@@ -48,3 +48,15 @@ func TestIntegration_Version(t *testing.T) {
 		t.Fatalf("version mismatch: %s vs %s", out, configs.VersionTxt)
 	}
 }
+
+func TestIntegration_UnknownCommand(t *testing.T) {
+	bin := buildBinary(t)
+	cmd := exec.Command(bin, "no-such-command")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("expected error for unknown command, got none; output: %s", out)
+	}
+	if !strings.Contains(string(out), "no-such-command") {
+		t.Fatalf("expected output to mention unknown command, got: %s", out)
+	}
+}
