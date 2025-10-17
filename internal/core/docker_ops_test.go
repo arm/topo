@@ -15,7 +15,7 @@ func TestReadContainersInfo_MockExec(t *testing.T) {
 		var out string
 		switch call {
 		case 0:
-			out = DefaultBoardHostname
+			out = TestSshTarget
 		case 1:
 			out = psOut
 		case 2:
@@ -24,7 +24,7 @@ func TestReadContainersInfo_MockExec(t *testing.T) {
 		call++
 		return exec.Command("echo", out)
 	}
-	items, err := ReadContainersInfo(DefaultSshTarget)
+	items, err := ReadContainersInfo(TestSshTarget)
 	if err != nil {
 		t.Fatalf("ReadContainersInfo: %v", err)
 	}

@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+const TestSshTarget = "test-target"
+
 // captureOutput captures stdout produced during f and returns it as string.
 func captureOutput(f func()) string {
 	old := os.Stdout

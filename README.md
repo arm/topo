@@ -28,16 +28,16 @@ A CLI tool to edit a `compose.topo.yaml` file.
 ./topo get-project <compose-filepath>
 
 # Initialise a project at the specified path
-./topo init-project <project-path> <project-name> [<ssh-target>]
+./topo init-project <project-path> <project-name> [--target <ssh-target>]
 
 # Show the config metadata
 ./topo get-config-metadata
 
 # Generate a Makefile for the project
-./topo generate-makefile <compose-filepath> [<ssh-target>]
+./topo generate-makefile <compose-filepath> [--target <ssh-target>]
 
 # Get containers info from the board
-./topo get-containers-info [<ssh-target>]
+./topo get-containers-info [--target <ssh-target>]
 ```
 
 * `compose-filepath` is a path to the `compose.topo.yaml` file
@@ -45,7 +45,7 @@ A CLI tool to edit a `compose.topo.yaml` file.
 * `template-id` is the id of the template to add.
 * `service-name` is the name of the new service to be added (equal to `template-id` by default) or removed.
 * `project-name` is the name of the project.
-* `ssh-target` is the ssh target for the project in the format `<user>@<host>`
+* `--target` is the SSH destination. It might be a config host alias (as defined in your ~/.ssh/config) or an SSH destination (`user@host`). If not specified it uses the `TOPO_TARGET` environment variable.
 
 ### How to deploy
 ```bash

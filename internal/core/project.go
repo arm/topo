@@ -187,9 +187,6 @@ func RunRemoveService(composeFilePath, serviceName string) error {
 
 // RunInitProject creates a basic project structure and makefile.
 func RunInitProject(projectPath, projectName, sshTarget string) error {
-	if sshTarget == "" {
-		sshTarget = DefaultSshTarget
-	}
 	if projectName == "" {
 		return fmt.Errorf("project name must not be empty")
 	}
@@ -216,13 +213,7 @@ func RunInitProject(projectPath, projectName, sshTarget string) error {
 
 // GenerateMakefile materializes a Makefile from template adjusting compose filename & ssh target.
 func GenerateMakefile(composePath string, sshTarget string) error {
-	if sshTarget == "" {
-		sshTarget = DefaultSshTarget
-	}
-	user, host, err := parseSshTarget(sshTarget)
-	if err != nil {
-		return err
-	}
+	dockerContext := getContextName(sshTarget)
 	composeFilename := filepath.Base(composePath)
 	dir := filepath.Dir(composePath)
 	template := string(configs.MakefileTemplate)
@@ -230,11 +221,11 @@ func GenerateMakefile(composePath string, sshTarget string) error {
 	for i, line := range lines {
 		switch {
 		case strings.HasPrefix(line, "COMPOSE_FILE"):
-			lines[i] = fmt.Sprintf("COMPOSE_FILE ?= %s", composeFilename)
-		case strings.HasPrefix(line, "REMOTE_HOST"):
-			lines[i] = fmt.Sprintf("REMOTE_HOST  := %s", host)
-		case strings.HasPrefix(line, "REMOTE_USER"):
-			lines[i] = fmt.Sprintf("REMOTE_USER  := %s", user)
+			lines[i] = fmt.Sprintf("COMPOSE_FILE    ?= %s", composeFilename)
+		case strings.HasPrefix(line, "SSH_TARGET "):
+			lines[i] = fmt.Sprintf("SSH_TARGET      := %s", sshTarget)
+		case strings.HasPrefix(line, "DOCKER_CONTEXT "):
+			lines[i] = fmt.Sprintf("DOCKER_CONTEXT  := %s", dockerContext)
 		}
 	}
 	result := strings.Join(lines, "\n")

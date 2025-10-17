@@ -72,8 +72,8 @@ func FlashDockerFile(serviceName string) error {
 	return nil
 }
 
-// EnsureContext creates a docker context if absent.
-func EnsureContext(contextName, host string) error {
+// EnsureContextExists creates a docker context if absent.
+func EnsureContextExists(contextName, sshTarget string) error {
 	cmd := ExecCommand("docker", "context", "ls", "--format", "{{.Name}}")
 	var out, stderr bytes.Buffer
 	cmd.Stdout = &out
@@ -84,6 +84,7 @@ func EnsureContext(contextName, host string) error {
 	if containsContext(out.String(), contextName) {
 		return nil
 	}
+	host := fmt.Sprintf("ssh://%s", sshTarget)
 	create := ExecCommand("docker", "context", "create", contextName, "--docker", fmt.Sprintf("host=%s", host))
 	var cErr bytes.Buffer
 	create.Stderr = &cErr
@@ -108,13 +109,9 @@ func RunDockerComposeUp(contextName, composePath string) error {
 
 // ReadContainersInfo returns enriched ps output.
 func ReadContainersInfo(sshTarget string) ([]DockerPsItemWithRuntime, error) {
-	_, host, err := parseSshTarget(sshTarget)
-	if err != nil {
-		return nil, err
-	}
-	sshUri := "ssh://" + sshTarget
-	EnsureContext(host, sshUri)
-	conn := []string{"--context", host}
+	dockerContext := getContextName(sshTarget)
+	EnsureContextExists(dockerContext, sshTarget)
+	conn := []string{"--context", dockerContext}
 	cmd := ExecCommand("docker", append(conn, "ps", "-a", "--format", "{{json .}}")...)
 	out, err := cmd.Output()
 	if err != nil {
@@ -223,9 +220,6 @@ func containsContext(list, name string) bool {
 
 // GetContainersInfo prints container info to stdout.
 func GetContainersInfo(sshTarget string) error {
-	if sshTarget == "" {
-		sshTarget = DefaultSshTarget
-	}
 	items, err := ReadContainersInfo(sshTarget)
 	if err != nil {
 		return fmt.Errorf("failed to read containers info: %w", err)

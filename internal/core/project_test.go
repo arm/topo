@@ -11,7 +11,7 @@ import (
 
 func TestRunInitProject(t *testing.T) {
 	dir := t.TempDir()
-	if err := RunInitProject(dir, "proj", DefaultSshTarget); err != nil {
+	if err := RunInitProject(dir, "proj", TestSshTarget); err != nil {
 		t.Fatalf("RunInitProject: %v", err)
 	}
 	composeFile := filepath.Join(dir, "proj", DefaultComposeFileName)
@@ -77,11 +77,11 @@ func TestGenerateMakefile(t *testing.T) {
 	dir := t.TempDir()
 	composePath := filepath.Join(dir, "compose.topo.yaml")
 	os.WriteFile(composePath, []byte("name: test"), 0644)
-	if err := GenerateMakefile(composePath, DefaultSshTarget); err != nil {
+	if err := GenerateMakefile(composePath, TestSshTarget); err != nil {
 		t.Fatalf("GenerateMakefile: %v", err)
 	}
 	content, _ := os.ReadFile(filepath.Join(dir, "Makefile"))
-	if !strings.Contains(string(content), "COMPOSE_FILE ?= compose.topo.yaml") {
+	if !strings.Contains(string(content), "COMPOSE_FILE    ?= compose.topo.yaml") {
 		t.Fatalf("compose file line missing")
 	}
 }
