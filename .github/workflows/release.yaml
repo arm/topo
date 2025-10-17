@@ -39,7 +39,7 @@ jobs:
       - name: Calculate Version
         id: calculate-version
         run: |
-          VERSION_FILE="version.txt"
+          VERSION_FILE="configs/version.txt"
           current=$(cat $VERSION_FILE)
           case "${{ inputs.release-type }}" in
             Major)
