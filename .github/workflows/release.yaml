@@ -153,7 +153,7 @@ jobs:
 
       - name: Test
         run: |
-          go test
+          go test ./...
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
