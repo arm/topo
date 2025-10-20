@@ -3,6 +3,9 @@ package core
 import (
 	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadContainersInfo_MockExec(t *testing.T) {
@@ -25,10 +28,6 @@ func TestReadContainersInfo_MockExec(t *testing.T) {
 		return exec.Command("echo", out)
 	}
 	items, err := ReadContainersInfo(TestSshTarget)
-	if err != nil {
-		t.Fatalf("ReadContainersInfo: %v", err)
-	}
-	if len(items) != 1 {
-		t.Fatalf("expected 1 item, got %d", len(items))
-	}
+	require.NoError(t, err)
+	assert.Len(t, items, 1)
 }

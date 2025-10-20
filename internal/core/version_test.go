@@ -3,12 +3,12 @@ package core
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPrintVersion(t *testing.T) {
 	out := captureOutput(PrintVersion)
 	expected := strings.TrimSpace(VersionTxt) + "\n"
-	if out != expected {
-		t.Fatalf("version mismatch: %q vs %q", expected, out)
-	}
+	assert.Equal(t, expected, out)
 }

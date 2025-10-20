@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/configs"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func buildBinary(t *testing.T) string {
@@ -15,9 +17,8 @@ func buildBinary(t *testing.T) string {
 	tmp := t.TempDir()
 	bin := filepath.Join(tmp, "topo")
 	cmd := exec.Command("go", "build", "-o", bin, "../cmd/topo")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build failed: %v\n%s", err, out)
-	}
+	out, err := cmd.CombinedOutput()
+	require.NoErrorf(t, err, "build failed: %s", out)
 	return bin
 }
 
@@ -25,38 +26,24 @@ func TestIntegration_ListTemplates(t *testing.T) {
 	bin := buildBinary(t)
 	cmd := exec.Command(bin, "list-templates")
 	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("run failed: %v", err)
-	}
+	require.NoError(t, err)
 	var arr []map[string]any
-	if err := json.Unmarshal(out, &arr); err != nil {
-		t.Fatalf("invalid JSON: %v", err)
-	}
-	if len(arr) == 0 {
-		t.Fatalf("expected templates")
-	}
+	require.NoError(t, json.Unmarshal(out, &arr))
+	assert.NotEmpty(t, arr)
 }
 
 func TestIntegration_Version(t *testing.T) {
 	bin := buildBinary(t)
 	cmd := exec.Command(bin, "version")
 	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("run failed: %v", err)
-	}
-	if strings.TrimSpace(string(out)) != strings.TrimSpace(configs.VersionTxt) {
-		t.Fatalf("version mismatch: %s vs %s", out, configs.VersionTxt)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, strings.TrimSpace(configs.VersionTxt), strings.TrimSpace(string(out)))
 }
 
 func TestIntegration_UnknownCommand(t *testing.T) {
 	bin := buildBinary(t)
 	cmd := exec.Command(bin, "no-such-command")
 	out, err := cmd.CombinedOutput()
-	if err == nil {
-		t.Fatalf("expected error for unknown command, got none; output: %s", out)
-	}
-	if !strings.Contains(string(out), "no-such-command") {
-		t.Fatalf("expected output to mention unknown command, got: %s", out)
-	}
+	assert.Error(t, err)
+	assert.Contains(t, string(out), "no-such-command")
 }

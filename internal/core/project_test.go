@@ -3,29 +3,22 @@ package core
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestRunInitProject(t *testing.T) {
 	dir := t.TempDir()
-	if err := RunInitProject(dir, "proj", TestSshTarget); err != nil {
-		t.Fatalf("RunInitProject: %v", err)
-	}
+	require.NoError(t, RunInitProject(dir, "proj", TestSshTarget))
 	composeFile := filepath.Join(dir, "proj", DefaultComposeFileName)
 	data, err := os.ReadFile(composeFile)
-	if err != nil {
-		t.Fatalf("read compose: %v", err)
-	}
+	require.NoError(t, err)
 	var p Project
-	if err := yaml.Unmarshal(data, &p); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if p.Name != "proj" {
-		t.Fatalf("expected name proj")
-	}
+	require.NoError(t, yaml.Unmarshal(data, &p))
+	assert.Equal(t, "proj", p.Name)
 }
 
 func TestAddServiceWithNoRuntime(t *testing.T) {
@@ -40,18 +33,12 @@ services:
       remoteproc.mcu: imx-rproc
 `
 	composePath := filepath.Join(dir, DefaultComposeFileName)
-	os.WriteFile(composePath, []byte(compose), 0644)
+	require.NoError(t, os.WriteFile(composePath, []byte(compose), 0644))
 	var calls []struct{ URL, Dest string }
 	mockCloner := func(url, dest string) error { calls = append(calls, struct{ URL, Dest string }{url, dest}); return nil }
-	if err := RunAddService(composePath, "cortexa-welcome", "test", mockCloner); err != nil {
-		t.Fatalf("RunAddService: %v", err)
-	}
-	if len(calls) != 1 {
-		t.Fatalf("expected 1 clone call")
-	}
-	if calls[0].URL != "https://github.com/Arm-Debug/topo-cortexa-welcome" {
-		t.Errorf("unexpected clone URL %s", calls[0].URL)
-	}
+	require.NoError(t, RunAddService(composePath, "cortexa-welcome", "test", mockCloner))
+	require.Len(t, calls, 1)
+	assert.Equal(t, "https://github.com/Arm-Debug/topo-cortexa-welcome", calls[0].URL)
 }
 
 func TestRunRemoveService(t *testing.T) {
@@ -63,25 +50,19 @@ services:
       context: ./removeMe
 `
 	composePath := filepath.Join(dir, DefaultComposeFileName)
-	os.WriteFile(composePath, []byte(compose), 0644)
-	if err := RunRemoveService(composePath, "removeMe"); err != nil {
-		t.Fatalf("RunRemoveService: %v", err)
-	}
-	data, _ := os.ReadFile(composePath)
-	if strings.Contains(string(data), "removeMe") {
-		t.Fatalf("service still present")
-	}
+	require.NoError(t, os.WriteFile(composePath, []byte(compose), 0644))
+	require.NoError(t, RunRemoveService(composePath, "removeMe"))
+	data, err := os.ReadFile(composePath)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "removeMe")
 }
 
 func TestGenerateMakefile(t *testing.T) {
 	dir := t.TempDir()
 	composePath := filepath.Join(dir, "compose.topo.yaml")
-	os.WriteFile(composePath, []byte("name: test"), 0644)
-	if err := GenerateMakefile(composePath, TestSshTarget); err != nil {
-		t.Fatalf("GenerateMakefile: %v", err)
-	}
-	content, _ := os.ReadFile(filepath.Join(dir, "Makefile"))
-	if !strings.Contains(string(content), "COMPOSE_FILE    ?= compose.topo.yaml") {
-		t.Fatalf("compose file line missing")
-	}
+	require.NoError(t, os.WriteFile(composePath, []byte("name: test"), 0644))
+	require.NoError(t, GenerateMakefile(composePath, TestSshTarget))
+	content, err := os.ReadFile(filepath.Join(dir, "Makefile"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "COMPOSE_FILE    ?= compose.topo.yaml")
 }
