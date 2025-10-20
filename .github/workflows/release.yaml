@@ -146,9 +146,9 @@ jobs:
           export GOOS=${{ matrix.os }}
           export GOARCH=${{ matrix.arch }}
           if [ "${{ matrix.os }}" = "windows" ]; then
-            go build -o dist/topo-${{ matrix.os }}-${{ matrix.arch }}.exe
+            go build -o dist/topo-${{ matrix.os }}-${{ matrix.arch }}.exe ./cmd/topo
           else
-            go build -o dist/topo-${{ matrix.os }}-${{ matrix.arch }}
+            go build -o dist/topo-${{ matrix.os }}-${{ matrix.arch }} ./cmd/topo
           fi
 
       - name: Test
