@@ -24,6 +24,7 @@ env:
   macos-x64-enabled: 'false'
   windows-arch64-enabled: 'false'
   windows-x64-enabled: 'true'
+  VERSION_FILE: configs/version.txt
 
 jobs:
   configure:
@@ -39,8 +40,7 @@ jobs:
       - name: Calculate Version
         id: calculate-version
         run: |
-          VERSION_FILE="configs/version.txt"
-          current=$(cat $VERSION_FILE)
+          current=$(cat "$VERSION_FILE")
           case "${{ inputs.release-type }}" in
             Major)
               IFS='.' read -r major minor patch <<< "$current"; new="$((major+1)).0.0";;
@@ -103,7 +103,7 @@ jobs:
 
       - name: Update VERSION file
         run: |
-          echo "${{ needs.configure.outputs.version }}" > version.txt
+          echo "${{ needs.configure.outputs.version }}" > "$VERSION_FILE"
 
       - name: Update changelog version
         run: |
@@ -111,7 +111,7 @@ jobs:
 
       - name: Commit changes
         run: |
-          git add version.txt CHANGELOG.md
+          git add "$VERSION_FILE" CHANGELOG.md
           git commit -m "Bump version to v${{ needs.configure.outputs.version }}"
           git push -u origin ${{ steps.get-branch-name.outputs.branch-name }}
 
