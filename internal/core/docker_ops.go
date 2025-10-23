@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -72,25 +73,42 @@ func FlashDockerFile(serviceName string) error {
 	return nil
 }
 
-// EnsureContextExists creates a docker context if absent.
-func EnsureContextExists(contextName, sshTarget string) error {
-	cmd := ExecCommand("docker", "context", "ls", "--format", "{{.Name}}")
-	var out, stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to list docker contexts: %s", stderr.String())
+// ensureContextExists creates a docker context if absent.
+func ensureContextExists(contextName, sshTarget string) error {
+	exists, err := contextExists(contextName)
+	if err != nil {
+		return err
 	}
-	if containsContext(out.String(), contextName) {
+	if exists {
 		return nil
 	}
+	return createContext(sshTarget, contextName)
+}
+
+func contextExists(contextName string) (bool, error) {
+	cmd := ExecCommand("docker", "context", "ls", "--format", "{{.Name}}")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return true, fmt.Errorf("failed to list docker contexts: %s", stderr.String())
+	}
+	scanner := bufio.NewScanner(&stdout)
+	for scanner.Scan() {
+		if scanner.Text() == contextName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func createContext(sshTarget string, contextName string) error {
 	host := fmt.Sprintf("ssh://%s", sshTarget)
 	create := ExecCommand("docker", "context", "create", contextName, "--docker", fmt.Sprintf("host=%s", host))
-	var cErr bytes.Buffer
-	create.Stderr = &cErr
-	create.Stdout = os.Stdout
+	var stderr bytes.Buffer
+	create.Stderr = &stderr
 	if err := create.Run(); err != nil {
-		return fmt.Errorf("failed to create docker context: %s", cErr.String())
+		return fmt.Errorf("failed to create docker context: %s", stderr.String())
 	}
 	return nil
 }
@@ -110,7 +128,7 @@ func RunDockerComposeUp(contextName, composePath string) error {
 // ReadContainersInfo returns enriched ps output.
 func ReadContainersInfo(sshTarget string) ([]DockerPsItemWithRuntime, error) {
 	dockerContext := getContextName(sshTarget)
-	EnsureContextExists(dockerContext, sshTarget)
+	ensureContextExists(dockerContext, sshTarget)
 	conn := []string{"--context", dockerContext}
 	cmd := ExecCommand("docker", append(conn, "ps", "-a", "--format", "{{json .}}")...)
 	out, err := cmd.Output()
@@ -206,16 +224,6 @@ func FilterNonEmpty(ss []string) []string {
 		}
 	}
 	return ret
-}
-
-// containsContext checks docker context list for a name.
-func containsContext(list, name string) bool {
-	for _, l := range strings.Split(list, "\n") {
-		if l == name {
-			return true
-		}
-	}
-	return false
 }
 
 // GetContainersInfo prints container info to stdout.
