@@ -22,28 +22,35 @@ func buildBinary(t *testing.T) string {
 	return bin
 }
 
-func TestIntegration_ListTemplates(t *testing.T) {
+func TestListTemplates(t *testing.T) {
 	bin := buildBinary(t)
+
 	cmd := exec.Command(bin, "list-templates")
 	out, err := cmd.CombinedOutput()
+
 	require.NoError(t, err)
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(out, &arr))
 	assert.NotEmpty(t, arr)
 }
 
-func TestIntegration_Version(t *testing.T) {
+func TestVersion(t *testing.T) {
 	bin := buildBinary(t)
+
 	cmd := exec.Command(bin, "version")
 	out, err := cmd.CombinedOutput()
+
 	require.NoError(t, err)
 	assert.Equal(t, strings.TrimSpace(configs.VersionTxt), strings.TrimSpace(string(out)))
 }
 
-func TestIntegration_UnknownCommand(t *testing.T) {
+func TestUnknownCommand(t *testing.T) {
 	bin := buildBinary(t)
-	cmd := exec.Command(bin, "no-such-command")
+
+	cmd := exec.Command(bin, "yolo-swag")
 	out, err := cmd.CombinedOutput()
+
 	assert.Error(t, err)
-	assert.Contains(t, string(out), "no-such-command")
+	want := `unknown command "yolo-swag"`
+	assert.Contains(t, string(out), want)
 }
