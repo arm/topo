@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +19,7 @@ func TestReadContainersInfo_MockExec(t *testing.T) {
 		var out string
 		switch call {
 		case 0:
-			out = TestSshTarget
+			out = testutil.TestSshTarget
 		case 1:
 			out = psOut
 		case 2:
@@ -27,7 +28,7 @@ func TestReadContainersInfo_MockExec(t *testing.T) {
 		call++
 		return exec.Command("echo", out)
 	}
-	items, err := ReadContainersInfo(TestSshTarget)
+	items, err := ReadContainersInfo(testutil.TestSshTarget)
 	require.NoError(t, err)
 	assert.Len(t, items, 1)
 }

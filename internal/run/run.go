@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,7 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 		Use:   "list-templates",
 		Short: "List available templates",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return core.ListTemplates()
+			return template.List()
 		},
 	}
 
@@ -83,7 +84,7 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 			if len(args) == 3 {
 				serviceName = args[2]
 			}
-			return core.RunAddService(composeFilePath, templateID, serviceName, core.CloneProject)
+			return core.RunAddService(composeFilePath, templateID, serviceName, core.CloneProject, template.GetTemplate)
 		},
 	}
 

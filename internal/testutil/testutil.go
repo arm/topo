@@ -1,4 +1,4 @@
-package core
+package testutil
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 const TestSshTarget = "test-target"
 
 // captureOutput captures stdout produced during f and returns it as string.
-func captureOutput(f func()) string {
+func CaptureOutput(f func()) string {
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w

@@ -2,8 +2,8 @@ package configs
 
 import _ "embed"
 
-//go:embed templates.json
-var TemplatesJSON []byte
+//go:embed service-templates.json
+var ServiceTemplatesJSON []byte
 
 //go:embed config-metadata.json
 var ConfigMetadataJSON []byte

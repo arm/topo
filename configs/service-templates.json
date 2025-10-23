@@ -1,0 +1,14 @@
+[
+  {
+    "id": "kleidi-llm",
+    "url": "git@github.com:Arm-Debug/topo-kleidi-service.git"
+  },
+  {
+    "id": "ambient-zephyr",
+    "url": "git@github.com:Arm-Debug/topo-ambient-zephyr.git"
+  },
+  {
+    "id": "cortexa-welcome",
+    "url": "git@github.com:Arm-Debug/topo-cortexa-welcome.git"
+  }
+]

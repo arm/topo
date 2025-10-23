@@ -8,40 +8,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/arm-debug/topo-cli/configs"
+	"github.com/arm-debug/topo-cli/internal/core/compose"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
 
-// A compose project
-type Project struct {
-	Name     string             `yaml:"name" json:"name"`
-	Services map[string]Service `yaml:"services" json:"services"`
-}
-
-type Service struct {
-	Build       *Build            `yaml:"build,omitempty" json:"build,omitempty"`
-	Runtime     string            `yaml:"runtime,omitempty" json:"runtime,omitempty"`
-	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Platform    string            `yaml:"platform,omitempty" json:"platform,omitempty"`
-	Ports       []ServicePort     `yaml:"ports,omitempty" json:"ports,omitempty"`
-}
-
-type Build struct {
-	Context string `yaml:"context,omitempty" json:"context,omitempty"`
-}
-
-type ServicePort struct {
-	Published string `yaml:"published,omitempty" json:"published,omitempty"`
-	Target    uint32 `yaml:"target,omitempty" json:"target,omitempty"`
-	Protocol  string `yaml:"protocol,omitempty" json:"protocol,omitempty"`
-}
-
 type CloneFunc func(url, dest string) error
+type GetTemplateFn func(id string) (*template.ServiceTemplateRepo, error)
 
 // Expose core.cloneProject via a wrapper because it is unexported.
 func CloneProject(url, dest string) error {
@@ -53,9 +31,9 @@ func CloneProject(url, dest string) error {
 }
 
 // ReadProject parses compose file into a compose-go project.
-func ReadProject(composeFilePath string) (*types.Project, error) {
+func ReadProject(targetProjectFile string) (*types.Project, error) {
 	ctx := context.Background()
-	options, err := cli.NewProjectOptions([]string{composeFilePath}, cli.WithOsEnv, cli.WithDotEnv, cli.WithResolvedPaths(false), cli.WithNormalization(false))
+	options, err := cli.NewProjectOptions([]string{targetProjectFile}, cli.WithOsEnv, cli.WithDotEnv, cli.WithResolvedPaths(false), cli.WithNormalization(false))
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +41,8 @@ func ReadProject(composeFilePath string) (*types.Project, error) {
 }
 
 // GetProject prints the compose project JSON.
-func GetProject(composeFilePath string) error {
-	project, err := ReadProject(composeFilePath)
+func GetProject(targetProjectFile string) error {
+	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}
@@ -77,68 +55,43 @@ func GetProject(composeFilePath string) error {
 }
 
 // RunAddService inserts a template-based service.
-func RunAddService(composePath, templateId, newServiceName string, cloner CloneFunc) error {
-	templates, err := ReadTemplates()
-	if err != nil {
-		return err
-	}
-	var selected *Template
-	for i := range templates {
-		if templates[i].Id == templateId {
-			selected = &templates[i]
-			break
-		}
-	}
-	if selected == nil {
-		return fmt.Errorf("template with id %q not found", templateId)
-	}
-	project, err := ReadProject(composePath)
+func RunAddService(targetProjectFile, templateId, newServiceName string, cloner CloneFunc, getTemplate GetTemplateFn) error {
+	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}
-	contextPath := "./" + newServiceName
-	meta, err := ReadConfigMetadata()
+
+	serviceTemplateRepo, err := getTemplate(templateId)
 	if err != nil {
-		return fmt.Errorf("failed to read config metadata: %w", err)
-	}
-	var runtime string
-	ann := map[string]string{}
-	for _, b := range meta.Boards {
-		if b.ID == DefaultBoard {
-			for _, ss := range b.Subsystems {
-				if ss.ID == selected.Subsystem {
-					runtime = ss.Runtime
-					ann = ss.Annotation
-					break
-				}
-			}
-			break
-		}
-	}
-	newSvc := types.ServiceConfig{Name: newServiceName, Build: &types.BuildConfig{Context: contextPath}, Runtime: runtime, Annotations: ann, Platform: selected.Platform}
-	if len(selected.Ports) > 0 {
-		newSvc.Ports = make([]types.ServicePortConfig, len(selected.Ports))
-		for i, p := range selected.Ports {
-			parts := strings.Split(p, ":")
-			if len(parts) == 2 {
-				tgt, err := strconv.ParseUint(parts[1], 10, 32)
-				if err != nil {
-					return fmt.Errorf("invalid target port %q: %w", parts[1], err)
-				}
-				newSvc.Ports[i] = types.ServicePortConfig{Published: parts[0], Target: uint32(tgt), Protocol: "tcp"}
-			} else {
-				tgt, err := strconv.ParseUint(p, 10, 32)
-				if err != nil {
-					return fmt.Errorf("invalid target port %q: %w", p, err)
-				}
-				newSvc.Ports[i] = types.ServicePortConfig{Target: uint32(tgt), Protocol: "tcp"}
-			}
-		}
-	}
-	if err := insertService(project, newSvc); err != nil {
 		return err
 	}
-	relativisePaths(project)
+
+	destDir := filepath.Join(filepath.Dir(targetProjectFile), newServiceName)
+
+	if _, err := os.Stat(destDir); err == nil {
+		return fmt.Errorf("directory %s already exists; please choose a different service name or remove the existing directory", destDir)
+	}
+
+	if err := cloner(serviceTemplateRepo.Url, destDir); err != nil {
+		return fmt.Errorf("failed to clone template: %w", err)
+	}
+
+	serviceManifest, err := template.ParseServiceDefinition(destDir)
+	if err != nil {
+		return fmt.Errorf("failed to load topo service from repo %s: %w", serviceTemplateRepo.Url, err)
+	}
+
+	newSvc, err := compose.ParseServiceFromTopo(newServiceName, &serviceManifest)
+	if err != nil {
+		return err
+	}
+
+	if err := compose.InsertService(project, newSvc); err != nil {
+		return err
+	}
+
+	compose.RegisterNamedVolumes(project, newSvc)
+
 	buf := &bytes.Buffer{}
 	enc := yaml.NewEncoder(buf)
 	enc.SetIndent(2)
@@ -146,14 +99,8 @@ func RunAddService(composePath, templateId, newServiceName string, cloner CloneF
 		return err
 	}
 	_ = enc.Close()
-	if err := os.WriteFile(composePath, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed to write compose file %s %w", composePath, err)
-	}
-	destDir := filepath.Join(filepath.Dir(composePath), contextPath)
-	if _, err := os.Stat(destDir); os.IsNotExist(err) {
-		if err := cloner(selected.Url, destDir); err != nil {
-			return fmt.Errorf("failed to clone template: %w", err)
-		}
+	if err := os.WriteFile(targetProjectFile, buf.Bytes(), 0o644); err != nil {
+		return fmt.Errorf("failed to write compose file %s %w", targetProjectFile, err)
 	}
 	return nil
 }
@@ -200,7 +147,11 @@ func RunInitProject(projectPath, projectName, sshTarget string) error {
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	compose := Project{Name: projectName, Services: map[string]Service{}}
+	compose := types.Project{
+		Name:     projectName,
+		Services: types.Services{},
+		Volumes:  types.Volumes{},
+	}
 	data, err := yaml.Marshal(compose)
 	if err != nil {
 		return fmt.Errorf("failed to marshal compose file: %w", err)
@@ -230,38 +181,4 @@ func GenerateMakefile(composePath string, sshTarget string) error {
 	}
 	result := strings.Join(lines, "\n")
 	return os.WriteFile(filepath.Join(dir, "Makefile"), []byte(result), 0644)
-}
-
-// insertService prevents duplicates.
-func insertService(p *types.Project, svc types.ServiceConfig) error {
-	if p.Services == nil {
-		p.Services = types.Services{}
-	}
-	if _, exists := p.Services[svc.Name]; exists {
-		return fmt.Errorf("service %q already exists", svc.Name)
-	}
-	p.Services[svc.Name] = svc
-	return nil
-}
-
-// relativisePaths converts absolute build/volume paths to relative.
-func relativisePaths(p *types.Project) {
-	base := p.WorkingDir
-	for name, svc := range p.Services {
-		if svc.Build != nil && svc.Build.Context != "" && filepath.IsAbs(svc.Build.Context) {
-			if rel, err := filepath.Rel(base, svc.Build.Context); err == nil {
-				svc.Build.Context = "./" + filepath.ToSlash(rel)
-			}
-		}
-		for i := range svc.Volumes {
-			v := svc.Volumes[i]
-			if v.Type == "bind" && filepath.IsAbs(v.Source) {
-				if rel, err := filepath.Rel(base, v.Source); err == nil {
-					v.Source = "./" + filepath.ToSlash(rel)
-					svc.Volumes[i] = v
-				}
-			}
-		}
-		p.Services[name] = svc
-	}
 }
