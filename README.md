@@ -36,10 +36,12 @@ A CLI tool to edit a `compose.topo.yaml` file.
 # Generate a Makefile for the project
 ./topo generate-makefile <compose-filepath> [--target <ssh-target>]
 
-# Get containers info from the board
+# Get containers info from the target
 ./topo get-containers-info [--target <ssh-target>]
-```
 
+# Show information about the board
+./topo check-health [--target <ssh-target>]
+```
 * `compose-filepath` is a path to the `compose.topo.yaml` file
 * `project-filepath` is a path to the directory where a project will be created
 * `template-id` is the id of the template to add.

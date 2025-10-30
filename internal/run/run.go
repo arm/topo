@@ -128,7 +128,21 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	}
 	addTargetFlag(getContCmd, &target)
 
-	root.AddCommand(listCmd, versionCmd, cfgCmd, getProjectCmd, initCmd, addCmd, removeCmd, genCmd, getContCmd)
+	healthCmd := &cobra.Command{
+		Use:   "check-health",
+		Short: "Show information about the target and check the host environment (container engines, SSH availability)",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resolved, err := core.ResolveTarget(target)
+			if err != nil {
+				return err
+			}
+			return core.CheckHealth(resolved)
+		},
+	}
+	addTargetFlag(healthCmd, &target)
+
+	root.AddCommand(listCmd, versionCmd, cfgCmd, getProjectCmd, initCmd, addCmd, removeCmd, genCmd, getContCmd, healthCmd)
 	root.SetOut(stdout)
 	root.SetErr(stderr)
 	root.SetArgs(args)
