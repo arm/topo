@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/configs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,16 +30,6 @@ func TestListTemplates(t *testing.T) {
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(out, &arr))
 	assert.NotEmpty(t, arr)
-}
-
-func TestVersion(t *testing.T) {
-	bin := buildBinary(t)
-
-	cmd := exec.Command(bin, "version")
-	out, err := cmd.CombinedOutput()
-
-	require.NoError(t, err)
-	assert.Equal(t, strings.TrimSpace(configs.VersionTxt), strings.TrimSpace(string(out)))
 }
 
 func TestUnknownCommand(t *testing.T) {

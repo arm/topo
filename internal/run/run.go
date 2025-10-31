@@ -1,10 +1,12 @@
 package run
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/arm-debug/topo-cli/internal/core"
 	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -16,8 +18,9 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	var target string
 
 	root := &cobra.Command{
-		Use:   "topo",
-		Short: "Topo CLI",
+		Use:     "topo",
+		Short:   "Topo CLI",
+		Version: fmt.Sprintf("%s (commit: %s)", version.Version, version.GitCommit),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
@@ -28,14 +31,6 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 		Short: "List available templates",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return template.List()
-		},
-	}
-
-	versionCmd := &cobra.Command{
-		Use:   "version",
-		Short: "Print version",
-		Run: func(cmd *cobra.Command, _ []string) {
-			core.PrintVersion()
 		},
 	}
 
@@ -142,7 +137,7 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	}
 	addTargetFlag(healthCmd, &target)
 
-	root.AddCommand(listCmd, versionCmd, cfgCmd, getProjectCmd, initCmd, addCmd, removeCmd, genCmd, getContCmd, healthCmd)
+	root.AddCommand(listCmd, cfgCmd, getProjectCmd, initCmd, addCmd, removeCmd, genCmd, getContCmd, healthCmd)
 	root.SetOut(stdout)
 	root.SetErr(stderr)
 	root.SetArgs(args)

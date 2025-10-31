@@ -10,6 +10,3 @@ var ConfigMetadataJSON []byte
 
 //go:embed Makefile-template.mk
 var MakefileTemplate []byte
-
-//go:embed version.txt
-var VersionTxt string

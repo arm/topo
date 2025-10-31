@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/arm-debug/topo-cli/configs"
 )
 
 // Execution / logging seams (overridable in tests)
@@ -14,9 +12,6 @@ var (
 	ExecCommand = exec.Command
 	LogPrintf   = fmt.Printf
 )
-
-// Embedded version string (re-export for tests / external callers)
-var VersionTxt = configs.VersionTxt
 
 const TargetEnvVar = "TOPO_TARGET"
 

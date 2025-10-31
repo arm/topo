@@ -1,0 +1,54 @@
+version: 2
+project_name: topo
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: topo
+    main: ./cmd/topo
+    binary: topo
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: amd64
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/arm-debug/topo-cli/internal/version.Version={{ .Version }}
+      - -X github.com/arm-debug/topo-cli/internal/version.GitCommit={{ .Commit }}
+
+archives:
+  - id: archive
+    builds:
+      - topo
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - "^refactor:"
