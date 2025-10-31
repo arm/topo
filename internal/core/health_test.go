@@ -8,7 +8,7 @@ import (
 )
 
 func TestExtractArmFeatures(t *testing.T) {
-	t.Run("extracts mapped ARM features and ignores unrecognised", func(t *testing.T) {
+	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
 		target := Target{
 			features: []string{"fp", "asimd", "sve2", "sme"},
 		}
