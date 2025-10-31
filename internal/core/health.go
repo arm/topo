@@ -57,7 +57,7 @@ func extractArmFeatures(target Target) []string {
 	return res
 }
 
-func HealthCheckStringBuilder(hostPath []string, target Target) string {
+func HealthCheckStringBuilder(hostPath []string, target Target) (string, error) {
 	boolIcon := func(b bool) string {
 		if b {
 			return "✅"
@@ -82,14 +82,18 @@ func HealthCheckStringBuilder(hostPath []string, target Target) string {
 	var buf bytes.Buffer
 	tmpl := template.Must(template.New("health").Parse(healthCheckTemplate))
 	if err := tmpl.Execute(&buf, data); err != nil {
-		return "<template execution error: " + err.Error() + ">"
+		return "", err
 	}
-	return buf.String()
+	return buf.String(), nil
 }
 
 func CheckHealth(sshTarget string) error {
 	hostPath := MakeHostPath()
 	target := MakeTarget(sshTarget, ExecSSH)
-	LogPrintf(HealthCheckStringBuilder(hostPath, target))
+	healthCheck, err := HealthCheckStringBuilder(hostPath, target)
+	if err != nil {
+		return err
+	}
+	LogPrintf(healthCheck)
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExtractArmFeatures(t *testing.T) {
@@ -31,7 +32,9 @@ func TestHealthCheckStringBuilder(t *testing.T) {
 			features:        []string{"asimd", "sve"},
 		}
 
-		output := HealthCheckStringBuilder(hostPath, target)
+		output, err := HealthCheckStringBuilder(hostPath, target)
+
+		require.NoError(t, err)
 		assert.Contains(t, output, "SSH: ✅")
 		assert.Contains(t, output, "Connected: ✅")
 		assert.Contains(t, output, "Features (Linux Host): NEON, SVE")
@@ -41,7 +44,9 @@ func TestHealthCheckStringBuilder(t *testing.T) {
 		hostPath := []string{}
 		target := Target{connectionError: nil}
 
-		output := HealthCheckStringBuilder(hostPath, target)
+		output, err := HealthCheckStringBuilder(hostPath, target)
+
+		require.NoError(t, err)
 		assert.Contains(t, output, "SSH: ❌")
 		assert.NotContains(t, output, "Connected: ✅") // no target section shown
 	})
@@ -50,7 +55,9 @@ func TestHealthCheckStringBuilder(t *testing.T) {
 		hostPath := []string{"ssh"}
 		target := Target{connectionError: assert.AnError}
 
-		output := HealthCheckStringBuilder(hostPath, target)
+		output, err := HealthCheckStringBuilder(hostPath, target)
+
+		require.NoError(t, err)
 		assert.Contains(t, output, "Connected: ❌")
 	})
 }
