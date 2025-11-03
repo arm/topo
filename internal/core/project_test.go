@@ -27,14 +27,18 @@ func writeComposeFile(t *testing.T, dir, content string) string {
 }
 
 func TestRunInitProject(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, RunInitProject(dir, "proj", testutil.TestSshTarget))
-	composeFile := filepath.Join(dir, "proj", DefaultComposeFileName)
-	data, err := os.ReadFile(composeFile)
-	require.NoError(t, err)
-	var p types.Project
-	require.NoError(t, yaml.Unmarshal(data, &p))
-	assert.Equal(t, "proj", p.Name)
+	t.Run("creates an empty compose file at the given location", func(t *testing.T) {
+		dir := t.TempDir()
+
+		require.NoError(t, RunInitProject(dir, testutil.TestSshTarget))
+
+		composeFile := filepath.Join(dir, DefaultComposeFileName)
+		data, err := os.ReadFile(composeFile)
+		require.NoError(t, err)
+		var p types.Project
+		require.NoError(t, yaml.Unmarshal(data, &p))
+		assert.Empty(t, p.Services)
+	})
 }
 
 func TestAddService(t *testing.T) {
@@ -162,10 +166,10 @@ services:
 
 func TestGenerateMakefile(t *testing.T) {
 	dir := t.TempDir()
-	targetProjectFile := filepath.Join(dir, "compose.topo.yaml")
+	targetProjectFile := filepath.Join(dir, "compose.yaml")
 	require.NoError(t, os.WriteFile(targetProjectFile, []byte("name: test"), 0644))
 	require.NoError(t, GenerateMakefile(targetProjectFile, testutil.TestSshTarget))
 	content, err := os.ReadFile(filepath.Join(dir, "Makefile"))
 	require.NoError(t, err)
-	assert.Contains(t, string(content), "COMPOSE_FILE    ?= compose.topo.yaml")
+	assert.Contains(t, string(content), "COMPOSE_FILE    ?= compose.yaml")
 }

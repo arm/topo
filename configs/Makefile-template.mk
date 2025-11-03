@@ -1,6 +1,6 @@
 # ——— Configuration —————————————————————————————————————————————
 
-COMPOSE_FILE    ?= compose.topo.yaml
+COMPOSE_FILE    ?= compose.yaml
 SSH_TARGET      := $(TOPO_TARGET)
 DOCKER_CONTEXT  := $(SSH_TARGET)
 

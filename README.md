@@ -2,19 +2,19 @@
 
 # Topo CLI
 
-A CLI tool to edit a `compose.topo.yaml` file.
+A CLI tool to edit a `compose.yaml` file.
 
 ## Installation
 
 1. **Build**:
 
-   ```bash
-   go build ./cmd/topo
-   ```
+```sh
+go build ./cmd/topo
+```
 
 ## Usage
 
-```bash
+```sh
 # Show supported templates
 ./topo list-templates
 
@@ -27,8 +27,8 @@ A CLI tool to edit a `compose.topo.yaml` file.
 # Get the project at the specified path
 ./topo get-project <compose-filepath>
 
-# Initialise a project at the specified path
-./topo init-project <project-path> <project-name> [--target <ssh-target>]
+# Initialise a project in the current directory
+./topo init [--target <ssh-target>]
 
 # Show the config metadata
 ./topo get-config-metadata
@@ -42,11 +42,9 @@ A CLI tool to edit a `compose.topo.yaml` file.
 # Show information about the board
 ./topo check-health [--target <ssh-target>]
 ```
-* `compose-filepath` is a path to the `compose.topo.yaml` file
-* `project-filepath` is a path to the directory where a project will be created
+* `compose-filepath` is a path to the `compose.yaml` file
 * `template-id` is the id of the template to add.
 * `service-name` is the name of the new service to be added (equal to `template-id` by default) or removed.
-* `project-name` is the name of the project.
 * `--target` is the SSH destination. It might be a config host alias (as defined in your ~/.ssh/config) or an SSH destination (`user@host`). If not specified it uses the `TOPO_TARGET` environment variable.
 
 ### How to deploy

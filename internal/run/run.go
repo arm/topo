@@ -3,6 +3,7 @@ package run
 import (
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/arm-debug/topo-cli/internal/core"
 	"github.com/arm-debug/topo-cli/internal/template"
@@ -50,17 +51,19 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	}
 
 	initCmd := &cobra.Command{
-		Use:   "init-project <project-path> <project-name>",
-		Short: "Initialise a new project",
-		Args:  cobra.ExactArgs(2),
+		Use:   "init",
+		Short: "Initialise a new project in the current directory",
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			projectPath := args[0]
-			projectName := args[1]
+			workDir, err := os.Getwd()
+			if err != nil {
+				return err
+			}
 			resolved, err := core.ResolveTarget(target)
 			if err != nil {
 				return err
 			}
-			return core.RunInitProject(projectPath, projectName, resolved)
+			return core.RunInitProject(workDir, resolved)
 		},
 	}
 	addTargetFlag(initCmd, &target)

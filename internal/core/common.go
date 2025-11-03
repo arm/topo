@@ -19,7 +19,7 @@ const TargetEnvVar = "TOPO_TARGET"
 const (
 	DefaultBoard           = "NXP i.MX 93"
 	DefaultDockerContext   = "default"
-	DefaultComposeFileName = "compose.topo.yaml"
+	DefaultComposeFileName = "compose.yaml"
 )
 
 // ResolveTarget returns the effective SSH target alias using precedence:
