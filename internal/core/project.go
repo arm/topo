@@ -132,15 +132,7 @@ func RunRemoveService(composeFilePath, serviceName string) error {
 	return nil
 }
 
-// RunInitProject creates a basic project structure and makefile.
-func RunInitProject(projectPath, projectName, sshTarget string) error {
-	if projectName == "" {
-		return fmt.Errorf("project name must not be empty")
-	}
-	projectDir := filepath.Join(projectPath, projectName)
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		return fmt.Errorf("failed to create project directory: %w", err)
-	}
+func RunInitProject(projectDir string, sshTarget string) error {
 	composePath := filepath.Join(projectDir, DefaultComposeFileName)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
@@ -148,9 +140,7 @@ func RunInitProject(projectPath, projectName, sshTarget string) error {
 		return err
 	}
 	compose := types.Project{
-		Name:     projectName,
 		Services: types.Services{},
-		Volumes:  types.Volumes{},
 	}
 	data, err := yaml.Marshal(compose)
 	if err != nil {
