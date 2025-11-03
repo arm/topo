@@ -21,9 +21,6 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 		Use:     "topo",
 		Short:   "Topo CLI",
 		Version: fmt.Sprintf("%s (commit: %s)", version.Version, version.GitCommit),
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help()
-		},
 	}
 
 	listCmd := &cobra.Command{
