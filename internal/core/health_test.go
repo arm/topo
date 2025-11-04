@@ -3,6 +3,7 @@ package core
 import (
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/dependencies"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,40 +25,131 @@ func TestExtractArmFeatures(t *testing.T) {
 	})
 }
 
-func TestHealthCheckStringBuilder(t *testing.T) {
-	t.Run("shows all fields when ssh and connected", func(t *testing.T) {
-		hostPath := []string{"ssh"}
+func TestGenerateReport(t *testing.T) {
+	t.Run("given two host dependencies in the same category, they are grouped in a health check", func(t *testing.T) {
+		dependencyStatuses := []dependencies.Status{
+			{
+				Dependency: dependencies.Dependency{Name: "foo", Category: "Baz"},
+				Installed:  true,
+			},
+			{
+				Dependency: dependencies.Dependency{Name: "bar", Category: "Baz"},
+				Installed:  true,
+			},
+		}
+
+		got := GenerateReport(dependencyStatuses, Target{})
+
+		want := HealthCheck{
+			Name:    "Baz",
+			Healthy: true,
+			Value:   "foo, bar",
+		}
+		assert.Contains(t, got.HostDependencies, want)
+	})
+
+	t.Run("when a dependency is not installed, the health check is unhealthy", func(t *testing.T) {
+		dependencyStatuses := []dependencies.Status{
+			{
+				Dependency: dependencies.Dependency{Name: "whatever", Category: "Rube Golberg"},
+				Installed:  false,
+			},
+		}
+
+		got := GenerateReport(dependencyStatuses, Target{})
+
+		assert.Len(t, got.HostDependencies, 1)
+		assert.Equal(t, "Rube Golberg", got.HostDependencies[0].Name)
+		assert.False(t, got.HostDependencies[0].Healthy)
+	})
+
+	t.Run("when the target has a connection error, Connectivity is unhealthy", func(t *testing.T) {
+		unconnectedTarget := Target{connectionError: assert.AnError}
+
+		got := GenerateReport(nil, unconnectedTarget)
+
+		assert.False(t, got.Connectivity.Healthy)
+	})
+
+	t.Run("when the target has no connection error, the Connectivity is healthy", func(t *testing.T) {
+		connectedTarget := Target{}
+
+		got := GenerateReport(nil, connectedTarget)
+
+		assert.True(t, got.Connectivity.Healthy)
+	})
+
+	t.Run("target features are listed", func(t *testing.T) {
 		target := Target{
 			connectionError: nil,
 			features:        []string{"asimd", "sve"},
 		}
 
-		output, err := HealthCheckStringBuilder(hostPath, target)
+		got := GenerateReport(nil, target)
+
+		assert.Equal(t, []string{"NEON", "SVE"}, got.TargetFeatures)
+	})
+}
+
+func TestRenderReportAsPlainText(t *testing.T) {
+	t.Run("it renders the dependencies", func(t *testing.T) {
+		report := Report{
+			HostDependencies: []HealthCheck{{
+				Name:    "Flux Capacitor",
+				Healthy: true,
+				Value:   "",
+			}},
+		}
+
+		got, err := RenderReportAsPlainText(report)
 
 		require.NoError(t, err)
-		assert.Contains(t, output, "SSH: ✅")
-		assert.Contains(t, output, "Connected: ✅")
-		assert.Contains(t, output, "Features (Linux Host): NEON, SVE")
+		assert.Contains(t, got, "Flux Capacitor")
 	})
 
-	t.Run("shows ❌ when ssh not present", func(t *testing.T) {
-		hostPath := []string{}
-		target := Target{connectionError: nil}
+	t.Run("it renders connection failures", func(t *testing.T) {
+		report := Report{
+			Connectivity: HealthCheck{
+				Name:    "Connected",
+				Healthy: false,
+				Value:   "",
+			},
+		}
 
-		output, err := HealthCheckStringBuilder(hostPath, target)
+		got, err := RenderReportAsPlainText(report)
 
 		require.NoError(t, err)
-		assert.Contains(t, output, "SSH: ❌")
-		assert.NotContains(t, output, "Connected: ✅") // no target section shown
+		assert.Contains(t, got, "Connected: ❌")
 	})
 
-	t.Run("shows ❌ when target connection failed", func(t *testing.T) {
-		hostPath := []string{"ssh"}
-		target := Target{connectionError: assert.AnError}
+	t.Run("when connected it renders cpu features", func(t *testing.T) {
+		report := Report{
+			Connectivity: HealthCheck{
+				Name:    "Connected",
+				Healthy: true,
+				Value:   "",
+			},
+			TargetFeatures: []string{"FOO", "BAR"},
+		}
 
-		output, err := HealthCheckStringBuilder(hostPath, target)
+		got, err := RenderReportAsPlainText(report)
 
 		require.NoError(t, err)
-		assert.Contains(t, output, "Connected: ❌")
+		assert.Contains(t, got, "FOO, BAR")
+	})
+
+	t.Run("when not connected, it does not renders cpu features", func(t *testing.T) {
+		report := Report{
+			Connectivity: HealthCheck{
+				Name:    "Connected",
+				Healthy: false,
+				Value:   "",
+			},
+		}
+
+		got, err := RenderReportAsPlainText(report)
+
+		require.NoError(t, err)
+		assert.NotContains(t, got, "Features")
 	})
 }

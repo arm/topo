@@ -3,23 +3,10 @@ package core
 import (
 	"bytes"
 	"html/template"
-	"os/exec"
-	"slices"
 	"strings"
-)
 
-const healthCheckTemplate = `Host
-----
-  SSH: {{.HostIcon}}
-  {{- if .ShowTarget}}
-Target
-------
-  Connected: {{.TargetIcon}}
-  {{- if .Connected}}
-  Features (Linux Host): {{.Features}}
-  {{- end}}
-  {{- end}}
-`
+	"github.com/arm-debug/topo-cli/internal/dependencies"
+)
 
 var searchFlags = map[string]string{
 	"asimd": "NEON",
@@ -27,23 +14,6 @@ var searchFlags = map[string]string{
 	"sve2":  "SVE2",
 	"sme":   "SME",
 	"sme2":  "SME2",
-}
-
-func MakeHostPath() []string {
-	res := []string{}
-	searchBinaryFor := []string{"ssh", "docker", "podman"}
-
-	for _, bin := range searchBinaryFor {
-		if binaryExists(bin) {
-			res = append(res, bin)
-		}
-	}
-	return res
-}
-
-func binaryExists(bin string) bool {
-	_, err := exec.LookPath(bin)
-	return err == nil
 }
 
 func extractArmFeatures(target Target) []string {
@@ -57,40 +27,82 @@ func extractArmFeatures(target Target) []string {
 	return res
 }
 
-func HealthCheckStringBuilder(hostPath []string, target Target) (string, error) {
-	boolIcon := func(b bool) string {
-		if b {
-			return "✅"
+type HealthCheck struct {
+	Name    string
+	Healthy bool
+	Value   string
+}
+
+type Report struct {
+	HostDependencies []HealthCheck
+	Connectivity     HealthCheck
+	TargetFeatures   []string
+}
+
+func GenerateReport(dependencyStatuses []dependencies.Status, target Target) Report {
+	report := Report{}
+
+	availableDepsByCategory := dependencies.CollectAvailableByCategory(dependencyStatuses)
+
+	for category, installedDependencies := range availableDepsByCategory {
+		names := make([]string, len(installedDependencies))
+		for i, dep := range installedDependencies {
+			names[i] = dep.Dependency.Name
 		}
-		return "❌"
+		report.HostDependencies = append(report.HostDependencies, HealthCheck{
+			Name:    category,
+			Healthy: len(installedDependencies) > 0,
+			Value:   strings.Join(names, ", "),
+		})
 	}
 
-	data := struct {
-		HostIcon   string
-		ShowTarget bool
-		TargetIcon string
-		Connected  bool
-		Features   string
-	}{
-		HostIcon:   boolIcon(slices.Contains(hostPath, "ssh")),
-		ShowTarget: slices.Contains(hostPath, "ssh"),
-		TargetIcon: boolIcon(target.connectionError == nil),
-		Connected:  target.connectionError == nil,
-		Features:   strings.Join(extractArmFeatures(target), ", "),
+	report.Connectivity = HealthCheck{
+		Name:    "Connected",
+		Healthy: target.connectionError == nil,
+		Value:   "",
 	}
 
+	report.TargetFeatures = extractArmFeatures(target)
+	return report
+}
+
+const healthCheckTemplate = `
+{{- define "checkRow" -}}
+  {{ .Name }}:{{- if .Healthy }} ✅{{- else }} ❌{{- end }}{{- if .Value }} ({{ .Value }}){{- end }}
+{{- end -}}
+Host
+----
+{{- range $healthcheckRow := .HostDependencies }}
+{{ template "checkRow" $healthcheckRow }}
+{{- end }}
+
+Target
+------
+{{ template "checkRow" .Connectivity }}
+{{- if .Connectivity.Healthy }}
+Features (Linux Host): {{ join .TargetFeatures ", " }}
+{{- end }}
+`
+
+func RenderReportAsPlainText(report Report) (string, error) {
 	var buf bytes.Buffer
-	tmpl := template.Must(template.New("health").Parse(healthCheckTemplate))
-	if err := tmpl.Execute(&buf, data); err != nil {
+	funcMap := template.FuncMap{
+		"join": strings.Join,
+	}
+	tmpl := template.Must(template.New("health").Funcs(funcMap).Parse(healthCheckTemplate))
+	if err := tmpl.Execute(&buf, report); err != nil {
 		return "", err
 	}
+
 	return buf.String(), nil
 }
 
 func CheckHealth(sshTarget string) error {
-	hostPath := MakeHostPath()
+	dependencyStatuses := dependencies.Check()
+
 	target := MakeTarget(sshTarget, ExecSSH)
-	healthCheck, err := HealthCheckStringBuilder(hostPath, target)
+	report := GenerateReport(dependencyStatuses, target)
+	healthCheck, err := RenderReportAsPlainText(report)
 	if err != nil {
 		return err
 	}
