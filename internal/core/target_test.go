@@ -17,7 +17,7 @@ func TestCollectFeatures(t *testing.T) {
 
 		err := target.collectFeatures()
 		assert.NoError(t, err)
-		assert.Equal(t, []string{"Features:", "fpu", "asimd", "sve"}, target.features)
+		assert.Equal(t, []string{"fpu", "asimd", "sve"}, target.features)
 	})
 
 	t.Run("collect features with malformed output", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestMakeTarget(t *testing.T) {
 
 		target := MakeTarget("device3", mockExec)
 		assert.NoError(t, target.connectionError)
-		assert.Equal(t, []string{"Features:", "fpu", "asimd"}, target.features)
+		assert.Equal(t, []string{"fpu", "asimd"}, target.features)
 	})
 
 	t.Run("make target fails connection", func(t *testing.T) {

@@ -39,6 +39,10 @@ func (t *Target) collectFeatures() error {
 		return err
 	}
 	t.features = strings.Fields(out)
+
+	if len(t.features) > 0 && t.features[0] == "Features:" {
+		t.features = t.features[1:]
+	}
 	return nil
 }
 
