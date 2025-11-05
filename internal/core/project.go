@@ -54,7 +54,7 @@ func GetProject(targetProjectFile string) error {
 	return nil
 }
 
-// RunAddService inserts a template-based service.
+// RunAddService inserts a service based on a Service Template.
 func RunAddService(targetProjectFile, templateId, newServiceName string, cloner CloneFunc, getTemplate GetTemplateFn) error {
 	project, err := ReadProject(targetProjectFile)
 	if err != nil {
@@ -73,7 +73,7 @@ func RunAddService(targetProjectFile, templateId, newServiceName string, cloner 
 	}
 
 	if err := cloner(serviceTemplateRepo.Url, destDir); err != nil {
-		return fmt.Errorf("failed to clone template: %w", err)
+		return fmt.Errorf("failed to clone Service Template: %w", err)
 	}
 
 	serviceManifest, err := template.ParseServiceDefinition(destDir)

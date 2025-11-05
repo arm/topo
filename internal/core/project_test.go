@@ -47,7 +47,7 @@ func TestAddService(t *testing.T) {
 			if id == "test-template" {
 				return &template.ServiceTemplateRepo{Id: "test-template", Url: "https://github.com/example/test-template.git"}, nil
 			}
-			return nil, fmt.Errorf("template with id %q not found", id)
+			return nil, fmt.Errorf("Service Template with id %q not found", id)
 		}
 
 		dir := t.TempDir()

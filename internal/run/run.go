@@ -25,8 +25,8 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	}
 
 	listCmd := &cobra.Command{
-		Use:   "list-templates",
-		Short: "List available templates",
+		Use:   "list-service-templates",
+		Short: "List available Service Templates",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return template.List()
 		},
@@ -69,17 +69,17 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	addTargetFlag(initCmd, &target)
 
 	addCmd := &cobra.Command{
-		Use:   "add-service <compose-filepath> <template-id> [service-name]",
-		Short: "Add a service to the compose file",
+		Use:   "add-service <compose-filepath> <service-template-id> [service-name]",
+		Short: "Add a service from a Service Template to the compose file",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			composeFilePath := args[0]
-			templateID := args[1]
-			serviceName := templateID
+			serviceTemplateID := args[1]
+			serviceName := serviceTemplateID
 			if len(args) == 3 {
 				serviceName = args[2]
 			}
-			return core.RunAddService(composeFilePath, templateID, serviceName, core.CloneProject, template.GetTemplate)
+			return core.RunAddService(composeFilePath, serviceTemplateID, serviceName, core.CloneProject, template.GetTemplate)
 		},
 	}
 

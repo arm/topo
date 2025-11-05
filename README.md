@@ -15,11 +15,11 @@ go build ./cmd/topo
 ## Usage
 
 ```sh
-# Show supported templates
-./topo list-templates
+# List supported Service Templates
+./topo list-service-templates
 
-# Add a service to the compose file
-./topo add-service <compose-filepath> <template-id> [<service-name>]
+# Add a service based on a Service Template to the compose file
+./topo add-service <compose-filepath> <service-template-id> [<service-name>]
 
 # Remove a service from the compose file
 ./topo remove-service <compose-filepath> <service-name>
@@ -43,8 +43,8 @@ go build ./cmd/topo
 ./topo check-health [--target <ssh-target>]
 ```
 * `compose-filepath` is a path to the `compose.yaml` file
-* `template-id` is the id of the template to add.
-* `service-name` is the name of the new service to be added (equal to `template-id` by default) or removed.
+* `service-template-id` is the id of the Service Template to add.
+* `service-name` is the name of the new service to be added (equal to `service-template-id` by default) or removed.
 * `--target` is the SSH destination. It might be a config host alias (as defined in your ~/.ssh/config) or an SSH destination (`user@host`). If not specified it uses the `TOPO_TARGET` environment variable.
 
 ### How to deploy

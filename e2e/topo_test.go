@@ -23,7 +23,7 @@ func buildBinary(t *testing.T) string {
 func TestListTemplates(t *testing.T) {
 	bin := buildBinary(t)
 
-	cmd := exec.Command(bin, "list-templates")
+	cmd := exec.Command(bin, "list-service-templates")
 	out, err := cmd.CombinedOutput()
 
 	require.NoError(t, err)

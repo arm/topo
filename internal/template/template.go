@@ -43,7 +43,7 @@ func GetTemplate(id string) (*ServiceTemplateRepo, error) {
 			return &templates[i], nil
 		}
 	}
-	return nil, fmt.Errorf("template with id %q not found", id)
+	return nil, fmt.Errorf("Service Template with id %q not found", id)
 }
 
 func List() error {
