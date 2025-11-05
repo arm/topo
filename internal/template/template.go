@@ -14,6 +14,7 @@ import (
 type ServiceTemplateRepo struct {
 	Id  string `json:"id"`
 	Url string `json:"url"`
+	Ref string `json:"ref,omitempty"`
 }
 
 type ServiceTemplateManifest struct {

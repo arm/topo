@@ -9,6 +9,7 @@
   },
   {
     "id": "cortexa-welcome",
-    "url": "git@github.com:Arm-Debug/topo-cortexa-welcome.git"
+    "url": "git@github.com:Arm-Debug/topo-cortexa-welcome.git",
+    "ref": "main"
   }
 ]
