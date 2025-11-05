@@ -18,12 +18,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type CloneFunc func(url, dest string) error
+type CloneFunc func(url, dest, ref string) error
 type GetTemplateFn func(id string) (*template.ServiceTemplateRepo, error)
 
 // Expose core.cloneProject via a wrapper because it is unexported.
-func CloneProject(url, dest string) error {
-	cmd := exec.Command("git", "clone", "--depth", "1", url, dest)
+func CloneProject(url, dest, ref string) error {
+	args := []string{"clone", "--depth", "1"}
+	if ref != "" {
+		args = append(args, "--branch", ref)
+	}
+	args = append(args, url, dest)
+	cmd := exec.Command("git", args...)
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -72,7 +77,7 @@ func RunAddService(targetProjectFile, templateId, newServiceName string, cloner 
 		return fmt.Errorf("directory %s already exists; please choose a different service name or remove the existing directory", destDir)
 	}
 
-	if err := cloner(serviceTemplateRepo.Url, destDir); err != nil {
+	if err := cloner(serviceTemplateRepo.Url, destDir, serviceTemplateRepo.Ref); err != nil {
 		return fmt.Errorf("failed to clone Service Template: %w", err)
 	}
 

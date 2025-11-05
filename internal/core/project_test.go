@@ -53,9 +53,9 @@ func TestAddService(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		var calls []struct{ URL, Dest string }
-		mockCloner := func(url, dest string) error {
-			calls = append(calls, struct{ URL, Dest string }{url, dest})
+		var calls []struct{ URL, Dest, Ref string }
+		mockCloner := func(url, dest, ref string) error {
+			calls = append(calls, struct{ URL, Dest, Ref string }{url, dest, ref})
 			if err := os.MkdirAll(dest, 0755); err != nil {
 				return err
 			}
@@ -89,7 +89,7 @@ description: "Test service"
 		conflictDir := filepath.Join(dir, "test")
 		require.NoError(t, os.MkdirAll(conflictDir, 0755), "failed to create conflict directory")
 
-		mockCloner := func(url, dest string) error {
+		mockCloner := func(url, dest, ref string) error {
 			t.Fatal("cloner should not be called when directory exists")
 			return nil
 		}
@@ -108,7 +108,7 @@ description: "Test service"
 			return &template.ServiceTemplateRepo{Id: id, Url: "https://example.com/template.git"}, nil
 		}
 
-		mockCloner := func(url, dest string) error {
+		mockCloner := func(url, dest, ref string) error {
 			if err := os.MkdirAll(dest, 0755); err != nil {
 				return err
 			}
