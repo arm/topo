@@ -98,7 +98,7 @@ func RenderReportAsPlainText(report Report) (string, error) {
 }
 
 func CheckHealth(sshTarget string) error {
-	dependencyStatuses := dependencies.Check()
+	dependencyStatuses := dependencies.Check(dependencies.RequiredDependencies, dependencies.BinaryExistsLocally)
 
 	target := MakeTarget(sshTarget, ExecSSH)
 	report := GenerateReport(dependencyStatuses, target)

@@ -6,6 +6,41 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCheck(t *testing.T) {
+	mockDependencies := []Dependency{
+		{Name: "foo", Category: "bar"},
+		{Name: "baz", Category: "qux"},
+	}
+
+	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
+		mockBinaryExists := func(bin string) bool {
+			return false
+		}
+
+		got := Check(mockDependencies, mockBinaryExists)
+
+		want := []Status{
+			{Dependency{Name: "foo", Category: "bar"}, false},
+			{Dependency{Name: "baz", Category: "qux"}, false},
+		}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("when a dependency is found, its status entry reflects that", func(t *testing.T) {
+		mockBinaryExists := func(bin string) bool {
+			return bin == "baz"
+		}
+
+		got := Check(mockDependencies, mockBinaryExists)
+
+		want := []Status{
+			{Dependency{Name: "foo", Category: "bar"}, false},
+			{Dependency{Name: "baz", Category: "qux"}, true},
+		}
+		assert.Equal(t, want, got)
+	})
+}
+
 func TestCollectAvailableByCategory(t *testing.T) {
 	t.Run("when a tool is installed, it is included in its category", func(t *testing.T) {
 		installedDependency := Dependency{Name: "foo", Category: "bar"}

@@ -2,7 +2,7 @@ package dependencies
 
 import "os/exec"
 
-var requiredDependencies = []Dependency{
+var RequiredDependencies = []Dependency{
 	{Name: "ssh", Category: "SSH"},
 	{Name: "docker", Category: "Container Engine"},
 	{Name: "podman", Category: "Container Engine"},
@@ -18,10 +18,12 @@ type Status struct {
 	Installed  bool
 }
 
-func Check() []Status {
-	res := make([]Status, len(requiredDependencies))
+type LookPath = func(bin string) bool
 
-	for i, dep := range requiredDependencies {
+func Check(dependencies []Dependency, binaryExists LookPath) []Status {
+	res := make([]Status, len(dependencies))
+
+	for i, dep := range dependencies {
 		res[i] = Status{
 			Dependency: dep,
 			Installed:  binaryExists(dep.Name),
@@ -31,7 +33,7 @@ func Check() []Status {
 	return res
 }
 
-func binaryExists(bin string) bool {
+func BinaryExistsLocally(bin string) bool {
 	_, err := exec.LookPath(bin)
 	return err == nil
 }
