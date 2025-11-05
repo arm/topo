@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/arm-debug/topo-cli/internal/version"
 	"github.com/spf13/cobra"
@@ -68,20 +69,45 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 	}
 	addTargetFlag(initCmd, &target)
 
+	var gitRef string
+
 	addCmd := &cobra.Command{
-		Use:   "add-service <compose-filepath> <service-template-id> [service-name]",
-		Short: "Add a service from a Service Template to the compose file",
-		Args:  cobra.RangeArgs(2, 3),
+		Use:   "add-service <compose-filepath> <service-name> <source>",
+		Short: "Add a service to the compose file from a template ID or git URL",
+		Long: `Add a service to the compose file.
+
+The source argument uses scheme prefixes to specify the source type:
+
+Template ID (from built-in templates):
+  topo add-service compose.yaml my-service template:hello-world
+
+Git repository:
+  topo add-service compose.yaml my-service git:git@github.com:user/repo.git
+  topo add-service compose.yaml my-service git:https://github.com/user/repo.git --ref develop
+
+Use list-service-templates to see available built-in templates.`,
+		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			composeFilePath := args[0]
-			serviceTemplateID := args[1]
-			serviceName := serviceTemplateID
-			if len(args) == 3 {
-				serviceName = args[2]
+			serviceName := args[1]
+			sourceArg := args[2]
+
+			sourceType, sourceValue, err := source.Parse(sourceArg)
+			if err != nil {
+				return err
 			}
-			return core.RunAddService(composeFilePath, serviceTemplateID, serviceName, core.CloneProject, template.GetTemplate)
+
+			switch sourceType {
+			case "template":
+				return core.RunAddServiceByTemplateId(composeFilePath, sourceValue, serviceName, core.CloneProject, template.GetTemplate)
+			case "git":
+				return core.RunAddService(composeFilePath, sourceValue, gitRef, serviceName, core.CloneProject)
+			default:
+				return fmt.Errorf("unsupported source type: %s (supported: template:, git:)", sourceType)
+			}
 		},
 	}
+	addCmd.Flags().StringVar(&gitRef, "ref", "", "Git branch or ref to checkout (use with git: sources)")
 
 	removeCmd := &cobra.Command{
 		Use:   "remove-service <compose-filepath> <service-name>",

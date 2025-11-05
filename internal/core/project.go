@@ -59,16 +59,10 @@ func GetProject(targetProjectFile string) error {
 	return nil
 }
 
-// RunAddService inserts a service based on a Service Template.
-func RunAddService(targetProjectFile, templateId, newServiceName string, cloner CloneFunc, getTemplate GetTemplateFn) error {
+func RunAddService(targetProjectFile, gitURL, gitRef, newServiceName string, cloner CloneFunc) error {
 	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
-	}
-
-	serviceTemplateRepo, err := getTemplate(templateId)
-	if err != nil {
-		return err
 	}
 
 	destDir := filepath.Join(filepath.Dir(targetProjectFile), newServiceName)
@@ -77,13 +71,13 @@ func RunAddService(targetProjectFile, templateId, newServiceName string, cloner 
 		return fmt.Errorf("directory %s already exists; please choose a different service name or remove the existing directory", destDir)
 	}
 
-	if err := cloner(serviceTemplateRepo.Url, destDir, serviceTemplateRepo.Ref); err != nil {
+	if err := cloner(gitURL, destDir, gitRef); err != nil {
 		return fmt.Errorf("failed to clone Service Template: %w", err)
 	}
 
 	serviceManifest, err := template.ParseServiceDefinition(destDir)
 	if err != nil {
-		return fmt.Errorf("failed to load topo service from repo %s: %w", serviceTemplateRepo.Url, err)
+		return fmt.Errorf("failed to load topo service from repo %s: %w", gitURL, err)
 	}
 
 	newSvc, err := compose.ParseServiceFromTopo(newServiceName, &serviceManifest)
@@ -108,6 +102,14 @@ func RunAddService(targetProjectFile, templateId, newServiceName string, cloner 
 		return fmt.Errorf("failed to write compose file %s %w", targetProjectFile, err)
 	}
 	return nil
+}
+
+func RunAddServiceByTemplateId(targetProjectFile, templateId, newServiceName string, cloner CloneFunc, getTemplate GetTemplateFn) error {
+	serviceTemplateRepo, err := getTemplate(templateId)
+	if err != nil {
+		return err
+	}
+	return RunAddService(targetProjectFile, serviceTemplateRepo.Url, serviceTemplateRepo.Ref, newServiceName, cloner)
 }
 
 // RunRemoveService deletes a service entry.

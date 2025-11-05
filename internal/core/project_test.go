@@ -41,21 +41,16 @@ func TestRunInitProject(t *testing.T) {
 	})
 }
 
-func TestAddService(t *testing.T) {
-	t.Run("simple", func(t *testing.T) {
-		mockGetTemplate := func(id string) (*template.ServiceTemplateRepo, error) {
-			if id == "test-template" {
-				return &template.ServiceTemplateRepo{Id: "test-template", Url: "https://github.com/example/test-template.git"}, nil
-			}
-			return nil, fmt.Errorf("Service Template with id %q not found", id)
-		}
+func TestRunAddService(t *testing.T) {
+	type cloneCall struct{ URL, Dest, Ref string }
 
+	t.Run("adds service from git URL", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		var calls []struct{ URL, Dest, Ref string }
+		var calls []cloneCall
 		mockCloner := func(url, dest, ref string) error {
-			calls = append(calls, struct{ URL, Dest, Ref string }{url, dest, ref})
+			calls = append(calls, cloneCall{url, dest, ref})
 			if err := os.MkdirAll(dest, 0755); err != nil {
 				return err
 			}
@@ -66,9 +61,14 @@ description: "Test service"
 			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
 		}
 
-		require.NoError(t, RunAddService(targetProjectFile, "test-template", "test", mockCloner, mockGetTemplate))
+		gitURL := "https://github.com/example/test-template.git"
+		gitRef := "main"
+
+		require.NoError(t, RunAddService(targetProjectFile, gitURL, gitRef, "test", mockCloner))
+
 		require.Len(t, calls, 1, "expected 1 clone call")
-		assert.Equal(t, "https://github.com/example/test-template.git", calls[0].URL)
+		wantCall := cloneCall{gitURL, filepath.Join(dir, "test"), gitRef}
+		assert.Equal(t, wantCall, calls[0])
 
 		data, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err, "failed to read compose file")
@@ -82,10 +82,6 @@ description: "Test service"
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		mockFinder := func(id string) (*template.ServiceTemplateRepo, error) {
-			return &template.ServiceTemplateRepo{Id: id, Url: "https://github.com/example/test-template.git"}, nil
-		}
-
 		conflictDir := filepath.Join(dir, "test")
 		require.NoError(t, os.MkdirAll(conflictDir, 0755), "failed to create conflict directory")
 
@@ -94,7 +90,7 @@ description: "Test service"
 			return nil
 		}
 
-		err := RunAddService(targetProjectFile, "test-template", "test", mockCloner, mockFinder)
+		err := RunAddService(targetProjectFile, "https://github.com/example/test-template.git", "main", "test", mockCloner)
 
 		require.Error(t, err, "expected error when directory exists")
 		assert.Contains(t, err.Error(), "already exists")
@@ -103,10 +99,6 @@ description: "Test service"
 	t.Run("registers named volumes but passes through all volume types", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
-
-		mockFinder := func(id string) (*template.ServiceTemplateRepo, error) {
-			return &template.ServiceTemplateRepo{Id: id, Url: "https://example.com/template.git"}, nil
-		}
 
 		mockCloner := func(url, dest, ref string) error {
 			if err := os.MkdirAll(dest, 0755); err != nil {
@@ -121,14 +113,14 @@ service:
 			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
 		}
 
-		require.NoError(t, RunAddService(targetProjectFile, "test-template", "test", mockCloner, mockFinder))
+		require.NoError(t, RunAddService(targetProjectFile, "https://example.com/template.git", "", "test", mockCloner))
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
 
 		want := `
 name: example-project
-services: 
+services:
   test:
     build:
       context: ./test
@@ -146,6 +138,69 @@ volumes:
   data: {}
 `
 		assert.YAMLEq(t, want, string(got))
+	})
+}
+
+func TestRunAddServiceByTemplateId(t *testing.T) {
+	type cloneCall struct{ URL, Dest, Ref string }
+
+	t.Run("looks up template and delegates to RunAddService", func(t *testing.T) {
+		dir := t.TempDir()
+		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
+
+		mockGetTemplate := func(id string) (*template.ServiceTemplateRepo, error) {
+			if id == "test-template" {
+				return &template.ServiceTemplateRepo{
+					Id:  "test-template",
+					Url: "https://github.com/example/test-template.git",
+					Ref: "v1.0",
+				}, nil
+			}
+			return nil, fmt.Errorf("service template with id %q not found", id)
+		}
+
+		var calls []cloneCall
+		mockCloner := func(url, dest, ref string) error {
+			calls = append(calls, cloneCall{url, dest, ref})
+			if err := os.MkdirAll(dest, 0755); err != nil {
+				return err
+			}
+			topoService := `
+name: "test-service"
+description: "Test service"
+`
+			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
+		}
+
+		require.NoError(t, RunAddServiceByTemplateId(targetProjectFile, "test-template", "my-service", mockCloner, mockGetTemplate))
+		require.Len(t, calls, 1, "expected 1 clone call")
+		wantCall := cloneCall{"https://github.com/example/test-template.git", filepath.Join(dir, "my-service"), "v1.0"}
+		assert.Equal(t, wantCall, calls[0])
+
+		data, err := os.ReadFile(targetProjectFile)
+		require.NoError(t, err, "failed to read compose file")
+		var project types.Project
+		require.NoError(t, yaml.Unmarshal(data, &project))
+		assert.Contains(t, project.Services, "my-service")
+	})
+
+	t.Run("returns error when template not found", func(t *testing.T) {
+		dir := t.TempDir()
+		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
+
+		mockGetTemplate := func(id string) (*template.ServiceTemplateRepo, error) {
+			return nil, fmt.Errorf("service template with id %q not found", id)
+		}
+
+		mockCloner := func(url, dest, ref string) error {
+			t.Fatal("cloner should not be called when service template lookup fails")
+			return nil
+		}
+
+		err := RunAddServiceByTemplateId(targetProjectFile, "non-existent", "test", mockCloner, mockGetTemplate)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
 	})
 }
 

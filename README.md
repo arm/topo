@@ -19,7 +19,13 @@ go build ./cmd/topo
 ./topo list-service-templates
 
 # Add a service based on a Service Template to the compose file
-./topo add-service <compose-filepath> <service-template-id> [<service-name>]
+./topo add-service <compose-filepath> <service-name> <source>
+# Examples:
+#   Using a built-in template:
+./topo add-service compose.yaml my-service template:hello-world
+#   Using a git repository:
+./topo add-service compose.yaml my-service git:https://github.com/user/repo.git
+./topo add-service compose.yaml my-service git:git@github.com:user/repo.git --ref develop
 
 # Remove a service from the compose file
 ./topo remove-service <compose-filepath> <service-name>
@@ -43,8 +49,10 @@ go build ./cmd/topo
 ./topo check-health [--target <ssh-target>]
 ```
 * `compose-filepath` is a path to the `compose.yaml` file
-* `service-template-id` is the id of the Service Template to add.
-* `service-name` is the name of the new service to be added (equal to `service-template-id` by default) or removed.
+* `service-name` is the name of the new service to be added or removed.
+* `source` is the service source with a scheme prefix:
+  * `template:<template-id>` - Use a built-in Service Template (see `list-service-templates`)
+  * `git:<git-url>` - Clone a git repository as a service template (supports `--ref` flag for branches/tags)
 * `--target` is the SSH destination. It might be a config host alias (as defined in your ~/.ssh/config) or an SSH destination (`user@host`). If not specified it uses the `TOPO_TARGET` environment variable.
 
 ### How to deploy
