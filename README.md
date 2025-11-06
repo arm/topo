@@ -19,7 +19,7 @@ go build ./cmd/topo
 ./topo list-service-templates
 
 # Add a service based on a Service Template to the compose file
-./topo add-service <compose-filepath> <service-name> <source>
+./topo add-service <compose-filepath> <service-name> <source> [--ref <git-ref>]
 # Examples:
 #   Using a built-in template:
 ./topo add-service compose.yaml my-service template:hello-world
@@ -54,6 +54,7 @@ go build ./cmd/topo
   * `template:<template-id>` - Use a built-in Service Template (see `list-service-templates`)
   * `git:<git-url>` - Clone a git repository as a service template (supports `--ref` flag for branches/tags)
 * `--target` is the SSH destination. It might be a config host alias (as defined in your ~/.ssh/config) or an SSH destination (`user@host`). If not specified it uses the `TOPO_TARGET` environment variable.
+* `--ref` is a valid git branch or tag.
 
 ### How to deploy
 ```bash
