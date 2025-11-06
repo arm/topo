@@ -42,7 +42,7 @@ func ensureContextExists(contextName, sshTarget string) error {
 	if exists {
 		return nil
 	}
-	return createContext(sshTarget, contextName)
+	return createContext(contextName, sshTarget)
 }
 
 func contextExists(contextName string) (bool, error) {
@@ -62,7 +62,7 @@ func contextExists(contextName string) (bool, error) {
 	return false, nil
 }
 
-func createContext(sshTarget string, contextName string) error {
+func createContext(contextName, sshTarget string) error {
 	host := fmt.Sprintf("ssh://%s", sshTarget)
 	create := ExecCommand("docker", "context", "create", contextName, "--docker", fmt.Sprintf("host=%s", host))
 	var stderr bytes.Buffer
