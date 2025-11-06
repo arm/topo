@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          go test ./... -covermode=atomic -coverprofile=coverage.out
+          go test ./... -v -covermode=atomic -coverprofile=coverage.out
 
       - name: Install Qlty Cloud
         uses: qltysh/qlty-action/install@v2.2.0
