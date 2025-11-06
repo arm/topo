@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -32,45 +31,6 @@ type DockerPsItemWithRuntime struct {
 	DockerPsItem
 	Runtime string `json:"Runtime"`
 	Ports   []int  `json:"HostPorts"`
-}
-
-// BuildComposeFile builds images for compose project.
-func BuildComposeFile(composePath string) error {
-	cmd := ExecCommand("docker", "--context", "default", "compose", "-f", composePath, "build")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Stdout = os.Stdout
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to build compose file: %s", stderr.String())
-	}
-	return nil
-}
-
-// FlashDockerFile saves image locally and loads on remote board context.
-func FlashDockerFile(serviceName string) error {
-	saveCmd := ExecCommand("docker", "--context", "default", "save", serviceName)
-	sshCmd := ExecCommand("docker", "--context", DefaultDockerContext, "load")
-	saveOut, err := saveCmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("failed to get stdout pipe for docker save: %w", err)
-	}
-	sshCmd.Stdin = saveOut
-	var saveStderr, sshStderr bytes.Buffer
-	saveCmd.Stderr = &saveStderr
-	sshCmd.Stderr = &sshStderr
-	if err := saveCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start docker save: %s", saveStderr.String())
-	}
-	if err := sshCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start ssh docker-load: %s", sshStderr.String())
-	}
-	if err := saveCmd.Wait(); err != nil {
-		return fmt.Errorf("docker save failed: %s", saveStderr.String())
-	}
-	if err := sshCmd.Wait(); err != nil {
-		return fmt.Errorf("ssh docker-load failed: %s", sshStderr.String())
-	}
-	return nil
 }
 
 // ensureContextExists creates a docker context if absent.
@@ -109,18 +69,6 @@ func createContext(sshTarget string, contextName string) error {
 	create.Stderr = &stderr
 	if err := create.Run(); err != nil {
 		return fmt.Errorf("failed to create docker context: %s", stderr.String())
-	}
-	return nil
-}
-
-// RunDockerComposeUp runs docker compose up -d --no-build with given context.
-func RunDockerComposeUp(contextName, composePath string) error {
-	cmd := ExecCommand("docker", "--context", contextName, "compose", "-f", composePath, "up", "-d", "--no-build")
-	var out, stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run docker compose up: %s", stderr.String())
 	}
 	return nil
 }
