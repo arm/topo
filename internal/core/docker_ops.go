@@ -174,8 +174,8 @@ func FilterNonEmpty(ss []string) []string {
 	return ret
 }
 
-// GetContainersInfo prints container info to stdout.
-func GetContainersInfo(sshTarget string) error {
+// PrintContainersInfo prints container info to stdout.
+func PrintContainersInfo(sshTarget string) error {
 	items, err := ReadContainersInfo(sshTarget)
 	if err != nil {
 		return fmt.Errorf("failed to read containers info: %w", err)

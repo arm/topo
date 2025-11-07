@@ -144,7 +144,7 @@ Use list-service-templates to see available built-in templates.`,
 			if err != nil {
 				return err
 			}
-			return core.GetContainersInfo(resolved)
+			return core.PrintContainersInfo(resolved)
 		},
 	}
 	addTargetFlag(getContCmd, &target)
