@@ -21,7 +21,6 @@ import (
 type CloneFunc func(url, dest, ref string) error
 type GetTemplateFn func(id string) (*template.ServiceTemplateRepo, error)
 
-// Expose core.cloneProject via a wrapper because it is unexported.
 func CloneProject(url, dest, ref string) error {
 	args := []string{"clone", "--depth", "1"}
 	if ref != "" {
