@@ -4,6 +4,11 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"os/exec"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 const TestSshTarget = "test-target"
@@ -19,4 +24,26 @@ func CaptureOutput(f func()) string {
 	_, _ = io.Copy(&buf, r)
 	os.Stdout = old
 	return buf.String()
+}
+
+func RequireDocker(t testing.TB) {
+	t.Helper()
+	if _, err := exec.LookPath("docker"); err != nil {
+		t.Skip("Docker not found. Install Docker: https://docs.docker.com/desktop/")
+	}
+}
+
+func RequireWriteFile(t testing.TB, path, content string) {
+	t.Helper()
+	err := os.WriteFile(path, []byte(content), 0o644)
+	require.NoError(t, err)
+}
+
+func SanitiseTestName(t testing.TB) string {
+	name := strings.ToLower(t.Name())
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, " ", "-")
+	name = strings.ReplaceAll(name, "_", "-")
+	name = strings.ReplaceAll(name, ",", "")
+	return name
 }
