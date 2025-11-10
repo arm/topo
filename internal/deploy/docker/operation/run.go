@@ -24,7 +24,12 @@ func NewRun(cmdOutput io.Writer, composeFile string, h host.Host) *Run {
 }
 
 func (r *Run) buildCommand() *exec.Cmd {
-	return command.DockerCompose(r.host, r.composeFile, "up", "-d", "--no-build")
+	return command.DockerCompose(r.host, r.composeFile,
+		"up",
+		"-d",
+		"--no-build",
+		"--pull", "never",
+	)
 }
 
 func (r *Run) Run() error {

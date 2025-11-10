@@ -19,16 +19,16 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run", func(t *testing.T) {
 		t.Run("starts services from compose file", func(t *testing.T) {
+			imageName := testutil.TestImageName(t)
+			testutil.BuildMinimalImage(t, host.Local, imageName)
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			composeFileContent := fmt.Sprintf(`
 name: %s
 services:
-  alpine:
-    image: alpine:latest
-    command: tail -f /dev/null
-    restart: unless-stopped
-`, testutil.TestProjectName(t))
+  a-service:
+    image: %s
+`, testutil.TestProjectName(t), imageName)
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
 			run := operation.NewRun(os.Stdout, composeFilePath, host.Local)
@@ -51,7 +51,7 @@ services:
 
 			require.NoError(t, err)
 			got := buf.String()
-			want := fmt.Sprintf("docker compose -f %s up -d --no-build\n", composeFilePath)
+			want := fmt.Sprintf("docker compose -f %s up -d --no-build --pull never\n", composeFilePath)
 			assert.Equal(t, want, got)
 		})
 	})

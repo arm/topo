@@ -67,7 +67,7 @@ services:
 docker compose -f %[1]s pull
 docker save alpine:latest | docker -H ssh://user@remote load
 docker save nginx:latest | docker -H ssh://user@remote load
-docker -H ssh://user@remote compose -f %[1]s up -d --no-build
+docker -H ssh://user@remote compose -f %[1]s up -d --no-build --pull never
 `, composeFilePath)
 		assert.Equal(t, want, got)
 	})

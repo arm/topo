@@ -34,6 +34,26 @@ func RequireImageExists(t *testing.T, h host.Host, imageName string) {
 	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, command.String(inspectCmd), string(output))
 }
 
+func BuildMinimalImage(t *testing.T, h host.Host, imageName string) {
+	t.Helper()
+	dockerfileContent := `
+FROM alpine:latest
+CMD ["tail", "-f", "/dev/null"]
+`
+	buildCmd := command.Docker(h, "build", "-t", imageName, "-")
+	buildCmd.Stdin = bytes.NewBufferString(dockerfileContent)
+	output, err := buildCmd.CombinedOutput()
+	require.NoError(t, err, "failed to build image %s: %s output: %s", imageName, command.String(buildCmd), string(output))
+
+	RequireImageExists(t, h, imageName)
+	t.Cleanup(func() {
+		removeCmd := command.Docker(h, "image", "rm", "-f", imageName)
+		if err := removeCmd.Run(); err != nil {
+			t.Logf("failed to remove image %s: %v", imageName, err)
+		}
+	})
+}
+
 func ForceComposeDown(t *testing.T, composeFilePath string) {
 	t.Helper()
 	err := exec.Command("docker", "compose", "-f", composeFilePath, "down", "-v").Run()
