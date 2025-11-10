@@ -68,7 +68,7 @@ services:
     image: nginx:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, host.NewSSH("ssh://user@remote"))
+			transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, host.New("ssh://user@remote"))
 
 			err := transfer.DryRun(&buf)
 

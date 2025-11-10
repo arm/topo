@@ -36,7 +36,7 @@ services:
 			err := run.Run()
 
 			require.NoError(t, err)
-			testutil.AssertContainersRunning(t, composeFilePath)
+			testutil.AssertContainersRunning(t, host.Local, composeFilePath)
 		})
 	})
 
