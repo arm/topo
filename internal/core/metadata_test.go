@@ -1,28 +1,33 @@
 package core
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetProject(t *testing.T) {
-	dir := t.TempDir()
+func TestPrintProject(t *testing.T) {
 	compose := `name: demo
 services: {}`
-	composePath := filepath.Join(dir, DefaultComposeFileName)
+	composePath := filepath.Join(t.TempDir(), DefaultComposeFileName)
 	require.NoError(t, os.WriteFile(composePath, []byte(compose), 0644))
-	out := testutil.CaptureOutput(func() { GetProject(composePath) })
-	assert.Contains(t, out, "\"name\": \"demo\"")
+	var buf bytes.Buffer
+
+	err := PrintProject(&buf, composePath)
+
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), `"name": "demo"`)
 }
 
-func TestGetConfigMetadata(t *testing.T) {
-	out := testutil.CaptureOutput(func() {
-		require.NoError(t, GetConfigMetadata())
-	})
-	assert.Contains(t, out, "boards")
+func TestPrintConfigMetadata(t *testing.T) {
+	var buf bytes.Buffer
+
+	err := PrintConfigMetadata(&buf)
+
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), `boards`)
 }
