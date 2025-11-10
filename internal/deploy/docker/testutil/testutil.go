@@ -17,6 +17,7 @@ var (
 	RequireDocker    = gtestutil.RequireDocker
 	RequireWriteFile = gtestutil.RequireWriteFile
 	SanitiseTestName = gtestutil.SanitiseTestName
+	StartDockerVM    = gtestutil.StartDockerVM
 )
 
 func TestImageName(t *testing.T) string {
@@ -62,10 +63,10 @@ func ForceComposeDown(t *testing.T, composeFilePath string) {
 	}
 }
 
-func AssertContainersRunning(t *testing.T, composeFilePath string) {
+func AssertContainersRunning(t *testing.T, h host.Host, composeFilePath string) {
 	t.Helper()
-	cmd := exec.Command("docker", "compose", "-f", composeFilePath, "ps", "--format", "json")
-	output, err := cmd.CombinedOutput()
+	dockerCmd := command.DockerCompose(h, composeFilePath, "ps", "--format", "json")
+	output, err := dockerCmd.CombinedOutput()
 	require.NoError(t, err, string(output))
 
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers running")

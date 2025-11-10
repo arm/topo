@@ -10,7 +10,7 @@ import (
 
 func TestString(t *testing.T) {
 	t.Run("converts docker command to string", func(t *testing.T) {
-		h := host.NewSSH("ssh://user@remote")
+		h := host.New("ssh://user@remote")
 		cmd := command.Docker(h, "save", "alpine:latest")
 
 		got := command.String(cmd)
@@ -20,7 +20,7 @@ func TestString(t *testing.T) {
 	})
 
 	t.Run("converts docker compose command to string", func(t *testing.T) {
-		h := host.NewSSH("ssh://user@remote")
+		h := host.New("ssh://user@remote")
 		cmd := command.DockerCompose(h, "/path/to/compose.yaml", "up", "-d")
 
 		got := command.String(cmd)

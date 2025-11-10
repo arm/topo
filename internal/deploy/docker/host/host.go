@@ -4,8 +4,8 @@ type Host string
 
 const Local = Host("")
 
-func NewSSH(sshTarget string) Host {
-	return Host(sshTarget)
+func New(targetHost string) Host {
+	return Host(targetHost)
 }
 
 func (h Host) DockerCommandArgs() []string {
