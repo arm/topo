@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/arm-debug/topo-cli/configs"
 )
@@ -33,8 +34,7 @@ func ReadConfigMetadata() (ConfigMetadata, error) {
 	return info, nil
 }
 
-// GetConfigMetadata prints metadata as JSON.
-func GetConfigMetadata() error {
+func PrintConfigMetadata(w io.Writer) error {
 	info, err := ReadConfigMetadata()
 	if err != nil {
 		return err
@@ -43,6 +43,6 @@ func GetConfigMetadata() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal config metadata: %w", err)
 	}
-	fmt.Println(string(data))
+	fmt.Fprintf(w, "%s\n", data)
 	return nil
 }

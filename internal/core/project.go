@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,8 +45,7 @@ func ReadProject(targetProjectFile string) (*types.Project, error) {
 	return cli.ProjectFromOptions(ctx, options)
 }
 
-// GetProject prints the compose project JSON.
-func GetProject(targetProjectFile string) error {
+func PrintProject(w io.Writer, targetProjectFile string) error {
 	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
@@ -54,7 +54,7 @@ func GetProject(targetProjectFile string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal project: %w", err)
 	}
-	fmt.Println(string(data))
+	fmt.Fprintf(w, "%s\n", data)
 	return nil
 }
 

@@ -29,7 +29,7 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 		Use:   "list-service-templates",
 		Short: "List available Service Templates",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return template.List()
+			return template.PrintList(os.Stdout)
 		},
 	}
 
@@ -37,7 +37,7 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 		Use:   "get-config-metadata",
 		Short: "Show config metadata",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return core.GetConfigMetadata()
+			return core.PrintConfigMetadata(os.Stdout)
 		},
 	}
 
@@ -47,7 +47,7 @@ func Execute(args []string, stdout, stderr io.Writer) error {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			composeFilePath := args[0]
-			return core.GetProject(composeFilePath)
+			return core.PrintProject(os.Stdout, composeFilePath)
 		},
 	}
 
@@ -144,7 +144,7 @@ Use list-service-templates to see available built-in templates.`,
 			if err != nil {
 				return err
 			}
-			return core.PrintContainersInfo(resolved)
+			return core.PrintContainersInfo(os.Stdout, resolved)
 		},
 	}
 	addTargetFlag(getContCmd, &target)

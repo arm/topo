@@ -1,25 +1,26 @@
 package template
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestList(t *testing.T) {
-	t.Run("lists templates to stdout", func(t *testing.T) {
-		out := testutil.CaptureOutput(func() {
-			require.NoError(t, List())
-		})
+func TestPrintList(t *testing.T) {
+	t.Run("prints templates as JSON", func(t *testing.T) {
+		var buf bytes.Buffer
 
-		var arr []ServiceTemplateRepo
-		require.NoError(t, json.Unmarshal([]byte(out), &arr))
-		assert.NotEmpty(t, arr)
+		err := PrintList(&buf)
+
+		require.NoError(t, err)
+		var templates []ServiceTemplateRepo
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &templates))
+		assert.NotEmpty(t, templates)
 	})
 }
 

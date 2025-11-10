@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -47,7 +48,7 @@ func GetTemplate(id string) (*ServiceTemplateRepo, error) {
 	return nil, fmt.Errorf("Service Template with id %q not found", id)
 }
 
-func List() error {
+func PrintList(w io.Writer) error {
 	templates, err := loadTemplates()
 	if err != nil {
 		return err
@@ -56,7 +57,7 @@ func List() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal templates: %w", err)
 	}
-	fmt.Println(string(data))
+	fmt.Fprintf(w, "%s\n", data)
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -174,8 +175,7 @@ func FilterNonEmpty(ss []string) []string {
 	return ret
 }
 
-// PrintContainersInfo prints container info to stdout.
-func PrintContainersInfo(sshTarget string) error {
+func PrintContainersInfo(w io.Writer, sshTarget string) error {
 	items, err := ReadContainersInfo(sshTarget)
 	if err != nil {
 		return fmt.Errorf("failed to read containers info: %w", err)
@@ -184,6 +184,6 @@ func PrintContainersInfo(sshTarget string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal containers info: %w", err)
 	}
-	fmt.Println(string(data))
+	fmt.Fprintf(w, "%s\n", data)
 	return nil
 }
