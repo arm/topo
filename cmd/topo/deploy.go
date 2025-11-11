@@ -6,7 +6,7 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/core"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/host"
+	"github.com/arm-debug/topo-cli/internal/deploy/host"
 	"github.com/spf13/cobra"
 )
 

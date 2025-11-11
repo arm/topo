@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/host"
+	"github.com/arm-debug/topo-cli/internal/deploy/host"
 	"golang.org/x/sync/errgroup"
 )
 

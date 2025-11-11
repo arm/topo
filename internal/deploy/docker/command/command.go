@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/host"
+	"github.com/arm-debug/topo-cli/internal/deploy/host"
 )
 
 func Docker(h host.Host, args ...string) *exec.Cmd {

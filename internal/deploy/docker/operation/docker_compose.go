@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/host"
+	"github.com/arm-debug/topo-cli/internal/deploy/host"
 )
 
 type DockerCompose struct {
