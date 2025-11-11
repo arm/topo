@@ -19,10 +19,8 @@ func TestReadContainersInfo_MockExec(t *testing.T) {
 		var out string
 		switch call {
 		case 0:
-			out = testutil.TestSshTarget
-		case 1:
 			out = psOut
-		case 2:
+		case 1:
 			out = inspectOut
 		}
 		call++

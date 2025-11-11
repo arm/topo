@@ -1,8 +1,6 @@
 package core
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,51 +32,9 @@ type DockerPsItemWithRuntime struct {
 	Ports   []int  `json:"HostPorts"`
 }
 
-// ensureContextExists creates a docker context if absent.
-func ensureContextExists(contextName, sshTarget string) error {
-	exists, err := contextExists(contextName)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-	return createContext(contextName, sshTarget)
-}
-
-func contextExists(contextName string) (bool, error) {
-	cmd := ExecCommand("docker", "context", "ls", "--format", "{{.Name}}")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return true, fmt.Errorf("failed to list docker contexts: %s", stderr.String())
-	}
-	scanner := bufio.NewScanner(&stdout)
-	for scanner.Scan() {
-		if scanner.Text() == contextName {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func createContext(contextName, sshTarget string) error {
-	host := fmt.Sprintf("ssh://%s", sshTarget)
-	create := ExecCommand("docker", "context", "create", contextName, "--docker", fmt.Sprintf("host=%s", host))
-	var stderr bytes.Buffer
-	create.Stderr = &stderr
-	if err := create.Run(); err != nil {
-		return fmt.Errorf("failed to create docker context: %s", stderr.String())
-	}
-	return nil
-}
-
 // ReadContainersInfo returns enriched ps output.
 func ReadContainersInfo(sshTarget string) ([]DockerPsItemWithRuntime, error) {
-	dockerContext := getContextName(sshTarget)
-	ensureContextExists(dockerContext, sshTarget)
-	conn := []string{"--context", dockerContext}
+	conn := []string{"-H", fmt.Sprintf("ssh://%s", sshTarget)}
 	cmd := ExecCommand("docker", append(conn, "ps", "-a", "--format", "{{json .}}")...)
 	out, err := cmd.Output()
 	if err != nil {
