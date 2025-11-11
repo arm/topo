@@ -218,13 +218,3 @@ services:
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "removeMe")
 }
-
-func TestGenerateMakefile(t *testing.T) {
-	dir := t.TempDir()
-	targetProjectFile := filepath.Join(dir, "compose.yaml")
-	require.NoError(t, os.WriteFile(targetProjectFile, []byte("name: test"), 0644))
-	require.NoError(t, GenerateMakefile(targetProjectFile, testutil.TestSshTarget))
-	content, err := os.ReadFile(filepath.Join(dir, "Makefile"))
-	require.NoError(t, err)
-	assert.Contains(t, string(content), "COMPOSE_FILE    ?= compose.yaml")
-}

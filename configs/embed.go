@@ -7,6 +7,3 @@ var ServiceTemplatesJSON []byte
 
 //go:embed config-metadata.json
 var ConfigMetadataJSON []byte
-
-//go:embed Makefile-template.mk
-var MakefileTemplate []byte

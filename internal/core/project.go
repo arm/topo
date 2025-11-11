@@ -9,9 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
-	"github.com/arm-debug/topo-cli/configs"
 	"github.com/arm-debug/topo-cli/internal/core/compose"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/cli"
@@ -155,26 +153,5 @@ func RunInitProject(projectDir string, sshTarget string) error {
 	if err := os.WriteFile(composePath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write compose file: %w", err)
 	}
-	return GenerateMakefile(composePath, sshTarget)
-}
-
-// GenerateMakefile materializes a Makefile from template adjusting compose filename & ssh target.
-func GenerateMakefile(composePath string, sshTarget string) error {
-	dockerContext := getContextName(sshTarget)
-	composeFilename := filepath.Base(composePath)
-	dir := filepath.Dir(composePath)
-	template := string(configs.MakefileTemplate)
-	lines := strings.Split(template, "\n")
-	for i, line := range lines {
-		switch {
-		case strings.HasPrefix(line, "COMPOSE_FILE"):
-			lines[i] = fmt.Sprintf("COMPOSE_FILE    ?= %s", composeFilename)
-		case strings.HasPrefix(line, "SSH_TARGET "):
-			lines[i] = fmt.Sprintf("SSH_TARGET      := %s", sshTarget)
-		case strings.HasPrefix(line, "DOCKER_CONTEXT "):
-			lines[i] = fmt.Sprintf("DOCKER_CONTEXT  := %s", dockerContext)
-		}
-	}
-	result := strings.Join(lines, "\n")
-	return os.WriteFile(filepath.Join(dir, "Makefile"), []byte(result), 0644)
+	return nil
 }
