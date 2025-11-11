@@ -39,9 +39,6 @@ go build ./cmd/topo
 # Show the config metadata
 ./topo get-config-metadata
 
-# Generate a Makefile for the project
-./topo generate-makefile <compose-filepath> [--target <ssh-target>]
-
 # Get containers info from the target
 ./topo get-containers-info [--target <ssh-target>]
 
@@ -59,5 +56,5 @@ go build ./cmd/topo
 ### How to deploy
 ```bash
 cd <your project area>
-make
+./topo deploy [--target <ssh-target>]
 ```
