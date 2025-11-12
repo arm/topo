@@ -8,16 +8,23 @@ import (
 )
 
 func Docker(h host.Host, args ...string) *exec.Cmd {
-	cmdArgs := append(h.DockerCommandArgs(), args...)
+	cmdArgs := append(hostToArgs(h), args...)
 	return exec.Command("docker", cmdArgs...)
 }
 
 func DockerCompose(h host.Host, composeFile string, args ...string) *exec.Cmd {
 	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
-	cmdArgs := append(h.DockerCommandArgs(), composeArgs...)
+	cmdArgs := append(hostToArgs(h), composeArgs...)
 	return exec.Command("docker", cmdArgs...)
 }
 
 func String(cmd *exec.Cmd) string {
 	return strings.Join(cmd.Args, " ")
+}
+
+func hostToArgs(h host.Host) []string {
+	if h == "" {
+		return nil
+	}
+	return []string{"-H", string(h)}
 }
