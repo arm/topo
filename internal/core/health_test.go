@@ -45,7 +45,7 @@ func TestGenerateReport(t *testing.T) {
 			Healthy: true,
 			Value:   "foo, bar",
 		}
-		assert.Contains(t, got.HostDependencies, want)
+		assert.Contains(t, got.Host.Dependencies, want)
 	})
 
 	t.Run("when a dependency is not installed, the health check is unhealthy", func(t *testing.T) {
@@ -58,9 +58,9 @@ func TestGenerateReport(t *testing.T) {
 
 		got := GenerateReport(dependencyStatuses, Target{})
 
-		assert.Len(t, got.HostDependencies, 1)
-		assert.Equal(t, "Rube Golberg", got.HostDependencies[0].Name)
-		assert.False(t, got.HostDependencies[0].Healthy)
+		assert.Len(t, got.Host.Dependencies, 1)
+		assert.Equal(t, "Rube Golberg", got.Host.Dependencies[0].Name)
+		assert.False(t, got.Host.Dependencies[0].Healthy)
 	})
 
 	t.Run("when the target has a connection error, Connectivity is unhealthy", func(t *testing.T) {
@@ -68,7 +68,7 @@ func TestGenerateReport(t *testing.T) {
 
 		got := GenerateReport(nil, unconnectedTarget)
 
-		assert.False(t, got.Connectivity.Healthy)
+		assert.False(t, got.Target.Connectivity.Healthy)
 	})
 
 	t.Run("when the target has no connection error, the Connectivity is healthy", func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestGenerateReport(t *testing.T) {
 
 		got := GenerateReport(nil, connectedTarget)
 
-		assert.True(t, got.Connectivity.Healthy)
+		assert.True(t, got.Target.Connectivity.Healthy)
 	})
 
 	t.Run("target features are listed", func(t *testing.T) {
@@ -87,19 +87,17 @@ func TestGenerateReport(t *testing.T) {
 
 		got := GenerateReport(nil, target)
 
-		assert.Equal(t, []string{"NEON", "SVE"}, got.TargetFeatures)
+		assert.Equal(t, []string{"NEON", "SVE"}, got.Target.Features)
 	})
 }
 
 func TestRenderReportAsPlainText(t *testing.T) {
 	t.Run("it renders the dependencies", func(t *testing.T) {
-		report := Report{
-			HostDependencies: []HealthCheck{{
-				Name:    "Flux Capacitor",
-				Healthy: true,
-				Value:   "",
-			}},
-		}
+		report := Report{}
+		report.Host.Dependencies = []HealthCheck{{
+			Name:    "Flux Capacitor",
+			Healthy: true,
+		}}
 
 		got, err := RenderReportAsPlainText(report)
 
@@ -108,12 +106,10 @@ func TestRenderReportAsPlainText(t *testing.T) {
 	})
 
 	t.Run("it renders connection failures", func(t *testing.T) {
-		report := Report{
-			Connectivity: HealthCheck{
-				Name:    "Connected",
-				Healthy: false,
-				Value:   "",
-			},
+		report := Report{}
+		report.Target.Connectivity = HealthCheck{
+			Name:    "Connected",
+			Healthy: false,
 		}
 
 		got, err := RenderReportAsPlainText(report)
@@ -123,14 +119,12 @@ func TestRenderReportAsPlainText(t *testing.T) {
 	})
 
 	t.Run("when connected it renders cpu features", func(t *testing.T) {
-		report := Report{
-			Connectivity: HealthCheck{
-				Name:    "Connected",
-				Healthy: true,
-				Value:   "",
-			},
-			TargetFeatures: []string{"FOO", "BAR"},
+		report := Report{}
+		report.Target.Connectivity = HealthCheck{
+			Name:    "Connected",
+			Healthy: true,
 		}
+		report.Target.Features = []string{"FOO", "BAR"}
 
 		got, err := RenderReportAsPlainText(report)
 
@@ -138,13 +132,11 @@ func TestRenderReportAsPlainText(t *testing.T) {
 		assert.Contains(t, got, "FOO, BAR")
 	})
 
-	t.Run("when not connected, it does not renders cpu features", func(t *testing.T) {
-		report := Report{
-			Connectivity: HealthCheck{
-				Name:    "Connected",
-				Healthy: false,
-				Value:   "",
-			},
+	t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
+		report := Report{}
+		report.Target.Connectivity = HealthCheck{
+			Name:    "Connected",
+			Healthy: false,
 		}
 
 		got, err := RenderReportAsPlainText(report)

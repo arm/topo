@@ -32,11 +32,18 @@ type HealthCheck struct {
 	Healthy bool
 	Value   string
 }
+type HostReport struct {
+	Dependencies []HealthCheck
+}
+
+type TargetReport struct {
+	Connectivity HealthCheck
+	Features     []string
+}
 
 type Report struct {
-	HostDependencies []HealthCheck
-	Connectivity     HealthCheck
-	TargetFeatures   []string
+	Host   HostReport
+	Target TargetReport
 }
 
 func GenerateReport(dependencyStatuses []dependencies.Status, target Target) Report {
@@ -49,20 +56,20 @@ func GenerateReport(dependencyStatuses []dependencies.Status, target Target) Rep
 		for i, dep := range installedDependencies {
 			names[i] = dep.Dependency.Name
 		}
-		report.HostDependencies = append(report.HostDependencies, HealthCheck{
+		report.Host.Dependencies = append(report.Host.Dependencies, HealthCheck{
 			Name:    category,
 			Healthy: len(installedDependencies) > 0,
 			Value:   strings.Join(names, ", "),
 		})
 	}
 
-	report.Connectivity = HealthCheck{
+	report.Target.Connectivity = HealthCheck{
 		Name:    "Connected",
 		Healthy: target.connectionError == nil,
 		Value:   "",
 	}
 
-	report.TargetFeatures = extractArmFeatures(target)
+	report.Target.Features = extractArmFeatures(target)
 	return report
 }
 
@@ -72,15 +79,15 @@ const healthCheckTemplate = `
 {{- end -}}
 Host
 ----
-{{- range $healthcheckRow := .HostDependencies }}
-{{ template "checkRow" $healthcheckRow }}
+{{- range $hostCheckRow := .Host.Dependencies }}
+{{ template "checkRow" $hostCheckRow }}
 {{- end }}
 
 Target
 ------
-{{ template "checkRow" .Connectivity }}
-{{- if .Connectivity.Healthy }}
-Features (Linux Host): {{ join .TargetFeatures ", " }}
+{{ template "checkRow" .Target.Connectivity }}
+{{- if .Target.Connectivity.Healthy }}
+Features (Linux Host): {{ join .Target.Features ", " }}
 {{- end }}
 `
 
