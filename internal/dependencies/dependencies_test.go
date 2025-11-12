@@ -6,6 +6,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBinaryRegex(t *testing.T) {
+	t.Run("binary regex passes a correct binary name", func(t *testing.T) {
+		got := "bin ary"
+
+		assert.False(t, BinaryRegex.MatchString(got))
+	})
+
+	t.Run("binary regex fails an incorrect binary name", func(t *testing.T) {
+		got := "binary"
+
+		assert.True(t, BinaryRegex.MatchString(got))
+	})
+}
+
+func TestDependencyFormat(t *testing.T) {
+	t.Run("all dependencies are of the correct format", func(t *testing.T) {
+		for _, dep := range RequiredDependencies {
+			assert.True(t, BinaryRegex.MatchString(dep.Name))
+		}
+	})
+}
+
 func TestCheck(t *testing.T) {
 	mockDependencies := []Dependency{
 		{Name: "foo", Category: "bar"},
@@ -13,29 +35,41 @@ func TestCheck(t *testing.T) {
 	}
 
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
-		mockBinaryExists := func(bin string) bool {
-			return false
+		mockBinaryExists := func(bin string) (bool, error) {
+			return false, nil
 		}
 
 		got := Check(mockDependencies, mockBinaryExists)
 
 		want := []Status{
-			{Dependency{Name: "foo", Category: "bar"}, false},
-			{Dependency{Name: "baz", Category: "qux"}, false},
+			{
+				Dependency: Dependency{Name: "foo", Category: "bar"},
+				Installed:  false,
+			},
+			{
+				Dependency: Dependency{Name: "baz", Category: "qux"},
+				Installed:  false,
+			},
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("when a dependency is found, its status entry reflects that", func(t *testing.T) {
-		mockBinaryExists := func(bin string) bool {
-			return bin == "baz"
+		mockBinaryExists := func(bin string) (bool, error) {
+			return bin == "baz", nil
 		}
 
 		got := Check(mockDependencies, mockBinaryExists)
 
 		want := []Status{
-			{Dependency{Name: "foo", Category: "bar"}, false},
-			{Dependency{Name: "baz", Category: "qux"}, true},
+			{
+				Dependency: Dependency{Name: "foo", Category: "bar"},
+				Installed:  false,
+			},
+			{
+				Dependency: Dependency{Name: "baz", Category: "qux"},
+				Installed:  true,
+			},
 		}
 		assert.Equal(t, want, got)
 	})

@@ -90,3 +90,29 @@ func TestMakeTarget(t *testing.T) {
 		assert.EqualError(t, target.connectionError, "connection refused")
 	})
 }
+
+func TestBinaryExists(t *testing.T) {
+	t.Run("when binary found, returns true", func(t *testing.T) {
+		target := Target{}
+		target.exec = func(_, _ string) (string, error) {
+			return "/foo/bar", nil
+		}
+
+		got, err := target.BinaryExists("bar")
+
+		assert.NoError(t, err)
+		assert.True(t, got)
+	})
+
+	t.Run("invalid format returns an error", func(t *testing.T) {
+		target := Target{}
+		target.exec = func(_, _ string) (string, error) {
+			return "/foo/bar", nil
+		}
+
+		got, err := target.BinaryExists("b a r")
+
+		assert.Error(t, err)
+		assert.False(t, got)
+	})
+}
