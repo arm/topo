@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/core/compose"
-	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,7 +12,7 @@ import (
 
 func TestParseServiceFromTopo(t *testing.T) {
 	t.Run("sets name and build context", func(t *testing.T) {
-		topoService := template.ServiceTemplateManifest{
+		topoService := service.TemplateManifest{
 			Name:        "test",
 			Description: "A test service",
 			Service: map[string]interface{}{
@@ -30,7 +30,7 @@ func TestParseServiceFromTopo(t *testing.T) {
 	})
 
 	t.Run("handles short volume syntax", func(t *testing.T) {
-		topoService := template.ServiceTemplateManifest{
+		topoService := service.TemplateManifest{
 			Service: map[string]interface{}{
 				"volumes": []interface{}{"data:/var/lib/data"},
 			},

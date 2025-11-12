@@ -11,14 +11,14 @@ import (
 	"path/filepath"
 
 	"github.com/arm-debug/topo-cli/internal/core/compose"
-	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
 
 type CloneFunc func(url, dest, ref string) error
-type GetTemplateFn func(id string) (*template.ServiceTemplateRepo, error)
+type GetTemplateFn func(id string) (*service.TemplateRepo, error)
 
 func CloneProject(url, dest, ref string) error {
 	args := []string{"clone", "--depth", "1"}
@@ -72,7 +72,7 @@ func AddService(targetProjectFile, gitURL, gitRef, newServiceName string, cloner
 		return fmt.Errorf("failed to clone Service Template: %w", err)
 	}
 
-	serviceManifest, err := template.ParseServiceDefinition(destDir)
+	serviceManifest, err := service.ParseDefinition(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to load topo service from repo %s: %w", gitURL, err)
 	}

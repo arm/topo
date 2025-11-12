@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
@@ -58,7 +58,7 @@ func TestAddService(t *testing.T) {
 name: "test-service"
 description: "Test service"
 `
-			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
+			return os.WriteFile(filepath.Join(dest, service.TopoServiceFilename), []byte(topoService), 0644)
 		}
 
 		gitURL := "https://github.com/example/test-template.git"
@@ -110,7 +110,7 @@ service:
   volumes:
     - "data:/data"
     - "/host:/host"`
-			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
+			return os.WriteFile(filepath.Join(dest, service.TopoServiceFilename), []byte(topoService), 0644)
 		}
 
 		require.NoError(t, AddService(targetProjectFile, "https://example.com/template.git", "", "test", mockCloner))
@@ -148,9 +148,9 @@ func TestAddServiceByTemplateId(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		mockGetTemplate := func(id string) (*template.ServiceTemplateRepo, error) {
+		mockGetTemplate := func(id string) (*service.TemplateRepo, error) {
 			if id == "test-template" {
-				return &template.ServiceTemplateRepo{
+				return &service.TemplateRepo{
 					Id:  "test-template",
 					Url: "https://github.com/example/test-template.git",
 					Ref: "v1.0",
@@ -169,7 +169,7 @@ func TestAddServiceByTemplateId(t *testing.T) {
 name: "test-service"
 description: "Test service"
 `
-			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
+			return os.WriteFile(filepath.Join(dest, service.TopoServiceFilename), []byte(topoService), 0644)
 		}
 
 		require.NoError(t, AddServiceByTemplateId(targetProjectFile, "test-template", "my-service", mockCloner, mockGetTemplate))
@@ -188,7 +188,7 @@ description: "Test service"
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		mockGetTemplate := func(id string) (*template.ServiceTemplateRepo, error) {
+		mockGetTemplate := func(id string) (*service.TemplateRepo, error) {
 			return nil, fmt.Errorf("service template with id %q not found", id)
 		}
 

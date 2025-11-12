@@ -3,16 +3,16 @@ package compose
 import (
 	"fmt"
 
-	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/transform"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ParseServiceFromTopo(serviceName string, topoService *template.ServiceTemplateManifest) (types.ServiceConfig, error) {
+func ParseServiceFromTopo(serviceName string, topoService *service.TemplateManifest) (types.ServiceConfig, error) {
 	// Create an in-memory compose file to dump the service definition into
-	composeDict := map[string]interface{}{
-		"services": map[string]interface{}{
+	composeDict := map[string]any{
+		"services": map[string]any{
 			serviceName: topoService.Service,
 		},
 	}
@@ -24,7 +24,7 @@ func ParseServiceFromTopo(serviceName string, topoService *template.ServiceTempl
 		return types.ServiceConfig{}, fmt.Errorf("failed to canonicalize service config: %w", err)
 	}
 
-	servicesDict, ok := canonical["services"].(map[string]interface{})
+	servicesDict, ok := canonical["services"].(map[string]any)
 	if !ok {
 		return types.ServiceConfig{}, fmt.Errorf("unexpected services format")
 	}

@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/arm-debug/topo-cli/internal/source"
-	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ Use list-service-templates to see available built-in templates.`,
 
 		switch sourceType {
 		case "template":
-			return core.AddServiceByTemplateId(composeFilePath, sourceValue, serviceName, core.CloneProject, template.GetTemplate)
+			return core.AddServiceByTemplateId(composeFilePath, sourceValue, serviceName, core.CloneProject, service.GetTemplateRepo)
 		case "git":
 			return core.AddService(composeFilePath, sourceValue, addServiceGitRef, serviceName, core.CloneProject)
 		default:
