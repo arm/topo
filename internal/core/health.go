@@ -46,30 +46,48 @@ type Report struct {
 	Target TargetReport
 }
 
-func GenerateReport(dependencyStatuses []dependencies.Status, target Target) Report {
-	report := Report{}
-
-	availableDepsByCategory := dependencies.CollectAvailableByCategory(dependencyStatuses)
+func gatherReportDependencies(statuses []dependencies.Status) []HealthCheck {
+	res := []HealthCheck{}
+	availableDepsByCategory := dependencies.CollectAvailableByCategory(statuses)
 
 	for category, installedDependencies := range availableDepsByCategory {
 		names := make([]string, len(installedDependencies))
 		for i, dep := range installedDependencies {
 			names[i] = dep.Dependency.Name
 		}
-		report.Host.Dependencies = append(report.Host.Dependencies, HealthCheck{
+		res = append(res, HealthCheck{
 			Name:    category,
 			Healthy: len(installedDependencies) > 0,
 			Value:   strings.Join(names, ", "),
 		})
 	}
+	return res
+}
 
-	report.Target.Connectivity = HealthCheck{
+func generateHostReport(statuses []dependencies.Status) HostReport {
+	report := HostReport{}
+	report.Dependencies = gatherReportDependencies(statuses)
+
+	return report
+}
+
+func generateTargetReport(target Target) TargetReport {
+	report := TargetReport{}
+	report.Connectivity = HealthCheck{
 		Name:    "Connected",
 		Healthy: target.ConnectionError == nil,
 		Value:   "",
 	}
+	report.Features = ExtractArmFeatures(target)
 
-	report.Target.Features = ExtractArmFeatures(target)
+	return report
+}
+
+func GenerateReport(hostDependencies []dependencies.Status, target Target) Report {
+	report := Report{}
+	report.Host = generateHostReport(hostDependencies)
+	report.Target = generateTargetReport(target)
+
 	return report
 }
 
