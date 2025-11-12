@@ -12,7 +12,7 @@ var removeServiceCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		composeFilePath := args[0]
 		serviceName := args[1]
-		return core.RunRemoveService(composeFilePath, serviceName)
+		return core.RemoveService(composeFilePath, serviceName)
 	},
 }
 

@@ -22,7 +22,7 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return core.RunInitProject(workDir, resolved)
+		return core.InitProject(workDir, resolved)
 	},
 }
 

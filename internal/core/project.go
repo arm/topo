@@ -56,7 +56,7 @@ func PrintProject(w io.Writer, targetProjectFile string) error {
 	return nil
 }
 
-func RunAddService(targetProjectFile, gitURL, gitRef, newServiceName string, cloner CloneFunc) error {
+func AddService(targetProjectFile, gitURL, gitRef, newServiceName string, cloner CloneFunc) error {
 	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
@@ -101,16 +101,15 @@ func RunAddService(targetProjectFile, gitURL, gitRef, newServiceName string, clo
 	return nil
 }
 
-func RunAddServiceByTemplateId(targetProjectFile, templateId, newServiceName string, cloner CloneFunc, getTemplate GetTemplateFn) error {
+func AddServiceByTemplateId(targetProjectFile, templateId, newServiceName string, cloner CloneFunc, getTemplate GetTemplateFn) error {
 	serviceTemplateRepo, err := getTemplate(templateId)
 	if err != nil {
 		return err
 	}
-	return RunAddService(targetProjectFile, serviceTemplateRepo.Url, serviceTemplateRepo.Ref, newServiceName, cloner)
+	return AddService(targetProjectFile, serviceTemplateRepo.Url, serviceTemplateRepo.Ref, newServiceName, cloner)
 }
 
-// RunRemoveService deletes a service entry.
-func RunRemoveService(composeFilePath, serviceName string) error {
+func RemoveService(composeFilePath, serviceName string) error {
 	project, err := ReadProject(composeFilePath)
 	if err != nil {
 		return err
@@ -136,7 +135,7 @@ func RunRemoveService(composeFilePath, serviceName string) error {
 	return nil
 }
 
-func RunInitProject(projectDir string, sshTarget string) error {
+func InitProject(projectDir string, sshTarget string) error {
 	composePath := filepath.Join(projectDir, DefaultComposeFileName)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
