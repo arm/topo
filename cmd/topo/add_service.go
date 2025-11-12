@@ -39,9 +39,9 @@ Use list-service-templates to see available built-in templates.`,
 
 		switch sourceType {
 		case "template":
-			return core.RunAddServiceByTemplateId(composeFilePath, sourceValue, serviceName, core.CloneProject, template.GetTemplate)
+			return core.AddServiceByTemplateId(composeFilePath, sourceValue, serviceName, core.CloneProject, template.GetTemplate)
 		case "git":
-			return core.RunAddService(composeFilePath, sourceValue, addServiceGitRef, serviceName, core.CloneProject)
+			return core.AddService(composeFilePath, sourceValue, addServiceGitRef, serviceName, core.CloneProject)
 		default:
 			return fmt.Errorf("unsupported source type: %s (supported: template:, git:)", sourceType)
 		}

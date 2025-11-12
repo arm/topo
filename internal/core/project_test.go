@@ -26,11 +26,11 @@ func writeComposeFile(t *testing.T, dir, content string) string {
 	return composePath
 }
 
-func TestRunInitProject(t *testing.T) {
+func TestInitProject(t *testing.T) {
 	t.Run("creates an empty compose file at the given location", func(t *testing.T) {
 		dir := t.TempDir()
 
-		require.NoError(t, RunInitProject(dir, testutil.TestSshTarget))
+		require.NoError(t, InitProject(dir, testutil.TestSshTarget))
 
 		composeFile := filepath.Join(dir, DefaultComposeFileName)
 		data, err := os.ReadFile(composeFile)
@@ -41,7 +41,7 @@ func TestRunInitProject(t *testing.T) {
 	})
 }
 
-func TestRunAddService(t *testing.T) {
+func TestAddService(t *testing.T) {
 	type cloneCall struct{ URL, Dest, Ref string }
 
 	t.Run("adds service from git URL", func(t *testing.T) {
@@ -64,7 +64,7 @@ description: "Test service"
 		gitURL := "https://github.com/example/test-template.git"
 		gitRef := "main"
 
-		require.NoError(t, RunAddService(targetProjectFile, gitURL, gitRef, "test", mockCloner))
+		require.NoError(t, AddService(targetProjectFile, gitURL, gitRef, "test", mockCloner))
 
 		require.Len(t, calls, 1, "expected 1 clone call")
 		wantCall := cloneCall{gitURL, filepath.Join(dir, "test"), gitRef}
@@ -90,7 +90,7 @@ description: "Test service"
 			return nil
 		}
 
-		err := RunAddService(targetProjectFile, "https://github.com/example/test-template.git", "main", "test", mockCloner)
+		err := AddService(targetProjectFile, "https://github.com/example/test-template.git", "main", "test", mockCloner)
 
 		require.Error(t, err, "expected error when directory exists")
 		assert.Contains(t, err.Error(), "already exists")
@@ -113,7 +113,7 @@ service:
 			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
 		}
 
-		require.NoError(t, RunAddService(targetProjectFile, "https://example.com/template.git", "", "test", mockCloner))
+		require.NoError(t, AddService(targetProjectFile, "https://example.com/template.git", "", "test", mockCloner))
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
@@ -141,7 +141,7 @@ volumes:
 	})
 }
 
-func TestRunAddServiceByTemplateId(t *testing.T) {
+func TestAddServiceByTemplateId(t *testing.T) {
 	type cloneCall struct{ URL, Dest, Ref string }
 
 	t.Run("looks up template and delegates to RunAddService", func(t *testing.T) {
@@ -172,7 +172,7 @@ description: "Test service"
 			return os.WriteFile(filepath.Join(dest, template.TopoServiceFilename), []byte(topoService), 0644)
 		}
 
-		require.NoError(t, RunAddServiceByTemplateId(targetProjectFile, "test-template", "my-service", mockCloner, mockGetTemplate))
+		require.NoError(t, AddServiceByTemplateId(targetProjectFile, "test-template", "my-service", mockCloner, mockGetTemplate))
 		require.Len(t, calls, 1, "expected 1 clone call")
 		wantCall := cloneCall{"https://github.com/example/test-template.git", filepath.Join(dir, "my-service"), "v1.0"}
 		assert.Equal(t, wantCall, calls[0])
@@ -197,14 +197,14 @@ description: "Test service"
 			return nil
 		}
 
-		err := RunAddServiceByTemplateId(targetProjectFile, "non-existent", "test", mockCloner, mockGetTemplate)
+		err := AddServiceByTemplateId(targetProjectFile, "non-existent", "test", mockCloner, mockGetTemplate)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
 }
 
-func TestRunRemoveService(t *testing.T) {
+func TestRemoveService(t *testing.T) {
 	dir := t.TempDir()
 	compose := `name: example-project
 services:
@@ -213,7 +213,7 @@ services:
       context: ./removeMe
 `
 	targetProjectFile := writeComposeFile(t, dir, compose)
-	require.NoError(t, RunRemoveService(targetProjectFile, "removeMe"))
+	require.NoError(t, RemoveService(targetProjectFile, "removeMe"))
 	data, err := os.ReadFile(targetProjectFile)
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "removeMe")
