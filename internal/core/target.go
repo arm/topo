@@ -11,19 +11,19 @@ import (
 type execSSH func(target, command string) (string, error)
 
 type Target struct {
-	sshConn         string
-	connectionError error
-	features        []string
+	SshConn         string
+	ConnectionError error
+	Features        []string
 	exec            execSSH
 }
 
 func MakeTarget(sshTarget string, exec execSSH) Target {
 	target := Target{}
-	target.sshConn = sshTarget
+	target.SshConn = sshTarget
 	target.exec = exec
 	_, err := target.Run("")
 	if err != nil {
-		target.connectionError = err
+		target.ConnectionError = err
 		return target
 	}
 
@@ -32,14 +32,14 @@ func MakeTarget(sshTarget string, exec execSSH) Target {
 }
 
 func (t *Target) Run(command string) (string, error) {
-	return t.exec(t.sshConn, command)
+	return t.exec(t.SshConn, command)
 }
 
 func (t *Target) BinaryExists(bin string) (bool, error) {
 	if !dependencies.BinaryRegex.MatchString(bin) {
 		return false, fmt.Errorf("%q is not a valid binary name (contains invalid characters)", bin)
 	}
-	_, err := t.exec(t.sshConn, fmt.Sprintf("command -v %s", bin))
+	_, err := t.exec(t.SshConn, fmt.Sprintf("command -v %s", bin))
 	return err == nil, nil
 }
 
@@ -48,10 +48,10 @@ func (t *Target) collectFeatures() error {
 	if err != nil {
 		return err
 	}
-	t.features = strings.Fields(out)
+	t.Features = strings.Fields(out)
 
-	if len(t.features) > 0 && t.features[0] == "Features:" {
-		t.features = t.features[1:]
+	if len(t.Features) > 0 && t.Features[0] == "Features:" {
+		t.Features = t.Features[1:]
 	}
 	return nil
 }

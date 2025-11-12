@@ -16,10 +16,10 @@ var searchFlags = map[string]string{
 	"sme2":  "SME2",
 }
 
-func extractArmFeatures(target Target) []string {
+func ExtractArmFeatures(target Target) []string {
 	res := make([]string, 0)
 
-	for _, field := range target.features {
+	for _, field := range target.Features {
 		if name, ok := searchFlags[field]; ok {
 			res = append(res, name)
 		}
@@ -65,11 +65,11 @@ func GenerateReport(dependencyStatuses []dependencies.Status, target Target) Rep
 
 	report.Target.Connectivity = HealthCheck{
 		Name:    "Connected",
-		Healthy: target.connectionError == nil,
+		Healthy: target.ConnectionError == nil,
 		Value:   "",
 	}
 
-	report.Target.Features = extractArmFeatures(target)
+	report.Target.Features = ExtractArmFeatures(target)
 	return report
 }
 
