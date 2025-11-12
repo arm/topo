@@ -1,6 +1,10 @@
 package dependencies
 
-import "os/exec"
+import (
+	"fmt"
+	"os/exec"
+	"regexp"
+)
 
 var RequiredDependencies = []Dependency{
 	{Name: "ssh", Category: "SSH"},
@@ -18,24 +22,30 @@ type Status struct {
 	Installed  bool
 }
 
-type LookPath = func(bin string) bool
+var BinaryRegex = regexp.MustCompile(`^[A-Za-z0-9_+-]+$`)
+
+type LookPath = func(bin string) (bool, error)
 
 func Check(dependencies []Dependency, binaryExists LookPath) []Status {
 	res := make([]Status, len(dependencies))
 
 	for i, dep := range dependencies {
+		installed, _ := binaryExists(dep.Name)
+
 		res[i] = Status{
 			Dependency: dep,
-			Installed:  binaryExists(dep.Name),
+			Installed:  installed,
 		}
 	}
-
 	return res
 }
 
-func BinaryExistsLocally(bin string) bool {
+func BinaryExistsLocally(bin string) (bool, error) {
+	if !BinaryRegex.MatchString(bin) {
+		return false, fmt.Errorf("%q is not a valid binary name (contains invalid characters)", bin)
+	}
 	_, err := exec.LookPath(bin)
-	return err == nil
+	return err == nil, nil
 }
 
 func CollectAvailableByCategory(dependencyStatuses []Status) map[string][]Status {

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+
+	"github.com/arm-debug/topo-cli/internal/dependencies"
 )
 
 type execSSH func(target, command string) (string, error)
@@ -31,6 +33,14 @@ func MakeTarget(sshTarget string, exec execSSH) Target {
 
 func (t *Target) Run(command string) (string, error) {
 	return t.exec(t.sshConn, command)
+}
+
+func (t *Target) BinaryExists(bin string) (bool, error) {
+	if !dependencies.BinaryRegex.MatchString(bin) {
+		return false, fmt.Errorf("%q is not a valid binary name (contains invalid characters)", bin)
+	}
+	_, err := t.exec(t.sshConn, fmt.Sprintf("command -v %s", bin))
+	return err == nil, nil
 }
 
 func (t *Target) collectFeatures() error {
