@@ -7,31 +7,15 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/arm-debug/topo-cli/internal/core/compose"
 	"github.com/arm-debug/topo-cli/internal/service"
+	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
-
-type CloneFunc func(url, dest, ref string) error
-type GetTemplateFn func(id string) (*service.TemplateRepo, error)
-
-func CloneProject(url, dest, ref string) error {
-	args := []string{"clone", "--depth", "1"}
-	if ref != "" {
-		args = append(args, "--branch", ref)
-	}
-	args = append(args, url, dest)
-	cmd := exec.Command("git", args...)
-	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
 
 // ReadProject parses compose file into a compose-go project.
 func ReadProject(targetProjectFile string) (*types.Project, error) {
@@ -56,7 +40,7 @@ func PrintProject(w io.Writer, targetProjectFile string) error {
 	return nil
 }
 
-func AddService(targetProjectFile, gitURL, gitRef, newServiceName string, cloner CloneFunc) error {
+func AddService(targetProjectFile, newServiceName string, src source.ServiceSource) error {
 	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
@@ -68,13 +52,13 @@ func AddService(targetProjectFile, gitURL, gitRef, newServiceName string, cloner
 		return fmt.Errorf("directory %s already exists; please choose a different service name or remove the existing directory", destDir)
 	}
 
-	if err := cloner(gitURL, destDir, gitRef); err != nil {
-		return fmt.Errorf("failed to clone Service Template: %w", err)
+	if err := src.CopyTo(destDir); err != nil {
+		return fmt.Errorf("failed to obtain Service Template: %w", err)
 	}
 
 	serviceManifest, err := service.ParseDefinition(destDir)
 	if err != nil {
-		return fmt.Errorf("failed to load topo service from repo %s: %w", gitURL, err)
+		return fmt.Errorf("failed to load topo service from %s: %w", src.String(), err)
 	}
 
 	newSvc, err := compose.ParseServiceFromTopo(newServiceName, &serviceManifest)
@@ -99,14 +83,6 @@ func AddService(targetProjectFile, gitURL, gitRef, newServiceName string, cloner
 		return fmt.Errorf("failed to write compose file %s %w", targetProjectFile, err)
 	}
 	return nil
-}
-
-func AddServiceByTemplateId(targetProjectFile, templateId, newServiceName string, cloner CloneFunc, getTemplate GetTemplateFn) error {
-	serviceTemplateRepo, err := getTemplate(templateId)
-	if err != nil {
-		return err
-	}
-	return AddService(targetProjectFile, serviceTemplateRepo.Url, serviceTemplateRepo.Ref, newServiceName, cloner)
 }
 
 func RemoveService(composeFilePath, serviceName string) error {

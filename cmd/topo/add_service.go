@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/arm-debug/topo-cli/internal/core"
-	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/spf13/cobra"
 )
@@ -39,9 +38,14 @@ Use list-service-templates to see available built-in templates.`,
 
 		switch sourceType {
 		case "template":
-			return core.AddServiceByTemplateId(composeFilePath, sourceValue, serviceName, core.CloneProject, service.GetTemplateRepo)
+			src := source.TemplateId(sourceValue)
+			return core.AddService(composeFilePath, serviceName, src)
 		case "git":
-			return core.AddService(composeFilePath, sourceValue, addServiceGitRef, serviceName, core.CloneProject)
+			src := source.Git{
+				URL: sourceValue,
+				Ref: addServiceGitRef,
+			}
+			return core.AddService(composeFilePath, serviceName, src)
 		default:
 			return fmt.Errorf("unsupported source type: %s (supported: template:, git:)", sourceType)
 		}
