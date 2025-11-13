@@ -9,11 +9,11 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ParseServiceFromTopo(serviceName string, topoService *service.TemplateManifest) (types.ServiceConfig, error) {
+func ParseServiceTemplate(serviceName string, resolved service.ResolvedTemplateManifest) (types.ServiceConfig, error) {
 	// Create an in-memory compose file to dump the service definition into
 	composeDict := map[string]any{
 		"services": map[string]any{
-			serviceName: topoService.Service,
+			serviceName: resolved.Service,
 		},
 	}
 
@@ -40,9 +40,31 @@ func ParseServiceFromTopo(serviceName string, topoService *service.TemplateManif
 	}
 
 	svc.Name = serviceName
-	svc.Build = &types.BuildConfig{Context: "./" + serviceName}
+
+	buildConfig := &types.BuildConfig{
+		Context: "./" + serviceName,
+	}
+
+	if args := convertResolvedArgsToBuildArgs(resolved.Args); args != nil {
+		buildConfig.Args = args
+	}
+
+	svc.Build = buildConfig
 
 	return svc, nil
+}
+
+func convertResolvedArgsToBuildArgs(resolvedArgs []service.ResolvedArg) types.MappingWithEquals {
+	if len(resolvedArgs) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]string, 0, len(resolvedArgs))
+	for _, arg := range resolvedArgs {
+		argsSlice = append(argsSlice, fmt.Sprintf("%s=%s", arg.Name, arg.Value))
+	}
+
+	return types.NewMappingWithEquals(argsSlice)
 }
 
 func InsertService(p *types.Project, svc types.ServiceConfig) error {
