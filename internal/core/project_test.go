@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/service"
-	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,7 +43,7 @@ func TestInitProject(t *testing.T) {
 	t.Run("creates an empty compose file at the given location", func(t *testing.T) {
 		dir := t.TempDir()
 
-		require.NoError(t, InitProject(dir, testutil.TestSshTarget))
+		require.NoError(t, InitProject(dir))
 
 		composeFile := filepath.Join(dir, DefaultComposeFileName)
 		data, err := os.ReadFile(composeFile)

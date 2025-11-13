@@ -7,8 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initTarget string
-
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialise a new project in the current directory",
@@ -18,15 +16,10 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		resolved, err := core.ResolveTarget(initTarget)
-		if err != nil {
-			return err
-		}
-		return core.InitProject(workDir, resolved)
+		return core.InitProject(workDir)
 	},
 }
 
 func init() {
-	addTargetFlag(initCmd, &initTarget)
 	rootCmd.AddCommand(initCmd)
 }

@@ -111,7 +111,7 @@ func RemoveService(composeFilePath, serviceName string) error {
 	return nil
 }
 
-func InitProject(projectDir string, sshTarget string) error {
+func InitProject(projectDir string) error {
 	composePath := filepath.Join(projectDir, DefaultComposeFileName)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
