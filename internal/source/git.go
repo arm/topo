@@ -26,7 +26,7 @@ func (g Git) CopyTo(destDir string) error {
 
 func (g Git) String() string {
 	if g.Ref != "" {
-		return fmt.Sprintf("git:%s@%s", g.URL, g.Ref)
+		return fmt.Sprintf("git:%s#%s", g.URL, g.Ref)
 	}
 	return fmt.Sprintf("git:%s", g.URL)
 }
