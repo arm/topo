@@ -66,11 +66,16 @@ func TestAddService(t *testing.T) {
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
 			dest := args.String(0)
 			require.NoError(t, os.MkdirAll(dest, 0755))
-			topoService := `
-name: "test-service"
-description: "Test service"
+			composeFileContents := `
+services:
+  app:
+    image: nginx:alpine
+
+x-topo:
+  name: "test-service"
+  description: "Test service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.TopoServiceFilename), []byte(topoService), 0644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
 		})
 
 		require.NoError(t, AddService(targetProjectFile, "test", mockSource))
@@ -111,13 +116,17 @@ description: "Test service"
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
 			dest := args.String(0)
 			require.NoError(t, os.MkdirAll(dest, 0755))
-			topoService := `
-name: "test-service"
-service:
-  volumes:
-    - "data:/data"
-    - "/host:/host"`
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.TopoServiceFilename), []byte(topoService), 0644))
+			composeFileContents := `
+services:
+  app:
+    volumes:
+      - "data:/data"
+      - "/host:/host"
+
+x-topo:
+  name: "test-service"
+`
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
 		})
 
 		require.NoError(t, AddService(targetProjectFile, "test", mockSource))

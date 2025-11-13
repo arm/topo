@@ -13,8 +13,6 @@ import (
 func TestParseServiceFromTopo(t *testing.T) {
 	t.Run("sets name and build context", func(t *testing.T) {
 		topoService := service.TemplateManifest{
-			Name:        "test",
-			Description: "A test service",
 			Service: map[string]interface{}{
 				"runtime": "cool-topo-runtime",
 			},
