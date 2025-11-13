@@ -83,13 +83,15 @@ x-topo:
 
 		require.NoError(t, err)
 		want := TopoMetadata{
-			Args: map[string]ArgMetadata{
-				"GREETING": {
+			Args: []ArgSpec{
+				{
+					Name:        "GREETING",
 					Description: "The greeting message to display",
 					Required:    true,
 					Example:     "Hello, World",
 				},
-				"PORT": {
+				{
+					Name:        "PORT",
 					Description: "Port number",
 					Required:    false,
 				},
