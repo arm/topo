@@ -6,8 +6,13 @@ import (
 	"regexp"
 )
 
-var RequiredDependencies = []Dependency{
+var HostRequiredDependencies = []Dependency{
 	{Name: "ssh", Category: "SSH"},
+	{Name: "docker", Category: "Container Engine"},
+	{Name: "podman", Category: "Container Engine"},
+}
+
+var TargetRequiredDependencies = []Dependency{
 	{Name: "docker", Category: "Container Engine"},
 	{Name: "podman", Category: "Container Engine"},
 }

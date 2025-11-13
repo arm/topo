@@ -14,6 +14,7 @@ type Target struct {
 	SshConn         string
 	ConnectionError error
 	Features        []string
+	Dependencies    []dependencies.Status
 	exec            execSSH
 }
 
@@ -28,6 +29,8 @@ func MakeTarget(sshTarget string, exec execSSH) Target {
 	}
 
 	target.collectFeatures()
+	target.Dependencies = dependencies.Check(dependencies.TargetRequiredDependencies, target.BinaryExists)
+
 	return target
 }
 
