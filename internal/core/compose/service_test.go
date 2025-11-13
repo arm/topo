@@ -10,17 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseServiceFromTopo(t *testing.T) {
+func TestParseServiceTemplate(t *testing.T) {
 	t.Run("sets name and build context", func(t *testing.T) {
-		topoService := service.TemplateManifest{
+		resolved := service.ResolvedTemplateManifest{
 			Service: map[string]interface{}{
 				"runtime": "cool-topo-runtime",
 			},
 		}
 
-		svc, err := compose.ParseServiceFromTopo("test-service", &topoService)
-		require.NoError(t, err)
+		svc, err := compose.ParseServiceTemplate("test-service", resolved)
 
+		require.NoError(t, err)
 		assert.Equal(t, "test-service", svc.Name)
 		require.NotNil(t, svc.Build)
 		assert.Equal(t, "./test-service", svc.Build.Context)
@@ -28,18 +28,38 @@ func TestParseServiceFromTopo(t *testing.T) {
 	})
 
 	t.Run("handles short volume syntax", func(t *testing.T) {
-		topoService := service.TemplateManifest{
+		resolved := service.ResolvedTemplateManifest{
 			Service: map[string]interface{}{
 				"volumes": []interface{}{"data:/var/lib/data"},
 			},
 		}
 
-		svc, err := compose.ParseServiceFromTopo("test-service", &topoService)
-		require.NoError(t, err)
+		svc, err := compose.ParseServiceTemplate("test-service", resolved)
 
+		require.NoError(t, err)
 		require.Len(t, svc.Volumes, 1)
 		assert.Equal(t, "data", svc.Volumes[0].Source)
 		assert.Equal(t, "/var/lib/data", svc.Volumes[0].Target)
+	})
+
+	t.Run("injects build arguments", func(t *testing.T) {
+		resolved := service.ResolvedTemplateManifest{
+			Service: map[string]interface{}{
+				"image": "nginx:alpine",
+			},
+			Args: []service.ResolvedArg{
+				{Name: "GREETING", Value: "Hello"},
+				{Name: "PORT", Value: "8080"},
+			},
+		}
+
+		svc, err := compose.ParseServiceTemplate("test-service", resolved)
+
+		require.NoError(t, err)
+		require.NotNil(t, svc.Build)
+		require.NotNil(t, svc.Build.Args)
+		assert.Equal(t, "Hello", *svc.Build.Args["GREETING"])
+		assert.Equal(t, "8080", *svc.Build.Args["PORT"])
 	})
 }
 
