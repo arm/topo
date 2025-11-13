@@ -90,6 +90,29 @@ func TestGenerateReport(t *testing.T) {
 
 		assert.Equal(t, []string{"NEON", "SVE"}, got.Target.Features)
 	})
+
+	t.Run("target dependencies are listed", func(t *testing.T) {
+		foo := dependencies.Dependency{
+			Name:     "foo",
+			Category: "bar",
+		}
+		target := core.Target{
+			ConnectionError: nil,
+			Dependencies: []dependencies.Status{
+				{
+					Dependency: foo,
+					Installed:  true,
+				},
+			},
+		}
+
+		got := core.GenerateReport(nil, target)
+
+		want := []core.HealthCheck{
+			{Name: "bar", Healthy: true, Value: "foo"},
+		}
+		assert.Equal(t, want, got.Target.Dependencies)
+	})
 }
 
 func TestRenderReportAsPlainText(t *testing.T) {

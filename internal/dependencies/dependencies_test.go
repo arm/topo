@@ -21,8 +21,14 @@ func TestBinaryRegex(t *testing.T) {
 }
 
 func TestDependencyFormat(t *testing.T) {
-	t.Run("all dependencies are of the correct format", func(t *testing.T) {
-		for _, dep := range RequiredDependencies {
+	t.Run("host dependencies are of the correct format", func(t *testing.T) {
+		for _, dep := range HostRequiredDependencies {
+			assert.True(t, BinaryRegex.MatchString(dep.Name))
+		}
+	})
+
+	t.Run("target dependencies are of the correct format", func(t *testing.T) {
+		for _, dep := range TargetRequiredDependencies {
 			assert.True(t, BinaryRegex.MatchString(dep.Name))
 		}
 	})

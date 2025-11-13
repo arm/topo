@@ -39,6 +39,7 @@ type HostReport struct {
 type TargetReport struct {
 	Connectivity HealthCheck
 	Features     []string
+	Dependencies []HealthCheck
 }
 
 type Report struct {
@@ -46,7 +47,7 @@ type Report struct {
 	Target TargetReport
 }
 
-func gatherReportDependencies(statuses []dependencies.Status) []HealthCheck {
+func generateDependencyReport(statuses []dependencies.Status) []HealthCheck {
 	res := []HealthCheck{}
 	availableDepsByCategory := dependencies.CollectAvailableByCategory(statuses)
 
@@ -66,7 +67,7 @@ func gatherReportDependencies(statuses []dependencies.Status) []HealthCheck {
 
 func generateHostReport(statuses []dependencies.Status) HostReport {
 	report := HostReport{}
-	report.Dependencies = gatherReportDependencies(statuses)
+	report.Dependencies = generateDependencyReport(statuses)
 
 	return report
 }
@@ -79,6 +80,7 @@ func generateTargetReport(target Target) TargetReport {
 		Value:   "",
 	}
 	report.Features = ExtractArmFeatures(target)
+	report.Dependencies = generateDependencyReport(target.Dependencies)
 
 	return report
 }
@@ -106,6 +108,9 @@ Target
 {{ template "checkRow" .Target.Connectivity }}
 {{- if .Target.Connectivity.Healthy }}
 Features (Linux Host): {{ join .Target.Features ", " }}
+{{- range $targetCheckRow := .Target.Dependencies }}
+{{ template "checkRow" $targetCheckRow }}
+{{- end }}
 {{- end }}
 `
 
@@ -123,7 +128,7 @@ func RenderReportAsPlainText(report Report) (string, error) {
 }
 
 func CheckHealth(sshTarget string) error {
-	dependencyStatuses := dependencies.Check(dependencies.RequiredDependencies, dependencies.BinaryExistsLocally)
+	dependencyStatuses := dependencies.Check(dependencies.HostRequiredDependencies, dependencies.BinaryExistsLocally)
 
 	target := MakeTarget(sshTarget, ExecSSH)
 	report := GenerateReport(dependencyStatuses, target)
