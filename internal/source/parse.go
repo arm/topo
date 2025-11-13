@@ -5,18 +5,36 @@ import (
 	"strings"
 )
 
-func Parse(source string) (sourceType, sourceValue string, err error) {
+func Parse(source string) (ServiceSource, error) {
 	parts := strings.SplitN(source, ":", 2)
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)
+		return nil, fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)
 	}
 
-	sourceType = parts[0]
-	sourceValue = parts[1]
+	sourceType := parts[0]
+	sourceValue := parts[1]
 
 	if sourceValue == "" {
-		return "", "", fmt.Errorf("source value cannot be empty")
+		return nil, fmt.Errorf("source value cannot be empty")
 	}
 
-	return sourceType, sourceValue, nil
+	switch sourceType {
+	case "template":
+		return TemplateId(sourceValue), nil
+	case "git":
+		return parseGit(sourceValue), nil
+	default:
+		return nil, fmt.Errorf("unsupported source type: %s (supported: template:, git:)", sourceType)
+	}
+}
+
+func parseGit(url string) Git {
+	if idx := strings.LastIndex(url, "#"); idx != -1 {
+		return Git{
+			URL: url[:idx],
+			Ref: url[idx+1:],
+		}
+	}
+
+	return Git{URL: url, Ref: ""}
 }

@@ -9,56 +9,98 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	t.Run("parses template source", func(t *testing.T) {
-		gotType, gotValue, err := source.Parse("template:hello")
+	t.Run("template source", func(t *testing.T) {
+		got, err := source.Parse("template:hello")
 
 		require.NoError(t, err)
-		assert.Equal(t, "template", gotType)
-		assert.Equal(t, "hello", gotValue)
+		want := source.TemplateId("hello")
+		assert.Equal(t, want, got)
 	})
 
-	t.Run("parses git HTTPS source", func(t *testing.T) {
-		gotType, gotValue, err := source.Parse("git:https://github.com/user/repo.git")
+	t.Run("git source", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			input string
+			want  source.Git
+		}{
+			{
+				name:  "HTTPS without ref",
+				input: "git:https://github.com/user/repo.git",
+				want: source.Git{
+					URL: "https://github.com/user/repo.git",
+					Ref: "",
+				},
+			},
+			{
+				name:  "HTTPS with # ref",
+				input: "git:https://github.com/user/repo.git#develop",
+				want: source.Git{
+					URL: "https://github.com/user/repo.git",
+					Ref: "develop",
+				},
+			},
+			{
+				name:  "SSH without ref",
+				input: "git:git@github.com:user/repo.git",
+				want: source.Git{
+					URL: "git@github.com:user/repo.git",
+					Ref: "",
+				},
+			},
+			{
+				name:  "SSH with # ref",
+				input: "git:git@github.com:user/repo.git#main",
+				want: source.Git{
+					URL: "git@github.com:user/repo.git",
+					Ref: "main",
+				},
+			},
+		}
 
-		require.NoError(t, err)
-		assert.Equal(t, "git", gotType)
-		assert.Equal(t, "https://github.com/user/repo.git", gotValue)
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := source.Parse(tt.input)
+
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			})
+		}
 	})
 
-	t.Run("parses git SSH source", func(t *testing.T) {
-		gotType, gotValue, err := source.Parse("git:git@github.com:user/repo.git")
+	t.Run("error cases", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			input         string
+			errorContains string
+		}{
+			{
+				name:          "missing colon",
+				input:         "template-ubuntu",
+				errorContains: "invalid source format",
+			},
+			{
+				name:          "empty value",
+				input:         "template:",
+				errorContains: "source value cannot be empty",
+			},
+			{
+				name:          "empty source",
+				input:         "",
+				errorContains: "invalid source format",
+			},
+			{
+				name:          "unsupported source type",
+				input:         "foo:value",
+				errorContains: "unsupported source type: foo",
+			},
+		}
 
-		require.NoError(t, err)
-		assert.Equal(t, "git", gotType)
-		assert.Equal(t, "git@github.com:user/repo.git", gotValue)
-	})
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				_, err := source.Parse(tt.input)
 
-	t.Run("preserves multiple colons in URL", func(t *testing.T) {
-		gotType, gotValue, err := source.Parse("git:https://example.com:8080/repo.git")
-
-		require.NoError(t, err)
-		assert.Equal(t, "git", gotType)
-		assert.Equal(t, "https://example.com:8080/repo.git", gotValue)
-	})
-
-	t.Run("returns error when colon is missing", func(t *testing.T) {
-		_, _, err := source.Parse("template-ubuntu")
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid source format")
-	})
-
-	t.Run("returns error when value is empty", func(t *testing.T) {
-		_, _, err := source.Parse("template:")
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "source value cannot be empty")
-	})
-
-	t.Run("returns error when source is empty", func(t *testing.T) {
-		_, _, err := source.Parse("")
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid source format")
+				assert.ErrorContains(t, err, tt.errorContains)
+			})
+		}
 	})
 }
