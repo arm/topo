@@ -40,6 +40,29 @@
 
 #### Testing Best Practices
 
+**Keep Act and Assert Phases Separate**
+
+Don't mix error checking with the action being tested:
+
+```go
+// Incorrect - mixing Act and Assert
+func TestUserService(t *testing.T) {
+    svc := NewUserService()
+    got, err := svc.GetUser(1)
+    require.NoError(t, err) // This belongs in Assert, not here
+}
+
+// Correct - clear separation
+func TestUserService(t *testing.T) {
+    svc := NewUserService()
+
+    got, err := svc.GetUser(1)
+
+    require.NoError(t, err)
+    assert.Equal(t, 1, got.ID)
+}
+```
+
 **Use Testify Assertions**
 
 Generate tests using [stretchr/testify](https://github.com/stretchr/testify) assertions for clearer test failures.
