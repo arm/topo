@@ -14,16 +14,68 @@ type TemplateManifest struct {
 }
 
 type TopoMetadata struct {
-	Name        string                 `yaml:"name"`
-	Description string                 `yaml:"description"`
-	Features    []string               `yaml:"features,omitempty"`
-	Args        map[string]ArgMetadata `yaml:"args,omitempty"`
+	Name        string    `yaml:"name"`
+	Description string    `yaml:"description"`
+	Features    []string  `yaml:"features,omitempty"`
+	Args        []ArgSpec `yaml:"args,omitempty"`
+}
+
+type ArgSpec struct {
+	Name        string
+	Description string `yaml:"description"`
+	Required    bool   `yaml:"required"`
+	Example     string `yaml:"example,omitempty"`
 }
 
 type ArgMetadata struct {
 	Description string `yaml:"description"`
 	Required    bool   `yaml:"required"`
 	Example     string `yaml:"example,omitempty"`
+}
+
+func (t *TopoMetadata) UnmarshalYAML(node *yaml.Node) error {
+	type rawTopoMetadata struct {
+		Name        string                 `yaml:"name"`
+		Description string                 `yaml:"description"`
+		Features    []string               `yaml:"features,omitempty"`
+		Args        map[string]ArgMetadata `yaml:"args,omitempty"`
+	}
+
+	var raw rawTopoMetadata
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+
+	t.Name = raw.Name
+	t.Description = raw.Description
+	t.Features = raw.Features
+	t.Args = parseArgsInOrder(node, raw.Args)
+
+	return nil
+}
+
+func parseArgsInOrder(node *yaml.Node, argsMap map[string]ArgMetadata) []ArgSpec {
+	var result []ArgSpec
+
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == "args" {
+			argsNode := node.Content[i+1]
+			for j := 0; j < len(argsNode.Content); j += 2 {
+				name := argsNode.Content[j].Value
+				if metadata, ok := argsMap[name]; ok {
+					result = append(result, ArgSpec{
+						Name:        name,
+						Description: metadata.Description,
+						Required:    metadata.Required,
+						Example:     metadata.Example,
+					})
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 const ComposeServiceFilename = "compose.service.yaml"
