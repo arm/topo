@@ -17,8 +17,6 @@ const TargetEnvVar = "TOPO_TARGET"
 
 // Exported constants referenced externally
 const (
-	DefaultBoard           = "NXP i.MX 93"
-	DefaultDockerContext   = "default"
 	DefaultComposeFileName = "compose.yaml"
 )
 
@@ -34,8 +32,4 @@ func ResolveTarget(flagValue string) (string, error) {
 		return env, nil
 	}
 	return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
-}
-
-func getContextName(sshTarget string) string {
-	return sshTarget
 }
