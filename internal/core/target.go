@@ -15,6 +15,7 @@ type Target struct {
 	ConnectionError error
 	Features        []string
 	Dependencies    []dependencies.Status
+	RemoteCPU       []string
 	exec            execSSH
 }
 
@@ -30,6 +31,7 @@ func MakeTarget(sshTarget string, exec execSSH) Target {
 
 	target.collectFeatures()
 	target.Dependencies = dependencies.Check(dependencies.TargetRequiredDependencies, target.BinaryExists)
+	target.collectRemoteCPU()
 
 	return target
 }
@@ -56,6 +58,25 @@ func (t *Target) collectFeatures() error {
 	if len(t.Features) > 0 && t.Features[0] == "Features:" {
 		t.Features = t.Features[1:]
 	}
+	return nil
+}
+
+func (t *Target) collectRemoteCPU() error {
+	out, err := t.Run("ls /sys/class/remoteproc")
+	if err != nil {
+		return err
+	}
+
+	if out == "" {
+		return fmt.Errorf("target supports remoteproc, but no processors found")
+	}
+
+	out, err = t.Run("cat /sys/class/remoteproc/*/name")
+	if err != nil {
+		return err
+	}
+
+	t.RemoteCPU = strings.Fields(out)
 	return nil
 }
 

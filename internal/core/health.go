@@ -37,9 +37,10 @@ type HostReport struct {
 }
 
 type TargetReport struct {
-	Connectivity HealthCheck
-	Features     []string
-	Dependencies []HealthCheck
+	Connectivity    HealthCheck
+	Features        []string
+	Dependencies    []HealthCheck
+	SubsystemDriver HealthCheck
 }
 
 type Report struct {
@@ -80,6 +81,11 @@ func generateTargetReport(target Target) TargetReport {
 		Value:   "",
 	}
 	report.Features = ExtractArmFeatures(target)
+	report.SubsystemDriver = HealthCheck{
+		Name:    "Subsystem Driver (remoteproc)",
+		Healthy: len(target.RemoteCPU) > 0,
+		Value:   strings.Join(target.RemoteCPU, ", "),
+	}
 	report.Dependencies = generateDependencyReport(target.Dependencies)
 
 	return report
@@ -111,6 +117,7 @@ Features (Linux Host): {{ join .Target.Features ", " }}
 {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
 {{- end }}
+{{ template "checkRow" .Target.SubsystemDriver }}
 {{- end }}
 `
 

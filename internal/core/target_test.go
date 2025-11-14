@@ -3,6 +3,7 @@ package core_test
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/core"
@@ -73,6 +74,21 @@ func TestMakeTarget(t *testing.T) {
 
 		assert.Error(t, target.ConnectionError)
 		assert.EqualError(t, target.ConnectionError, "connection refused")
+	})
+
+	t.Run("make target finds remote cpu", func(t *testing.T) {
+		mockExec := func(target, command string) (string, error) {
+			if strings.Contains(command, "remoteproc") {
+				return "foo\nbar", nil
+			}
+			return "", nil
+		}
+
+		target := core.MakeTarget("hostname", mockExec)
+		got := target.RemoteCPU
+
+		want := []string{"foo", "bar"}
+		assert.Equal(t, want, got)
 	})
 }
 
