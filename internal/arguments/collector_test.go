@@ -78,9 +78,11 @@ func TestCollector(t *testing.T) {
 
 	t.Run("errors when provider fails", func(t *testing.T) {
 		provider := &mockProvider{}
-		specs := []service.ArgSpec{}
+		specs := []service.ArgSpec{
+			{Name: "GREETING", Required: true},
+		}
 		provider.On("Name").Return("fancy")
-		provider.On("Provide", specs).Return(nil, errors.New("big bang"))
+		provider.On("Provide", mock.Anything).Return(nil, errors.New("big bang"))
 		collector := NewCollector(provider)
 
 		_, err := collector.Collect(specs)
@@ -111,15 +113,20 @@ func TestCollector(t *testing.T) {
 	t.Run("calls second provider when first does not satisfy all required args", func(t *testing.T) {
 		provider1 := &mockProvider{}
 		provider2 := &mockProvider{}
-		specs := []service.ArgSpec{
+		allSpecs := []service.ArgSpec{
 			{Name: "GREETING", Required: true},
 			{Name: "NAME", Required: true},
+			{Name: "PORT", Required: false},
 		}
-		provider1.On("Provide", specs).Return(map[string]string{"GREETING": "Hello"}, nil)
-		provider2.On("Provide", specs).Return(map[string]string{"NAME": "World"}, nil)
+		remainingSpecs := []service.ArgSpec{
+			{Name: "NAME", Required: true},
+			{Name: "PORT", Required: false},
+		}
+		provider1.On("Provide", allSpecs).Return(map[string]string{"GREETING": "Hello"}, nil)
+		provider2.On("Provide", remainingSpecs).Return(map[string]string{"NAME": "World"}, nil)
 		collector := NewCollector(provider1, provider2)
 
-		got, err := collector.Collect(specs)
+		got, err := collector.Collect(allSpecs)
 
 		require.NoError(t, err)
 		assert.Equal(t, "Hello", got["GREETING"])
