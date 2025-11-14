@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"strings"
 
@@ -143,6 +144,6 @@ func CheckHealth(sshTarget string) error {
 	if err != nil {
 		return err
 	}
-	LogPrintf(healthCheck)
+	fmt.Println(healthCheck)
 	return nil
 }

@@ -17,6 +17,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const DefaultProjectComposeFileName = "compose.yaml"
+
 // ReadProject parses compose file into a compose-go project.
 func ReadProject(targetProjectFile string) (*types.Project, error) {
 	ctx := context.Background()
@@ -129,7 +131,7 @@ func RemoveService(composeFilePath, serviceName string) error {
 }
 
 func InitProject(projectDir string) error {
-	composePath := filepath.Join(projectDir, DefaultComposeFileName)
+	composePath := filepath.Join(projectDir, DefaultProjectComposeFileName)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
 	} else if !os.IsNotExist(err) {

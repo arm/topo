@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/dependencies"
@@ -81,7 +82,7 @@ func (t *Target) collectRemoteCPU() error {
 }
 
 func ExecSSH(target, command string) (string, error) {
-	cmd := ExecCommand("ssh", target, command)
+	cmd := exec.Command("ssh", target, command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

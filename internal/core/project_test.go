@@ -47,7 +47,7 @@ func (m *mockArgumentCollector) Collect(specs []service.ArgSpec) (map[string]str
 
 func writeComposeFile(t *testing.T, dir, content string) string {
 	t.Helper()
-	composePath := filepath.Join(dir, DefaultComposeFileName)
+	composePath := filepath.Join(dir, DefaultProjectComposeFileName)
 	require.NoError(t, os.WriteFile(composePath, []byte(content), 0644), "failed to write compose file")
 	return composePath
 }
@@ -58,7 +58,7 @@ func TestInitProject(t *testing.T) {
 
 		require.NoError(t, InitProject(dir))
 
-		composeFile := filepath.Join(dir, DefaultComposeFileName)
+		composeFile := filepath.Join(dir, DefaultProjectComposeFileName)
 		data, err := os.ReadFile(composeFile)
 		require.NoError(t, err)
 		var p types.Project
