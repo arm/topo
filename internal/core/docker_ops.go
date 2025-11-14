@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -35,7 +36,7 @@ type DockerPsItemWithRuntime struct {
 // ReadContainersInfo returns enriched ps output.
 func ReadContainersInfo(sshTarget string) ([]DockerPsItemWithRuntime, error) {
 	conn := []string{"-H", fmt.Sprintf("ssh://%s", sshTarget)}
-	cmd := ExecCommand("docker", append(conn, "ps", "-a", "--format", "{{json .}}")...)
+	cmd := exec.Command("docker", append(conn, "ps", "-a", "--format", "{{json .}}")...)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func ReadContainersInfo(sshTarget string) ([]DockerPsItemWithRuntime, error) {
 	}
 	inspectArgs := append(append(conn, "inspect"), ids...)
 	inspectArgs = append(inspectArgs, "--format", `{{json .NetworkSettings.Ports}};{{.HostConfig.Runtime}}`)
-	inspectCmd := ExecCommand("docker", inspectArgs...)
+	inspectCmd := exec.Command("docker", inspectArgs...)
 	inspectOut, err := inspectCmd.Output()
 	if err != nil {
 		return nil, err

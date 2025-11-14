@@ -13,7 +13,7 @@ import (
 func TestPrintProject(t *testing.T) {
 	compose := `name: demo
 services: {}`
-	composePath := filepath.Join(t.TempDir(), DefaultComposeFileName)
+	composePath := filepath.Join(t.TempDir(), DefaultProjectComposeFileName)
 	require.NoError(t, os.WriteFile(composePath, []byte(compose), 0644))
 	var buf bytes.Buffer
 
