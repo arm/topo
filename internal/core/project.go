@@ -40,7 +40,7 @@ func PrintProject(w io.Writer, targetProjectFile string) error {
 	return nil
 }
 
-func AddService(targetProjectFile, newServiceName string, src source.ServiceSource) error {
+func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argCollector service.ArgumentCollector) error {
 	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
@@ -56,18 +56,27 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 		return fmt.Errorf("failed to obtain Service Template: %w", err)
 	}
 
+	var success bool
+	defer func() {
+		if !success {
+			_ = os.RemoveAll(destDir)
+		}
+	}()
+
 	serviceManifest, err := service.ParseDefinition(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to load topo service from %s: %w", src.String(), err)
 	}
 
-	newSvc, err := compose.ParseServiceTemplate(
-		newServiceName,
-		service.NewResolvedTemplateManifest(serviceManifest),
-	)
+	resolvedServiceManifest, err := service.NewResolvedTemplateManifest(serviceManifest, argCollector)
 	if err != nil {
 		return err
 	}
+
+	newSvc, err := compose.ParseServiceTemplate(
+		newServiceName,
+		resolvedServiceManifest,
+	)
 
 	if err := compose.InsertService(project, newSvc); err != nil {
 		return err
@@ -85,6 +94,8 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 	if err := os.WriteFile(targetProjectFile, buf.Bytes(), 0o644); err != nil {
 		return fmt.Errorf("failed to write compose file %s %w", targetProjectFile, err)
 	}
+
+	success = true
 	return nil
 }
 

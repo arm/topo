@@ -1,13 +1,18 @@
 package main
 
 import (
+	"os"
+
+	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/core"
 	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/spf13/cobra"
 )
 
+var addServiceNoPrompt bool
+
 var addServiceCmd = &cobra.Command{
-	Use:   "add-service <compose-filepath> <service-name> <source>",
+	Use:   "add-service <compose-filepath> <service-name> <source> [-- ARG=VALUE ...]",
 	Short: "Add a service to the compose file from a template ID or git URL",
 	Long: `Add a service to the compose file.
 
@@ -21,8 +26,14 @@ Git repository:
   topo add-service compose.yaml my-service git:https://github.com/user/repo.git#develop
   topo add-service compose.yaml my-service git:git@github.com:user/repo.git#main
 
+Service templates may require build arguments. You can provide them via the command line
+or interactively when prompted:
+
+  topo add-service compose.yaml my-service git:url -- GREETING="Hello" PORT=8080
+  topo add-service compose.yaml my-service git:url --no-prompt
+
 Use list-service-templates to see available built-in templates.`,
-	Args: cobra.ExactArgs(3),
+	Args: cobra.MinimumNArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		composeFilePath := args[0]
 		serviceName := args[1]
@@ -33,10 +44,29 @@ Use list-service-templates to see available built-in templates.`,
 			return err
 		}
 
-		return core.AddService(composeFilePath, serviceName, src)
+		var providers []arguments.Provider
+		var cliArgs []string
+		if len(args) > 3 {
+			cliArgs = args[3:]
+		}
+		if len(cliArgs) > 0 {
+			cliProvider, err := arguments.NewCLIProvider(cliArgs)
+			if err != nil {
+				return err
+			}
+			providers = append(providers, cliProvider)
+		}
+		if !addServiceNoPrompt {
+			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
+		}
+
+		collector := arguments.NewCollector(providers...)
+
+		return core.AddService(composeFilePath, serviceName, src, collector)
 	},
 }
 
 func init() {
+	addServiceCmd.Flags().BoolVar(&addServiceNoPrompt, "no-prompt", false, "Error if required arguments are missing instead of prompting")
 	rootCmd.AddCommand(addServiceCmd)
 }
