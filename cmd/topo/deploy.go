@@ -41,7 +41,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		targetHost := host.New(resolvedTarget)
+		targetHost := host.NewSSH(resolvedTarget)
 		deployment := docker.NewDeployment(os.Stdout, composeFile, targetHost)
 
 		if deployDryRun {
