@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/core"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
 	"github.com/arm-debug/topo-cli/internal/deploy/host"
 	"github.com/spf13/cobra"
@@ -32,7 +31,7 @@ similar to how 'docker compose' works without the -f flag.
 Use --dry-run to see what commands would be executed without actually running them.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		resolvedTarget, err := core.ResolveTarget(deployTarget)
+		resolvedTarget, err := resolveTarget(deployTarget)
 		if err != nil {
 			return err
 		}

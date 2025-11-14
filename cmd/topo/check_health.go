@@ -12,7 +12,7 @@ var checkHealthCmd = &cobra.Command{
 	Short: "Show information about the target and check the host environment (container engines, SSH availability)",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		resolved, err := core.ResolveTarget(checkHealthTarget)
+		resolved, err := resolveTarget(checkHealthTarget)
 		if err != nil {
 			return err
 		}
