@@ -15,9 +15,14 @@ func NewCollector(providers ...Provider) Collector {
 
 func (c Collector) Collect(specs []service.ArgSpec) (map[string]string, error) {
 	result := make(map[string]string)
+	remainingSpecs := specs
 
 	for _, provider := range c {
-		args, err := provider.Provide(specs)
+		if len(remainingSpecs) == 0 {
+			break
+		}
+
+		args, err := provider.Provide(remainingSpecs)
 		if err != nil {
 			return nil, fmt.Errorf("%s provider failed: %w", provider.Name(), err)
 		}
@@ -26,13 +31,25 @@ func (c Collector) Collect(specs []service.ArgSpec) (map[string]string, error) {
 		if allRequiredProvided(specs, result) {
 			break
 		}
+
+		remainingSpecs = filterProvided(remainingSpecs, args)
 	}
 
-	if err := validateRequired(specs, result); err != nil {
+	if err := validateRequiredProvided(specs, result); err != nil {
 		return nil, err
 	}
 
 	return result, nil
+}
+
+func filterProvided(specs []service.ArgSpec, provided map[string]string) []service.ArgSpec {
+	var remaining []service.ArgSpec
+	for _, spec := range specs {
+		if _, exists := provided[spec.Name]; !exists {
+			remaining = append(remaining, spec)
+		}
+	}
+	return remaining
 }
 
 func allRequiredProvided(specs []service.ArgSpec, provided map[string]string) bool {
@@ -46,7 +63,7 @@ func allRequiredProvided(specs []service.ArgSpec, provided map[string]string) bo
 	return true
 }
 
-func validateRequired(specs []service.ArgSpec, provided map[string]string) error {
+func validateRequiredProvided(specs []service.ArgSpec, provided map[string]string) error {
 	var missing []service.ArgSpec
 	for _, spec := range specs {
 		if spec.Required {
