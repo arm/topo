@@ -68,7 +68,7 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 		return fmt.Errorf("failed to load topo service from %s: %w", src.String(), err)
 	}
 
-	resolvedServiceManifest, err := service.NewResolvedTemplateManifest(serviceManifest, argCollector)
+	resolvedServiceManifest, err := service.ResolveTemplateManifest(serviceManifest, argCollector)
 	if err != nil {
 		return err
 	}
@@ -77,6 +77,9 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 		newServiceName,
 		resolvedServiceManifest,
 	)
+	if err != nil {
+		return err
+	}
 
 	if err := compose.InsertService(project, newSvc); err != nil {
 		return err

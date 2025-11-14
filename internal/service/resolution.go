@@ -14,7 +14,7 @@ type ArgumentCollector interface {
 	Collect(specs []ArgSpec) (map[string]string, error)
 }
 
-func NewResolvedTemplateManifest(sourceManifest TemplateManifest, argCollector ArgumentCollector) (ResolvedTemplateManifest, error) {
+func ResolveTemplateManifest(sourceManifest TemplateManifest, argCollector ArgumentCollector) (ResolvedTemplateManifest, error) {
 	buildArgs, err := argCollector.Collect(sourceManifest.Metadata.Args)
 	if err != nil {
 		return ResolvedTemplateManifest{}, err

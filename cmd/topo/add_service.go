@@ -29,7 +29,11 @@ Git repository:
 Service templates may require build arguments. You can provide them via the command line
 or interactively when prompted:
 
+  # Will prompt for required args
+  topo add-service compose.yaml my-service git:url
+  # Provide args explicitly
   topo add-service compose.yaml my-service git:url -- GREETING="Hello" PORT=8080
+  # Don't prompt, raise an error if required args are missing
   topo add-service compose.yaml my-service git:url --no-prompt
 
 Use list-service-templates to see available built-in templates.`,
@@ -60,9 +64,9 @@ Use list-service-templates to see available built-in templates.`,
 			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
 		}
 
-		collector := arguments.NewCollector(providers...)
+		argCollector := arguments.NewCollector(providers...)
 
-		return core.AddService(composeFilePath, serviceName, src, collector)
+		return core.AddService(composeFilePath, serviceName, src, argCollector)
 	},
 }
 
