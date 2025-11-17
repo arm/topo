@@ -3,13 +3,13 @@ package source
 import (
 	"fmt"
 
-	"github.com/arm-debug/topo-cli/internal/service"
+	"github.com/arm-debug/topo-cli/internal/catalog"
 )
 
 type TemplateId string
 
 func (t TemplateId) CopyTo(destDir string) error {
-	serviceTemplateRepo, err := service.GetTemplateRepo(string(t))
+	serviceTemplateRepo, err := catalog.GetServiceTemplateRepo(string(t))
 	if err != nil {
 		return err
 	}
