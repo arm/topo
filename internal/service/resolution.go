@@ -1,37 +1,27 @@
 package service
 
-type ResolvedArg struct {
-	Name  string
-	Value string
-}
+import (
+	"github.com/arm-debug/topo-cli/internal/arguments"
+)
 
 type ResolvedTemplateManifest struct {
 	Service map[string]any
-	Args    []ResolvedArg
+	Args    []arguments.ResolvedArg
 }
 
-type ArgumentCollector interface {
-	Collect(specs []ArgSpec) (map[string]string, error)
-}
+func ResolveTemplateManifest(sourceManifest TemplateManifest, argCollector arguments.Collector) (ResolvedTemplateManifest, error) {
+	args := make([]arguments.Arg, len(sourceManifest.Metadata.Args))
+	for i, metaArg := range sourceManifest.Metadata.Args {
+		args[i] = arguments.Arg(metaArg)
+	}
 
-func ResolveTemplateManifest(sourceManifest TemplateManifest, argCollector ArgumentCollector) (ResolvedTemplateManifest, error) {
-	buildArgs, err := argCollector.Collect(sourceManifest.Metadata.Args)
+	resolvedArgs, err := argCollector.Collect(args)
 	if err != nil {
 		return ResolvedTemplateManifest{}, err
 	}
 
-	args := make([]ResolvedArg, 0, len(buildArgs))
-	for _, spec := range sourceManifest.Metadata.Args {
-		if value, ok := buildArgs[spec.Name]; ok {
-			args = append(args, ResolvedArg{
-				Name:  spec.Name,
-				Value: value,
-			})
-		}
-	}
-
 	return ResolvedTemplateManifest{
 		Service: sourceManifest.Service,
-		Args:    args,
+		Args:    resolvedArgs,
 	}, nil
 }

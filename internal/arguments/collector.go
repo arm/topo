@@ -3,9 +3,24 @@ package arguments
 import (
 	"fmt"
 	"maps"
-
-	"github.com/arm-debug/topo-cli/internal/service"
 )
+
+type Arg struct {
+	Name        string
+	Description string
+	Required    bool
+	Example     string
+}
+
+type ResolvedArg struct {
+	Name  string
+	Value string
+}
+
+type Provider interface {
+	Provide(args []Arg) (map[string]string, error)
+	Name() string
+}
 
 type Collector []Provider
 
@@ -13,49 +28,59 @@ func NewCollector(providers ...Provider) Collector {
 	return Collector(providers)
 }
 
-func (c Collector) Collect(specs []service.ArgSpec) (map[string]string, error) {
-	result := make(map[string]string)
-	remainingSpecs := specs
+func (c Collector) Collect(args []Arg) ([]ResolvedArg, error) {
+	provided := make(map[string]string)
+	remaining := args
 
 	for _, provider := range c {
-		if len(remainingSpecs) == 0 {
+		if len(remaining) == 0 {
 			break
 		}
 
-		args, err := provider.Provide(remainingSpecs)
+		values, err := provider.Provide(remaining)
 		if err != nil {
 			return nil, fmt.Errorf("%s provider failed: %w", provider.Name(), err)
 		}
-		maps.Copy(result, args)
+		maps.Copy(provided, values)
 
-		if allRequiredProvided(specs, result) {
+		if allRequiredProvided(args, provided) {
 			break
 		}
 
-		remainingSpecs = filterProvided(remainingSpecs, args)
+		remaining = filterProvided(remaining, values)
 	}
 
-	if err := validateRequiredProvided(specs, result); err != nil {
+	if err := validateRequiredProvided(args, provided); err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	resolved := []ResolvedArg{}
+	for _, arg := range args {
+		if value, ok := provided[arg.Name]; ok {
+			resolved = append(resolved, ResolvedArg{
+				Name:  arg.Name,
+				Value: value,
+			})
+		}
+	}
+
+	return resolved, nil
 }
 
-func filterProvided(specs []service.ArgSpec, provided map[string]string) []service.ArgSpec {
-	var remaining []service.ArgSpec
-	for _, spec := range specs {
-		if _, exists := provided[spec.Name]; !exists {
-			remaining = append(remaining, spec)
+func filterProvided(args []Arg, provided map[string]string) []Arg {
+	var remaining []Arg
+	for _, arg := range args {
+		if _, exists := provided[arg.Name]; !exists {
+			remaining = append(remaining, arg)
 		}
 	}
 	return remaining
 }
 
-func allRequiredProvided(specs []service.ArgSpec, provided map[string]string) bool {
-	for _, spec := range specs {
-		if spec.Required {
-			if value, exists := provided[spec.Name]; !exists || value == "" {
+func allRequiredProvided(args []Arg, provided map[string]string) bool {
+	for _, arg := range args {
+		if arg.Required {
+			if value, exists := provided[arg.Name]; !exists || value == "" {
 				return false
 			}
 		}
@@ -63,12 +88,12 @@ func allRequiredProvided(specs []service.ArgSpec, provided map[string]string) bo
 	return true
 }
 
-func validateRequiredProvided(specs []service.ArgSpec, provided map[string]string) error {
-	var missing []service.ArgSpec
-	for _, spec := range specs {
-		if spec.Required {
-			if value, exists := provided[spec.Name]; !exists || value == "" {
-				missing = append(missing, spec)
+func validateRequiredProvided(args []Arg, provided map[string]string) error {
+	var missing []Arg
+	for _, arg := range args {
+		if arg.Required {
+			if value, exists := provided[arg.Name]; !exists || value == "" {
+				missing = append(missing, arg)
 			}
 		}
 	}
@@ -80,15 +105,15 @@ func validateRequiredProvided(specs []service.ArgSpec, provided map[string]strin
 	return nil
 }
 
-type MissingArgsError []service.ArgSpec
+type MissingArgsError []Arg
 
 func (e MissingArgsError) Error() string {
 	msg := "missing required build arguments:\n"
-	for _, spec := range e {
-		msg += fmt.Sprintf("  %s:\n", spec.Name)
-		msg += fmt.Sprintf("    description: %s\n", spec.Description)
-		if spec.Example != "" {
-			msg += fmt.Sprintf("    example: %s\n", spec.Example)
+	for _, arg := range e {
+		msg += fmt.Sprintf("  %s:\n", arg.Name)
+		msg += fmt.Sprintf("    description: %s\n", arg.Description)
+		if arg.Example != "" {
+			msg += fmt.Sprintf("    example: %s\n", arg.Example)
 		}
 	}
 	return msg

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
@@ -33,16 +34,20 @@ func (m *mockServiceSource) String() string {
 	return args.String(0)
 }
 
-type mockArgumentCollector struct {
+type mockProvider struct {
 	mock.Mock
 }
 
-func (m *mockArgumentCollector) Collect(specs []service.ArgSpec) (map[string]string, error) {
-	args := m.Called(specs)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func (m *mockProvider) Provide(args []arguments.Arg) (map[string]string, error) {
+	callArgs := m.Called(args)
+	if callArgs.Get(0) == nil {
+		return nil, callArgs.Error(1)
 	}
-	return args.Get(0).(map[string]string), args.Error(1)
+	return callArgs.Get(0).(map[string]string), callArgs.Error(1)
+}
+
+func (m *mockProvider) Name() string {
+	return "mock"
 }
 
 func writeComposeFile(t *testing.T, dir, content string) string {
@@ -73,7 +78,6 @@ func TestAddService(t *testing.T) {
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockServiceSource{}
-		collector := &mockArgumentCollector{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -90,12 +94,11 @@ x-topo:
 `
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
 		})
-		collector.On("Collect", mock.Anything).Return(map[string]string{}, nil)
+		collector := arguments.NewCollector()
 
 		require.NoError(t, AddService(targetProjectFile, "test", mockSource, collector))
 
 		mockSource.AssertExpectations(t)
-		collector.AssertExpectations(t)
 
 		data, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err, "failed to read compose file")
@@ -113,7 +116,7 @@ x-topo:
 		require.NoError(t, os.MkdirAll(conflictDir, 0755), "failed to create conflict directory")
 
 		mockSource := &mockServiceSource{}
-		collector := &mockArgumentCollector{}
+		collector := arguments.NewCollector()
 
 		err := AddService(targetProjectFile, "test", mockSource, collector)
 
@@ -127,7 +130,6 @@ x-topo:
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockServiceSource{}
-		collector := &mockArgumentCollector{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -145,12 +147,11 @@ x-topo:
 `
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
 		})
-		collector.On("Collect", mock.Anything).Return(map[string]string{}, nil)
+		collector := arguments.NewCollector()
 
 		require.NoError(t, AddService(targetProjectFile, "test", mockSource, collector))
 
 		mockSource.AssertExpectations(t)
-		collector.AssertExpectations(t)
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
@@ -182,7 +183,7 @@ volumes:
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockServiceSource{}
-		collector := &mockArgumentCollector{}
+		provider := &mockProvider{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -204,7 +205,7 @@ x-topo:
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
 		})
 
-		expectedSpecs := []service.ArgSpec{
+		expectedArgs := []arguments.Arg{
 			{
 				Name:        "GREETING",
 				Description: "The greeting message",
@@ -212,12 +213,13 @@ x-topo:
 				Example:     "Hello",
 			},
 		}
-		collector.On("Collect", expectedSpecs).Return(map[string]string{"GREETING": "Hello, World"}, nil)
+		provider.On("Provide", expectedArgs).Return(map[string]string{"GREETING": "Hello, World"}, nil)
+		collector := arguments.NewCollector(provider)
 
 		require.NoError(t, AddService(targetProjectFile, "test", mockSource, collector))
 
 		mockSource.AssertExpectations(t)
-		collector.AssertExpectations(t)
+		provider.AssertExpectations(t)
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
@@ -240,7 +242,7 @@ services:
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockServiceSource{}
-		collector := &mockArgumentCollector{}
+		provider := &mockProvider{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -261,7 +263,8 @@ x-topo:
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
 		})
 
-		collector.On("Collect", mock.Anything).Return(nil, fmt.Errorf("user cancelled"))
+		provider.On("Provide", mock.Anything).Return(nil, fmt.Errorf("user cancelled"))
+		collector := arguments.NewCollector(provider)
 
 		err := AddService(targetProjectFile, "test", mockSource, collector)
 
@@ -272,7 +275,7 @@ x-topo:
 		assert.True(t, os.IsNotExist(err), "service directory should be cleaned up after failure")
 
 		mockSource.AssertExpectations(t)
-		collector.AssertExpectations(t)
+		provider.AssertExpectations(t)
 	})
 }
 

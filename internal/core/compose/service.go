@@ -3,6 +3,7 @@ package compose
 import (
 	"fmt"
 
+	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/transform"
@@ -54,7 +55,7 @@ func ParseServiceTemplate(serviceName string, resolved service.ResolvedTemplateM
 	return svc, nil
 }
 
-func convertResolvedArgsToBuildArgs(resolvedArgs []service.ResolvedArg) types.MappingWithEquals {
+func convertResolvedArgsToBuildArgs(resolvedArgs []arguments.ResolvedArg) types.MappingWithEquals {
 	if len(resolvedArgs) == 0 {
 		return nil
 	}

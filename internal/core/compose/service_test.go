@@ -3,6 +3,7 @@ package compose_test
 import (
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/core/compose"
 	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -47,7 +48,7 @@ func TestParseServiceTemplate(t *testing.T) {
 			Service: map[string]interface{}{
 				"image": "nginx:alpine",
 			},
-			Args: []service.ResolvedArg{
+			Args: []arguments.ResolvedArg{
 				{Name: "GREETING", Value: "Hello"},
 				{Name: "PORT", Value: "8080"},
 			},

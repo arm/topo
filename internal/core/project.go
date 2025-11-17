@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/core/compose"
 	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/arm-debug/topo-cli/internal/source"
@@ -42,7 +43,7 @@ func PrintProject(w io.Writer, targetProjectFile string) error {
 	return nil
 }
 
-func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argCollector service.ArgumentCollector) error {
+func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argCollector arguments.Collector) error {
 	project, err := ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)

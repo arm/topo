@@ -3,8 +3,6 @@ package arguments
 import (
 	"fmt"
 	"strings"
-
-	"github.com/arm-debug/topo-cli/internal/service"
 )
 
 type CLIProvider map[string]string
@@ -21,11 +19,11 @@ func NewCLIProvider(cliArgs []string) (CLIProvider, error) {
 	return CLIProvider(parsed), nil
 }
 
-func (p CLIProvider) Provide(specs []service.ArgSpec) (map[string]string, error) {
+func (p CLIProvider) Provide(args []Arg) (map[string]string, error) {
 	for key := range p {
 		found := false
-		for _, spec := range specs {
-			if spec.Name == key {
+		for _, arg := range args {
+			if arg.Name == key {
 				found = true
 				break
 			}
