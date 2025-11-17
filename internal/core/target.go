@@ -11,74 +11,109 @@ import (
 
 type execSSH func(target, command string) (string, error)
 
-type Target struct {
-	SshConn         string
+type HardwareProfile struct {
+	Features  []string
+	RemoteCPU []string
+}
+
+type TargetStatus struct {
+	SSHTarget       string
 	ConnectionError error
-	Features        []string
 	Dependencies    []dependencies.Status
-	RemoteCPU       []string
-	exec            execSSH
+	Hardware        HardwareProfile
 }
 
-func MakeTarget(sshTarget string, exec execSSH) Target {
-	target := Target{}
-	target.SshConn = sshTarget
-	target.exec = exec
-	_, err := target.Run("")
-	if err != nil {
-		target.ConnectionError = err
-		return target
+type TargetConnection struct {
+	sshTarget string
+	exec      execSSH
+}
+
+func NewTargetConnection(sshTarget string, exec execSSH) TargetConnection {
+	return TargetConnection{
+		sshTarget: sshTarget,
+		exec:      exec,
 	}
-
-	target.collectFeatures()
-	target.Dependencies = dependencies.Check(dependencies.TargetRequiredDependencies, target.BinaryExists)
-	target.collectRemoteCPU()
-
-	return target
 }
 
-func (t *Target) Run(command string) (string, error) {
-	return t.exec(t.SshConn, command)
+func (t *TargetConnection) Run(command string) (string, error) {
+	return t.exec(t.sshTarget, command)
 }
 
-func (t *Target) BinaryExists(bin string) (bool, error) {
+func (t *TargetConnection) BinaryExists(bin string) (bool, error) {
 	if !dependencies.BinaryRegex.MatchString(bin) {
 		return false, fmt.Errorf("%q is not a valid binary name (contains invalid characters)", bin)
 	}
-	_, err := t.exec(t.SshConn, fmt.Sprintf("command -v %s", bin))
+	_, err := t.exec(t.sshTarget, fmt.Sprintf("command -v %s", bin))
 	return err == nil, nil
 }
 
-func (t *Target) collectFeatures() error {
-	out, err := t.Run("grep -m1 Features /proc/cpuinfo")
-	if err != nil {
-		return err
-	}
-	t.Features = strings.Fields(out)
+func (t *TargetConnection) Probe() TargetStatus {
+	var targetStatus TargetStatus
+	targetStatus.SSHTarget = t.sshTarget
 
-	if len(t.Features) > 0 && t.Features[0] == "Features:" {
-		t.Features = t.Features[1:]
+	if err := t.ProbeConnection(); err != nil {
+		targetStatus.ConnectionError = err
+		return targetStatus
 	}
-	return nil
+
+	targetStatus.Dependencies = t.CheckDependencies()
+	targetStatus.Hardware, _ = t.ProbeHardware()
+
+	return targetStatus
 }
 
-func (t *Target) collectRemoteCPU() error {
+func (t *TargetConnection) ProbeConnection() error {
+	_, err := t.Run("true")
+	return err
+}
+
+func (t *TargetConnection) CheckDependencies() []dependencies.Status {
+	return dependencies.Check(dependencies.TargetRequiredDependencies, t.BinaryExists)
+}
+
+func (t *TargetConnection) ProbeHardware() (HardwareProfile, error) {
+	var hp HardwareProfile
+
+	if feats, err := t.collectFeatures(); err == nil {
+		hp.Features = feats
+	}
+	if cpus, err := t.collectRemoteCPU(); err == nil {
+		hp.RemoteCPU = cpus
+	}
+
+	return hp, nil
+}
+
+func (t *TargetConnection) collectFeatures() ([]string, error) {
+	out, err := t.Run("grep -m1 Features /proc/cpuinfo")
+	if err != nil {
+		return nil, err
+	}
+	features := strings.Fields(out)
+
+	if len(features) > 0 && features[0] == "Features:" {
+		features = features[1:]
+	}
+	return features, nil
+}
+
+func (t *TargetConnection) collectRemoteCPU() ([]string, error) {
 	out, err := t.Run("ls /sys/class/remoteproc")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if out == "" {
-		return fmt.Errorf("target supports remoteproc, but no processors found")
+		return nil, fmt.Errorf("target supports remoteproc, but no processors found")
 	}
 
 	out, err = t.Run("cat /sys/class/remoteproc/*/name")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	t.RemoteCPU = strings.Fields(out)
-	return nil
+	remoteCPU := strings.Fields(out)
+	return remoteCPU, nil
 }
 
 func ExecSSH(target, command string) (string, error) {
