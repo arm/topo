@@ -15,9 +15,9 @@ func TestRun(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "success", nil
 		}
-		target := core.MakeTarget("hostname", mockExec)
+		tc := core.NewTargetConnection("hostname", mockExec)
 
-		out, err := target.Run("ls")
+		out, err := tc.Run("ls")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "success", out)
@@ -27,68 +27,71 @@ func TestRun(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "", errors.New("ssh failed")
 		}
-		target := core.MakeTarget("hostname", mockExec)
+		tc := core.NewTargetConnection("hostname", mockExec)
 
-		out, err := target.Run("ls")
+		out, err := tc.Run("ls")
 
 		assert.Error(t, err)
 		assert.Empty(t, out)
 	})
 }
 
-func TestMakeTarget(t *testing.T) {
-	t.Run("make target succeeds and collects features", func(t *testing.T) {
-		mockExec := func(target, command string) (string, error) {
+func TestProbe(t *testing.T) {
+	t.Run("probe succeeds and collects features", func(t *testing.T) {
+		mockExec := func(_, command string) (string, error) {
 			if command == "" {
 				return "", nil // simulate successful initial connection
 			}
 			return "Features: fpu asimd", nil
 		}
 
-		target := core.MakeTarget("hostname", mockExec)
+		tc := core.NewTargetConnection("hostname", mockExec)
+		ts := tc.Probe()
 
-		assert.NoError(t, target.ConnectionError)
-		assert.Equal(t, []string{"fpu", "asimd"}, target.Features)
+		assert.NoError(t, ts.ConnectionError)
+		assert.Equal(t, []string{"fpu", "asimd"}, ts.Hardware.Features)
 	})
 
-	t.Run("make target succeeds but fails to collect features", func(t *testing.T) {
-		mockExec := func(target, command string) (string, error) {
+	t.Run("probe succeeds but features collection returns empty", func(t *testing.T) {
+		mockExec := func(_, command string) (string, error) {
 			if command == "" {
 				return "", nil
 			}
 			return "", nil
 		}
 
-		target := core.MakeTarget("hostname", mockExec)
+		tc := core.NewTargetConnection("hostname", mockExec)
+		ts := tc.Probe()
 
-		assert.NoError(t, target.ConnectionError)
-		assert.Empty(t, target.Features)
+		assert.NoError(t, ts.ConnectionError)
+		assert.Empty(t, ts.Hardware.Features)
 	})
 
-	t.Run("make target fails connection", func(t *testing.T) {
-		mockExec := func(target, command string) (string, error) {
+	t.Run("probe fails connection", func(t *testing.T) {
+		mockExec := func(_, _ string) (string, error) {
 			return "", fmt.Errorf("connection refused")
 		}
 
-		target := core.MakeTarget("hostname", mockExec)
+		tc := core.NewTargetConnection("hostname", mockExec)
+		ts := tc.Probe()
 
-		assert.Error(t, target.ConnectionError)
-		assert.EqualError(t, target.ConnectionError, "connection refused")
+		assert.Error(t, ts.ConnectionError)
+		assert.EqualError(t, ts.ConnectionError, "connection refused")
 	})
 
-	t.Run("make target finds remote cpu", func(t *testing.T) {
-		mockExec := func(target, command string) (string, error) {
+	t.Run("probe finds remote cpu", func(t *testing.T) {
+		mockExec := func(_, command string) (string, error) {
 			if strings.Contains(command, "remoteproc") {
 				return "foo\nbar", nil
 			}
 			return "", nil
 		}
 
-		target := core.MakeTarget("hostname", mockExec)
-		got := target.RemoteCPU
+		tc := core.NewTargetConnection("hostname", mockExec)
+		ts := tc.Probe()
 
 		want := []string{"foo", "bar"}
-		assert.Equal(t, want, got)
+		assert.Equal(t, want, ts.Hardware.RemoteCPU)
 	})
 }
 
@@ -97,9 +100,9 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
-		target := core.MakeTarget("hostname", mockExec)
+		tc := core.NewTargetConnection("hostname", mockExec)
 
-		got, err := target.BinaryExists("bar")
+		got, err := tc.BinaryExists("bar")
 
 		assert.NoError(t, err)
 		assert.True(t, got)
@@ -109,9 +112,9 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
-		target := core.MakeTarget("hostname", mockExec)
+		tc := core.NewTargetConnection("hostname", mockExec)
 
-		got, err := target.BinaryExists("b a r")
+		got, err := tc.BinaryExists("b a r")
 
 		assert.Error(t, err)
 		assert.False(t, got)

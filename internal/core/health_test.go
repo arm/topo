@@ -11,17 +11,23 @@ import (
 
 func TestExtractArmFeatures(t *testing.T) {
 	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
-		target := core.Target{
-			Features: []string{"fp", "asimd", "sve2", "sme"},
+		ts := core.TargetStatus{
+			Hardware: core.HardwareProfile{
+				Features: []string{"fp", "asimd", "sve2", "sme"},
+			},
 		}
-		res := core.ExtractArmFeatures(target)
+		res := core.ExtractArmFeatures(ts)
 		expected := []string{"NEON", "SVE2", "SME"}
 		assert.Equal(t, expected, res)
 	})
 
 	t.Run("returns empty slice if no matching features", func(t *testing.T) {
-		target := core.Target{Features: []string{"fp", "crc32"}}
-		res := core.ExtractArmFeatures(target)
+		ts := core.TargetStatus{
+			Hardware: core.HardwareProfile{
+				Features: []string{"fp", "crc32"},
+			},
+		}
+		res := core.ExtractArmFeatures(ts)
 		assert.Empty(t, res)
 	})
 }
@@ -39,7 +45,7 @@ func TestGenerateReport(t *testing.T) {
 			},
 		}
 
-		got := core.GenerateReport(dependencyStatuses, core.Target{})
+		got := core.GenerateReport(dependencyStatuses, core.TargetStatus{})
 
 		want := core.HealthCheck{
 			Name:    "Baz",
@@ -57,7 +63,7 @@ func TestGenerateReport(t *testing.T) {
 			},
 		}
 
-		got := core.GenerateReport(dependencyStatuses, core.Target{})
+		got := core.GenerateReport(dependencyStatuses, core.TargetStatus{})
 
 		assert.Len(t, got.Host.Dependencies, 1)
 		assert.Equal(t, "Rube Golberg", got.Host.Dependencies[0].Name)
@@ -65,28 +71,30 @@ func TestGenerateReport(t *testing.T) {
 	})
 
 	t.Run("when the target has a connection error, Connectivity is unhealthy", func(t *testing.T) {
-		unconnectedTarget := core.Target{ConnectionError: assert.AnError}
+		ts := core.TargetStatus{ConnectionError: assert.AnError}
 
-		got := core.GenerateReport(nil, unconnectedTarget)
+		got := core.GenerateReport(nil, ts)
 
 		assert.False(t, got.Target.Connectivity.Healthy)
 	})
 
 	t.Run("when the target has no connection error, the Connectivity is healthy", func(t *testing.T) {
-		connectedTarget := core.Target{}
+		ts := core.TargetStatus{}
 
-		got := core.GenerateReport(nil, connectedTarget)
+		got := core.GenerateReport(nil, ts)
 
 		assert.True(t, got.Target.Connectivity.Healthy)
 	})
 
 	t.Run("target features are listed", func(t *testing.T) {
-		target := core.Target{
+		ts := core.TargetStatus{
 			ConnectionError: nil,
-			Features:        []string{"asimd", "sve"},
+			Hardware: core.HardwareProfile{
+				Features: []string{"asimd", "sve"},
+			},
 		}
 
-		got := core.GenerateReport(nil, target)
+		got := core.GenerateReport(nil, ts)
 
 		assert.Equal(t, []string{"NEON", "SVE"}, got.Target.Features)
 	})
@@ -96,7 +104,7 @@ func TestGenerateReport(t *testing.T) {
 			Name:     "foo",
 			Category: "bar",
 		}
-		target := core.Target{
+		ts := core.TargetStatus{
 			ConnectionError: nil,
 			Dependencies: []dependencies.Status{
 				{
@@ -106,7 +114,7 @@ func TestGenerateReport(t *testing.T) {
 			},
 		}
 
-		got := core.GenerateReport(nil, target)
+		got := core.GenerateReport(nil, ts)
 
 		want := []core.HealthCheck{
 			{Name: "bar", Healthy: true, Value: "foo"},

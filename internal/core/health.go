@@ -17,10 +17,10 @@ var searchFlags = map[string]string{
 	"sme2":  "SME2",
 }
 
-func ExtractArmFeatures(target Target) []string {
+func ExtractArmFeatures(targetStatus TargetStatus) []string {
 	res := make([]string, 0)
 
-	for _, field := range target.Features {
+	for _, field := range targetStatus.Hardware.Features {
 		if name, ok := searchFlags[field]; ok {
 			res = append(res, name)
 		}
@@ -74,28 +74,28 @@ func generateHostReport(statuses []dependencies.Status) HostReport {
 	return report
 }
 
-func generateTargetReport(target Target) TargetReport {
+func generateTargetReport(targetStatus TargetStatus) TargetReport {
 	report := TargetReport{}
 	report.Connectivity = HealthCheck{
 		Name:    "Connected",
-		Healthy: target.ConnectionError == nil,
+		Healthy: targetStatus.ConnectionError == nil,
 		Value:   "",
 	}
-	report.Features = ExtractArmFeatures(target)
+	report.Features = ExtractArmFeatures(targetStatus)
 	report.SubsystemDriver = HealthCheck{
 		Name:    "Subsystem Driver (remoteproc)",
-		Healthy: len(target.RemoteCPU) > 0,
-		Value:   strings.Join(target.RemoteCPU, ", "),
+		Healthy: len(targetStatus.Hardware.RemoteCPU) > 0,
+		Value:   strings.Join(targetStatus.Hardware.RemoteCPU, ", "),
 	}
-	report.Dependencies = generateDependencyReport(target.Dependencies)
+	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 
 	return report
 }
 
-func GenerateReport(hostDependencies []dependencies.Status, target Target) Report {
+func GenerateReport(hostDependencies []dependencies.Status, targetStatus TargetStatus) Report {
 	report := Report{}
 	report.Host = generateHostReport(hostDependencies)
-	report.Target = generateTargetReport(target)
+	report.Target = generateTargetReport(targetStatus)
 
 	return report
 }
@@ -138,8 +138,9 @@ func RenderReportAsPlainText(report Report) (string, error) {
 func CheckHealth(sshTarget string) error {
 	dependencyStatuses := dependencies.Check(dependencies.HostRequiredDependencies, dependencies.BinaryExistsLocally)
 
-	target := MakeTarget(sshTarget, ExecSSH)
-	report := GenerateReport(dependencyStatuses, target)
+	targetConnection := NewTargetConnection(sshTarget, ExecSSH)
+	targetStatus := targetConnection.Probe()
+	report := GenerateReport(dependencyStatuses, targetStatus)
 	healthCheck, err := RenderReportAsPlainText(report)
 	if err != nil {
 		return err
