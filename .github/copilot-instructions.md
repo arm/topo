@@ -40,6 +40,36 @@
 
 #### Testing Best Practices
 
+**Use Black-Box Testing with `_test` Package Suffix**
+
+Generate test files using the `_test` package suffix to encourage black-box testing. This tests the public API and discourages testing implementation details.
+
+```go
+// Correct - black-box testing
+package user_test
+
+import (
+    "testing"
+    "mymodule/user"
+    "github.com/stretchr/testify/assert"
+)
+
+func TestCreateUser(t *testing.T) {
+    got := user.Create("Bob", "bob@example.com")
+
+    assert.Equal(t, "Bob", got.Name)
+}
+```
+
+```go
+// Avoid - white-box testing (unless testing unexported internals is truly necessary)
+package user
+
+func TestCreateUser(t *testing.T) {
+    // Can access unexported functions - discourages good API design
+}
+```
+
 **Keep Act and Assert Phases Separate**
 
 Don't mix error checking with the action being tested:
