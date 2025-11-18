@@ -12,7 +12,7 @@ import (
 var addServiceNoPrompt bool
 
 var addServiceCmd = &cobra.Command{
-	Use:   "add-service <compose-filepath> <service-name> <source> [-- ARG=VALUE ...]",
+	Use:   "add-service <compose-filepath> <service-name> <source> [flags] [-- ARG=VALUE ...]",
 	Short: "Add a service to the compose file from a template ID or git URL",
 	Long: `Add a service to the compose file.
 
