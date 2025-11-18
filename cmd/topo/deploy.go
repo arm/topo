@@ -31,6 +31,7 @@ similar to how 'docker compose' works without the -f flag.
 Use --dry-run to see what commands would be executed without actually running them.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
 		resolvedTarget, err := resolveTarget(deployTarget)
 		if err != nil {
 			return err
