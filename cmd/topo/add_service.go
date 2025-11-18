@@ -39,6 +39,7 @@ or interactively when prompted:
 Use list-service-templates to see available built-in templates.`,
 	Args: cobra.MinimumNArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
 		composeFilePath := args[0]
 		serviceName := args[1]
 		sourceArg := args[2]

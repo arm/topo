@@ -10,6 +10,7 @@ var removeServiceCmd = &cobra.Command{
 	Short: "Remove a service from the compose file",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
 		composeFilePath := args[0]
 		serviceName := args[1]
 		return core.RemoveService(composeFilePath, serviceName)

@@ -11,6 +11,7 @@ var getConfigMetadataCmd = &cobra.Command{
 	Use:   "get-config-metadata",
 	Short: "Show config metadata",
 	RunE: func(cmd *cobra.Command, _ []string) error {
+		cmd.SilenceUsage = true
 		return core.PrintConfigMetadata(os.Stdout)
 	},
 }

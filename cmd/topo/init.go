@@ -12,6 +12,7 @@ var initCmd = &cobra.Command{
 	Short: "Initialise a new project in the current directory",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
 		workDir, err := os.Getwd()
 		if err != nil {
 			return err

@@ -14,6 +14,7 @@ var getContainersInfoCmd = &cobra.Command{
 	Short: "Show container info running on the board",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
 		resolved, err := resolveTarget(getContainersInfoTarget)
 		if err != nil {
 			return err

@@ -12,6 +12,7 @@ var getProjectCmd = &cobra.Command{
 	Short: "Print the project as JSON",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
 		composeFilePath := args[0]
 		return core.PrintProject(os.Stdout, composeFilePath)
 	},

@@ -11,6 +11,7 @@ var listProjectsCmd = &cobra.Command{
 	Use:   "list-projects",
 	Short: "List available Projects",
 	RunE: func(cmd *cobra.Command, _ []string) error {
+		cmd.SilenceUsage = true
 		return catalog.PrintExampleProjectRepos(os.Stdout)
 	},
 }
