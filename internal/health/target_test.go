@@ -1,4 +1,4 @@
-package core_test
+package health_test
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,9 +15,9 @@ func TestRun(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "success", nil
 		}
-		tc := core.NewTargetConnection("hostname", mockExec)
+		conn := health.NewConnection("hostname", mockExec)
 
-		out, err := tc.Run("ls")
+		out, err := conn.Run("ls")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "success", out)
@@ -27,9 +27,9 @@ func TestRun(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "", errors.New("ssh failed")
 		}
-		tc := core.NewTargetConnection("hostname", mockExec)
+		conn := health.NewConnection("hostname", mockExec)
 
-		out, err := tc.Run("ls")
+		out, err := conn.Run("ls")
 
 		assert.Error(t, err)
 		assert.Empty(t, out)
@@ -45,8 +45,8 @@ func TestProbe(t *testing.T) {
 			return "Features: fpu asimd", nil
 		}
 
-		tc := core.NewTargetConnection("hostname", mockExec)
-		ts := tc.Probe()
+		conn := health.NewConnection("hostname", mockExec)
+		ts := conn.Probe()
 
 		assert.NoError(t, ts.ConnectionError)
 		assert.Equal(t, []string{"fpu", "asimd"}, ts.Hardware.Features)
@@ -60,8 +60,8 @@ func TestProbe(t *testing.T) {
 			return "", nil
 		}
 
-		tc := core.NewTargetConnection("hostname", mockExec)
-		ts := tc.Probe()
+		conn := health.NewConnection("hostname", mockExec)
+		ts := conn.Probe()
 
 		assert.NoError(t, ts.ConnectionError)
 		assert.Empty(t, ts.Hardware.Features)
@@ -72,8 +72,8 @@ func TestProbe(t *testing.T) {
 			return "", fmt.Errorf("connection refused")
 		}
 
-		tc := core.NewTargetConnection("hostname", mockExec)
-		ts := tc.Probe()
+		conn := health.NewConnection("hostname", mockExec)
+		ts := conn.Probe()
 
 		assert.Error(t, ts.ConnectionError)
 		assert.EqualError(t, ts.ConnectionError, "connection refused")
@@ -87,8 +87,8 @@ func TestProbe(t *testing.T) {
 			return "", nil
 		}
 
-		tc := core.NewTargetConnection("hostname", mockExec)
-		ts := tc.Probe()
+		conn := health.NewConnection("hostname", mockExec)
+		ts := conn.Probe()
 
 		want := []string{"foo", "bar"}
 		assert.Equal(t, want, ts.Hardware.RemoteCPU)
@@ -100,9 +100,9 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
-		tc := core.NewTargetConnection("hostname", mockExec)
+		conn := health.NewConnection("hostname", mockExec)
 
-		got, err := tc.BinaryExists("bar")
+		got, err := conn.BinaryExists("bar")
 
 		assert.NoError(t, err)
 		assert.True(t, got)
@@ -112,9 +112,9 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
-		tc := core.NewTargetConnection("hostname", mockExec)
+		conn := health.NewConnection("hostname", mockExec)
 
-		got, err := tc.BinaryExists("b a r")
+		got, err := conn.BinaryExists("b a r")
 
 		assert.Error(t, err)
 		assert.False(t, got)

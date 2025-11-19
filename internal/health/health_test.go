@@ -1,53 +1,52 @@
-package core_test
+package health_test
 
 import (
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/core"
-	"github.com/arm-debug/topo-cli/internal/dependencies"
+	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestExtractArmFeatures(t *testing.T) {
 	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
-		ts := core.TargetStatus{
-			Hardware: core.HardwareProfile{
+		ts := health.Status{
+			Hardware: health.HardwareProfile{
 				Features: []string{"fp", "asimd", "sve2", "sme"},
 			},
 		}
-		res := core.ExtractArmFeatures(ts)
+		res := health.ExtractArmFeatures(ts)
 		expected := []string{"NEON", "SVE2", "SME"}
 		assert.Equal(t, expected, res)
 	})
 
 	t.Run("returns empty slice if no matching features", func(t *testing.T) {
-		ts := core.TargetStatus{
-			Hardware: core.HardwareProfile{
+		ts := health.Status{
+			Hardware: health.HardwareProfile{
 				Features: []string{"fp", "crc32"},
 			},
 		}
-		res := core.ExtractArmFeatures(ts)
+		res := health.ExtractArmFeatures(ts)
 		assert.Empty(t, res)
 	})
 }
 
 func TestGenerateReport(t *testing.T) {
 	t.Run("given two host dependencies in the same category, they are grouped in a health check", func(t *testing.T) {
-		dependencyStatuses := []dependencies.Status{
+		dependencyStatuses := []health.DependencyStatus{
 			{
-				Dependency: dependencies.Dependency{Name: "foo", Category: "Baz"},
+				Dependency: health.Dependency{Name: "foo", Category: "Baz"},
 				Installed:  true,
 			},
 			{
-				Dependency: dependencies.Dependency{Name: "bar", Category: "Baz"},
+				Dependency: health.Dependency{Name: "bar", Category: "Baz"},
 				Installed:  true,
 			},
 		}
 
-		got := core.GenerateReport(dependencyStatuses, core.TargetStatus{})
+		got := health.GenerateReport(dependencyStatuses, health.Status{})
 
-		want := core.HealthCheck{
+		want := health.HealthCheck{
 			Name:    "Baz",
 			Healthy: true,
 			Value:   "foo, bar",
@@ -56,14 +55,14 @@ func TestGenerateReport(t *testing.T) {
 	})
 
 	t.Run("when a dependency is not installed, the health check is unhealthy", func(t *testing.T) {
-		dependencyStatuses := []dependencies.Status{
+		dependencyStatuses := []health.DependencyStatus{
 			{
-				Dependency: dependencies.Dependency{Name: "whatever", Category: "Rube Golberg"},
+				Dependency: health.Dependency{Name: "whatever", Category: "Rube Golberg"},
 				Installed:  false,
 			},
 		}
 
-		got := core.GenerateReport(dependencyStatuses, core.TargetStatus{})
+		got := health.GenerateReport(dependencyStatuses, health.Status{})
 
 		assert.Len(t, got.Host.Dependencies, 1)
 		assert.Equal(t, "Rube Golberg", got.Host.Dependencies[0].Name)
@@ -71,42 +70,42 @@ func TestGenerateReport(t *testing.T) {
 	})
 
 	t.Run("when the target has a connection error, Connectivity is unhealthy", func(t *testing.T) {
-		ts := core.TargetStatus{ConnectionError: assert.AnError}
+		ts := health.Status{ConnectionError: assert.AnError}
 
-		got := core.GenerateReport(nil, ts)
+		got := health.GenerateReport(nil, ts)
 
 		assert.False(t, got.Target.Connectivity.Healthy)
 	})
 
 	t.Run("when the target has no connection error, the Connectivity is healthy", func(t *testing.T) {
-		ts := core.TargetStatus{}
+		ts := health.Status{}
 
-		got := core.GenerateReport(nil, ts)
+		got := health.GenerateReport(nil, ts)
 
 		assert.True(t, got.Target.Connectivity.Healthy)
 	})
 
 	t.Run("target features are listed", func(t *testing.T) {
-		ts := core.TargetStatus{
+		ts := health.Status{
 			ConnectionError: nil,
-			Hardware: core.HardwareProfile{
+			Hardware: health.HardwareProfile{
 				Features: []string{"asimd", "sve"},
 			},
 		}
 
-		got := core.GenerateReport(nil, ts)
+		got := health.GenerateReport(nil, ts)
 
 		assert.Equal(t, []string{"NEON", "SVE"}, got.Target.Features)
 	})
 
 	t.Run("target dependencies are listed", func(t *testing.T) {
-		foo := dependencies.Dependency{
+		foo := health.Dependency{
 			Name:     "foo",
 			Category: "bar",
 		}
-		ts := core.TargetStatus{
+		ts := health.Status{
 			ConnectionError: nil,
-			Dependencies: []dependencies.Status{
+			Dependencies: []health.DependencyStatus{
 				{
 					Dependency: foo,
 					Installed:  true,
@@ -114,9 +113,9 @@ func TestGenerateReport(t *testing.T) {
 			},
 		}
 
-		got := core.GenerateReport(nil, ts)
+		got := health.GenerateReport(nil, ts)
 
-		want := []core.HealthCheck{
+		want := []health.HealthCheck{
 			{Name: "bar", Healthy: true, Value: "foo"},
 		}
 		assert.Equal(t, want, got.Target.Dependencies)
@@ -125,53 +124,53 @@ func TestGenerateReport(t *testing.T) {
 
 func TestRenderReportAsPlainText(t *testing.T) {
 	t.Run("it renders the dependencies", func(t *testing.T) {
-		report := core.Report{}
-		report.Host.Dependencies = []core.HealthCheck{{
+		report := health.Report{}
+		report.Host.Dependencies = []health.HealthCheck{{
 			Name:    "Flux Capacitor",
 			Healthy: true,
 		}}
 
-		got, err := core.RenderReportAsPlainText(report)
+		got, err := health.RenderReportAsPlainText(report)
 
 		require.NoError(t, err)
 		assert.Contains(t, got, "Flux Capacitor")
 	})
 
 	t.Run("it renders connection failures", func(t *testing.T) {
-		report := core.Report{}
-		report.Target.Connectivity = core.HealthCheck{
+		report := health.Report{}
+		report.Target.Connectivity = health.HealthCheck{
 			Name:    "Connected",
 			Healthy: false,
 		}
 
-		got, err := core.RenderReportAsPlainText(report)
+		got, err := health.RenderReportAsPlainText(report)
 
 		require.NoError(t, err)
 		assert.Contains(t, got, "Connected: ❌")
 	})
 
 	t.Run("when connected it renders cpu features", func(t *testing.T) {
-		report := core.Report{}
-		report.Target.Connectivity = core.HealthCheck{
+		report := health.Report{}
+		report.Target.Connectivity = health.HealthCheck{
 			Name:    "Connected",
 			Healthy: true,
 		}
 		report.Target.Features = []string{"FOO", "BAR"}
 
-		got, err := core.RenderReportAsPlainText(report)
+		got, err := health.RenderReportAsPlainText(report)
 
 		require.NoError(t, err)
 		assert.Contains(t, got, "FOO, BAR")
 	})
 
 	t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
-		report := core.Report{}
-		report.Target.Connectivity = core.HealthCheck{
+		report := health.Report{}
+		report.Target.Connectivity = health.HealthCheck{
 			Name:    "Connected",
 			Healthy: false,
 		}
 
-		got, err := core.RenderReportAsPlainText(report)
+		got, err := health.RenderReportAsPlainText(report)
 
 		require.NoError(t, err)
 		assert.NotContains(t, got, "Features")
