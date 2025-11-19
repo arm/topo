@@ -1,0 +1,14 @@
+name: Codex review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  codex-review:
+    uses: Arm-Debug/ai-debug-workflows/.github/workflows/codex-pr-review.yaml@main
+    with:
+      codex_proxy_url: ${{ vars.CODEX_PROXY_URL }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ARM_PKI_ROOT_CA: ${{ secrets.ARM_PKI_ROOT_CA }}
