@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ var checkHealthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return core.CheckHealth(resolved)
+		return health.Check(resolved)
 	},
 }
 

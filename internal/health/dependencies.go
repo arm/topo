@@ -1,4 +1,4 @@
-package dependencies
+package health
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ type Dependency struct {
 	Category string
 }
 
-type Status struct {
+type DependencyStatus struct {
 	Dependency Dependency
 	Installed  bool
 }
@@ -31,13 +31,13 @@ var BinaryRegex = regexp.MustCompile(`^[A-Za-z0-9_+-]+$`)
 
 type LookPath = func(bin string) (bool, error)
 
-func Check(dependencies []Dependency, binaryExists LookPath) []Status {
-	res := make([]Status, len(dependencies))
+func CheckInstalled(dependencies []Dependency, binaryExists LookPath) []DependencyStatus {
+	res := make([]DependencyStatus, len(dependencies))
 
 	for i, dep := range dependencies {
 		installed, _ := binaryExists(dep.Name)
 
-		res[i] = Status{
+		res[i] = DependencyStatus{
 			Dependency: dep,
 			Installed:  installed,
 		}
@@ -53,8 +53,8 @@ func BinaryExistsLocally(bin string) (bool, error) {
 	return err == nil, nil
 }
 
-func CollectAvailableByCategory(dependencyStatuses []Status) map[string][]Status {
-	groupedByCategory := map[string][]Status{}
+func CollectAvailableByCategory(dependencyStatuses []DependencyStatus) map[string][]DependencyStatus {
+	groupedByCategory := map[string][]DependencyStatus{}
 
 	for _, status := range dependencyStatuses {
 		statuses := groupedByCategory[status.Dependency.Category]

@@ -1,12 +1,10 @@
-package core
+package health
 
 import (
 	"bytes"
 	"fmt"
 	"html/template"
 	"strings"
-
-	"github.com/arm-debug/topo-cli/internal/dependencies"
 )
 
 var searchFlags = map[string]string{
@@ -17,7 +15,7 @@ var searchFlags = map[string]string{
 	"sme2":  "SME2",
 }
 
-func ExtractArmFeatures(targetStatus TargetStatus) []string {
+func ExtractArmFeatures(targetStatus Status) []string {
 	res := make([]string, 0)
 
 	for _, field := range targetStatus.Hardware.Features {
@@ -49,9 +47,9 @@ type Report struct {
 	Target TargetReport
 }
 
-func generateDependencyReport(statuses []dependencies.Status) []HealthCheck {
+func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
-	availableDepsByCategory := dependencies.CollectAvailableByCategory(statuses)
+	availableDepsByCategory := CollectAvailableByCategory(statuses)
 
 	for category, installedDependencies := range availableDepsByCategory {
 		names := make([]string, len(installedDependencies))
@@ -67,14 +65,14 @@ func generateDependencyReport(statuses []dependencies.Status) []HealthCheck {
 	return res
 }
 
-func generateHostReport(statuses []dependencies.Status) HostReport {
+func generateHostReport(statuses []DependencyStatus) HostReport {
 	report := HostReport{}
 	report.Dependencies = generateDependencyReport(statuses)
 
 	return report
 }
 
-func generateTargetReport(targetStatus TargetStatus) TargetReport {
+func generateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.Connectivity = HealthCheck{
 		Name:    "Connected",
@@ -92,7 +90,7 @@ func generateTargetReport(targetStatus TargetStatus) TargetReport {
 	return report
 }
 
-func GenerateReport(hostDependencies []dependencies.Status, targetStatus TargetStatus) Report {
+func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Report {
 	report := Report{}
 	report.Host = generateHostReport(hostDependencies)
 	report.Target = generateTargetReport(targetStatus)
@@ -135,11 +133,11 @@ func RenderReportAsPlainText(report Report) (string, error) {
 	return buf.String(), nil
 }
 
-func CheckHealth(sshTarget string) error {
-	dependencyStatuses := dependencies.Check(dependencies.HostRequiredDependencies, dependencies.BinaryExistsLocally)
+func Check(sshTarget string) error {
+	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 
-	targetConnection := NewTargetConnection(sshTarget, ExecSSH)
-	targetStatus := targetConnection.Probe()
+	conn := NewConnection(sshTarget, ExecSSH)
+	targetStatus := conn.Probe()
 	report := GenerateReport(dependencyStatuses, targetStatus)
 	healthCheck, err := RenderReportAsPlainText(report)
 	if err != nil {
