@@ -23,8 +23,10 @@ func Parse(source string) (ServiceSource, error) {
 		return TemplateId(sourceValue), nil
 	case "git":
 		return parseGit(sourceValue), nil
+	case "dir":
+		return Dir{Path: sourceValue}, nil
 	default:
-		return nil, fmt.Errorf("unsupported source type: %s (supported: template:, git:)", sourceType)
+		return nil, fmt.Errorf("unsupported source type: %s (supported: template:, git:, dir:)", sourceType)
 	}
 }
 

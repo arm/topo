@@ -17,6 +17,39 @@ func TestParse(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
+	t.Run("dir source", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			input string
+			want  source.Dir
+		}{
+			{
+				name:  "absolute path",
+				input: "dir:/path/to/template",
+				want:  source.Dir{Path: "/path/to/template"},
+			},
+			{
+				name:  "relative path",
+				input: "dir:./local/template",
+				want:  source.Dir{Path: "./local/template"},
+			},
+			{
+				name:  "path with spaces",
+				input: "dir:/path/with spaces/template",
+				want:  source.Dir{Path: "/path/with spaces/template"},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := source.Parse(tt.input)
+
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			})
+		}
+	})
+
 	t.Run("git source", func(t *testing.T) {
 		tests := []struct {
 			name  string

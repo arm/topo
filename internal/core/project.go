@@ -56,7 +56,7 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 	}
 
 	if err := src.CopyTo(destDir); err != nil {
-		return fmt.Errorf("failed to obtain Service Template: %w", err)
+		return fmt.Errorf("failed to copy Service Template: %w", err)
 	}
 
 	var success bool

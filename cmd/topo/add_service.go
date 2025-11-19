@@ -13,7 +13,7 @@ var addServiceNoPrompt bool
 
 var addServiceCmd = &cobra.Command{
 	Use:   "add-service <compose-filepath> <service-name> <source> [flags] [-- ARG=VALUE ...]",
-	Short: "Add a service to the compose file from a template ID or git URL",
+	Short: "Add a service to the compose file from a template ID, git URL, or local directory",
 	Long: `Add a service to the compose file.
 
 The source argument uses scheme prefixes to specify the source type:
@@ -25,6 +25,10 @@ Git repository:
   topo add-service compose.yaml my-service git:git@github.com:user/repo.git
   topo add-service compose.yaml my-service git:https://github.com/user/repo.git#develop
   topo add-service compose.yaml my-service git:git@github.com:user/repo.git#main
+
+Local directory:
+  topo add-service compose.yaml my-service dir:/path/to/template
+  topo add-service compose.yaml my-service dir:./relative/path
 
 Service templates may require build arguments. You can provide them via the command line
 or interactively when prompted:
