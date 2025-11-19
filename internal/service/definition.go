@@ -8,40 +8,79 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type TemplateManifest struct {
-	Metadata TopoMetadata
+const ComposeServiceFilename = "compose.service.yaml"
+
+type Template struct {
+	Metadata Metadata
 	Service  map[string]any
 }
 
-type TopoMetadata struct {
-	Name        string    `yaml:"name"`
-	Description string    `yaml:"description"`
-	Features    []string  `yaml:"features,omitempty"`
-	Args        []ArgSpec `yaml:"args,omitempty"`
-}
-
-type ArgSpec struct {
+type Metadata struct {
 	Name        string
-	Description string `yaml:"description"`
-	Required    bool   `yaml:"required"`
-	Example     string `yaml:"example,omitempty"`
+	Description string
+	Features    []string
+	Args        []Arg
 }
 
-type ArgMetadata struct {
-	Description string `yaml:"description"`
-	Required    bool   `yaml:"required"`
-	Example     string `yaml:"example,omitempty"`
+type Arg struct {
+	Name        string
+	Description string
+	Required    bool
+	Example     string
 }
 
-func (t *TopoMetadata) UnmarshalYAML(node *yaml.Node) error {
-	type rawTopoMetadata struct {
-		Name        string                 `yaml:"name"`
-		Description string                 `yaml:"description"`
-		Features    []string               `yaml:"features,omitempty"`
-		Args        map[string]ArgMetadata `yaml:"args,omitempty"`
+func ParseDefinition(destDir string) (Template, error) {
+	type composeServiceFile struct {
+		Services map[string]any `yaml:"services"`
+		XTopo    Metadata       `yaml:"x-topo"`
 	}
 
-	var raw rawTopoMetadata
+	composeServicePath := filepath.Join(destDir, ComposeServiceFilename)
+	composeServiceData, err := os.ReadFile(composeServicePath)
+	if err != nil {
+		return Template{}, fmt.Errorf("failed to read %s from %s: %w", ComposeServiceFilename, composeServicePath, err)
+	}
+
+	var parsed composeServiceFile
+	if err := yaml.Unmarshal(composeServiceData, &parsed); err != nil {
+		return Template{}, fmt.Errorf("failed to parse %s: %w", ComposeServiceFilename, err)
+	}
+
+	if len(parsed.Services) == 0 {
+		return Template{}, fmt.Errorf("no services defined in %s", ComposeServiceFilename)
+	}
+
+	if len(parsed.Services) > 1 {
+		return Template{}, fmt.Errorf("expected exactly one service in %s, found %d", ComposeServiceFilename, len(parsed.Services))
+	}
+
+	var serviceDef map[string]any
+	for _, svc := range parsed.Services {
+		serviceDef = svc.(map[string]any)
+		break
+	}
+
+	return Template{
+		Metadata: parsed.XTopo,
+		Service:  serviceDef,
+	}, nil
+}
+
+type rawMetadata struct {
+	Name        string            `yaml:"name"`
+	Description string            `yaml:"description"`
+	Features    []string          `yaml:"features,omitempty"`
+	Args        map[string]rawArg `yaml:"args,omitempty"`
+}
+
+type rawArg struct {
+	Description string `yaml:"description"`
+	Required    bool   `yaml:"required"`
+	Example     string `yaml:"example,omitempty"`
+}
+
+func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
+	var raw rawMetadata
 	if err := node.Decode(&raw); err != nil {
 		return err
 	}
@@ -54,8 +93,8 @@ func (t *TopoMetadata) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-func parseArgsInOrder(node *yaml.Node, argsMap map[string]ArgMetadata) []ArgSpec {
-	var result []ArgSpec
+func parseArgsInOrder(node *yaml.Node, argsMap map[string]rawArg) []Arg {
+	var result []Arg
 
 	for i := 0; i < len(node.Content); i += 2 {
 		if node.Content[i].Value == "args" {
@@ -63,7 +102,7 @@ func parseArgsInOrder(node *yaml.Node, argsMap map[string]ArgMetadata) []ArgSpec
 			for j := 0; j < len(argsNode.Content); j += 2 {
 				name := argsNode.Content[j].Value
 				if metadata, ok := argsMap[name]; ok {
-					result = append(result, ArgSpec{
+					result = append(result, Arg{
 						Name:        name,
 						Description: metadata.Description,
 						Required:    metadata.Required,
@@ -76,43 +115,4 @@ func parseArgsInOrder(node *yaml.Node, argsMap map[string]ArgMetadata) []ArgSpec
 	}
 
 	return result
-}
-
-const ComposeServiceFilename = "compose.service.yaml"
-
-type composeServiceFile struct {
-	Services map[string]any `yaml:"services"`
-	XTopo    TopoMetadata   `yaml:"x-topo"`
-}
-
-func ParseDefinition(destDir string) (TemplateManifest, error) {
-	composeServicePath := filepath.Join(destDir, ComposeServiceFilename)
-	composeServiceData, err := os.ReadFile(composeServicePath)
-	if err != nil {
-		return TemplateManifest{}, fmt.Errorf("failed to read %s from %s: %w", ComposeServiceFilename, composeServicePath, err)
-	}
-
-	var parsed composeServiceFile
-	if err := yaml.Unmarshal(composeServiceData, &parsed); err != nil {
-		return TemplateManifest{}, fmt.Errorf("failed to parse %s: %w", ComposeServiceFilename, err)
-	}
-
-	if len(parsed.Services) == 0 {
-		return TemplateManifest{}, fmt.Errorf("no services defined in %s", ComposeServiceFilename)
-	}
-
-	if len(parsed.Services) > 1 {
-		return TemplateManifest{}, fmt.Errorf("expected exactly one service in %s, found %d", ComposeServiceFilename, len(parsed.Services))
-	}
-
-	var serviceDef map[string]any
-	for _, svc := range parsed.Services {
-		serviceDef = svc.(map[string]any)
-		break
-	}
-
-	return TemplateManifest{
-		Metadata: parsed.XTopo,
-		Service:  serviceDef,
-	}, nil
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ParseServiceTemplate(serviceName string, resolved service.ResolvedTemplateManifest) (types.ServiceConfig, error) {
+func ParseServiceTemplate(serviceName string, resolved service.ResolvedTemplate) (types.ServiceConfig, error) {
 	// Create an in-memory compose file to dump the service definition into
 	composeDict := map[string]any{
 		"services": map[string]any{

@@ -13,7 +13,7 @@ import (
 
 func TestParseServiceTemplate(t *testing.T) {
 	t.Run("sets name and build context", func(t *testing.T) {
-		resolved := service.ResolvedTemplateManifest{
+		resolved := service.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"runtime": "cool-topo-runtime",
 			},
@@ -29,7 +29,7 @@ func TestParseServiceTemplate(t *testing.T) {
 	})
 
 	t.Run("handles short volume syntax", func(t *testing.T) {
-		resolved := service.ResolvedTemplateManifest{
+		resolved := service.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"volumes": []interface{}{"data:/var/lib/data"},
 			},
@@ -44,7 +44,7 @@ func TestParseServiceTemplate(t *testing.T) {
 	})
 
 	t.Run("injects build arguments", func(t *testing.T) {
-		resolved := service.ResolvedTemplateManifest{
+		resolved := service.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"image": "nginx:alpine",
 			},
