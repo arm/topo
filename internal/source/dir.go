@@ -13,14 +13,18 @@ type Dir struct {
 }
 
 func (d Dir) CopyTo(destDir string) error {
-	srcAbs, err := filepath.Abs(d.Path)
-	if err != nil {
-		return fmt.Errorf("failed to resolve source path: %w", err)
+	if _, err := os.Stat(destDir); err == nil {
+		return DestDirExistsError{Dir: destDir}
 	}
 
 	dstAbs, err := filepath.Abs(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to resolve destination path: %w", err)
+	}
+
+	srcAbs, err := filepath.Abs(d.Path)
+	if err != nil {
+		return fmt.Errorf("failed to resolve source path: %w", err)
 	}
 
 	if isNestedPath(srcAbs, dstAbs) {

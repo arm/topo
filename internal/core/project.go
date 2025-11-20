@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -51,11 +52,11 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 
 	destDir := filepath.Join(filepath.Dir(targetProjectFile), newServiceName)
 
-	if _, err := os.Stat(destDir); err == nil {
-		return fmt.Errorf("directory %s already exists; please choose a different service name or remove the existing directory", destDir)
-	}
-
 	if err := src.CopyTo(destDir); err != nil {
+		var errDestDirExists source.DestDirExistsError
+		if errors.As(err, &errDestDirExists) {
+			return fmt.Errorf("%w: please choose a different service name or remove the existing directory", errDestDirExists)
+		}
 		return fmt.Errorf("failed to copy Service Template: %w", err)
 	}
 

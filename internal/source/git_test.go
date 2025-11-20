@@ -8,6 +8,15 @@ import (
 )
 
 func TestGit(t *testing.T) {
+	t.Run("CopyTo", func(t *testing.T) {
+		dstDir := t.TempDir()
+		src := source.Git{URL: "https://github.com/example/repo.git"}
+
+		err := src.CopyTo(dstDir)
+
+		assert.ErrorIs(t, err, source.DestDirExistsError{Dir: dstDir})
+	})
+
 	t.Run("String", func(t *testing.T) {
 		t.Run("returns git:URL#ref for HTTPS URLs when ref is set", func(t *testing.T) {
 			src := source.Git{

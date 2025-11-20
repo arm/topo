@@ -8,6 +8,7 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/service"
+	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -112,17 +113,17 @@ x-topo:
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		conflictDir := filepath.Join(dir, "test")
-		require.NoError(t, os.MkdirAll(conflictDir, 0755), "failed to create conflict directory")
+		destDir := filepath.Join(dir, "test")
 
 		mockSource := &mockServiceSource{}
+		mockSource.On("CopyTo", destDir).Return(source.DestDirExistsError{Dir: destDir})
 		collector := arguments.NewCollector()
 
 		err := AddService(targetProjectFile, "test", mockSource, collector)
 
 		require.Error(t, err, "expected error when directory exists")
 		assert.Contains(t, err.Error(), "already exists")
-		mockSource.AssertNotCalled(t, "CopyTo")
+		mockSource.AssertExpectations(t)
 	})
 
 	t.Run("registers named volumes but passes through all volume types", func(t *testing.T) {

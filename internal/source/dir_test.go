@@ -72,51 +72,6 @@ func TestDir(t *testing.T) {
 			}
 		})
 
-		t.Run("returns error when source does not exist", func(t *testing.T) {
-			src := source.Dir{Path: "/nonexistent/path"}
-			dstDir := t.TempDir()
-
-			err := src.CopyTo(dstDir)
-
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "failed to access source directory")
-		})
-
-		t.Run("returns error when source is a file", func(t *testing.T) {
-			srcFile := filepath.Join(t.TempDir(), "file.txt")
-			require.NoError(t, os.WriteFile(srcFile, []byte("content"), 0o644))
-			src := source.Dir{Path: srcFile}
-			dstDir := t.TempDir()
-
-			err := src.CopyTo(dstDir)
-
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "source path is not a directory")
-		})
-
-		t.Run("returns error when destination is inside source", func(t *testing.T) {
-			srcDir := t.TempDir()
-			dstDir := filepath.Join(srcDir, "subdir")
-			src := source.Dir{Path: srcDir}
-
-			err := src.CopyTo(dstDir)
-
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "destination directory")
-			assert.Contains(t, err.Error(), "is inside source directory")
-		})
-
-		t.Run("returns error when destination equals source", func(t *testing.T) {
-			srcDir := t.TempDir()
-			src := source.Dir{Path: srcDir}
-
-			err := src.CopyTo(srcDir)
-
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "destination directory")
-			assert.Contains(t, err.Error(), "is inside source directory")
-		})
-
 		t.Run("preserves symlinks as symlinks", func(t *testing.T) {
 			srcDir := t.TempDir()
 			targetFile := filepath.Join(srcDir, "target.txt")
@@ -136,6 +91,51 @@ func TestDir(t *testing.T) {
 			target, err := os.Readlink(dstLink)
 			require.NoError(t, err)
 			assert.Equal(t, "target.txt", target)
+		})
+
+		t.Run("errors when source does not exist", func(t *testing.T) {
+			src := source.Dir{Path: "/nonexistent/path"}
+			dstDir := filepath.Join(t.TempDir(), "dest")
+
+			err := src.CopyTo(dstDir)
+
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "failed to access source directory")
+		})
+
+		t.Run("errors when source is a file", func(t *testing.T) {
+			srcFile := filepath.Join(t.TempDir(), "file.txt")
+			require.NoError(t, os.WriteFile(srcFile, []byte("content"), 0o644))
+			src := source.Dir{Path: srcFile}
+			dstDir := filepath.Join(t.TempDir(), "dest")
+
+			err := src.CopyTo(dstDir)
+
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "source path is not a directory")
+		})
+
+		t.Run("errors when destination is inside source", func(t *testing.T) {
+			srcDir := t.TempDir()
+			dstDir := filepath.Join(srcDir, "subdir")
+			src := source.Dir{Path: srcDir}
+
+			err := src.CopyTo(dstDir)
+
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "destination directory")
+			assert.Contains(t, err.Error(), "is inside source directory")
+		})
+
+		t.Run("errors when destination already exists", func(t *testing.T) {
+			srcDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(srcDir, "file.txt"), []byte("content"), 0o644))
+			dstDir := t.TempDir()
+			src := source.Dir{Path: srcDir}
+
+			err := src.CopyTo(dstDir)
+
+			assert.ErrorIs(t, err, source.DestDirExistsError{Dir: dstDir})
 		})
 	})
 }

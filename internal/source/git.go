@@ -12,6 +12,10 @@ type Git struct {
 }
 
 func (g Git) CopyTo(destDir string) error {
+	if _, err := os.Stat(destDir); err == nil {
+		return DestDirExistsError{Dir: destDir}
+	}
+
 	args := []string{"clone", "--depth", "1"}
 	if g.Ref != "" {
 		args = append(args, "--branch", g.Ref)
