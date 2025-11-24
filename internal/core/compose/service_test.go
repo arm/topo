@@ -11,52 +11,119 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseServiceTemplate(t *testing.T) {
-	t.Run("sets name and build context", func(t *testing.T) {
+func TestExtractNamedServiceVolumes(t *testing.T) {
+	t.Run("extracts only named volumes from volume syntax", func(t *testing.T) {
 		resolved := service.ResolvedTemplate{
 			Service: map[string]interface{}{
-				"runtime": "cool-topo-runtime",
+				"volumes": []interface{}{
+					"data:/var/lib/data",
+					"/host/path:/container/path",
+					"cache:/cache:ro",
+				},
 			},
 		}
 
-		svc, err := compose.ParseServiceTemplate("test-service", resolved)
+		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
 
 		require.NoError(t, err)
-		assert.Equal(t, "test-service", svc.Name)
-		require.NotNil(t, svc.Build)
-		assert.Equal(t, "./test-service", svc.Build.Context)
-		assert.Equal(t, "cool-topo-runtime", svc.Runtime)
+		require.Len(t, volumes, 2)
+		assert.Equal(t, "data", volumes[0].Source)
+		assert.Equal(t, "/var/lib/data", volumes[0].Target)
+		assert.Equal(t, "cache", volumes[1].Source)
+		assert.Equal(t, "/cache", volumes[1].Target)
 	})
 
-	t.Run("handles short volume syntax", func(t *testing.T) {
+	t.Run("skips bind mounts", func(t *testing.T) {
 		resolved := service.ResolvedTemplate{
 			Service: map[string]interface{}{
-				"volumes": []interface{}{"data:/var/lib/data"},
+				"volumes": []interface{}{
+					map[string]interface{}{
+						"type":   types.VolumeTypeBind,
+						"source": "/host/path",
+						"target": "/container/path",
+					},
+				},
 			},
 		}
 
-		svc, err := compose.ParseServiceTemplate("test-service", resolved)
+		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
 
 		require.NoError(t, err)
-		require.Len(t, svc.Volumes, 1)
-		assert.Equal(t, "data", svc.Volumes[0].Source)
-		assert.Equal(t, "/var/lib/data", svc.Volumes[0].Target)
+		assert.Empty(t, volumes)
+	})
+
+	t.Run("skips tmpfs", func(t *testing.T) {
+		resolved := service.ResolvedTemplate{
+			Service: map[string]interface{}{
+				"volumes": []interface{}{
+					map[string]interface{}{
+						"target": "/tmp",
+					},
+				},
+			},
+		}
+
+		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
+
+		require.NoError(t, err)
+		assert.Empty(t, volumes)
+	})
+
+	t.Run("skips volumes with empty source", func(t *testing.T) {
+		resolved := service.ResolvedTemplate{
+			Service: map[string]interface{}{
+				"volumes": []interface{}{
+					map[string]interface{}{
+						"source": "",
+						"target": "/data",
+					},
+				},
+			},
+		}
+
+		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
+
+		require.NoError(t, err)
+		assert.Empty(t, volumes)
+	})
+}
+
+func TestCreateService(t *testing.T) {
+	t.Run("generates service with extends field", func(t *testing.T) {
+		resolved := service.ResolvedTemplate{
+			Service: map[string]interface{}{
+				"name": "test-service",
+				"build": map[string]interface{}{
+					"context": ".",
+				},
+			},
+			ServiceName: "test-service-template",
+			Args:        nil,
+		}
+
+		svc := compose.CreateService("test-service", resolved)
+
+		assert.Equal(t, "./test-service/compose.service.yaml", svc.Extends.File)
+		assert.Equal(t, "test-service-template", svc.Extends.Service)
 	})
 
 	t.Run("injects build arguments", func(t *testing.T) {
 		resolved := service.ResolvedTemplate{
 			Service: map[string]interface{}{
-				"image": "nginx:alpine",
+				"name": "test-service",
+				"build": map[string]interface{}{
+					"context": ".",
+				},
 			},
+			ServiceName: "test-service-template",
 			Args: []arguments.ResolvedArg{
 				{Name: "GREETING", Value: "Hello"},
 				{Name: "PORT", Value: "8080"},
 			},
 		}
 
-		svc, err := compose.ParseServiceTemplate("test-service", resolved)
+		svc := compose.CreateService("test-service", resolved)
 
-		require.NoError(t, err)
 		require.NotNil(t, svc.Build)
 		require.NotNil(t, svc.Build.Args)
 		assert.Equal(t, "Hello", *svc.Build.Args["GREETING"])
@@ -64,65 +131,18 @@ func TestParseServiceTemplate(t *testing.T) {
 	})
 }
 
-func TestRegisterNamedVolumes(t *testing.T) {
-	t.Run("registers named volume", func(t *testing.T) {
+func TestRegisterVolumes(t *testing.T) {
+	t.Run("registers volumes", func(t *testing.T) {
 		project := &types.Project{
 			Volumes: nil,
 		}
-		svc := types.ServiceConfig{
-			Volumes: []types.ServiceVolumeConfig{
-				{Type: types.VolumeTypeVolume, Source: "mydata", Target: "/data"},
-			},
+		volumes := []types.ServiceVolumeConfig{
+			{Type: types.VolumeTypeVolume, Source: "mydata", Target: "/data"},
 		}
 
-		compose.RegisterNamedVolumes(project, svc)
+		compose.RegisterVolumes(project, volumes)
 
 		assert.Equal(t, types.Volumes{"mydata": {}}, project.Volumes)
-	})
-
-	t.Run("skips bind mounts", func(t *testing.T) {
-		project := &types.Project{
-			Volumes: nil,
-		}
-		svc := types.ServiceConfig{
-			Volumes: []types.ServiceVolumeConfig{
-				{Type: types.VolumeTypeBind, Source: "/host/path", Target: "/container/path"},
-			},
-		}
-
-		compose.RegisterNamedVolumes(project, svc)
-
-		assert.Empty(t, project.Volumes)
-	})
-
-	t.Run("skips tmpfs", func(t *testing.T) {
-		project := &types.Project{
-			Volumes: nil,
-		}
-		svc := types.ServiceConfig{
-			Volumes: []types.ServiceVolumeConfig{
-				{Type: types.VolumeTypeTmpfs, Target: "/tmp"},
-			},
-		}
-
-		compose.RegisterNamedVolumes(project, svc)
-
-		assert.Empty(t, project.Volumes)
-	})
-
-	t.Run("skips volumes with empty source", func(t *testing.T) {
-		project := &types.Project{
-			Volumes: nil,
-		}
-		svc := types.ServiceConfig{
-			Volumes: []types.ServiceVolumeConfig{
-				{Type: types.VolumeTypeVolume, Source: "", Target: "/data"},
-			},
-		}
-
-		compose.RegisterNamedVolumes(project, svc)
-
-		assert.Empty(t, project.Volumes)
 	})
 
 	t.Run("does not overwrite existing volumes", func(t *testing.T) {
@@ -131,14 +151,12 @@ func TestRegisterNamedVolumes(t *testing.T) {
 				"existing": types.VolumeConfig{Name: "existing", Driver: "local"},
 			},
 		}
-		svc := types.ServiceConfig{
-			Volumes: []types.ServiceVolumeConfig{
-				{Type: types.VolumeTypeVolume, Source: "existing", Target: "/data"},
-				{Type: types.VolumeTypeVolume, Source: "new", Target: "/other"},
-			},
+		volumes := []types.ServiceVolumeConfig{
+			{Type: types.VolumeTypeVolume, Source: "existing", Target: "/data"},
+			{Type: types.VolumeTypeVolume, Source: "new", Target: "/other"},
 		}
 
-		compose.RegisterNamedVolumes(project, svc)
+		compose.RegisterVolumes(project, volumes)
 
 		assert.Equal(t, types.Volumes{
 			"existing": types.VolumeConfig{Name: "existing", Driver: "local"},
@@ -146,23 +164,4 @@ func TestRegisterNamedVolumes(t *testing.T) {
 		}, project.Volumes)
 	})
 
-	t.Run("handles multiple named volumes", func(t *testing.T) {
-		project := &types.Project{
-			Volumes: nil,
-		}
-		svc := types.ServiceConfig{
-			Volumes: []types.ServiceVolumeConfig{
-				{Type: types.VolumeTypeVolume, Source: "data", Target: "/data"},
-				{Type: types.VolumeTypeVolume, Source: "cache", Target: "/cache"},
-				{Type: types.VolumeTypeBind, Source: "/host", Target: "/mnt"},
-			},
-		}
-
-		compose.RegisterNamedVolumes(project, svc)
-
-		assert.Equal(t, types.Volumes{
-			"data":  types.VolumeConfig{},
-			"cache": types.VolumeConfig{},
-		}, project.Volumes)
-	})
 }

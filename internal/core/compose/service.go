@@ -10,7 +10,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ParseServiceTemplate(serviceName string, resolved service.ResolvedTemplate) (types.ServiceConfig, error) {
+func ExtractNamedServiceVolumes(serviceName string, resolved service.ResolvedTemplate) ([]types.ServiceVolumeConfig, error) {
 	// Create an in-memory compose file to dump the service definition into
 	composeDict := map[string]any{
 		"services": map[string]any{
@@ -22,37 +22,48 @@ func ParseServiceTemplate(serviceName string, resolved service.ResolvedTemplate)
 	// This avoids us having to handle parsing of the various short forms
 	canonical, err := transform.Canonical(composeDict, false)
 	if err != nil {
-		return types.ServiceConfig{}, fmt.Errorf("failed to canonicalize service config: %w", err)
+		return nil, fmt.Errorf("failed to canonicalize service config: %w", err)
 	}
 
 	servicesDict, ok := canonical["services"].(map[string]any)
 	if !ok {
-		return types.ServiceConfig{}, fmt.Errorf("unexpected services format")
+		return nil, fmt.Errorf("unexpected services format")
 	}
 
 	serviceDict, ok := servicesDict[serviceName]
 	if !ok {
-		return types.ServiceConfig{}, fmt.Errorf("service %q not found after canonicalization", serviceName)
+		return nil, fmt.Errorf("service %q not found after canonicalization", serviceName)
 	}
 
 	var svc types.ServiceConfig
 	if err := loader.Transform(serviceDict, &svc); err != nil {
-		return types.ServiceConfig{}, fmt.Errorf("failed to transform service config: %w", err)
+		return nil, fmt.Errorf("failed to transform service config: %w", err)
 	}
 
-	svc.Name = serviceName
+	namedVolumes := []types.ServiceVolumeConfig{}
+	for _, vol := range svc.Volumes {
+		if vol.Type == types.VolumeTypeVolume && vol.Source != "" {
+			namedVolumes = append(namedVolumes, vol)
+		}
+	}
 
-	buildConfig := &types.BuildConfig{
-		Context: "./" + serviceName,
+	return namedVolumes, nil
+}
+
+func CreateService(serviceName string, resolved service.ResolvedTemplate) types.ServiceConfig {
+	projectService := types.ServiceConfig{}
+	projectService.Name = serviceName
+	projectService.Extends = &types.ExtendsConfig{
+		File:    "./" + serviceName + "/" + service.ComposeServiceFilename,
+		Service: resolved.ServiceName,
 	}
 
 	if args := convertResolvedArgsToBuildArgs(resolved.Args); args != nil {
-		buildConfig.Args = args
+		projectService.Build = &types.BuildConfig{}
+		projectService.Build.Args = args
 	}
 
-	svc.Build = buildConfig
-
-	return svc, nil
+	return projectService
 }
 
 func convertResolvedArgsToBuildArgs(resolvedArgs []arguments.ResolvedArg) types.MappingWithEquals {
@@ -79,16 +90,14 @@ func InsertService(p *types.Project, svc types.ServiceConfig) error {
 	return nil
 }
 
-func RegisterNamedVolumes(targetProject *types.Project, newService types.ServiceConfig) {
+func RegisterVolumes(targetProject *types.Project, volumes []types.ServiceVolumeConfig) {
 	if targetProject.Volumes == nil {
 		targetProject.Volumes = make(types.Volumes)
 	}
 
-	for _, vol := range newService.Volumes {
-		if vol.Type == types.VolumeTypeVolume && vol.Source != "" {
-			if _, exists := targetProject.Volumes[vol.Source]; !exists {
-				targetProject.Volumes[vol.Source] = types.VolumeConfig{}
-			}
+	for _, vol := range volumes {
+		if _, exists := targetProject.Volumes[vol.Source]; !exists {
+			targetProject.Volumes[vol.Source] = types.VolumeConfig{}
 		}
 	}
 }

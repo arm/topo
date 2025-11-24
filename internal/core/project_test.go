@@ -126,7 +126,7 @@ x-topo:
 		mockSource.AssertExpectations(t)
 	})
 
-	t.Run("registers named volumes but passes through all volume types", func(t *testing.T) {
+	t.Run("registers named volumes", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
@@ -140,7 +140,7 @@ x-topo:
 services:
   app:
     volumes:
-      - "data:/data"
+      - "pretty_data:/data"
       - "/host:/host"
 
 x-topo:
@@ -161,20 +161,11 @@ x-topo:
 name: example-project
 services:
   test:
-    build:
-      context: ./test
-    volumes:
-      - type: volume
-        source: data
-        target: /data
-        volume: {}
-      - type: bind
-        source: /host
-        target: /host
-        bind:
-          create_host_path: true
+    extends:
+      file: ./test/compose.service.yaml
+      service: app
 volumes:
-  data: {}
+  pretty_data: {}
 `
 		assert.YAMLEq(t, want, string(got))
 	})
@@ -229,9 +220,10 @@ x-topo:
 name: example-project
 services:
   test:
-    image: nginx:alpine
+    extends:
+      file: ./test/compose.service.yaml
+      service: app
     build:
-      context: ./test
       args:
         GREETING: "Hello, World"
 `

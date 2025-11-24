@@ -77,19 +77,20 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 		return err
 	}
 
-	newSvc, err := compose.ParseServiceTemplate(
+	newSvc := compose.CreateService(newServiceName, resolvedTemplate)
+
+	if err := compose.InsertService(project, newSvc); err != nil {
+		return err
+	}
+
+	volumes, err := compose.ExtractNamedServiceVolumes(
 		newServiceName,
 		resolvedTemplate,
 	)
 	if err != nil {
 		return err
 	}
-
-	if err := compose.InsertService(project, newSvc); err != nil {
-		return err
-	}
-
-	compose.RegisterNamedVolumes(project, newSvc)
+	compose.RegisterVolumes(project, volumes)
 
 	buf := &bytes.Buffer{}
 	enc := yaml.NewEncoder(buf)

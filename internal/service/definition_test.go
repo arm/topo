@@ -30,6 +30,7 @@ services:
 				"image": "nginx:alpine",
 				"ports": []any{"8000:80"},
 			},
+			ServiceName: "app",
 		}
 		assert.Equal(t, want, got)
 	})

@@ -11,8 +11,9 @@ import (
 const ComposeServiceFilename = "compose.service.yaml"
 
 type Template struct {
-	Metadata Metadata
-	Service  map[string]any
+	Metadata    Metadata
+	Service     map[string]any
+	ServiceName string
 }
 
 type Metadata struct {
@@ -55,14 +56,17 @@ func ParseDefinition(destDir string) (Template, error) {
 	}
 
 	var serviceDef map[string]any
-	for _, svc := range parsed.Services {
+	var serviceName string
+	for svcName, svc := range parsed.Services {
 		serviceDef = svc.(map[string]any)
+		serviceName = svcName
 		break
 	}
 
 	return Template{
-		Metadata: parsed.XTopo,
-		Service:  serviceDef,
+		Metadata:    parsed.XTopo,
+		Service:     serviceDef,
+		ServiceName: serviceName,
 	}, nil
 }
 

@@ -5,8 +5,9 @@ import (
 )
 
 type ResolvedTemplate struct {
-	Service map[string]any
-	Args    []arguments.ResolvedArg
+	Service     map[string]any
+	ServiceName string
+	Args        []arguments.ResolvedArg
 }
 
 func ResolveTemplate(template Template, argCollector arguments.Collector) (ResolvedTemplate, error) {
@@ -21,7 +22,8 @@ func ResolveTemplate(template Template, argCollector arguments.Collector) (Resol
 	}
 
 	return ResolvedTemplate{
-		Service: template.Service,
-		Args:    resolvedArgs,
+		Service:     template.Service,
+		Args:        resolvedArgs,
+		ServiceName: template.ServiceName,
 	}, nil
 }
