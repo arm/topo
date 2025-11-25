@@ -1,4 +1,4 @@
-package core
+package project
 
 import (
 	"bytes"
@@ -19,10 +19,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const DefaultProjectComposeFileName = "compose.yaml"
+const ComposeFilename = "compose.project.yaml"
 
-// ReadProject parses compose file into a compose-go project.
-func ReadProject(targetProjectFile string) (*types.Project, error) {
+// Read parses compose file into a compose-go project.
+func Read(targetProjectFile string) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions([]string{targetProjectFile}, cli.WithOsEnv, cli.WithDotEnv, cli.WithResolvedPaths(false), cli.WithNormalization(false))
 	if err != nil {
@@ -31,8 +31,8 @@ func ReadProject(targetProjectFile string) (*types.Project, error) {
 	return cli.ProjectFromOptions(ctx, options)
 }
 
-func PrintProject(w io.Writer, targetProjectFile string) error {
-	project, err := ReadProject(targetProjectFile)
+func Print(w io.Writer, targetProjectFile string) error {
+	project, err := Read(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}
@@ -45,7 +45,7 @@ func PrintProject(w io.Writer, targetProjectFile string) error {
 }
 
 func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argCollector arguments.Collector) error {
-	project, err := ReadProject(targetProjectFile)
+	project, err := Read(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}
@@ -108,7 +108,7 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 }
 
 func RemoveService(composeFilePath, serviceName string) error {
-	project, err := ReadProject(composeFilePath)
+	project, err := Read(composeFilePath)
 	if err != nil {
 		return err
 	}
@@ -133,8 +133,8 @@ func RemoveService(composeFilePath, serviceName string) error {
 	return nil
 }
 
-func InitProject(projectDir string) error {
-	composePath := filepath.Join(projectDir, DefaultProjectComposeFileName)
+func Init(projectDir string) error {
+	composePath := filepath.Join(projectDir, ComposeFilename)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
 	} else if !os.IsNotExist(err) {
@@ -147,7 +147,7 @@ func InitProject(projectDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal compose file: %w", err)
 	}
-	if err := os.WriteFile(composePath, data, 0644); err != nil {
+	if err := os.WriteFile(composePath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write compose file: %w", err)
 	}
 	return nil

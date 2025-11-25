@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
-	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/spf13/cobra"
 )
@@ -71,7 +71,7 @@ Use list-service-templates to see available built-in templates.`,
 
 		argCollector := arguments.NewCollector(providers...)
 
-		return core.AddService(composeFilePath, serviceName, src, argCollector)
+		return project.AddService(composeFilePath, serviceName, src, argCollector)
 	},
 }
 

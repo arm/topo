@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return core.InitProject(workDir)
+		return project.Init(workDir)
 	},
 }
 

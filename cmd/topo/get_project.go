@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +14,7 @@ var getProjectCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		composeFilePath := args[0]
-		return core.PrintProject(os.Stdout, composeFilePath)
+		return project.Print(os.Stdout, composeFilePath)
 	},
 }
 

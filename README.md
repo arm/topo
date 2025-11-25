@@ -22,11 +22,11 @@ go build ./cmd/topo
 ./topo add-service <compose-filepath> <service-name> <source>
 # Examples:
 #   Using a built-in template:
-./topo add-service compose.yaml my-service template:hello-world
+./topo add-service compose.project.yaml my-service template:hello-world
 #   Using a git repository:
-./topo add-service compose.yaml my-service git:https://github.com/user/repo.git
-./topo add-service compose.yaml my-service git:https://github.com/user/repo.git#develop
-./topo add-service compose.yaml my-service git:git@github.com:user/repo.git#main
+./topo add-service compose.project.yaml my-service git:https://github.com/user/repo.git
+./topo add-service compose.project.yaml my-service git:https://github.com/user/repo.git#develop
+./topo add-service compose.project.yaml my-service git:git@github.com:user/repo.git#main
 
 # Remove a service from the compose file
 ./topo remove-service <compose-filepath> <service-name>

@@ -1,12 +1,14 @@
-package core
+package project_test
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
+	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -53,24 +55,37 @@ func (m *mockProvider) Name() string {
 
 func writeComposeFile(t *testing.T, dir, content string) string {
 	t.Helper()
-	composePath := filepath.Join(dir, DefaultProjectComposeFileName)
-	require.NoError(t, os.WriteFile(composePath, []byte(content), 0644), "failed to write compose file")
+	composePath := filepath.Join(dir, project.ComposeFilename)
+	require.NoError(t, os.WriteFile(composePath, []byte(content), 0o644), "failed to write compose file")
 	return composePath
 }
 
-func TestInitProject(t *testing.T) {
+func TestInit(t *testing.T) {
 	t.Run("creates an empty compose file at the given location", func(t *testing.T) {
 		dir := t.TempDir()
 
-		require.NoError(t, InitProject(dir))
+		require.NoError(t, project.Init(dir))
 
-		composeFile := filepath.Join(dir, DefaultProjectComposeFileName)
+		composeFile := filepath.Join(dir, project.ComposeFilename)
 		data, err := os.ReadFile(composeFile)
 		require.NoError(t, err)
 		var p types.Project
 		require.NoError(t, yaml.Unmarshal(data, &p))
 		assert.Empty(t, p.Services)
 	})
+}
+
+func TestPrint(t *testing.T) {
+	compose := `name: demo
+services: {}`
+	composePath := filepath.Join(t.TempDir(), project.ComposeFilename)
+	require.NoError(t, os.WriteFile(composePath, []byte(compose), 0o644))
+	var buf bytes.Buffer
+
+	err := project.Print(&buf, composePath)
+
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), `"name": "demo"`)
 }
 
 func TestAddService(t *testing.T) {
@@ -83,7 +98,7 @@ func TestAddService(t *testing.T) {
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
 			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0755))
+			require.NoError(t, os.MkdirAll(dest, 0o755))
 			composeFileContents := `
 services:
   app:
@@ -93,11 +108,11 @@ x-topo:
   name: "test-service"
   description: "Test service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
 		collector := arguments.NewCollector()
 
-		require.NoError(t, AddService(targetProjectFile, "test", mockSource, collector))
+		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, collector))
 
 		mockSource.AssertExpectations(t)
 
@@ -119,7 +134,7 @@ x-topo:
 		mockSource.On("CopyTo", destDir).Return(source.DestDirExistsError{Dir: destDir})
 		collector := arguments.NewCollector()
 
-		err := AddService(targetProjectFile, "test", mockSource, collector)
+		err := project.AddService(targetProjectFile, "test", mockSource, collector)
 
 		require.Error(t, err, "expected error when directory exists")
 		assert.Contains(t, err.Error(), "already exists")
@@ -135,7 +150,7 @@ x-topo:
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
 			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0755))
+			require.NoError(t, os.MkdirAll(dest, 0o755))
 			composeFileContents := `
 services:
   app:
@@ -146,11 +161,11 @@ services:
 x-topo:
   name: "test-service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
 		collector := arguments.NewCollector()
 
-		require.NoError(t, AddService(targetProjectFile, "test", mockSource, collector))
+		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, collector))
 
 		mockSource.AssertExpectations(t)
 
@@ -180,7 +195,7 @@ volumes:
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
 			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0755))
+			require.NoError(t, os.MkdirAll(dest, 0o755))
 			composeFileContents := `
 services:
   app:
@@ -194,7 +209,7 @@ x-topo:
       required: true
       example: "Hello"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
 
 		expectedArgs := []arguments.Arg{
@@ -208,7 +223,7 @@ x-topo:
 		provider.On("Provide", expectedArgs).Return(map[string]string{"GREETING": "Hello, World"}, nil)
 		collector := arguments.NewCollector(provider)
 
-		require.NoError(t, AddService(targetProjectFile, "test", mockSource, collector))
+		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, collector))
 
 		mockSource.AssertExpectations(t)
 		provider.AssertExpectations(t)
@@ -240,7 +255,7 @@ services:
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
 			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0755))
+			require.NoError(t, os.MkdirAll(dest, 0o755))
 			composeFileContents := `
 services:
   app:
@@ -253,13 +268,13 @@ x-topo:
       description: "The greeting message"
       required: true
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
 
 		provider.On("Provide", mock.Anything).Return(nil, fmt.Errorf("user cancelled"))
 		collector := arguments.NewCollector(provider)
 
-		err := AddService(targetProjectFile, "test", mockSource, collector)
+		err := project.AddService(targetProjectFile, "test", mockSource, collector)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "user cancelled")
@@ -281,7 +296,7 @@ services:
       context: ./removeMe
 `
 	targetProjectFile := writeComposeFile(t, dir, compose)
-	require.NoError(t, RemoveService(targetProjectFile, "removeMe"))
+	require.NoError(t, project.RemoveService(targetProjectFile, "removeMe"))
 	data, err := os.ReadFile(targetProjectFile)
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "removeMe")

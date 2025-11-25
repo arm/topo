@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/arm-debug/topo-cli/internal/core"
+	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +13,7 @@ var removeServiceCmd = &cobra.Command{
 		cmd.SilenceUsage = true
 		composeFilePath := args[0]
 		serviceName := args[1]
-		return core.RemoveService(composeFilePath, serviceName)
+		return project.RemoveService(composeFilePath, serviceName)
 	},
 }
 

@@ -25,7 +25,7 @@ This command performs the following operations in sequence:
   3. Transfer - Transfers built and pulled images and compose file to the target host
   4. Run - Runs docker compose up on the target host
 
-The compose file (compose.yaml) is assumed to be in the current working directory,
+The compose file (compose.project.yaml) is assumed to be in the current working directory,
 similar to how 'docker compose' works without the -f flag.
 
 Use --dry-run to see what commands would be executed without actually running them.`,
@@ -54,13 +54,13 @@ Use --dry-run to see what commands would be executed without actually running th
 }
 
 func getComposeFileName() (string, error) {
-	candidates := []string{"compose.yaml", "compose.yml"}
+	candidates := []string{"compose.project.yaml", "compose.project.yml"}
 	for _, fileName := range candidates {
 		if _, err := os.Stat(fileName); err == nil {
 			return fileName, nil
 		}
 	}
-	return "", fmt.Errorf("compose file not found in current working directory: looking for compose.yaml or compose.yml")
+	return "", fmt.Errorf("compose file not found in current working directory: looking for compose.project.yaml or compose.project.yml")
 }
 
 func init() {
