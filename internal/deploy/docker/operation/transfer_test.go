@@ -18,6 +18,17 @@ import (
 func TestTransfer(t *testing.T) {
 	testutil.RequireDocker(t)
 
+	t.Run("Description", func(t *testing.T) {
+		h := host.Local
+		tmpDir := t.TempDir()
+		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
+		transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, h)
+
+		got := transfer.Description()
+
+		assert.Equal(t, "Transfer images", got)
+	})
+
 	t.Run("Run", func(t *testing.T) {
 		t.Run("transfers images from source to target", func(t *testing.T) {
 			// Note: The Run test doesn't perfectly verify that the image was transferred through

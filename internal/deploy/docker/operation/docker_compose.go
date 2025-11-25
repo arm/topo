@@ -10,14 +10,16 @@ import (
 )
 
 type DockerCompose struct {
+	description string
 	cmdOutput   io.Writer
 	composeFile string
 	host        host.Host
 	args        []string
 }
 
-func NewDockerCompose(cmdOutput io.Writer, composeFile string, h host.Host, args []string) *DockerCompose {
+func NewDockerCompose(description string, cmdOutput io.Writer, composeFile string, h host.Host, args []string) *DockerCompose {
 	return &DockerCompose{
+		description: description,
 		cmdOutput:   cmdOutput,
 		composeFile: composeFile,
 		host:        h,
@@ -25,8 +27,8 @@ func NewDockerCompose(cmdOutput io.Writer, composeFile string, h host.Host, args
 	}
 }
 
-func (dc *DockerCompose) buildCommand() *exec.Cmd {
-	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
+func (dc *DockerCompose) Description() string {
+	return dc.description
 }
 
 func (dc *DockerCompose) Run() error {
@@ -42,15 +44,19 @@ func (dc *DockerCompose) DryRun(w io.Writer) error {
 	return nil
 }
 
+func (dc *DockerCompose) buildCommand() *exec.Cmd {
+	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
+}
+
 func NewBuild(cmdOutput io.Writer, composeFile string, h host.Host) *DockerCompose {
-	return NewDockerCompose(cmdOutput, composeFile, h, []string{"build"})
+	return NewDockerCompose("Build images", cmdOutput, composeFile, h, []string{"build"})
 }
 
 func NewPull(cmdOutput io.Writer, composeFile string, h host.Host) *DockerCompose {
-	return NewDockerCompose(cmdOutput, composeFile, h, []string{"pull"})
+	return NewDockerCompose("Pull images", cmdOutput, composeFile, h, []string{"pull"})
 }
 
 func NewRun(cmdOutput io.Writer, composeFile string, h host.Host) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
-	return NewDockerCompose(cmdOutput, composeFile, h, args)
+	return NewDockerCompose("Start services", cmdOutput, composeFile, h, args)
 }

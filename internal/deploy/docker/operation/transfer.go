@@ -28,6 +28,10 @@ func NewTransfer(cmdOutput io.Writer, composeFile string, sourceHost, targetHost
 	}
 }
 
+func (t *Transfer) Description() string {
+	return "Transfer images"
+}
+
 func (t *Transfer) Run() error {
 	images, err := t.getImagesFromCompose()
 	if err != nil {

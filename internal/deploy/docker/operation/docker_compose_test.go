@@ -27,7 +27,7 @@ services:
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			var buf bytes.Buffer
-			op := operation.NewDockerCompose(&buf, composeFilePath, host.Local, []string{"config", "--services"})
+			op := operation.NewDockerCompose("", &buf, composeFilePath, host.Local, []string{"config", "--services"})
 
 			err := op.Run()
 
@@ -42,7 +42,7 @@ services:
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			remoteHost := host.New("ssh://user@remote")
-			op := operation.NewDockerCompose(&buf, composeFilePath, remoteHost, []string{"up", "-d", "--no-build"})
+			op := operation.NewDockerCompose("", &buf, composeFilePath, remoteHost, []string{"up", "-d", "--no-build"})
 
 			err := op.DryRun(&buf)
 
@@ -54,40 +54,68 @@ services:
 	})
 }
 
-func TestOperationFactories(t *testing.T) {
+func TestNewBuild(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := host.New("ssh://user@remote")
+	op := operation.NewBuild(nil, composeFilePath, remoteHost)
 
-	tests := []struct {
-		name        string
-		op          *operation.DockerCompose
-		wantCommand string
-	}{
-		{
-			name:        "NewBuild",
-			op:          operation.NewBuild(nil, composeFilePath, remoteHost),
-			wantCommand: fmt.Sprintf("docker -H %s compose -f %s build\n", remoteHost, composeFilePath),
-		},
-		{
-			name:        "NewPull",
-			op:          operation.NewPull(nil, composeFilePath, remoteHost),
-			wantCommand: fmt.Sprintf("docker -H %s compose -f %s pull\n", remoteHost, composeFilePath),
-		},
-		{
-			name:        "NewRun",
-			op:          operation.NewRun(nil, composeFilePath, remoteHost),
-			wantCommand: fmt.Sprintf("docker -H %s compose -f %s up -d --no-build --pull never\n", remoteHost, composeFilePath),
-		},
-	}
+	t.Run("Description", func(t *testing.T) {
+		got := op.Description()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
+		assert.Equal(t, "Build images", got)
+	})
 
-			err := tt.op.DryRun(&buf)
+	t.Run("DryRun", func(t *testing.T) {
+		var buf bytes.Buffer
 
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantCommand, buf.String())
-		})
-	}
+		err := op.DryRun(&buf)
+
+		require.NoError(t, err)
+		want := fmt.Sprintf("docker -H %s compose -f %s build\n", remoteHost, composeFilePath)
+		assert.Equal(t, want, buf.String())
+	})
+}
+
+func TestNewPull(t *testing.T) {
+	composeFilePath := "/path/to/compose.yaml"
+	remoteHost := host.New("ssh://user@remote")
+	op := operation.NewPull(nil, composeFilePath, remoteHost)
+
+	t.Run("Description", func(t *testing.T) {
+		got := op.Description()
+
+		assert.Equal(t, "Pull images", got)
+	})
+
+	t.Run("DryRun", func(t *testing.T) {
+		var buf bytes.Buffer
+
+		err := op.DryRun(&buf)
+
+		require.NoError(t, err)
+		want := fmt.Sprintf("docker -H %s compose -f %s pull\n", remoteHost, composeFilePath)
+		assert.Equal(t, want, buf.String())
+	})
+}
+
+func TestNewRun(t *testing.T) {
+	composeFilePath := "/path/to/compose.yaml"
+	remoteHost := host.New("ssh://user@remote")
+	op := operation.NewRun(nil, composeFilePath, remoteHost)
+
+	t.Run("Description", func(t *testing.T) {
+		got := op.Description()
+
+		assert.Equal(t, "Start services", got)
+	})
+
+	t.Run("DryRun", func(t *testing.T) {
+		var buf bytes.Buffer
+
+		err := op.DryRun(&buf)
+
+		require.NoError(t, err)
+		want := fmt.Sprintf("docker -H %s compose -f %s up -d --no-build --pull never\n", remoteHost, composeFilePath)
+		assert.Equal(t, want, buf.String())
+	})
 }
