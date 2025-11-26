@@ -1,0 +1,20 @@
+services:
+  hello-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NAME: "World"
+    ports:
+      - "8080:8080"
+
+x-topo:
+  name: "Hello Server"
+  description: |
+    A simple HTTP server that responds with "Hello <name>"
+  features: []
+  args:
+    NAME:
+      description: "The name to greet in the response"
+      required: false
+      example: "Topo"
