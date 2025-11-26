@@ -1,9 +1,10 @@
-package core
+package vscode_test
 
 import (
 	"bytes"
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/vscode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -11,7 +12,7 @@ import (
 func TestPrintConfigMetadata(t *testing.T) {
 	var buf bytes.Buffer
 
-	err := PrintConfigMetadata(&buf)
+	err := vscode.PrintConfigMetadata(&buf)
 
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), `boards`)

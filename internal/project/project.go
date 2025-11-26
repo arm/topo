@@ -3,10 +3,8 @@ package project
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -29,19 +27,6 @@ func Read(targetProjectFile string) (*types.Project, error) {
 		return nil, err
 	}
 	return cli.ProjectFromOptions(ctx, options)
-}
-
-func Print(w io.Writer, targetProjectFile string) error {
-	project, err := Read(targetProjectFile)
-	if err != nil {
-		return fmt.Errorf("failed to read project: %w", err)
-	}
-	data, err := json.MarshalIndent(project, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal project: %w", err)
-	}
-	fmt.Fprintf(w, "%s\n", data)
-	return nil
 }
 
 func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argCollector arguments.Collector) error {

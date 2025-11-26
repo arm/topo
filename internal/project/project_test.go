@@ -1,7 +1,6 @@
 package project_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -73,19 +72,6 @@ func TestInit(t *testing.T) {
 		require.NoError(t, yaml.Unmarshal(data, &p))
 		assert.Empty(t, p.Services)
 	})
-}
-
-func TestPrint(t *testing.T) {
-	compose := `name: demo
-services: {}`
-	composePath := filepath.Join(t.TempDir(), project.ComposeFilename)
-	require.NoError(t, os.WriteFile(composePath, []byte(compose), 0o644))
-	var buf bytes.Buffer
-
-	err := project.Print(&buf, composePath)
-
-	require.NoError(t, err)
-	assert.Contains(t, buf.String(), `"name": "demo"`)
 }
 
 func TestAddService(t *testing.T) {

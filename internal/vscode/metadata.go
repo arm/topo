@@ -1,14 +1,15 @@
-package core
+package vscode
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/arm-debug/topo-cli/configs"
 )
 
-// Configuration metadata (embedded config-metadata.json)
+//go:embed config-metadata.json
+var configMetadataJSON []byte
+
 type ConfigMetadata struct {
 	Boards []BoardInfo `json:"boards"`
 }
@@ -25,10 +26,9 @@ type SubsystemInfo struct {
 	Annotation map[string]string `json:"annotation"`
 }
 
-// ReadConfigMetadata loads embedded metadata JSON.
 func ReadConfigMetadata() (ConfigMetadata, error) {
 	var info ConfigMetadata
-	if err := json.Unmarshal(configs.ConfigMetadataJSON, &info); err != nil {
+	if err := json.Unmarshal(configMetadataJSON, &info); err != nil {
 		return info, fmt.Errorf("failed to unmarshal config metadata: %v", err)
 	}
 	return info, nil
