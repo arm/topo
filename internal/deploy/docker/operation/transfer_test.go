@@ -10,7 +10,7 @@ import (
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/testutil"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +19,7 @@ func TestTransfer(t *testing.T) {
 	testutil.RequireDocker(t)
 
 	t.Run("Description", func(t *testing.T) {
-		h := host.Local
+		h := ssh.Empty
 		tmpDir := t.TempDir()
 		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 		transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, h)
@@ -37,7 +37,7 @@ func TestTransfer(t *testing.T) {
 			// - Remove the image after save but before load (not feasible with current implementation).
 			// - Ensure test has access to two docker engines (expensive).
 			// As a compromise, this test verifies the operation completes without error and the image exists afterward.
-			h := host.Local
+			h := ssh.Empty
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
@@ -68,7 +68,7 @@ services:
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("prints transfer commands", func(t *testing.T) {
 			var buf bytes.Buffer
-			h := host.Local
+			h := ssh.Empty
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			composeFileContent := `
@@ -79,7 +79,7 @@ services:
     image: nginx:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, host.New("ssh://user@remote"))
+			transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, ssh.Host("user@remote"))
 
 			err := transfer.DryRun(&buf)
 

@@ -8,18 +8,18 @@ import (
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	"golang.org/x/sync/errgroup"
 )
 
 type Transfer struct {
 	cmdOutput   io.Writer
 	composeFile string
-	sourceHost  host.Host
-	targetHost  host.Host
+	sourceHost  ssh.Host
+	targetHost  ssh.Host
 }
 
-func NewTransfer(cmdOutput io.Writer, composeFile string, sourceHost, targetHost host.Host) *Transfer {
+func NewTransfer(cmdOutput io.Writer, composeFile string, sourceHost, targetHost ssh.Host) *Transfer {
 	return &Transfer{
 		cmdOutput:   cmdOutput,
 		composeFile: composeFile,

@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestString(t *testing.T) {
 	t.Run("converts docker command to string", func(t *testing.T) {
-		h := host.New("ssh://user@remote")
+		h := ssh.Host("user@remote")
 		cmd := command.Docker(h, "save", "alpine:latest")
 
 		got := command.String(cmd)
@@ -20,7 +20,7 @@ func TestString(t *testing.T) {
 	})
 
 	t.Run("converts docker compose command to string", func(t *testing.T) {
-		h := host.New("ssh://user@remote")
+		h := ssh.Host("user@remote")
 		cmd := command.DockerCompose(h, "/path/to/compose.yaml", "up", "-d")
 
 		got := command.String(cmd)

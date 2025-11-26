@@ -9,7 +9,7 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/testutil"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +21,7 @@ func TestDeployment(t *testing.T) {
 		dockerVM := testutil.StartDockerVM(t)
 
 		t.Run("builds images, transfers them, and starts services", func(t *testing.T) {
-			remoteDockerHost := host.New(dockerVM.DockerSocketPath)
+			remoteDockerHost := ssh.Host(dockerVM.SSHConnectionString)
 			tmpDir := t.TempDir()
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
 			dockerFileContent := `
@@ -63,7 +63,7 @@ services:
     image: busybox
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			targetHost := host.New("ssh://user@remote")
+			targetHost := ssh.Host("user@remote")
 			d := docker.NewDeployment(&buf, composeFilePath, targetHost)
 
 			err := d.DryRun(&buf)

@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +42,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		targetHost := host.NewSSH(resolvedTarget)
+		targetHost := ssh.Host(resolvedTarget)
 		deployment := docker.NewDeployment(os.Stdout, composeFile, targetHost)
 
 		if deployDryRun {

@@ -4,12 +4,12 @@ import (
 	"io"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
 	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
-func NewDeployment(cmdOutput io.Writer, composeFile string, targetHost host.Host) goperation.Sequence {
-	sourceHost := host.Local
+func NewDeployment(cmdOutput io.Writer, composeFile string, targetHost ssh.Host) goperation.Sequence {
+	sourceHost := ssh.Empty
 	return goperation.NewSequence(
 		cmdOutput,
 		operation.NewBuild(cmdOutput, composeFile, sourceHost),

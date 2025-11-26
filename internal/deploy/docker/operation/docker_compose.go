@@ -6,18 +6,18 @@ import (
 	"os/exec"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
 type DockerCompose struct {
 	description string
 	cmdOutput   io.Writer
 	composeFile string
-	host        host.Host
+	host        ssh.Host
 	args        []string
 }
 
-func NewDockerCompose(description string, cmdOutput io.Writer, composeFile string, h host.Host, args []string) *DockerCompose {
+func NewDockerCompose(description string, cmdOutput io.Writer, composeFile string, h ssh.Host, args []string) *DockerCompose {
 	return &DockerCompose{
 		description: description,
 		cmdOutput:   cmdOutput,
@@ -48,15 +48,15 @@ func (dc *DockerCompose) buildCommand() *exec.Cmd {
 	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
 }
 
-func NewBuild(cmdOutput io.Writer, composeFile string, h host.Host) *DockerCompose {
+func NewBuild(cmdOutput io.Writer, composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Build images", cmdOutput, composeFile, h, []string{"build"})
 }
 
-func NewPull(cmdOutput io.Writer, composeFile string, h host.Host) *DockerCompose {
+func NewPull(cmdOutput io.Writer, composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Pull images", cmdOutput, composeFile, h, []string{"pull"})
 }
 
-func NewRun(cmdOutput io.Writer, composeFile string, h host.Host) *DockerCompose {
+func NewRun(cmdOutput io.Writer, composeFile string, h ssh.Host) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
 	return NewDockerCompose("Start services", cmdOutput, composeFile, h, args)
 }

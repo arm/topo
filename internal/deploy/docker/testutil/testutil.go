@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	gtestutil "github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,14 +28,14 @@ func TestProjectName(t *testing.T) string {
 	return "test-project-" + gtestutil.SanitiseTestName(t)
 }
 
-func RequireImageExists(t *testing.T, h host.Host, imageName string) {
+func RequireImageExists(t *testing.T, h ssh.Host, imageName string) {
 	t.Helper()
 	inspectCmd := command.Docker(h, "image", "inspect", imageName)
 	output, err := inspectCmd.CombinedOutput()
 	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, command.String(inspectCmd), string(output))
 }
 
-func BuildMinimalImage(t *testing.T, h host.Host, imageName string) {
+func BuildMinimalImage(t *testing.T, h ssh.Host, imageName string) {
 	t.Helper()
 	dockerfileContent := `
 FROM alpine:latest
@@ -63,7 +63,7 @@ func ForceComposeDown(t *testing.T, composeFilePath string) {
 	}
 }
 
-func AssertContainersRunning(t *testing.T, h host.Host, composeFilePath string) {
+func AssertContainersRunning(t *testing.T, h ssh.Host, composeFilePath string) {
 	t.Helper()
 	dockerCmd := command.DockerCompose(h, composeFilePath, "ps", "--format", "json")
 	output, err := dockerCmd.CombinedOutput()

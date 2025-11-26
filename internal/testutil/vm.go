@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -15,7 +16,7 @@ const vmName = "topo-test-docker"
 var setupVMOnce = sync.OnceValues(setupVM)
 
 type DockerVM struct {
-	DockerSocketPath string
+	SSHConnectionString string
 }
 
 func RequireLima(t testing.TB) {
@@ -55,12 +56,16 @@ func setupVM() (*DockerVM, error) {
 		return nil, err
 	}
 
-	socketPath, err := getDockerSocketPath()
+	sshConnection, err := getSSHConnectionString()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Docker socket path: %w", err)
+		return nil, fmt.Errorf("failed to get SSH connection string: %w", err)
 	}
 
-	return &DockerVM{DockerSocketPath: socketPath}, nil
+	if err := ensureHostKeyKnown(sshConnection); err != nil {
+		return nil, fmt.Errorf("failed to add host key: %w", err)
+	}
+
+	return &DockerVM{SSHConnectionString: sshConnection}, nil
 }
 
 func determineLimaOperation() (limaOperation, error) {
@@ -90,7 +95,8 @@ func executeLimaOperation(operation limaOperation) error {
 	case limaOperationNone:
 		return nil
 	case limaOperationCreate:
-		cmd = exec.Command("limactl", "start", "--name", vmName, "template://docker")
+		templatePath := filepath.Join(getTestUtilDir(), "lima-template.yaml")
+		cmd = exec.Command("limactl", "start", "--name", vmName, templatePath)
 	case limaOperationStart:
 		cmd = exec.Command("limactl", "start", vmName)
 	default:
@@ -105,27 +111,59 @@ func executeLimaOperation(operation limaOperation) error {
 	return nil
 }
 
-func getDockerSocketPath() (string, error) {
-	vmDir, err := getVMDirectory()
-	if err != nil {
-		return "", err
-	}
-
-	socketPath := filepath.Join(vmDir, "sock", "docker.sock")
-	return "unix://" + socketPath, nil
+func getTestUtilDir() string {
+	_, filename, _, _ := runtime.Caller(0)
+	return filepath.Dir(filename)
 }
 
-func getVMDirectory() (string, error) {
-	cmd := exec.Command("limactl", "list", vmName, "--format", "{{.Dir}}")
+func getSSHConnectionString() (string, error) {
+	cmd := exec.Command("limactl", "list", vmName, "--format", "{{.SSHAddress}}:{{.SSHLocalPort}}")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to get VM directory: %w", err)
+		return "", fmt.Errorf("failed to get SSH connection string: %w", err)
 	}
 
-	vmDir := strings.TrimSpace(string(output))
-	if vmDir == "" {
-		return "", fmt.Errorf("empty VM directory")
+	sshConnection := strings.TrimSpace(string(output))
+	if sshConnection == "" {
+		return "", fmt.Errorf("empty SSH connection string")
 	}
 
-	return vmDir, nil
+	return sshConnection, nil
+}
+
+func ensureHostKeyKnown(sshConnection string) error {
+	parts := strings.Split(sshConnection, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid SSH connection string format: %s", sshConnection)
+	}
+
+	host := parts[0]
+	port := parts[1]
+
+	cmd := exec.Command("ssh-keyscan", "-p", port, host)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("ssh-keyscan failed: %w", err)
+	}
+
+	if len(output) == 0 {
+		return fmt.Errorf("ssh-keyscan returned no host keys")
+	}
+
+	knownHostsPath := filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts")
+	if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0700); err != nil {
+		return fmt.Errorf("failed to create .ssh directory: %w", err)
+	}
+
+	f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to open known_hosts: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write(output); err != nil {
+		return fmt.Errorf("failed to write to known_hosts: %w", err)
+	}
+
+	return nil
 }

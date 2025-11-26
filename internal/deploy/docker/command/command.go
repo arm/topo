@@ -4,15 +4,15 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/host"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
-func Docker(h host.Host, args ...string) *exec.Cmd {
+func Docker(h ssh.Host, args ...string) *exec.Cmd {
 	cmdArgs := append(hostToArgs(h), args...)
 	return exec.Command("docker", cmdArgs...)
 }
 
-func DockerCompose(h host.Host, composeFile string, args ...string) *exec.Cmd {
+func DockerCompose(h ssh.Host, composeFile string, args ...string) *exec.Cmd {
 	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
 	cmdArgs := append(hostToArgs(h), composeArgs...)
 	return exec.Command("docker", cmdArgs...)
@@ -22,9 +22,9 @@ func String(cmd *exec.Cmd) string {
 	return strings.Join(cmd.Args, " ")
 }
 
-func hostToArgs(h host.Host) []string {
-	if h == "" {
+func hostToArgs(h ssh.Host) []string {
+	if h == ssh.Empty {
 		return nil
 	}
-	return []string{"-H", string(h)}
+	return []string{"-H", h.AsURI()}
 }

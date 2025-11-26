@@ -1,0 +1,25 @@
+# Lima template for Docker with passwordless SSH access
+# Inherits from the standard docker template and adds SSH configuration
+
+base:
+- template://docker
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    # Create config for passwordless SSH
+    cat > /etc/ssh/sshd_config.d/01-passwordless-authentication.conf << 'EOF'
+    PasswordAuthentication yes
+    PermitEmptyPasswords yes
+    UsePAM no
+    EOF
+    # Restart SSH daemon to apply changes
+    systemctl restart sshd || systemctl restart ssh
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    # Remove password from current user
+    sudo passwd -d "$(whoami)"
