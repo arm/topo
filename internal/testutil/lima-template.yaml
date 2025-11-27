@@ -4,6 +4,12 @@
 base:
 - template://docker
 
+cpus: 2
+memory: 1GiB
+disk: 5GiB
+
+mounts: []
+
 provision:
 - mode: system
   script: |
