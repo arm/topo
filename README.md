@@ -2,59 +2,53 @@
 
 # Topo CLI
 
-A CLI tool to edit a `compose.yaml` file.
+Compose, parameterize, and deploy containerized examples for Arm hardware.
 
 ## Installation
 
-1. **Build**:
+Build from source:
 
 ```sh
 go build ./cmd/topo
 ```
 
-## Usage
+## Getting Started
+
+### Create a new project
 
 ```sh
-# List supported Service Templates
-./topo list-service-templates
-
-# Add a service based on a Service Template to the compose file
-./topo add-service <compose-filepath> <service-name> <source>
-# Examples:
-#   Using a built-in template:
-./topo add-service compose.project.yaml my-service template:hello-world
-#   Using a git repository:
-./topo add-service compose.project.yaml my-service git:https://github.com/user/repo.git
-./topo add-service compose.project.yaml my-service git:https://github.com/user/repo.git#develop
-./topo add-service compose.project.yaml my-service git:git@github.com:user/repo.git#main
-
-# Remove a service from the compose file
-./topo remove-service <compose-filepath> <service-name>
-
-# Get the project at the specified path
-./topo get-project <compose-filepath>
-
-# Initialise a project in the current directory
-./topo init [--target <ssh-target>]
-
-# Show the config metadata
-./topo get-config-metadata
-
-# Get containers info from the target
-./topo get-containers-info [--target <ssh-target>]
-
-# Show information about the board
-./topo check-health [--target <ssh-target>]
+./topo init
 ```
-* `compose-filepath` is a path to the `compose.yaml` file
-* `service-name` is the name of the new service to be added or removed.
-* `source` is the service source with a scheme prefix:
-  * `template:<template-id>` - Use a built-in Service Template (see `list-service-templates`)
-  * `git:<git-url>` - Clone a git repository as a service template. Append `#<ref>` for branches/tags (e.g., `git:https://github.com/user/repo.git#develop` or `git:git@github.com:user/repo.git#main`)
-* `--target` is the SSH destination. It might be a config host alias (as defined in your ~/.ssh/config) or an SSH destination (`user@host`). If not specified it uses the `TOPO_TARGET` environment variable.
 
-### How to deploy
-```bash
-cd <your project area>
-./topo deploy [--target <ssh-target>]
+This creates a `compose.project.yaml` in the current directory.
+
+### Add a service to your project
+
+List available templates:
+
+```sh
+./topo list-service-templates
+```
+
+Add a service using a built-in template:
+
+```sh
+./topo add-service compose.project.yaml my-service template:cortexa-welcome
+```
+
+### Deploy to your target
+
+```sh
+./topo deploy --target my-board
+```
+
+The `--target` flag accepts SSH config host aliases or `user@host` destinations. You can also set the `TOPO_TARGET` environment variable to avoid repeating this flag.
+
+## Usage
+
+For detailed command information and all available options:
+
+```sh
+./topo --help
+./topo <command> --help
 ```
