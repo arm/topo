@@ -2,12 +2,17 @@ package catalog
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/arm-debug/topo-cli/configs"
 )
+
+//go:embed data/service-templates.json
+var serviceTemplatesJSON []byte
+
+//go:embed data/example-projects.json
+var exampleProjectsJSON []byte
 
 type Repo struct {
 	Id  string `json:"id"`
@@ -16,19 +21,19 @@ type Repo struct {
 }
 
 func GetExampleProjectRepo(id string) (*Repo, error) {
-	return GetRepo(id, configs.ExampleProjectsJSON)
+	return GetRepo(id, exampleProjectsJSON)
 }
 
 func PrintExampleProjectRepos(w io.Writer) error {
-	return printRepos(w, configs.ExampleProjectsJSON)
+	return printRepos(w, exampleProjectsJSON)
 }
 
 func GetServiceTemplateRepo(id string) (*Repo, error) {
-	return GetRepo(id, configs.ServiceTemplatesJSON)
+	return GetRepo(id, serviceTemplatesJSON)
 }
 
 func PrintServiceTemplateRepos(w io.Writer) error {
-	return printRepos(w, configs.ServiceTemplatesJSON)
+	return printRepos(w, serviceTemplatesJSON)
 }
 
 func ListRepos(b []byte) ([]Repo, error) {
