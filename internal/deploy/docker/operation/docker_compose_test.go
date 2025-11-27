@@ -27,9 +27,9 @@ services:
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			var buf bytes.Buffer
-			op := operation.NewDockerCompose("", &buf, composeFilePath, ssh.Empty, []string{"config", "--services"})
+			op := operation.NewDockerCompose("", composeFilePath, ssh.Empty, []string{"config", "--services"})
 
-			err := op.Run()
+			err := op.Run(&buf)
 
 			require.NoError(t, err)
 			assert.Contains(t, buf.String(), "test-service")
@@ -42,7 +42,7 @@ services:
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			remoteHost := ssh.Host("user@remote")
-			op := operation.NewDockerCompose("", &buf, composeFilePath, remoteHost, []string{"up", "-d", "--no-build"})
+			op := operation.NewDockerCompose("", composeFilePath, remoteHost, []string{"up", "-d", "--no-build"})
 
 			err := op.DryRun(&buf)
 
@@ -57,7 +57,7 @@ services:
 func TestNewBuild(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.Host("user@remote")
-	op := operation.NewBuild(nil, composeFilePath, remoteHost)
+	op := operation.NewBuild(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()
@@ -79,7 +79,7 @@ func TestNewBuild(t *testing.T) {
 func TestNewPull(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.Host("user@remote")
-	op := operation.NewPull(nil, composeFilePath, remoteHost)
+	op := operation.NewPull(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()
@@ -101,7 +101,7 @@ func TestNewPull(t *testing.T) {
 func TestNewRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.Host("user@remote")
-	op := operation.NewRun(nil, composeFilePath, remoteHost)
+	op := operation.NewRun(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()

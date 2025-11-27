@@ -22,7 +22,7 @@ func TestTransfer(t *testing.T) {
 		h := ssh.Empty
 		tmpDir := t.TempDir()
 		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-		transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, h)
+		transfer := operation.NewTransfer(composeFilePath, h, h)
 
 		got := transfer.Description()
 
@@ -56,9 +56,9 @@ services:
 			buildOutput, err := buildCmd.CombinedOutput()
 			require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 
-			transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, h)
+			transfer := operation.NewTransfer(composeFilePath, h, h)
 
-			err = transfer.Run()
+			err = transfer.Run(os.Stdout)
 
 			require.NoError(t, err)
 			testutil.RequireImageExists(t, h, imageName)
@@ -79,7 +79,7 @@ services:
     image: nginx:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewTransfer(os.Stdout, composeFilePath, h, ssh.Host("user@remote"))
+			transfer := operation.NewTransfer(composeFilePath, h, ssh.Host("user@remote"))
 
 			err := transfer.DryRun(&buf)
 

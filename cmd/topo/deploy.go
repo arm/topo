@@ -43,13 +43,13 @@ Use --dry-run to see what commands would be executed without actually running th
 		}
 
 		targetHost := ssh.Host(resolvedTarget)
-		deployment := docker.NewDeployment(os.Stdout, composeFile, targetHost)
+		deployment := docker.NewDeployment(composeFile, targetHost)
 
 		if deployDryRun {
 			return deployment.DryRun(os.Stdout)
 		}
 
-		return deployment.Run()
+		return deployment.Run(os.Stdout)
 	},
 }
 

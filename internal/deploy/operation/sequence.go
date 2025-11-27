@@ -7,13 +7,11 @@ import (
 )
 
 type Sequence struct {
-	cmdOutput  io.Writer
 	operations []Operation
 }
 
-func NewSequence(cmdOutput io.Writer, operations ...Operation) Sequence {
+func NewSequence(operations ...Operation) Sequence {
 	return Sequence{
-		cmdOutput:  cmdOutput,
 		operations: operations,
 	}
 }
@@ -22,22 +20,22 @@ func (s Sequence) Description() string {
 	return ""
 }
 
-func (s Sequence) Run() error {
+func (s Sequence) Run(cmdOutput io.Writer) error {
 	for _, op := range s.operations {
-		if s.cmdOutput != nil {
-			printHeader(s.cmdOutput, op.Description())
+		if cmdOutput != nil {
+			printHeader(cmdOutput, op.Description())
 		}
-		if err := op.Run(); err != nil {
+		if err := op.Run(cmdOutput); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s Sequence) DryRun(w io.Writer) error {
+func (s Sequence) DryRun(output io.Writer) error {
 	for _, op := range s.operations {
-		printHeader(w, op.Description())
-		if err := op.DryRun(w); err != nil {
+		printHeader(output, op.Description())
+		if err := op.DryRun(output); err != nil {
 			return err
 		}
 	}

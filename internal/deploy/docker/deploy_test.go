@@ -41,9 +41,9 @@ services:
 `, testutil.TestProjectName(t))
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
-			d := docker.NewDeployment(os.Stdout, composeFilePath, remoteDockerHost)
+			d := docker.NewDeployment(composeFilePath, remoteDockerHost)
 
-			err := d.Run()
+			err := d.Run(os.Stdout)
 
 			require.NoError(t, err)
 			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
@@ -64,7 +64,7 @@ services:
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			targetHost := ssh.Host("user@remote")
-			d := docker.NewDeployment(&buf, composeFilePath, targetHost)
+			d := docker.NewDeployment(composeFilePath, targetHost)
 
 			err := d.DryRun(&buf)
 

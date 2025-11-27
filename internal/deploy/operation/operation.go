@@ -4,6 +4,6 @@ import "io"
 
 type Operation interface {
 	Description() string
-	Run() error
-	DryRun(io.Writer) error
+	Run(cmdOutput io.Writer) error
+	DryRun(output io.Writer) error
 }
