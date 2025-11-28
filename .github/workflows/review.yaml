@@ -6,7 +6,7 @@ on:
 
 jobs:
   codex-review:
-    uses: Arm-Debug/ai-debug-workflows/.github/workflows/codex-pr-review.yaml@v0.2
+    uses: Arm-Debug/ai-debug-workflows/.github/workflows/codex-pr-review.yaml@v0.3
     with:
       codex_proxy_url: ${{ vars.CODEX_PROXY_URL }}
     secrets:
