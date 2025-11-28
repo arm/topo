@@ -1,70 +1,68 @@
 package arguments
 
-import (
-	"fmt"
-	"maps"
-)
+import "fmt"
 
-type Arg struct {
-	Name        string
-	Description string
-	Required    bool
-	Example     string
+// StrictProviderChain chains multiple providers and ensures all required arguments are resolved.
+// It stops early once all required arguments are satisfied.
+type StrictProviderChain struct {
+	providers []Provider
 }
 
-type ResolvedArg struct {
-	Name  string
-	Value string
+func NewStrictProviderChain(providers ...Provider) *StrictProviderChain {
+	return &StrictProviderChain{providers: providers}
 }
 
-type Provider interface {
-	Provide(args []Arg) (map[string]string, error)
-	Name() string
-}
-
-type Collector []Provider
-
-func NewCollector(providers ...Provider) Collector {
-	return Collector(providers)
-}
-
-func (c Collector) Collect(args []Arg) ([]ResolvedArg, error) {
+func (p *StrictProviderChain) Provide(args []Arg) ([]ResolvedArg, error) {
 	provided := make(map[string]string)
 	remaining := args
 
-	for _, provider := range c {
+	for _, provider := range p.providers {
 		if len(remaining) == 0 {
 			break
 		}
 
-		values, err := provider.Provide(remaining)
+		resolved, err := provider.Provide(remaining)
 		if err != nil {
-			return nil, fmt.Errorf("%s provider failed: %w", provider.Name(), err)
+			return nil, err
 		}
-		maps.Copy(provided, values)
+
+		for _, r := range resolved {
+			provided[r.Name] = r.Value
+		}
 
 		if allRequiredProvided(args, provided) {
 			break
 		}
 
-		remaining = filterProvided(remaining, values)
+		remaining = filterProvided(remaining, provided)
 	}
 
 	if err := validateRequiredProvided(args, provided); err != nil {
 		return nil, err
 	}
 
-	resolved := []ResolvedArg{}
+	var result []ResolvedArg
 	for _, arg := range args {
 		if value, ok := provided[arg.Name]; ok {
-			resolved = append(resolved, ResolvedArg{
-				Name:  arg.Name,
-				Value: value,
-			})
+			result = append(result, ResolvedArg{Name: arg.Name, Value: value})
 		}
 	}
 
-	return resolved, nil
+	return result, nil
+}
+
+type MissingArgsError []Arg
+
+func (e MissingArgsError) Error() string {
+	msg := "missing required build arguments:\n"
+	for _, arg := range e {
+		msg += fmt.Sprintf("  %s:\n", arg.Name)
+		msg += fmt.Sprintf("    description: %s\n", arg.Description)
+		if arg.Example != "" {
+			msg += fmt.Sprintf("    example: %s\n", arg.Example)
+		}
+	}
+	return msg
 }
 
 func filterProvided(args []Arg, provided map[string]string) []Arg {
@@ -103,18 +101,4 @@ func validateRequiredProvided(args []Arg, provided map[string]string) error {
 	}
 
 	return nil
-}
-
-type MissingArgsError []Arg
-
-func (e MissingArgsError) Error() string {
-	msg := "missing required build arguments:\n"
-	for _, arg := range e {
-		msg += fmt.Sprintf("  %s:\n", arg.Name)
-		msg += fmt.Sprintf("    description: %s\n", arg.Description)
-		if arg.Example != "" {
-			msg += fmt.Sprintf("    example: %s\n", arg.Example)
-		}
-	}
-	return msg
 }

@@ -14,29 +14,24 @@ type mockProvider struct {
 	mock.Mock
 }
 
-func (m *mockProvider) Provide(args []arguments.Arg) (map[string]string, error) {
+func (m *mockProvider) Provide(args []arguments.Arg) ([]arguments.ResolvedArg, error) {
 	callArgs := m.Called(args)
 	if callArgs.Get(0) == nil {
 		return nil, callArgs.Error(1)
 	}
-	return callArgs.Get(0).(map[string]string), callArgs.Error(1)
+	return callArgs.Get(0).([]arguments.ResolvedArg), callArgs.Error(1)
 }
 
-func (m *mockProvider) Name() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func TestCollector(t *testing.T) {
+func TestStrictMultiProvider(t *testing.T) {
 	t.Run("collects from single provider", func(t *testing.T) {
 		provider := &mockProvider{}
 		args := []arguments.Arg{
 			{Name: "GREETING", Required: true},
 		}
-		provider.On("Provide", args).Return(map[string]string{"GREETING": "Hello"}, nil)
-		collector := arguments.NewCollector(provider)
+		provider.On("Provide", args).Return([]arguments.ResolvedArg{{Name: "GREETING", Value: "Hello"}}, nil)
+		multi := arguments.NewStrictProviderChain(provider)
 
-		got, err := collector.Collect(args)
+		got, err := multi.Provide(args)
 
 		require.NoError(t, err)
 		want := []arguments.ResolvedArg{{Name: "GREETING", Value: "Hello"}}
@@ -51,10 +46,10 @@ func TestCollector(t *testing.T) {
 			missingArg,
 			{Name: "PORT", Required: false},
 		}
-		provider.On("Provide", args).Return(map[string]string{"PORT": "8080"}, nil)
-		collector := arguments.NewCollector(provider)
+		provider.On("Provide", args).Return([]arguments.ResolvedArg{{Name: "PORT", Value: "8080"}}, nil)
+		multi := arguments.NewStrictProviderChain(provider)
 
-		_, err := collector.Collect(args)
+		_, err := multi.Provide(args)
 
 		assert.Equal(t, arguments.MissingArgsError{missingArg}, err)
 		provider.AssertExpectations(t)
@@ -66,10 +61,10 @@ func TestCollector(t *testing.T) {
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider.On("Provide", args).Return(map[string]string{"GREETING": "Hello"}, nil)
-		collector := arguments.NewCollector(provider)
+		provider.On("Provide", args).Return([]arguments.ResolvedArg{{Name: "GREETING", Value: "Hello"}}, nil)
+		multi := arguments.NewStrictProviderChain(provider)
 
-		got, err := collector.Collect(args)
+		got, err := multi.Provide(args)
 
 		require.NoError(t, err)
 		want := []arguments.ResolvedArg{{Name: "GREETING", Value: "Hello"}}
@@ -82,14 +77,13 @@ func TestCollector(t *testing.T) {
 		args := []arguments.Arg{
 			{Name: "GREETING", Required: true},
 		}
-		provider.On("Name").Return("fancy")
 		provider.On("Provide", mock.Anything).Return(nil, errors.New("big bang"))
-		collector := arguments.NewCollector(provider)
+		multi := arguments.NewStrictProviderChain(provider)
 
-		_, err := collector.Collect(args)
+		_, err := multi.Provide(args)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "fancy provider failed: big bang")
+		assert.EqualError(t, err, "big bang")
 		provider.AssertExpectations(t)
 	})
 
@@ -100,10 +94,10 @@ func TestCollector(t *testing.T) {
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider1.On("Provide", args).Return(map[string]string{"GREETING": "Hello"}, nil)
-		collector := arguments.NewCollector(provider1, provider2)
+		provider1.On("Provide", args).Return([]arguments.ResolvedArg{{Name: "GREETING", Value: "Hello"}}, nil)
+		multi := arguments.NewStrictProviderChain(provider1, provider2)
 
-		got, err := collector.Collect(args)
+		got, err := multi.Provide(args)
 
 		require.NoError(t, err)
 		want := []arguments.ResolvedArg{{Name: "GREETING", Value: "Hello"}}
@@ -124,11 +118,11 @@ func TestCollector(t *testing.T) {
 			{Name: "NAME", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider1.On("Provide", allArgs).Return(map[string]string{"GREETING": "Hello"}, nil)
-		provider2.On("Provide", remainingArgs).Return(map[string]string{"NAME": "World"}, nil)
-		collector := arguments.NewCollector(provider1, provider2)
+		provider1.On("Provide", allArgs).Return([]arguments.ResolvedArg{{Name: "GREETING", Value: "Hello"}}, nil)
+		provider2.On("Provide", remainingArgs).Return([]arguments.ResolvedArg{{Name: "NAME", Value: "World"}}, nil)
+		multi := arguments.NewStrictProviderChain(provider1, provider2)
 
-		got, err := collector.Collect(allArgs)
+		got, err := multi.Provide(allArgs)
 
 		require.NoError(t, err)
 		want := []arguments.ResolvedArg{
@@ -138,6 +132,32 @@ func TestCollector(t *testing.T) {
 		assert.Equal(t, want, got)
 		provider1.AssertExpectations(t)
 		provider2.AssertExpectations(t)
+	})
+
+	t.Run("returns resolved args in requested order", func(t *testing.T) {
+		provider1 := arguments.NewStaticProvider(
+			arguments.ResolvedArg{Name: "PORT", Value: "8080"},
+			arguments.ResolvedArg{Name: "NAME", Value: "Topo"},
+		)
+		provider2 := arguments.NewStaticProvider(
+			arguments.ResolvedArg{Name: "GREETING", Value: "Hello"},
+		)
+		multi := arguments.NewStrictProviderChain(provider1, provider2)
+		args := []arguments.Arg{
+			{Name: "NAME", Required: true},
+			{Name: "GREETING", Required: true},
+			{Name: "PORT", Required: true},
+		}
+
+		got, err := multi.Provide(args)
+
+		require.NoError(t, err)
+		want := []arguments.ResolvedArg{
+			{Name: "NAME", Value: "Topo"},
+			{Name: "GREETING", Value: "Hello"},
+			{Name: "PORT", Value: "8080"},
+		}
+		assert.Equal(t, want, got)
 	})
 }
 

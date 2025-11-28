@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// InteractiveProvider prompts the user for each argument via stdin/stdout.
 type InteractiveProvider struct {
 	input  io.Reader
 	output io.Writer
@@ -16,8 +17,8 @@ func NewInteractiveProvider(in io.Reader, out io.Writer) *InteractiveProvider {
 	return &InteractiveProvider{input: in, output: out}
 }
 
-func (p *InteractiveProvider) Provide(args []Arg) (map[string]string, error) {
-	result := make(map[string]string)
+func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
+	var result []ResolvedArg
 	scanner := bufio.NewScanner(p.input)
 
 	for _, arg := range args {
@@ -42,13 +43,9 @@ func (p *InteractiveProvider) Provide(args []Arg) (map[string]string, error) {
 
 		value := strings.TrimSpace(scanner.Text())
 		if value != "" {
-			result[arg.Name] = value
+			result = append(result, ResolvedArg{Name: arg.Name, Value: value})
 		}
 	}
 
 	return result, nil
-}
-
-func (p *InteractiveProvider) Name() string {
-	return "interactive"
 }

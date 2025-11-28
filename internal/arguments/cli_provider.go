@@ -5,9 +5,13 @@ import (
 	"strings"
 )
 
-type CLIProvider map[string]string
+// CLIProvider resolves arguments from command-line key=value pairs.
+// It validates that all provided keys match known argument names.
+type CLIProvider struct {
+	input map[string]string
+}
 
-func NewCLIProvider(cliArgs []string) (CLIProvider, error) {
+func NewCLIProvider(cliArgs []string) (*CLIProvider, error) {
 	parsed := make(map[string]string)
 	for _, arg := range cliArgs {
 		parts := strings.SplitN(arg, "=", 2)
@@ -16,25 +20,25 @@ func NewCLIProvider(cliArgs []string) (CLIProvider, error) {
 		}
 		parsed[parts[0]] = parts[1]
 	}
-	return CLIProvider(parsed), nil
+	return &CLIProvider{input: parsed}, nil
 }
 
-func (p CLIProvider) Provide(args []Arg) (map[string]string, error) {
-	for key := range p {
-		found := false
-		for _, arg := range args {
-			if arg.Name == key {
-				found = true
-				break
-			}
+func (p *CLIProvider) Provide(args []Arg) ([]ResolvedArg, error) {
+	var result []ResolvedArg
+	seen := make(map[string]bool, len(p.input))
+
+	for _, arg := range args {
+		if value, ok := p.input[arg.Name]; ok {
+			result = append(result, ResolvedArg{Name: arg.Name, Value: value})
+			seen[arg.Name] = true
 		}
-		if !found {
+	}
+
+	for key := range p.input {
+		if !seen[key] {
 			return nil, fmt.Errorf("unknown argument: %s", key)
 		}
 	}
-	return p, nil
-}
 
-func (p CLIProvider) Name() string {
-	return "cli"
+	return result, nil
 }

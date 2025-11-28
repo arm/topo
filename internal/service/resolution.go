@@ -10,13 +10,13 @@ type ResolvedTemplate struct {
 	Args        []arguments.ResolvedArg
 }
 
-func ResolveTemplate(template Template, argCollector arguments.Collector) (ResolvedTemplate, error) {
+func ResolveTemplate(template Template, argProvider arguments.Provider) (ResolvedTemplate, error) {
 	args := make([]arguments.Arg, len(template.Metadata.Args))
 	for i, metaArg := range template.Metadata.Args {
 		args[i] = arguments.Arg(metaArg)
 	}
 
-	resolvedArgs, err := argCollector.Collect(args)
+	resolvedArgs, err := argProvider.Provide(args)
 	if err != nil {
 		return ResolvedTemplate{}, err
 	}

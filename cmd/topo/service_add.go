@@ -69,9 +69,9 @@ Use "topo service templates" to see available built-in templates.`,
 			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
 		}
 
-		argCollector := arguments.NewCollector(providers...)
+		argProvider := arguments.NewStrictProviderChain(providers...)
 
-		return project.AddService(composeFilePath, serviceName, src, argCollector)
+		return project.AddService(composeFilePath, serviceName, src, argProvider)
 	},
 }
 

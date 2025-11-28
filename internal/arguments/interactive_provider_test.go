@@ -33,8 +33,11 @@ func TestInteractiveProvider(t *testing.T) {
 		got, err := provider.Provide(args)
 
 		require.NoError(t, err)
-		assert.Equal(t, "Hello, World", got["GREETING"])
-		assert.Equal(t, "8080", got["PORT"])
+		want := []arguments.ResolvedArg{
+			{Name: "GREETING", Value: "Hello, World"},
+			{Name: "PORT", Value: "8080"},
+		}
+		assert.Equal(t, want, got)
 		assert.Contains(t, output.String(), "The greeting message")
 		assert.Contains(t, output.String(), "Example: Hello")
 		assert.Contains(t, output.String(), "GREETING (required)>")
@@ -52,11 +55,6 @@ func TestInteractiveProvider(t *testing.T) {
 		got, err := provider.Provide(args)
 
 		require.NoError(t, err)
-		assert.Empty(t, got["OPTIONAL"])
-	})
-
-	t.Run("returns correct name", func(t *testing.T) {
-		provider := arguments.NewInteractiveProvider(nil, nil)
-		assert.Equal(t, "interactive", provider.Name())
+		assert.Empty(t, got)
 	})
 }

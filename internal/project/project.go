@@ -29,7 +29,7 @@ func Read(targetProjectFile string) (*types.Project, error) {
 	return cli.ProjectFromOptions(ctx, options)
 }
 
-func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argCollector arguments.Collector) error {
+func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argProvider arguments.Provider) error {
 	project, err := Read(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
@@ -57,7 +57,7 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 		return fmt.Errorf("failed to load topo service from %s: %w", src.String(), err)
 	}
 
-	resolvedTemplate, err := service.ResolveTemplate(serviceManifest, argCollector)
+	resolvedTemplate, err := service.ResolveTemplate(serviceManifest, argProvider)
 	if err != nil {
 		return err
 	}

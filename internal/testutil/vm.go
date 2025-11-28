@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -27,6 +28,9 @@ func StartDockerVM(t *testing.T) *DockerVM {
 		deleteVM(vmName)
 	})
 
+	unlock := acquireLimaLock(t)
+	defer unlock()
+
 	if err := createVM(vmName); err != nil {
 		t.Fatalf("failed to create vm: %v", err)
 	}
@@ -41,6 +45,25 @@ func StartDockerVM(t *testing.T) *DockerVM {
 	}
 
 	return &DockerVM{SSHConnectionString: sshConnection}
+}
+
+func acquireLimaLock(t *testing.T) func() {
+	t.Helper()
+	lockPath := filepath.Join(os.TempDir(), "topo-lima-test.lock")
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatalf("failed to open lock file: %v", err)
+	}
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		f.Close()
+		t.Fatalf("failed to acquire lock: %v", err)
+	}
+
+	return func() {
+		syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+		f.Close()
+	}
 }
 
 func requireLima(t testing.TB) {

@@ -21,9 +21,9 @@ func TestCLIProvider(t *testing.T) {
 		got, err := provider.Provide(args)
 
 		require.NoError(t, err)
-		want := map[string]string{
-			"GREETING": "Hello",
-			"PORT":     "8080",
+		want := []arguments.ResolvedArg{
+			{Name: "GREETING", Value: "Hello"},
+			{Name: "PORT", Value: "8080"},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -39,7 +39,10 @@ func TestCLIProvider(t *testing.T) {
 		got, err := provider.Provide(args)
 
 		require.NoError(t, err)
-		assert.Equal(t, "host=localhost;port=5432", got["CONNECTION_STRING"])
+		want := []arguments.ResolvedArg{
+			{Name: "CONNECTION_STRING", Value: "host=localhost;port=5432"},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("errors on invalid format", func(t *testing.T) {
@@ -63,8 +66,24 @@ func TestCLIProvider(t *testing.T) {
 		assert.Contains(t, err.Error(), "unknown argument: UNKNOWN")
 	})
 
-	t.Run("returns correct name", func(t *testing.T) {
-		provider, _ := arguments.NewCLIProvider([]string{})
-		assert.Equal(t, "cli", provider.Name())
+	t.Run("returns arguments in requested order", func(t *testing.T) {
+		provider, err := arguments.NewCLIProvider([]string{"PORT=8080", "GREETING=Hello", "NAME=Topo"})
+		require.NoError(t, err)
+
+		args := []arguments.Arg{
+			{Name: "NAME", Required: true},
+			{Name: "GREETING", Required: true},
+			{Name: "PORT", Required: true},
+		}
+
+		got, err := provider.Provide(args)
+
+		require.NoError(t, err)
+		want := []arguments.ResolvedArg{
+			{Name: "NAME", Value: "Topo"},
+			{Name: "GREETING", Value: "Hello"},
+			{Name: "PORT", Value: "8080"},
+		}
+		assert.Equal(t, want, got)
 	})
 }

@@ -1,7 +1,7 @@
 package project_test
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -34,22 +34,6 @@ func (m *mockServiceSource) CopyTo(destDir string) error {
 func (m *mockServiceSource) String() string {
 	args := m.Called()
 	return args.String(0)
-}
-
-type mockProvider struct {
-	mock.Mock
-}
-
-func (m *mockProvider) Provide(args []arguments.Arg) (map[string]string, error) {
-	callArgs := m.Called(args)
-	if callArgs.Get(0) == nil {
-		return nil, callArgs.Error(1)
-	}
-	return callArgs.Get(0).(map[string]string), callArgs.Error(1)
-}
-
-func (m *mockProvider) Name() string {
-	return "mock"
 }
 
 func writeComposeFile(t *testing.T, dir, content string) string {
@@ -96,9 +80,9 @@ x-topo:
 `
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
-		collector := arguments.NewCollector()
+		argProvider := arguments.NewStrictProviderChain()
 
-		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, collector))
+		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, argProvider))
 
 		mockSource.AssertExpectations(t)
 
@@ -118,9 +102,9 @@ x-topo:
 
 		mockSource := &mockServiceSource{}
 		mockSource.On("CopyTo", destDir).Return(source.DestDirExistsError{Dir: destDir})
-		collector := arguments.NewCollector()
+		provider := arguments.NewStrictProviderChain()
 
-		err := project.AddService(targetProjectFile, "test", mockSource, collector)
+		err := project.AddService(targetProjectFile, "test", mockSource, provider)
 
 		require.Error(t, err, "expected error when directory exists")
 		assert.Contains(t, err.Error(), "already exists")
@@ -149,9 +133,9 @@ x-topo:
 `
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
-		collector := arguments.NewCollector()
+		argProvider := arguments.NewStrictProviderChain()
 
-		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, collector))
+		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, argProvider))
 
 		mockSource.AssertExpectations(t)
 
@@ -176,7 +160,6 @@ volumes:
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockServiceSource{}
-		provider := &mockProvider{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -198,21 +181,11 @@ x-topo:
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
 
-		expectedArgs := []arguments.Arg{
-			{
-				Name:        "GREETING",
-				Description: "The greeting message",
-				Required:    true,
-				Example:     "Hello",
-			},
-		}
-		provider.On("Provide", expectedArgs).Return(map[string]string{"GREETING": "Hello, World"}, nil)
-		collector := arguments.NewCollector(provider)
+		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
 
-		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, collector))
+		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, provider))
 
 		mockSource.AssertExpectations(t)
-		provider.AssertExpectations(t)
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
@@ -236,7 +209,6 @@ services:
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockServiceSource{}
-		provider := &mockProvider{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -257,19 +229,17 @@ x-topo:
 			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
 		})
 
-		provider.On("Provide", mock.Anything).Return(nil, fmt.Errorf("user cancelled"))
-		collector := arguments.NewCollector(provider)
+		provider := arguments.NewErrorProvider(errors.New("user cancelled"))
 
-		err := project.AddService(targetProjectFile, "test", mockSource, collector)
+		err := project.AddService(targetProjectFile, "test", mockSource, provider)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "user cancelled")
+		assert.EqualError(t, err, "user cancelled")
 
 		_, err = os.Stat(destDir)
 		assert.True(t, os.IsNotExist(err), "service directory should be cleaned up after failure")
 
 		mockSource.AssertExpectations(t)
-		provider.AssertExpectations(t)
 	})
 }
 
