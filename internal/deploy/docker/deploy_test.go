@@ -8,11 +8,42 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
+	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/testutil"
+	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNewDeployment(t *testing.T) {
+	composeFile := "compose.yaml"
+
+	t.Run("includes transfer operation for remote host", func(t *testing.T) {
+		remoteHost := ssh.Host("user@remote")
+
+		got := docker.NewDeployment(composeFile, remoteHost)
+
+		want := goperation.Sequence{
+			operation.NewBuild(composeFile, ssh.PlainLocalhost),
+			operation.NewPull(composeFile, ssh.PlainLocalhost),
+			operation.NewTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
+			operation.NewRun(composeFile, remoteHost),
+		}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("excludes transfer operation for local host", func(t *testing.T) {
+		got := docker.NewDeployment(composeFile, ssh.PlainLocalhost)
+
+		want := goperation.Sequence{
+			operation.NewBuild(composeFile, ssh.PlainLocalhost),
+			operation.NewPull(composeFile, ssh.PlainLocalhost),
+			operation.NewRun(composeFile, ssh.PlainLocalhost),
+		}
+		assert.Equal(t, want, got)
+	})
+}
 
 func TestDeployment(t *testing.T) {
 	testutil.RequireDocker(t)

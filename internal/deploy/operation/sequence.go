@@ -6,22 +6,14 @@ import (
 	"strings"
 )
 
-type Sequence struct {
-	operations []Operation
-}
+type Sequence []Operation
 
 func NewSequence(operations ...Operation) Sequence {
-	return Sequence{
-		operations: operations,
-	}
-}
-
-func (s Sequence) Description() string {
-	return ""
+	return operations
 }
 
 func (s Sequence) Run(cmdOutput io.Writer) error {
-	for _, op := range s.operations {
+	for _, op := range s {
 		if cmdOutput != nil {
 			printHeader(cmdOutput, op.Description())
 		}
@@ -33,7 +25,7 @@ func (s Sequence) Run(cmdOutput io.Writer) error {
 }
 
 func (s Sequence) DryRun(output io.Writer) error {
-	for _, op := range s.operations {
+	for _, op := range s {
 		printHeader(output, op.Description())
 		if err := op.DryRun(output); err != nil {
 			return err

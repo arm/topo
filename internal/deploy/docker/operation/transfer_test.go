@@ -19,7 +19,7 @@ func TestTransfer(t *testing.T) {
 	testutil.RequireDocker(t)
 
 	t.Run("Description", func(t *testing.T) {
-		h := ssh.Empty
+		h := ssh.PlainLocalhost
 		tmpDir := t.TempDir()
 		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 		transfer := operation.NewTransfer(composeFilePath, h, h)
@@ -37,7 +37,7 @@ func TestTransfer(t *testing.T) {
 			// - Remove the image after save but before load (not feasible with current implementation).
 			// - Ensure test has access to two docker engines (expensive).
 			// As a compromise, this test verifies the operation completes without error and the image exists afterward.
-			h := ssh.Empty
+			h := ssh.PlainLocalhost
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
@@ -68,7 +68,7 @@ services:
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("prints transfer commands", func(t *testing.T) {
 			var buf bytes.Buffer
-			h := ssh.Empty
+			h := ssh.PlainLocalhost
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			composeFileContent := `

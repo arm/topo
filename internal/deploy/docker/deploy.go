@@ -7,11 +7,14 @@ import (
 )
 
 func NewDeployment(composeFile string, targetHost ssh.Host) goperation.Sequence {
-	sourceHost := ssh.Empty
-	return goperation.NewSequence(
+	sourceHost := ssh.PlainLocalhost
+	ops := []goperation.Operation{
 		operation.NewBuild(composeFile, sourceHost),
 		operation.NewPull(composeFile, sourceHost),
-		operation.NewTransfer(composeFile, sourceHost, targetHost),
-		operation.NewRun(composeFile, targetHost),
-	)
+	}
+	if !targetHost.IsPlainLocalhost() {
+		ops = append(ops, operation.NewTransfer(composeFile, sourceHost, targetHost))
+	}
+	ops = append(ops, operation.NewRun(composeFile, targetHost))
+	return goperation.NewSequence(ops...)
 }

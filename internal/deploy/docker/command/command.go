@@ -23,7 +23,7 @@ func String(cmd *exec.Cmd) string {
 }
 
 func hostToArgs(h ssh.Host) []string {
-	if h == ssh.Empty {
+	if h.IsPlainLocalhost() {
 		return nil
 	}
 	return []string{"-H", h.AsURI()}

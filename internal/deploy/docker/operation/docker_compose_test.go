@@ -27,7 +27,7 @@ services:
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			var buf bytes.Buffer
-			op := operation.NewDockerCompose("", composeFilePath, ssh.Empty, []string{"config", "--services"})
+			op := operation.NewDockerCompose("", composeFilePath, ssh.PlainLocalhost, []string{"config", "--services"})
 
 			err := op.Run(&buf)
 
