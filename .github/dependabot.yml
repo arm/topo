@@ -5,23 +5,9 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    groups:
-      all:
-        applies-to: version-updates
-        update-types:
-          - major
-          - minor
-          - patch
 
   # Maintain dependencies for Go CLI
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "monthly"
-    groups:
-      all:
-        applies-to: version-updates
-        update-types:
-          - major
-          - minor
-          - patch
