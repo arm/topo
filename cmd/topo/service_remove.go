@@ -5,8 +5,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var removeServiceCmd = &cobra.Command{
-	Use:   "remove-service <compose-filepath> <service-name>",
+var serviceRemoveCmd = &cobra.Command{
+	Use:   "remove <compose-filepath> <service-name>",
 	Short: "Remove a service from the compose file",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -18,5 +18,5 @@ var removeServiceCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(removeServiceCmd)
+	serviceCmd.AddCommand(serviceRemoveCmd)
 }

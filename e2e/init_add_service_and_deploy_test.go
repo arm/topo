@@ -44,14 +44,14 @@ func requireInit(t *testing.T, topo, projectDir string) {
 func requireAddService(t *testing.T, topo, projectDir, composeFile, serviceName, customName string) {
 	templateDir, err := filepath.Abs("testdata/services/hello-server")
 	require.NoError(t, err)
-	addServiceCmd := exec.Command(topo, "add-service", composeFile, serviceName,
+	serviceAddCmd := exec.Command(topo, "service", "add", composeFile, serviceName,
 		fmt.Sprintf("dir:%s", templateDir), "--no-prompt", "--",
 		fmt.Sprintf("NAME=%s", customName))
-	addServiceCmd.Dir = projectDir
+	serviceAddCmd.Dir = projectDir
 
-	out, err := addServiceCmd.CombinedOutput()
+	out, err := serviceAddCmd.CombinedOutput()
 
-	require.NoErrorf(t, err, "add-service failed: %s", out)
+	require.NoErrorf(t, err, "service add failed: %s", out)
 }
 
 func requireDeploy(t *testing.T, topo, projectDir, sshTarget string) {

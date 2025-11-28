@@ -27,13 +27,13 @@ This creates a `compose.project.yaml` in the current directory.
 List available templates:
 
 ```sh
-./topo list-service-templates
+./topo service templates
 ```
 
 Add a service using a built-in template:
 
 ```sh
-./topo add-service compose.project.yaml my-service template:cortexa-welcome
+./topo service add compose.project.yaml my-service template:cortexa-welcome
 ```
 
 ### Deploy to your target

@@ -12,7 +12,7 @@ import (
 func TestListTemplates(t *testing.T) {
 	bin := buildBinary(t)
 
-	cmd := exec.Command(bin, "list-service-templates")
+	cmd := exec.Command(bin, "service", "templates")
 	out, err := cmd.CombinedOutput()
 
 	require.NoError(t, err)

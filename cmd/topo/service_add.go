@@ -9,38 +9,38 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var addServiceNoPrompt bool
+var serviceAddNoPrompt bool
 
-var addServiceCmd = &cobra.Command{
-	Use:   "add-service <compose-filepath> <service-name> <source> [flags] [-- ARG=VALUE ...]",
+var serviceAddCmd = &cobra.Command{
+	Use:   "add <compose-filepath> <service-name> <source> [flags] [-- ARG=VALUE ...]",
 	Short: "Add a service to the compose file from a template ID, git URL, or local directory",
 	Long: `Add a service to the compose file.
 
 The source argument uses scheme prefixes to specify the source type:
 
 Template ID (from built-in templates):
-  topo add-service compose.yaml my-service template:hello-world
+  topo service add compose.yaml my-service template:hello-world
 
 Git repository:
-  topo add-service compose.yaml my-service git:git@github.com:user/repo.git
-  topo add-service compose.yaml my-service git:https://github.com/user/repo.git#develop
-  topo add-service compose.yaml my-service git:git@github.com:user/repo.git#main
+  topo service add compose.yaml my-service git:git@github.com:user/repo.git
+  topo service add compose.yaml my-service git:https://github.com/user/repo.git#develop
+  topo service add compose.yaml my-service git:git@github.com:user/repo.git#main
 
 Local directory:
-  topo add-service compose.yaml my-service dir:/path/to/template
-  topo add-service compose.yaml my-service dir:./relative/path
+  topo service add compose.yaml my-service dir:/path/to/template
+  topo service add compose.yaml my-service dir:./relative/path
 
 Service templates may require build arguments. You can provide them via the command line
 or interactively when prompted:
 
   # Will prompt for required args
-  topo add-service compose.yaml my-service git:url
+  topo service add compose.yaml my-service git:url
   # Provide args explicitly
-  topo add-service compose.yaml my-service git:url -- GREETING="Hello" PORT=8080
+  topo service add compose.yaml my-service git:url -- GREETING="Hello" PORT=8080
   # Don't prompt, raise an error if required args are missing
-  topo add-service compose.yaml my-service git:url --no-prompt
+  topo service add compose.yaml my-service git:url --no-prompt
 
-Use list-service-templates to see available built-in templates.`,
+Use "topo service templates" to see available built-in templates.`,
 	Args: cobra.MinimumNArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -65,7 +65,7 @@ Use list-service-templates to see available built-in templates.`,
 			}
 			providers = append(providers, cliProvider)
 		}
-		if !addServiceNoPrompt {
+		if !serviceAddNoPrompt {
 			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
 		}
 
@@ -76,6 +76,6 @@ Use list-service-templates to see available built-in templates.`,
 }
 
 func init() {
-	addServiceCmd.Flags().BoolVar(&addServiceNoPrompt, "no-prompt", false, "Error if required arguments are missing instead of prompting")
-	rootCmd.AddCommand(addServiceCmd)
+	serviceAddCmd.Flags().BoolVar(&serviceAddNoPrompt, "no-prompt", false, "Error if required arguments are missing instead of prompting")
+	serviceCmd.AddCommand(serviceAddCmd)
 }

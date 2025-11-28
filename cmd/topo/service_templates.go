@@ -7,15 +7,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var listProjectsCmd = &cobra.Command{
-	Use:   "list-projects",
-	Short: "List available Projects",
+var serviceTemplatesCmd = &cobra.Command{
+	Use:   "templates",
+	Short: "List available Service Templates",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
-		return catalog.PrintExampleProjectRepos(os.Stdout)
+		return catalog.PrintServiceTemplateRepos(os.Stdout)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(listProjectsCmd)
+	serviceCmd.AddCommand(serviceTemplatesCmd)
 }
