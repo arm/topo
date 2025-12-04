@@ -55,8 +55,8 @@ Use "topo service templates" to see available built-in templates.`,
 
 		var providers []arguments.Provider
 		var cliArgs []string
-		if len(args) > 3 {
-			cliArgs = args[3:]
+		if dashIdx := cmd.ArgsLenAtDash(); dashIdx >= 0 {
+			cliArgs = args[dashIdx:]
 		}
 		if len(cliArgs) > 0 {
 			cliProvider, err := arguments.NewCLIProvider(cliArgs)
