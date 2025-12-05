@@ -6,6 +6,9 @@ Compose, parameterize, and deploy containerized examples for Arm hardware.
 
 ## Installation
 
+### Prerequisites
+- Go (1.24)
+
 Build from source:
 
 ```sh
