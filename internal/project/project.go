@@ -2,35 +2,78 @@ package project
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/core/compose"
+	"github.com/arm-debug/topo-cli/internal/project/parse"
 	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/arm-debug/topo-cli/internal/template"
-	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
 
 const ComposeFilename = "compose.yaml"
 
-// Read parses compose file into a compose-go project.
-func Read(targetProjectFile string) (*types.Project, error) {
-	ctx := context.Background()
-	options, err := cli.NewProjectOptions([]string{targetProjectFile}, cli.WithOsEnv, cli.WithDotEnv, cli.WithResolvedPaths(false), cli.WithNormalization(false))
-	if err != nil {
-		return nil, err
+func Clone(path string, src source.TemplateSource, argProvider *arguments.StrictProviderChain, w io.Writer) error {
+	if err := src.CopyTo(path); err != nil {
+		var errDestDirExists source.DestDirExistsError
+		if errors.As(err, &errDestDirExists) {
+			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
+		}
+		return fmt.Errorf("failed to copy Service Template: %w", err)
 	}
-	return cli.ProjectFromOptions(ctx, options)
+
+	composeFile := filepath.Join(path, ComposeFilename)
+	if err := InitTemplate(composeFile, argProvider, w); err != nil {
+		if rmErr := os.RemoveAll(path); rmErr != nil {
+			return errors.Join(err, rmErr)
+		}
+		return fmt.Errorf("init failed: %w", err)
+	}
+
+	return nil
+}
+
+func InitTemplate(composeFile string, argCollector arguments.Provider, w io.Writer) error {
+	proj, err := parse.ReadNodes(composeFile)
+	if err != nil {
+		return fmt.Errorf("error reading project file: %w", err)
+	}
+
+	requiredArgs := parse.ListArgs(proj)
+	if len(requiredArgs) == 0 {
+		return nil
+	}
+
+	resolvedArgs, err := argCollector.Provide(requiredArgs)
+	if err != nil {
+		return err
+	}
+
+	if err := parse.ApplyArgs(proj, resolvedArgs, w); err != nil {
+		return fmt.Errorf("error applying args to project file: %w", err)
+	}
+
+	buf := &bytes.Buffer{}
+	enc := yaml.NewEncoder(buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(proj); err != nil {
+		return err
+	}
+	_ = enc.Close()
+	if err := os.WriteFile(composeFile, buf.Bytes(), 0o644); err != nil {
+		return fmt.Errorf("failed to write compose file: %s %w", composeFile, err)
+	}
+	return nil
 }
 
 func AddService(targetProjectFile, newServiceName string, src source.TemplateSource, argProvider arguments.Provider) error {
-	project, err := Read(targetProjectFile)
+	project, err := parse.Read(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}
@@ -93,7 +136,7 @@ func AddService(targetProjectFile, newServiceName string, src source.TemplateSou
 }
 
 func RemoveService(composeFilePath, serviceName string) error {
-	project, err := Read(composeFilePath)
+	project, err := parse.Read(composeFilePath)
 	if err != nil {
 		return err
 	}
