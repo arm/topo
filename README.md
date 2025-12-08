@@ -23,7 +23,7 @@ go build ./cmd/topo
 ./topo init
 ```
 
-This creates a `compose.project.yaml` in the current directory.
+This creates a `compose.yaml` in the current directory.
 
 ### Add a service to your project
 
@@ -36,7 +36,7 @@ List available templates:
 Add a service using a built-in template:
 
 ```sh
-./topo service add compose.project.yaml my-service template:cortexa-welcome
+./topo service add compose.yaml my-service template:cortexa-welcome
 ```
 
 ### Deploy to your target

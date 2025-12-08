@@ -21,7 +21,7 @@ func TestInitAddServiceAndDeploy(t *testing.T) {
 	projectDir := t.TempDir()
 
 	requireInit(t, topo, projectDir)
-	composeFile := filepath.Join(projectDir, "compose.project.yaml")
+	composeFile := filepath.Join(projectDir, "compose.yaml")
 	require.FileExists(t, composeFile)
 
 	nameArgValue := "Topo"

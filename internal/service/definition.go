@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ComposeServiceFilename = "compose.service.yaml"
+const ComposeFilename = "compose.yaml"
 
 type Template struct {
 	Metadata    Metadata
@@ -36,23 +36,23 @@ func ParseDefinition(destDir string) (Template, error) {
 		XTopo    Metadata       `yaml:"x-topo"`
 	}
 
-	composeServicePath := filepath.Join(destDir, ComposeServiceFilename)
+	composeServicePath := filepath.Join(destDir, ComposeFilename)
 	composeServiceData, err := os.ReadFile(composeServicePath)
 	if err != nil {
-		return Template{}, fmt.Errorf("failed to read %s from %s: %w", ComposeServiceFilename, composeServicePath, err)
+		return Template{}, fmt.Errorf("failed to read %s from %s: %w", ComposeFilename, composeServicePath, err)
 	}
 
 	var parsed composeServiceFile
 	if err := yaml.Unmarshal(composeServiceData, &parsed); err != nil {
-		return Template{}, fmt.Errorf("failed to parse %s: %w", ComposeServiceFilename, err)
+		return Template{}, fmt.Errorf("failed to parse %s: %w", ComposeFilename, err)
 	}
 
 	if len(parsed.Services) == 0 {
-		return Template{}, fmt.Errorf("no services defined in %s", ComposeServiceFilename)
+		return Template{}, fmt.Errorf("no services defined in %s", ComposeFilename)
 	}
 
 	if len(parsed.Services) > 1 {
-		return Template{}, fmt.Errorf("expected exactly one service in %s, found %d", ComposeServiceFilename, len(parsed.Services))
+		return Template{}, fmt.Errorf("expected exactly one service in %s, found %d", ComposeFilename, len(parsed.Services))
 	}
 
 	var serviceDef map[string]any

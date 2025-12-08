@@ -78,7 +78,7 @@ x-topo:
   name: "test-service"
   description: "Test service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 		argProvider := arguments.NewStrictProviderChain()
 
@@ -131,7 +131,7 @@ services:
 x-topo:
   name: "test-service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 		argProvider := arguments.NewStrictProviderChain()
 
@@ -147,7 +147,7 @@ name: example-project
 services:
   test:
     extends:
-      file: ./test/compose.service.yaml
+      file: ./test/compose.yaml
       service: app
 volumes:
   pretty_data: {}
@@ -178,7 +178,7 @@ x-topo:
       required: true
       example: "Hello"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
@@ -195,7 +195,7 @@ name: example-project
 services:
   test:
     extends:
-      file: ./test/compose.service.yaml
+      file: ./test/compose.yaml
       service: app
     build:
       args:
@@ -226,7 +226,7 @@ x-topo:
       description: "The greeting message"
       required: true
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeServiceFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 
 		provider := arguments.NewErrorProvider(errors.New("user cancelled"))

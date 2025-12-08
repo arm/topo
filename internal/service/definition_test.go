@@ -20,7 +20,7 @@ services:
     ports:
       - "8000:80"
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeServiceFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
 
 		got, err := service.ParseDefinition(dir)
 
@@ -49,7 +49,7 @@ x-topo:
     - "SME"
     - "NEON"
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeServiceFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
 
 		got, err := service.ParseDefinition(dir)
 
@@ -79,7 +79,7 @@ x-topo:
       description: "Port number"
       required: false
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeServiceFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
 
 		got, err := service.ParseDefinition(dir)
 
@@ -102,13 +102,13 @@ x-topo:
 		assert.Equal(t, want, got.Metadata)
 	})
 
-	t.Run("errors when compose.service.yaml missing", func(t *testing.T) {
+	t.Run("errors when compose.yaml missing", func(t *testing.T) {
 		dir := t.TempDir()
 
 		_, err := service.ParseDefinition(dir)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), service.ComposeServiceFilename)
+		assert.Contains(t, err.Error(), service.ComposeFilename)
 	})
 
 	t.Run("errors when no services defined", func(t *testing.T) {
@@ -117,7 +117,7 @@ x-topo:
 x-topo:
   name: "test-service"
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeServiceFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
 
 		_, err := service.ParseDefinition(dir)
 
@@ -134,7 +134,7 @@ services:
   app2:
     image: redis:alpine
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeServiceFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
 
 		_, err := service.ParseDefinition(dir)
 

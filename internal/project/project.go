@@ -17,7 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ComposeFilename = "compose.project.yaml"
+const ComposeFilename = "compose.yaml"
 
 // Read parses compose file into a compose-go project.
 func Read(targetProjectFile string) (*types.Project, error) {

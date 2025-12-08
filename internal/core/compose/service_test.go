@@ -103,7 +103,7 @@ func TestCreateService(t *testing.T) {
 
 		svc := compose.CreateService("test-service", resolved)
 
-		assert.Equal(t, "./test-service/compose.service.yaml", svc.Extends.File)
+		assert.Equal(t, "./test-service/compose.yaml", svc.Extends.File)
 		assert.Equal(t, "test-service-template", svc.Extends.Service)
 	})
 

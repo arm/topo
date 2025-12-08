@@ -54,7 +54,7 @@ func CreateService(serviceName string, resolved service.ResolvedTemplate) types.
 	projectService := types.ServiceConfig{}
 	projectService.Name = serviceName
 	projectService.Extends = &types.ExtendsConfig{
-		File:    "./" + serviceName + "/" + service.ComposeServiceFilename,
+		File:    "./" + serviceName + "/" + service.ComposeFilename,
 		Service: resolved.ServiceName,
 	}
 
