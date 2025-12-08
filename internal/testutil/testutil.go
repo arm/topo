@@ -5,10 +5,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 const TestSshTarget = "test-target"
@@ -46,4 +49,20 @@ func SanitiseTestName(t testing.TB) string {
 	name = strings.ReplaceAll(name, "_", "-")
 	name = strings.ReplaceAll(name, ",", "")
 	return name
+}
+
+func WriteComposeFile(t *testing.T, dir, content string) string {
+	t.Helper()
+	composePath := filepath.Join(dir, project.ComposeFilename)
+	RequireWriteFile(t, composePath, content)
+	return composePath
+}
+
+func ParseYAMLString(s string) (*yaml.Node, error) {
+	var root yaml.Node
+	if err := yaml.Unmarshal([]byte(s), &root); err != nil {
+		return nil, err
+	}
+	doc := root.Content[0]
+	return doc, nil
 }

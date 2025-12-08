@@ -2,6 +2,7 @@ package project_test
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -36,13 +38,6 @@ func (m *mockTemplateSource) String() string {
 	return args.String(0)
 }
 
-func writeComposeFile(t *testing.T, dir, content string) string {
-	t.Helper()
-	composePath := filepath.Join(dir, project.ComposeFilename)
-	require.NoError(t, os.WriteFile(composePath, []byte(content), 0o644), "failed to write compose file")
-	return composePath
-}
-
 func TestInit(t *testing.T) {
 	t.Run("creates an empty compose file at the given location", func(t *testing.T) {
 		dir := t.TempDir()
@@ -61,7 +56,7 @@ func TestInit(t *testing.T) {
 func TestAddService(t *testing.T) {
 	t.Run("adds service from TemplateSource", func(t *testing.T) {
 		dir := t.TempDir()
-		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
+		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
@@ -96,7 +91,7 @@ x-topo:
 
 	t.Run("errors when directory exists", func(t *testing.T) {
 		dir := t.TempDir()
-		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
+		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		destDir := filepath.Join(dir, "test")
 
@@ -113,7 +108,7 @@ x-topo:
 
 	t.Run("registers named volumes", func(t *testing.T) {
 		dir := t.TempDir()
-		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
+		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
@@ -157,7 +152,7 @@ volumes:
 
 	t.Run("collects and injects build arguments", func(t *testing.T) {
 		dir := t.TempDir()
-		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
+		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
@@ -204,9 +199,9 @@ services:
 		assert.YAMLEq(t, want, string(got))
 	})
 
-	t.Run("cleans up service directory when argument collection fails", func(t *testing.T) {
+	t.Run("cleans up service directory when argument collection fails ", func(t *testing.T) {
 		dir := t.TempDir()
-		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
+		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
@@ -243,6 +238,65 @@ x-topo:
 	})
 }
 
+func TestInitTemplate(t *testing.T) {
+	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
+		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
+		argProvider := arguments.NewStrictProviderChain()
+
+		err := project.InitTemplate(invalidPath, argProvider, io.Discard)
+
+		require.ErrorContains(t, err, "error reading project file")
+	})
+
+	t.Run("succeeds and writes an updated file", func(t *testing.T) {
+		dir := t.TempDir()
+		composeFileContents := `
+services:
+  app:
+    build:
+      context: .
+      args:
+        FOO: bar
+
+x-topo:
+  name: My Project
+  args:
+    FOO:
+      description: a dummy argument
+      required: true
+      example: bar
+`
+		composeFilePath := filepath.Join(dir, project.ComposeFilename)
+		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
+		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
+		argProvider := arguments.NewStrictProviderChain(provider)
+
+		err := project.InitTemplate(composeFilePath, argProvider, io.Discard)
+		require.NoError(t, err)
+
+		want := `
+services:
+  app:
+    build:
+      context: .
+      args:
+        FOO: baz
+
+x-topo:
+  name: My Project
+  args:
+    FOO:
+      description: a dummy argument
+      required: true
+      example: bar
+`
+		got, err := os.ReadFile(composeFilePath)
+		require.NoError(t, err)
+
+		assert.YAMLEq(t, want, string(got))
+	})
+}
+
 func TestRemoveService(t *testing.T) {
 	dir := t.TempDir()
 	compose := `name: example-project
@@ -251,7 +305,7 @@ services:
     build:
       context: ./removeMe
 `
-	targetProjectFile := writeComposeFile(t, dir, compose)
+	targetProjectFile := testutil.WriteComposeFile(t, dir, compose)
 	require.NoError(t, project.RemoveService(targetProjectFile, "removeMe"))
 	data, err := os.ReadFile(targetProjectFile)
 	require.NoError(t, err)
