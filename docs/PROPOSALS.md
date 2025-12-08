@@ -47,6 +47,50 @@ Connected: ✅
 Container Engine: ✅ (docker)
 ```
 
-## Commands to add
+### service add -> extend
 
-The following additional commands are planned:
+#### Changes
+
+- name: `service add` -> `extend`
+- support extending multi-service compose files
+- use `--prefix` flag to customize service prefix and clone directory
+
+#### Expected Usage Output
+
+```
+Extend a compose file with services from a template
+
+Usage:
+  topo extend <compose-file> <template> [flags] [-- ARG=VALUE ...]
+
+Flags:
+      --prefix string   Name for the cloned directory and service prefix (default: slugify(x-topo->name))
+  -h, --help            help for extend
+```
+
+#### Expected Behaviour Example
+
+```sh
+$> topo extend compose.yaml git:Arm-Debug/llm-stack --prefix llm
+# Clones template to ./llm/
+# Adds to compose.yaml:
+
+services:
+  llm-service-1:
+    extends:
+      file: ./llm/compose.yaml
+      service: service-1
+  llm-service-N:
+    extends:
+      file: ./llm/compose.yaml
+      service: service-N
+```
+
+- Without `--prefix`, the prefix defaults to a slugified version of the template's `name` field.
+- ⚠️ A clashing target folder name or extended service name cancels the operation and reports error to the user.
+
+### service remove -> 🗑️
+
+#### Changes
+
+- remove `service remove` command
