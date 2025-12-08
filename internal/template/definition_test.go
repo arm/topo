@@ -1,10 +1,10 @@
-package service_test
+package template_test
 
 import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/service"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,12 +20,12 @@ services:
     ports:
       - "8000:80"
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		got, err := service.ParseDefinition(dir)
+		got, err := template.ParseDefinition(dir)
 
 		require.NoError(t, err)
-		want := service.Template{
+		want := template.Template{
 			Service: map[string]any{
 				"image": "nginx:alpine",
 				"ports": []any{"8000:80"},
@@ -49,12 +49,12 @@ x-topo:
     - "SME"
     - "NEON"
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		got, err := service.ParseDefinition(dir)
+		got, err := template.ParseDefinition(dir)
 
 		require.NoError(t, err)
-		want := service.Metadata{
+		want := template.Metadata{
 			Name:        "test-service",
 			Description: "Test service",
 			Features:    []string{"SME", "NEON"},
@@ -79,13 +79,13 @@ x-topo:
       description: "Port number"
       required: false
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		got, err := service.ParseDefinition(dir)
+		got, err := template.ParseDefinition(dir)
 
 		require.NoError(t, err)
-		want := service.Metadata{
-			Args: []service.Arg{
+		want := template.Metadata{
+			Args: []template.Arg{
 				{
 					Name:        "GREETING",
 					Description: "The greeting message to display",
@@ -105,10 +105,10 @@ x-topo:
 	t.Run("errors when compose.yaml missing", func(t *testing.T) {
 		dir := t.TempDir()
 
-		_, err := service.ParseDefinition(dir)
+		_, err := template.ParseDefinition(dir)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), service.ComposeFilename)
+		assert.Contains(t, err.Error(), template.ComposeFilename)
 	})
 
 	t.Run("errors when no services defined", func(t *testing.T) {
@@ -117,9 +117,9 @@ x-topo:
 x-topo:
   name: "test-service"
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		_, err := service.ParseDefinition(dir)
+		_, err := template.ParseDefinition(dir)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no services defined")
@@ -134,9 +134,9 @@ services:
   app2:
     image: redis:alpine
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, service.ComposeFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		_, err := service.ParseDefinition(dir)
+		_, err := template.ParseDefinition(dir)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "expected exactly one service")

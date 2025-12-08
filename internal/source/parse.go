@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func Parse(source string) (ServiceSource, error) {
+func Parse(source string) (TemplateSource, error) {
 	parts := strings.SplitN(source, ":", 2)
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)

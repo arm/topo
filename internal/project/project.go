@@ -10,8 +10,8 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/core/compose"
-	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/arm-debug/topo-cli/internal/source"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
@@ -29,7 +29,7 @@ func Read(targetProjectFile string) (*types.Project, error) {
 	return cli.ProjectFromOptions(ctx, options)
 }
 
-func AddService(targetProjectFile, newServiceName string, src source.ServiceSource, argProvider arguments.Provider) error {
+func AddService(targetProjectFile, newServiceName string, src source.TemplateSource, argProvider arguments.Provider) error {
 	project, err := Read(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
@@ -52,12 +52,12 @@ func AddService(targetProjectFile, newServiceName string, src source.ServiceSour
 		}
 	}()
 
-	serviceManifest, err := service.ParseDefinition(destDir)
+	tmpl, err := template.ParseDefinition(destDir)
 	if err != nil {
-		return fmt.Errorf("failed to load topo service from %s: %w", src.String(), err)
+		return fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
 	}
 
-	resolvedTemplate, err := service.ResolveTemplate(serviceManifest, argProvider)
+	resolvedTemplate, err := template.Resolve(tmpl, argProvider)
 	if err != nil {
 		return err
 	}

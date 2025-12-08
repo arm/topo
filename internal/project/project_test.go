@@ -8,8 +8,8 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/project"
-	"github.com/arm-debug/topo-cli/internal/service"
 	"github.com/arm-debug/topo-cli/internal/source"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -22,16 +22,16 @@ name: example-project
 services: {}
 `
 
-type mockServiceSource struct {
+type mockTemplateSource struct {
 	mock.Mock
 }
 
-func (m *mockServiceSource) CopyTo(destDir string) error {
+func (m *mockTemplateSource) CopyTo(destDir string) error {
 	args := m.Called(destDir)
 	return args.Error(0)
 }
 
-func (m *mockServiceSource) String() string {
+func (m *mockTemplateSource) String() string {
 	args := m.Called()
 	return args.String(0)
 }
@@ -59,11 +59,11 @@ func TestInit(t *testing.T) {
 }
 
 func TestAddService(t *testing.T) {
-	t.Run("adds service from ServiceSource", func(t *testing.T) {
+	t.Run("adds service from TemplateSource", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		mockSource := &mockServiceSource{}
+		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -78,7 +78,7 @@ x-topo:
   name: "test-service"
   description: "Test service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 		argProvider := arguments.NewStrictProviderChain()
 
@@ -100,7 +100,7 @@ x-topo:
 
 		destDir := filepath.Join(dir, "test")
 
-		mockSource := &mockServiceSource{}
+		mockSource := &mockTemplateSource{}
 		mockSource.On("CopyTo", destDir).Return(source.DestDirExistsError{Dir: destDir})
 		provider := arguments.NewStrictProviderChain()
 
@@ -115,7 +115,7 @@ x-topo:
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		mockSource := &mockServiceSource{}
+		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -131,7 +131,7 @@ services:
 x-topo:
   name: "test-service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 		argProvider := arguments.NewStrictProviderChain()
 
@@ -159,7 +159,7 @@ volumes:
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		mockSource := &mockServiceSource{}
+		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -178,7 +178,7 @@ x-topo:
       required: true
       example: "Hello"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
@@ -208,7 +208,7 @@ services:
 		dir := t.TempDir()
 		targetProjectFile := writeComposeFile(t, dir, emptyComposeProject)
 
-		mockSource := &mockServiceSource{}
+		mockSource := &mockTemplateSource{}
 		destDir := filepath.Join(dir, "test")
 
 		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
@@ -226,7 +226,7 @@ x-topo:
       description: "The greeting message"
       required: true
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, service.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
 
 		provider := arguments.NewErrorProvider(errors.New("user cancelled"))

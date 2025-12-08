@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
-	"github.com/arm-debug/topo-cli/internal/service"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/transform"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ExtractNamedServiceVolumes(serviceName string, resolved service.ResolvedTemplate) ([]types.ServiceVolumeConfig, error) {
+func ExtractNamedServiceVolumes(serviceName string, resolved template.ResolvedTemplate) ([]types.ServiceVolumeConfig, error) {
 	// Create an in-memory compose file to dump the service definition into
 	composeDict := map[string]any{
 		"services": map[string]any{
@@ -50,11 +50,11 @@ func ExtractNamedServiceVolumes(serviceName string, resolved service.ResolvedTem
 	return namedVolumes, nil
 }
 
-func CreateService(serviceName string, resolved service.ResolvedTemplate) types.ServiceConfig {
+func CreateService(serviceName string, resolved template.ResolvedTemplate) types.ServiceConfig {
 	projectService := types.ServiceConfig{}
 	projectService.Name = serviceName
 	projectService.Extends = &types.ExtendsConfig{
-		File:    "./" + serviceName + "/" + service.ComposeFilename,
+		File:    "./" + serviceName + "/" + template.ComposeFilename,
 		Service: resolved.ServiceName,
 	}
 

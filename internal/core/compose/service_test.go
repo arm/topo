@@ -5,7 +5,7 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/core/compose"
-	"github.com/arm-debug/topo-cli/internal/service"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,7 +13,7 @@ import (
 
 func TestExtractNamedServiceVolumes(t *testing.T) {
 	t.Run("extracts only named volumes from volume syntax", func(t *testing.T) {
-		resolved := service.ResolvedTemplate{
+		resolved := template.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"volumes": []interface{}{
 					"data:/var/lib/data",
@@ -34,7 +34,7 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 	})
 
 	t.Run("skips bind mounts", func(t *testing.T) {
-		resolved := service.ResolvedTemplate{
+		resolved := template.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"volumes": []interface{}{
 					map[string]interface{}{
@@ -53,7 +53,7 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 	})
 
 	t.Run("skips tmpfs", func(t *testing.T) {
-		resolved := service.ResolvedTemplate{
+		resolved := template.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"volumes": []interface{}{
 					map[string]interface{}{
@@ -70,7 +70,7 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 	})
 
 	t.Run("skips volumes with empty source", func(t *testing.T) {
-		resolved := service.ResolvedTemplate{
+		resolved := template.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"volumes": []interface{}{
 					map[string]interface{}{
@@ -90,7 +90,7 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 
 func TestCreateService(t *testing.T) {
 	t.Run("generates service with extends field", func(t *testing.T) {
-		resolved := service.ResolvedTemplate{
+		resolved := template.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"name": "test-service",
 				"build": map[string]interface{}{
@@ -108,7 +108,7 @@ func TestCreateService(t *testing.T) {
 	})
 
 	t.Run("injects build arguments", func(t *testing.T) {
-		resolved := service.ResolvedTemplate{
+		resolved := template.ResolvedTemplate{
 			Service: map[string]interface{}{
 				"name": "test-service",
 				"build": map[string]interface{}{

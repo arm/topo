@@ -1,4 +1,4 @@
-package service
+package template
 
 import (
 	"fmt"
@@ -55,18 +55,18 @@ func ParseDefinition(destDir string) (Template, error) {
 		return Template{}, fmt.Errorf("expected exactly one service in %s, found %d", ComposeFilename, len(parsed.Services))
 	}
 
-	var serviceDef map[string]any
-	var serviceName string
-	for svcName, svc := range parsed.Services {
-		serviceDef = svc.(map[string]any)
-		serviceName = svcName
+	var svcDef map[string]any
+	var svcName string
+	for name, svc := range parsed.Services {
+		svcDef = svc.(map[string]any)
+		svcName = name
 		break
 	}
 
 	return Template{
 		Metadata:    parsed.XTopo,
-		Service:     serviceDef,
-		ServiceName: serviceName,
+		Service:     svcDef,
+		ServiceName: svcName,
 	}, nil
 }
 
