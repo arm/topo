@@ -5,7 +5,7 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/project"
-	"github.com/arm-debug/topo-cli/internal/source"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +48,7 @@ Use "topo service templates" to see available built-in templates.`,
 		serviceName := args[1]
 		sourceArg := args[2]
 
-		src, err := source.Parse(sourceArg)
+		src, err := template.NewSource(sourceArg)
 		if err != nil {
 			return err
 		}

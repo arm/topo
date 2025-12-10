@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/project"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -53,7 +53,7 @@ func SanitiseTestName(t testing.TB) string {
 
 func WriteComposeFile(t *testing.T, dir, content string) string {
 	t.Helper()
-	composePath := filepath.Join(dir, project.ComposeFilename)
+	composePath := filepath.Join(dir, template.ComposeFilename)
 	RequireWriteFile(t, composePath, content)
 	return composePath
 }

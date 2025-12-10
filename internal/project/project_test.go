@@ -9,7 +9,6 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/project"
-	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -44,7 +43,7 @@ func TestInit(t *testing.T) {
 
 		require.NoError(t, project.Init(dir))
 
-		composeFile := filepath.Join(dir, project.ComposeFilename)
+		composeFile := filepath.Join(dir, template.ComposeFilename)
 		data, err := os.ReadFile(composeFile)
 		require.NoError(t, err)
 		var p types.Project
@@ -96,7 +95,7 @@ x-topo:
 		destDir := filepath.Join(dir, "test")
 
 		mockSource := &mockTemplateSource{}
-		mockSource.On("CopyTo", destDir).Return(source.DestDirExistsError{Dir: destDir})
+		mockSource.On("CopyTo", destDir).Return(template.DestDirExistsError{Dir: destDir})
 		provider := arguments.NewStrictProviderChain()
 
 		err := project.AddService(targetProjectFile, "test", mockSource, provider)
@@ -266,7 +265,7 @@ x-topo:
       required: true
       example: bar
 `
-		composeFilePath := filepath.Join(dir, project.ComposeFilename)
+		composeFilePath := filepath.Join(dir, template.ComposeFilename)
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
 		argProvider := arguments.NewStrictProviderChain(provider)

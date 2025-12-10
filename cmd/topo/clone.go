@@ -5,7 +5,7 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/project"
-	"github.com/arm-debug/topo-cli/internal/source"
+	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +34,7 @@ var topoCloneCmd = &cobra.Command{
 
 		argProvider := arguments.NewStrictProviderChain(providers...)
 
-		projectSource, err := source.Parse(src)
+		projectSource, err := template.NewSource(src)
 		if err != nil {
 			return err
 		}

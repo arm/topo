@@ -11,24 +11,21 @@ import (
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/core/compose"
 	"github.com/arm-debug/topo-cli/internal/project/parse"
-	"github.com/arm-debug/topo-cli/internal/source"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
 
-const ComposeFilename = "compose.yaml"
-
-func Clone(path string, src source.TemplateSource, argProvider *arguments.StrictProviderChain, w io.Writer) error {
+func Clone(path string, src template.Source, argProvider *arguments.StrictProviderChain, w io.Writer) error {
 	if err := src.CopyTo(path); err != nil {
-		var errDestDirExists source.DestDirExistsError
+		var errDestDirExists template.DestDirExistsError
 		if errors.As(err, &errDestDirExists) {
 			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
 		}
 		return fmt.Errorf("failed to copy Service Template: %w", err)
 	}
 
-	composeFile := filepath.Join(path, ComposeFilename)
+	composeFile := filepath.Join(path, template.ComposeFilename)
 	if err := InitTemplate(composeFile, argProvider, w); err != nil {
 		if rmErr := os.RemoveAll(path); rmErr != nil {
 			return errors.Join(err, rmErr)
@@ -72,7 +69,7 @@ func InitTemplate(composeFile string, argCollector arguments.Provider, w io.Writ
 	return nil
 }
 
-func AddService(targetProjectFile, newServiceName string, src source.TemplateSource, argProvider arguments.Provider) error {
+func AddService(targetProjectFile, newServiceName string, src template.Source, argProvider arguments.Provider) error {
 	project, err := parse.Read(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
@@ -81,7 +78,7 @@ func AddService(targetProjectFile, newServiceName string, src source.TemplateSou
 	destDir := filepath.Join(filepath.Dir(targetProjectFile), newServiceName)
 
 	if err := src.CopyTo(destDir); err != nil {
-		var errDestDirExists source.DestDirExistsError
+		var errDestDirExists template.DestDirExistsError
 		if errors.As(err, &errDestDirExists) {
 			return fmt.Errorf("%w: please choose a different service name or remove the existing directory", errDestDirExists)
 		}
@@ -162,7 +159,7 @@ func RemoveService(composeFilePath, serviceName string) error {
 }
 
 func Init(projectDir string) error {
-	composePath := filepath.Join(projectDir, ComposeFilename)
+	composePath := filepath.Join(projectDir, template.ComposeFilename)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
 	} else if !os.IsNotExist(err) {
