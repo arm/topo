@@ -50,19 +50,19 @@ func StartDockerVM(t *testing.T) *DockerVM {
 func acquireLimaLock(t *testing.T) func() {
 	t.Helper()
 	lockPath := filepath.Join(os.TempDir(), "topo-lima-test.lock")
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		t.Fatalf("failed to open lock file: %v", err)
 	}
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatalf("failed to acquire lock: %v", err)
 	}
 
 	return func() {
-		syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-		f.Close()
+		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+		_ = f.Close()
 	}
 }
 
@@ -138,15 +138,15 @@ func ensureHostKeyKnown(sshConnection string) error {
 	}
 
 	knownHostsPath := filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts")
-	if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0o700); err != nil {
 		return fmt.Errorf("failed to create .ssh directory: %w", err)
 	}
 
-	f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open known_hosts: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.Write(output); err != nil {
 		return fmt.Errorf("failed to write to known_hosts: %w", err)

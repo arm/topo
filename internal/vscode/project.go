@@ -17,6 +17,6 @@ func PrintProject(w io.Writer, targetProjectFile string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal project: %w", err)
 	}
-	fmt.Fprintf(w, "%s\n", data)
-	return nil
+	_, err = fmt.Fprintf(w, "%s\n", data)
+	return err
 }

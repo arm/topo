@@ -51,7 +51,10 @@ func (t *Transfer) DryRun(output io.Writer) error {
 	}
 	for _, image := range images {
 		saveCmd, loadCmd := t.buildTransferCommands(image)
-		fmt.Fprintf(output, "%s | %s\n", command.String(saveCmd), command.String(loadCmd))
+		_, err := fmt.Fprintf(output, "%s | %s\n", command.String(saveCmd), command.String(loadCmd))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -93,7 +96,7 @@ func (t *Transfer) transferImage(cmdOutput io.Writer, imageName string) error {
 
 	var g errgroup.Group
 	g.Go(func() error {
-		defer pipeWriter.Close()
+		defer pipeWriter.Close() //nolint:errcheck
 		if err := saveCmd.Run(); err != nil {
 			return fmt.Errorf("failed to save image: %w", err)
 		}
@@ -101,7 +104,7 @@ func (t *Transfer) transferImage(cmdOutput io.Writer, imageName string) error {
 	})
 
 	g.Go(func() error {
-		defer pipeReader.Close()
+		defer pipeReader.Close() //nolint:errcheck
 		if err := loadCmd.Run(); err != nil {
 			return fmt.Errorf("failed to load image: %w", err)
 		}

@@ -15,7 +15,10 @@ func NewSequence(operations ...Operation) Sequence {
 func (s Sequence) Run(cmdOutput io.Writer) error {
 	for _, op := range s {
 		if cmdOutput != nil {
-			printHeader(cmdOutput, op.Description())
+			err := printHeader(cmdOutput, op.Description())
+			if err != nil {
+				return err
+			}
 		}
 		if err := op.Run(cmdOutput); err != nil {
 			return err
@@ -26,7 +29,10 @@ func (s Sequence) Run(cmdOutput io.Writer) error {
 
 func (s Sequence) DryRun(output io.Writer) error {
 	for _, op := range s {
-		printHeader(output, op.Description())
+		err := printHeader(output, op.Description())
+		if err != nil {
+			return err
+		}
 		if err := op.DryRun(output); err != nil {
 			return err
 		}
@@ -34,9 +40,9 @@ func (s Sequence) DryRun(output io.Writer) error {
 	return nil
 }
 
-func printHeader(w io.Writer, description string) {
+func printHeader(w io.Writer, description string) error {
 	if description == "" {
-		return
+		return nil
 	}
 
 	const totalWidth = 60
@@ -47,6 +53,6 @@ func printHeader(w io.Writer, description string) {
 	barWidth := max(totalWidth-len(prefix)-descriptionWidth-len(suffix), 0)
 
 	header := prefix + description + suffix + strings.Repeat("─", barWidth)
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, header)
+	_, err := fmt.Fprintf(w, "\n%s\n", header)
+	return err
 }

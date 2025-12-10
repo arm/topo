@@ -22,17 +22,26 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 	scanner := bufio.NewScanner(p.input)
 
 	for _, arg := range args {
-		fmt.Fprintf(p.output, "\n%s\n", arg.Description)
+		_, err := fmt.Fprintf(p.output, "\n%s\n", arg.Description)
+		if err != nil {
+			return nil, err
+		}
 
 		if arg.Example != "" {
-			fmt.Fprintf(p.output, "Example: %s\n", arg.Example)
+			_, err := fmt.Fprintf(p.output, "Example: %s\n", arg.Example)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		requiredLabel := ""
 		if arg.Required {
 			requiredLabel = " (required)"
 		}
-		fmt.Fprintf(p.output, "%s%s> ", arg.Name, requiredLabel)
+		_, err = fmt.Fprintf(p.output, "%s%s> ", arg.Name, requiredLabel)
+		if err != nil {
+			return nil, err
+		}
 
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {

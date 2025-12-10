@@ -38,8 +38,8 @@ func (dc *DockerCompose) Run(cmdOutput io.Writer) error {
 
 func (dc *DockerCompose) DryRun(output io.Writer) error {
 	cmd := dc.buildCommand()
-	fmt.Fprintln(output, command.String(cmd))
-	return nil
+	_, err := fmt.Fprintln(output, command.String(cmd))
+	return err
 }
 
 func (dc *DockerCompose) buildCommand() *exec.Cmd {

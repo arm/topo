@@ -72,12 +72,12 @@ func assertResponseBody(t *testing.T, url, wantBody string) {
 			return false
 		}
 		if resp.StatusCode != 200 {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return false
 		}
 		return true
 	}, 30*time.Second, 1*time.Second, "service did not become healthy")
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.Equal(t, wantBody, string(body))

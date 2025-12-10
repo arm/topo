@@ -163,5 +163,4 @@ func TestRegisterVolumes(t *testing.T) {
 			"new":      types.VolumeConfig{},
 		}, project.Volumes)
 	})
-
 }

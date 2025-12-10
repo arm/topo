@@ -178,12 +178,12 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
-func copyFile(src, dst string) error {
+func copyFile(src, dst string) (err error) {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+	defer srcFile.Close() //nolint:errcheck
 
 	srcInfo, err := srcFile.Stat()
 	if err != nil {
@@ -194,7 +194,11 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer func() {
+		if closeError := dstFile.Close(); closeError != nil && err == nil {
+			err = closeError
+		}
+	}()
 
 	_, err = io.Copy(dstFile, srcFile)
 	return err

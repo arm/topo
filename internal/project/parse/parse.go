@@ -85,7 +85,10 @@ func ApplyArgs(root *yaml.Node, resolved []arguments.ResolvedArg, w io.Writer) e
 
 	for _, a := range resolved {
 		if !used[a.Name] && w != nil {
-			fmt.Fprintf(w, "warning: arg %q was resolved but not found in any service build args\n", a.Name)
+			_, err := fmt.Fprintf(w, "warning: arg %q was resolved but not found in any service build args\n", a.Name)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
