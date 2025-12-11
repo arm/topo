@@ -1,6 +1,6 @@
 module github.com/arm-debug/topo-cli
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/compose-spec/compose-go/v2 v2.9.1
