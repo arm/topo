@@ -46,15 +46,15 @@ func (dc *DockerCompose) buildCommand() *exec.Cmd {
 	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
 }
 
-func NewBuild(composeFile string, h ssh.Host) *DockerCompose {
+func NewDockerComposeBuild(composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Build images", composeFile, h, []string{"build"})
 }
 
-func NewPull(composeFile string, h ssh.Host) *DockerCompose {
+func NewDockerComposePull(composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Pull images", composeFile, h, []string{"pull"})
 }
 
-func NewRun(composeFile string, h ssh.Host) *DockerCompose {
+func NewDockerComposeRun(composeFile string, h ssh.Host) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
 	return NewDockerCompose("Start services", composeFile, h, args)
 }

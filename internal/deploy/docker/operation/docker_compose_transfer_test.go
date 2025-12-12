@@ -15,14 +15,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTransfer(t *testing.T) {
+func TestDockerComposePipeTransfer(t *testing.T) {
 	testutil.RequireDocker(t)
 
 	t.Run("Description", func(t *testing.T) {
 		h := ssh.PlainLocalhost
 		tmpDir := t.TempDir()
 		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-		transfer := operation.NewTransfer(composeFilePath, h, h)
+		transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, h)
 
 		got := transfer.Description()
 
@@ -56,7 +56,7 @@ services:
 			buildOutput, err := buildCmd.CombinedOutput()
 			require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 
-			transfer := operation.NewTransfer(composeFilePath, h, h)
+			transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, h)
 
 			err = transfer.Run(os.Stdout)
 
@@ -79,7 +79,7 @@ services:
     image: nginx:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewTransfer(composeFilePath, h, ssh.Host("user@remote"))
+			transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, ssh.Host("user@remote"))
 
 			err := transfer.DryRun(&buf)
 

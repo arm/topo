@@ -54,10 +54,10 @@ services:
 	})
 }
 
-func TestNewBuild(t *testing.T) {
+func TestNewDockerComposeBuild(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.Host("user@remote")
-	op := operation.NewBuild(composeFilePath, remoteHost)
+	op := operation.NewDockerComposeBuild(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()
@@ -76,10 +76,10 @@ func TestNewBuild(t *testing.T) {
 	})
 }
 
-func TestNewPull(t *testing.T) {
+func TestNewDockerComposePull(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.Host("user@remote")
-	op := operation.NewPull(composeFilePath, remoteHost)
+	op := operation.NewDockerComposePull(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()
@@ -98,10 +98,10 @@ func TestNewPull(t *testing.T) {
 	})
 }
 
-func TestNewRun(t *testing.T) {
+func TestNewDockerComposeRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.Host("user@remote")
-	op := operation.NewRun(composeFilePath, remoteHost)
+	op := operation.NewDockerComposeRun(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()

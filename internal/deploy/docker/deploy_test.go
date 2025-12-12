@@ -25,10 +25,10 @@ func TestNewDeployment(t *testing.T) {
 		got := docker.NewDeployment(composeFile, remoteHost)
 
 		want := goperation.Sequence{
-			operation.NewBuild(composeFile, ssh.PlainLocalhost),
-			operation.NewPull(composeFile, ssh.PlainLocalhost),
-			operation.NewTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
-			operation.NewRun(composeFile, remoteHost),
+			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
+			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
+			operation.NewDockerComposePipeTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
+			operation.NewDockerComposeRun(composeFile, remoteHost),
 		}
 		assert.Equal(t, want, got)
 	})
@@ -37,9 +37,9 @@ func TestNewDeployment(t *testing.T) {
 		got := docker.NewDeployment(composeFile, ssh.PlainLocalhost)
 
 		want := goperation.Sequence{
-			operation.NewBuild(composeFile, ssh.PlainLocalhost),
-			operation.NewPull(composeFile, ssh.PlainLocalhost),
-			operation.NewRun(composeFile, ssh.PlainLocalhost),
+			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
+			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
+			operation.NewDockerComposeRun(composeFile, ssh.PlainLocalhost),
 		}
 		assert.Equal(t, want, got)
 	})

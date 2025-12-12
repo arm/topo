@@ -9,12 +9,12 @@ import (
 func NewDeployment(composeFile string, targetHost ssh.Host) goperation.Sequence {
 	sourceHost := ssh.PlainLocalhost
 	ops := []goperation.Operation{
-		operation.NewBuild(composeFile, sourceHost),
-		operation.NewPull(composeFile, sourceHost),
+		operation.NewDockerComposeBuild(composeFile, sourceHost),
+		operation.NewDockerComposePull(composeFile, sourceHost),
 	}
 	if !targetHost.IsPlainLocalhost() {
-		ops = append(ops, operation.NewTransfer(composeFile, sourceHost, targetHost))
+		ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, targetHost))
 	}
-	ops = append(ops, operation.NewRun(composeFile, targetHost))
+	ops = append(ops, operation.NewDockerComposeRun(composeFile, targetHost))
 	return goperation.NewSequence(ops...)
 }

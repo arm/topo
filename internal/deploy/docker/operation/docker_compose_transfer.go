@@ -12,25 +12,25 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Transfer struct {
+type DockerComposePipeTransfer struct {
 	composeFile string
 	sourceHost  ssh.Host
 	targetHost  ssh.Host
 }
 
-func NewTransfer(composeFile string, sourceHost, targetHost ssh.Host) *Transfer {
-	return &Transfer{
+func NewDockerComposePipeTransfer(composeFile string, sourceHost, targetHost ssh.Host) *DockerComposePipeTransfer {
+	return &DockerComposePipeTransfer{
 		composeFile: composeFile,
 		sourceHost:  sourceHost,
 		targetHost:  targetHost,
 	}
 }
 
-func (t *Transfer) Description() string {
+func (t *DockerComposePipeTransfer) Description() string {
 	return "Transfer images"
 }
 
-func (t *Transfer) Run(cmdOutput io.Writer) error {
+func (t *DockerComposePipeTransfer) Run(cmdOutput io.Writer) error {
 	images, err := t.getImagesFromCompose(cmdOutput)
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func (t *Transfer) Run(cmdOutput io.Writer) error {
 	return g.Wait()
 }
 
-func (t *Transfer) DryRun(output io.Writer) error {
+func (t *DockerComposePipeTransfer) DryRun(output io.Writer) error {
 	images, err := t.getImagesFromCompose(io.Discard)
 	if err != nil {
 		return err
@@ -59,13 +59,13 @@ func (t *Transfer) DryRun(output io.Writer) error {
 	return nil
 }
 
-func (t *Transfer) buildTransferCommands(imageName string) (*exec.Cmd, *exec.Cmd) {
+func (t *DockerComposePipeTransfer) buildTransferCommands(imageName string) (*exec.Cmd, *exec.Cmd) {
 	saveCmd := command.Docker(t.sourceHost, "save", imageName)
 	loadCmd := command.Docker(t.targetHost, "load")
 	return saveCmd, loadCmd
 }
 
-func (t *Transfer) getImagesFromCompose(cmdOutput io.Writer) ([]string, error) {
+func (t *DockerComposePipeTransfer) getImagesFromCompose(cmdOutput io.Writer) ([]string, error) {
 	cmd := command.DockerCompose(t.sourceHost, t.composeFile, "config", "--images")
 	cmd.Stderr = cmdOutput
 	output, err := cmd.Output()
@@ -84,7 +84,7 @@ func (t *Transfer) getImagesFromCompose(cmdOutput io.Writer) ([]string, error) {
 	return imageNames, nil
 }
 
-func (t *Transfer) transferImage(cmdOutput io.Writer, imageName string) error {
+func (t *DockerComposePipeTransfer) transferImage(cmdOutput io.Writer, imageName string) error {
 	pipeReader, pipeWriter := io.Pipe()
 
 	saveCmd, loadCmd := t.buildTransferCommands(imageName)
