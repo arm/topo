@@ -8,11 +8,8 @@ import (
 	"io"
 )
 
-//go:embed data/service-templates.json
-var serviceTemplatesJSON []byte
-
-//go:embed data/example-projects.json
-var exampleProjectsJSON []byte
+//go:embed data/templates.json
+var templatesJSON []byte
 
 type Repo struct {
 	Id  string `json:"id"`
@@ -20,20 +17,12 @@ type Repo struct {
 	Ref string `json:"ref,omitempty"`
 }
 
-func GetExampleProjectRepo(id string) (*Repo, error) {
-	return GetRepo(id, exampleProjectsJSON)
+func GetTemplateRepo(id string) (*Repo, error) {
+	return GetRepo(id, templatesJSON)
 }
 
-func PrintExampleProjectRepos(w io.Writer) error {
-	return printRepos(w, exampleProjectsJSON)
-}
-
-func GetServiceTemplateRepo(id string) (*Repo, error) {
-	return GetRepo(id, serviceTemplatesJSON)
-}
-
-func PrintServiceTemplateRepos(w io.Writer) error {
-	return printRepos(w, serviceTemplatesJSON)
+func PrintTemplateRepos(w io.Writer) error {
+	return printRepos(w, templatesJSON)
 }
 
 func ListRepos(b []byte) ([]Repo, error) {

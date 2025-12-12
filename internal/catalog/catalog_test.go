@@ -10,59 +10,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetExampleProjectRepo(t *testing.T) {
-	t.Run("when example project exists, it is found", func(t *testing.T) {
-		project, err := catalog.GetExampleProjectRepo("STM32MP5-Heterogenous-Lightbulb")
-
-		require.NoError(t, err)
-		assert.Equal(t, &catalog.Repo{
-			Id:  "STM32MP5-Heterogenous-Lightbulb",
-			Url: "git@github.com:Arm-Debug/STM32-Heteogenous-Communications-example.git",
-			Ref: "main",
-		}, project)
-	})
-
-	t.Run("when example project does not exist, it errors", func(t *testing.T) {
-		_, err := catalog.GetExampleProjectRepo("nonexistent-example-project")
-
-		assert.ErrorContains(t, err, `"nonexistent-example-project" not found`)
-	})
-}
-
-func TestPrintExampleProjectRepos(t *testing.T) {
-	t.Run("prints example projects as JSON", func(t *testing.T) {
-		var buf bytes.Buffer
-		var projects []catalog.Repo
-
-		err := catalog.PrintExampleProjectRepos(&buf)
-
-		require.NoError(t, err)
-		require.NoError(t, json.Unmarshal(buf.Bytes(), &projects))
-		assert.NotNil(t, projects)
-	})
-}
-
-func TestGetServiceTemplateRepo(t *testing.T) {
+func TestGetTemplateRepo(t *testing.T) {
 	t.Run("when template exists it is found", func(t *testing.T) {
-		template, err := catalog.GetServiceTemplateRepo("kleidi-llm")
+		template, err := catalog.GetTemplateRepo("kleidi-llm")
 
 		require.NoError(t, err)
 		assert.Equal(t, &catalog.Repo{Id: "kleidi-llm", Url: "git@github.com:Arm-Debug/topo-kleidi-service.git"}, template)
 	})
 
 	t.Run("when template does not exist, it errors", func(t *testing.T) {
-		_, err := catalog.GetServiceTemplateRepo("nonexistent-template")
+		_, err := catalog.GetTemplateRepo("nonexistent-template")
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, `"nonexistent-template" not found`)
 	})
 }
 
-func TestPrintServiceTemplateRepos(t *testing.T) {
+func TestPrintTemplateRepos(t *testing.T) {
 	t.Run("prints templates as JSON", func(t *testing.T) {
 		var buf bytes.Buffer
 
-		err := catalog.PrintServiceTemplateRepos(&buf)
+		err := catalog.PrintTemplateRepos(&buf)
 
 		require.NoError(t, err)
 		var templates []catalog.Repo

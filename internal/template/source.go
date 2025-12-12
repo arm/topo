@@ -52,13 +52,13 @@ func NewSource(source string) (Source, error) {
 type TemplateIdSource string
 
 func (t TemplateIdSource) CopyTo(destDir string) error {
-	serviceTemplateRepo, err := catalog.GetServiceTemplateRepo(string(t))
+	templateRepo, err := catalog.GetTemplateRepo(string(t))
 	if err != nil {
 		return err
 	}
 	gitSource := GitSource{
-		URL: serviceTemplateRepo.Url,
-		Ref: serviceTemplateRepo.Ref,
+		URL: templateRepo.Url,
+		Ref: templateRepo.Ref,
 	}
 	return gitSource.CopyTo(destDir)
 }
