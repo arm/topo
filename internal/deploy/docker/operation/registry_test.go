@@ -30,7 +30,7 @@ func TestNewRunRegistry(t *testing.T) {
 	})
 }
 
-func TestDockerPull(t *testing.T) {
+func TestPull(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("returns image name", func(t *testing.T) {
 			pull := operation.NewPull(ssh.PlainLocalhost, "registry:2")
@@ -51,7 +51,7 @@ func TestDockerPull(t *testing.T) {
 	})
 }
 
-func TestDockerPipeTransfer(t *testing.T) {
+func TestPipeTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("returns image name", func(t *testing.T) {
 			transfer := operation.NewPipeTransfer("registry:2", ssh.PlainLocalhost, ssh.Host("user@remote"))
@@ -73,7 +73,7 @@ func TestDockerPipeTransfer(t *testing.T) {
 	})
 }
 
-func TestDockerStartOrRun(t *testing.T) {
+func TestStartOrRun(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("returns container name", func(t *testing.T) {
 			startOrRun := operation.NewStartOrRun(ssh.Host("user@remote"), "my-container", "my-image:latest")
