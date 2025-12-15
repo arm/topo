@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	RegistryPort          = 12737
 	RegistryContainerName = "topo-registry"
 	registryImage         = "registry:2"
 )
@@ -22,7 +21,7 @@ func NewRunRegistry(host ssh.Host) operation.Sequence {
 		NewPull(ssh.PlainLocalhost, registryImage),
 		NewPipeTransfer(registryImage, ssh.PlainLocalhost, host),
 		NewStartOrRun(host, RegistryContainerName, registryImage,
-			"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", RegistryPort)),
+			"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
 	)
 }
 
