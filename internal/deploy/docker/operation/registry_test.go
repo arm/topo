@@ -24,7 +24,7 @@ func TestNewRunRegistry(t *testing.T) {
 			operation.NewPull(ssh.PlainLocalhost, "registry:2"),
 			operation.NewPipeTransfer("registry:2", ssh.PlainLocalhost, host),
 			operation.NewStartOrRun(host, operation.RegistryContainerName, "registry:2",
-				"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", operation.RegistryPort)),
+				"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
 		)
 		assert.Equal(t, want, got)
 	})
@@ -88,7 +88,7 @@ func TestStartOrRun(t *testing.T) {
 		t.Run("prints run command when container does not exist", func(t *testing.T) {
 			var buf bytes.Buffer
 			startOrRun := operation.NewStartOrRun(ssh.Host("user@remote"), "topo-registry", "registry:2",
-				"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", operation.RegistryPort))
+				"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort))
 
 			require.NoError(t, startOrRun.DryRun(&buf))
 

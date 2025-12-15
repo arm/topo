@@ -45,7 +45,7 @@ func (t *DockerComposePipeTransfer) Run(cmdOutput io.Writer) error {
 }
 
 func (t *DockerComposePipeTransfer) DryRun(output io.Writer) error {
-	images, err := t.getImagesFromCompose(io.Discard)
+	images, err := t.getImagesFromCompose(output)
 	if err != nil {
 		return err
 	}
