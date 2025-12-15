@@ -1,15 +1,47 @@
 [
   {
-    "id": "kleidi-llm",
-    "url": "git@github.com:Arm-Debug/topo-kleidi-service.git"
-  },
-  {
-    "id": "ambient-zephyr",
-    "url": "git@github.com:Arm-Debug/topo-ambient-zephyr.git"
-  },
-  {
-    "id": "cortexa-welcome",
+    "id": "Topo-Welcome",
+    "description": "A Hello World web app to test Topo setup\n",
+    "features": [],
     "url": "git@github.com:Arm-Debug/topo-cortexa-welcome.git",
     "ref": "main"
+  },
+  {
+    "id": "kleidi-llm",
+    "description": "Run an LLM locally using KleidiAI optimised inference on Arm CPU\n",
+    "features": [
+      "SME",
+      "NEON"
+    ],
+    "url": "git@github.com:Arm-Debug/topo-kleidi-service.git",
+    "ref": "main"
+  },
+  {
+    "id": "Lightbulb-moment",
+    "description": "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state.",
+    "features": null,
+    "url": "git@github.com:Arm-Debug/STM32-Heteogenous-Communications-example.git",
+    "ref": "main"
+  },
+  {
+    "id": "armv9-cpu-llm-chat",
+    "description": "Complete LLM chat application optimized for Arm v9 CPU inference. This project demonstrates running large language models entirely on CPU using llama.cpp compiled with Arm v9-specific optimizations including NEON and SVE (Scalable Vector Extension). The stack includes:- llama.cpp server with Arm v9 SIMD optimizations (NEON, SVE)- Qwen2.5-3B-Instruct model bundled in the image (~1.93 GB)- Simple web-based chat interface- No GPU required - pure CPU inference Perfect for demos and testing! The bundled Qwen2.5-3B model allows the project to run immediately without downloading additional models. Ideal for testing LLM workloads on Arm v9 hardware without GPU dependencies, showcasing the performance benefits of SVE for AI inference tasks.",
+    "features": [
+      "Armv9",
+      "SVE",
+      "NEON"
+    ],
+    "url": "git@github.com:Arm-Debug/topo-armv9-cpu-llm-chat.git",
+    "ref": "master"
+  },
+  {
+    "id": "simd-visual-benchmark",
+    "description": "Visual demonstration of SIMD performance benefits on Arm processors.Compare scalar (no SIMD), NEON (128-bit), and SVE (scalable vector) implementations running identical image processing workloads side-by-side. This demo shows real hardware acceleration through three C++ services compiled with different architecture flags, processing the same box blur algorithm on images. Performance differences are measured in real-time and displayed in an interactive web dashboard. Perfect for demonstrating to non-technical audiences the concrete benefits of SIMD optimizations, with visual results and quantified speedups.",
+    "features": [
+      "NEON",
+      "SVE"
+    ],
+    "url": "git@github.com:Arm-Debug/topo-simd-visual-benchmark.git",
+    "ref": "master"
   }
 ]

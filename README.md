@@ -36,7 +36,7 @@ List available templates:
 Add a service using a built-in template:
 
 ```sh
-./topo service add compose.yaml my-service template:cortexa-welcome
+./topo service add compose.yaml my-service template:Topo-Welcome
 ```
 
 ### Deploy to your target

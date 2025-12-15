@@ -15,7 +15,13 @@ func TestGetTemplateRepo(t *testing.T) {
 		template, err := catalog.GetTemplateRepo("kleidi-llm")
 
 		require.NoError(t, err)
-		assert.Equal(t, &catalog.Repo{Id: "kleidi-llm", Url: "git@github.com:Arm-Debug/topo-kleidi-service.git"}, template)
+		assert.Equal(t, &catalog.Repo{
+			Id:          "kleidi-llm",
+			Description: "Run an LLM locally using KleidiAI optimised inference on Arm CPU\n",
+			Features:    []string{"SME", "NEON"},
+			Url:         "git@github.com:Arm-Debug/topo-kleidi-service.git",
+			Ref:         "main",
+		}, template)
 	})
 
 	t.Run("when template does not exist, it errors", func(t *testing.T) {
@@ -42,16 +48,40 @@ func TestPrintTemplateRepos(t *testing.T) {
 func TestListRepos(t *testing.T) {
 	t.Run("parses valid JSON successfully", func(t *testing.T) {
 		jsonData := []byte(`[
-			{"id": "test-repo", "url": "https://example.com/repo.git"},
-			{"id": "another-repo", "url": "https://example.com/another.git", "ref": "v1.0.0"}
+			{
+				"id": "test-repo",
+				"description": "A test template",
+				"features": ["feat1", "feat2"],
+				"url": "https://example.com/repo.git",
+				"ref": "main"
+			},
+			{
+				"id": "another-repo",
+				"description": "Another template",
+				"features": null,
+				"url": "https://example.com/another.git",
+				"ref": "v1.0.0"
+			}
 		]`)
 
 		templates, err := catalog.ListRepos(jsonData)
 
 		require.NoError(t, err)
 		assert.Len(t, templates, 2)
-		assert.Equal(t, catalog.Repo{Id: "test-repo", Url: "https://example.com/repo.git"}, templates[0])
-		assert.Equal(t, catalog.Repo{Id: "another-repo", Url: "https://example.com/another.git", Ref: "v1.0.0"}, templates[1])
+		assert.Equal(t, catalog.Repo{
+			Id:          "test-repo",
+			Description: "A test template",
+			Features:    []string{"feat1", "feat2"},
+			Url:         "https://example.com/repo.git",
+			Ref:         "main",
+		}, templates[0])
+		assert.Equal(t, catalog.Repo{
+			Id:          "another-repo",
+			Description: "Another template",
+			Features:    nil,
+			Url:         "https://example.com/another.git",
+			Ref:         "v1.0.0",
+		}, templates[1])
 	})
 
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
@@ -64,7 +94,15 @@ func TestListRepos(t *testing.T) {
 	})
 
 	t.Run("returns error for unknown fields", func(t *testing.T) {
-		jsonData := []byte(`[{"id": "test", "url": "https://example.com", "unknown_field": "value"}]`)
+		jsonData := []byte(`[
+			{
+				"id": "test",
+				"description": "desc",
+				"features": [],
+				"url": "https://example.com",
+				"unknown_field": "value"
+			}
+		]`)
 
 		_, err := catalog.ListRepos(jsonData)
 
@@ -75,22 +113,44 @@ func TestListRepos(t *testing.T) {
 
 func TestGetRepo(t *testing.T) {
 	validJSON := []byte(`[
-		{"id": "repo1", "url": "https://example.com/repo1.git"},
-		{"id": "repo2", "url": "https://example.com/repo2.git", "ref": "main"}
+		{
+			"id": "repo1",
+			"description": "first",
+			"features": ["feat"],
+			"url": "https://example.com/repo1.git"
+		},
+		{
+			"id": "repo2",
+			"description": "second",
+			"features": null,
+			"url": "https://example.com/repo2.git",
+			"ref": "main"
+		}
 	]`)
 
 	t.Run("finds existing repo by id", func(t *testing.T) {
 		repo, err := catalog.GetRepo("repo1", validJSON)
 
 		require.NoError(t, err)
-		assert.Equal(t, &catalog.Repo{Id: "repo1", Url: "https://example.com/repo1.git"}, repo)
+		assert.Equal(t, &catalog.Repo{
+			Id:          "repo1",
+			Description: "first",
+			Features:    []string{"feat"},
+			Url:         "https://example.com/repo1.git",
+		}, repo)
 	})
 
 	t.Run("finds repo with ref", func(t *testing.T) {
 		repo, err := catalog.GetRepo("repo2", validJSON)
 
 		require.NoError(t, err)
-		assert.Equal(t, &catalog.Repo{Id: "repo2", Url: "https://example.com/repo2.git", Ref: "main"}, repo)
+		assert.Equal(t, &catalog.Repo{
+			Id:          "repo2",
+			Description: "second",
+			Features:    nil,
+			Url:         "https://example.com/repo2.git",
+			Ref:         "main",
+		}, repo)
 	})
 
 	t.Run("returns error when repo not found", func(t *testing.T) {

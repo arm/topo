@@ -12,9 +12,11 @@ import (
 var templatesJSON []byte
 
 type Repo struct {
-	Id  string `json:"id"`
-	Url string `json:"url"`
-	Ref string `json:"ref,omitempty"`
+	Id          string   `json:"id"`
+	Description string   `json:"description"`
+	Features    []string `json:"features"`
+	Url         string   `json:"url"`
+	Ref         string   `json:"ref"`
 }
 
 func GetTemplateRepo(id string) (*Repo, error) {
