@@ -10,12 +10,13 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ExtractNamedServiceVolumes(serviceName string, resolved template.ResolvedTemplate) ([]types.ServiceVolumeConfig, error) {
+func ExtractNamedServiceVolumes(resolved []template.ResolvedTemplate) ([]types.ServiceVolumeConfig, error) {
 	// Create an in-memory compose file to dump the service definition into
 	composeDict := map[string]any{
-		"services": map[string]any{
-			serviceName: resolved.Service,
-		},
+		"services": map[string]any{},
+	}
+	for _, r := range resolved {
+		composeDict["services"].(map[string]any)[r.ServiceName] = r.Service
 	}
 
 	// Use compose-spec's transform.Canonical to convert the supported syntaxes to their canonical representation
@@ -30,31 +31,33 @@ func ExtractNamedServiceVolumes(serviceName string, resolved template.ResolvedTe
 		return nil, fmt.Errorf("unexpected services format")
 	}
 
-	serviceDict, ok := servicesDict[serviceName]
-	if !ok {
-		return nil, fmt.Errorf("service %q not found after canonicalization", serviceName)
-	}
-
-	var svc types.ServiceConfig
-	if err := loader.Transform(serviceDict, &svc); err != nil {
-		return nil, fmt.Errorf("failed to transform service config: %w", err)
-	}
-
 	namedVolumes := []types.ServiceVolumeConfig{}
-	for _, vol := range svc.Volumes {
-		if vol.Type == types.VolumeTypeVolume && vol.Source != "" {
-			namedVolumes = append(namedVolumes, vol)
+	for _, r := range resolved {
+		serviceDict, ok := servicesDict[r.ServiceName]
+		if !ok {
+			return nil, fmt.Errorf("service %q not found after canonicalization", r.ServiceName)
+		}
+
+		var svc types.ServiceConfig
+		if err := loader.Transform(serviceDict, &svc); err != nil {
+			return nil, fmt.Errorf("failed to transform service config: %w", err)
+		}
+
+		for _, vol := range svc.Volumes {
+			if vol.Type == types.VolumeTypeVolume && vol.Source != "" {
+				namedVolumes = append(namedVolumes, vol)
+			}
 		}
 	}
 
 	return namedVolumes, nil
 }
 
-func CreateService(serviceName string, resolved template.ResolvedTemplate) types.ServiceConfig {
+func CreateService(templateRepoPath string, resolved template.ResolvedTemplate) types.ServiceConfig {
 	projectService := types.ServiceConfig{}
-	projectService.Name = serviceName
+	projectService.Name = resolved.ServiceName
 	projectService.Extends = &types.ExtendsConfig{
-		File:    "./" + serviceName + "/" + template.ComposeFilename,
+		File:    "./" + templateRepoPath + "/" + template.ComposeFilename,
 		Service: resolved.ServiceName,
 	}
 

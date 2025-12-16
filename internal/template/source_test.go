@@ -184,6 +184,14 @@ func TestGitSource(t *testing.T) {
 			assert.Equal(t, "git:https://github.com/example/test.git", src.String())
 		})
 	})
+	t.Run("GetName", func(t *testing.T) {
+		src := template.GitSource{
+			URL: "https://github.com/example/test.git",
+		}
+		name, err := src.GetName()
+		assert.NoError(t, err)
+		assert.Equal(t, "test", name)
+	})
 }
 
 func TestDirSource(t *testing.T) {
@@ -312,6 +320,25 @@ func TestDirSource(t *testing.T) {
 			err := src.CopyTo(dstDir)
 
 			assert.ErrorIs(t, err, template.DestDirExistsError{Dir: dstDir})
+		})
+	})
+	t.Run("GetName", func(t *testing.T) {
+		t.Run("returns base name of the directory path", func(t *testing.T) {
+			src := template.DirSource{Path: "/path/to/template"}
+
+			name, err := src.GetName()
+
+			require.NoError(t, err)
+			assert.Equal(t, "template", name)
+		})
+
+		t.Run("works with relative paths", func(t *testing.T) {
+			src := template.DirSource{Path: "./local/template"}
+
+			name, err := src.GetName()
+
+			require.NoError(t, err)
+			assert.Equal(t, "template", name)
 		})
 	})
 }

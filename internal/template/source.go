@@ -22,6 +22,7 @@ func (e DestDirExistsError) Error() string {
 type Source interface {
 	CopyTo(destDir string) error
 	String() string
+	GetName() (string, error)
 }
 
 func NewSource(source string) (Source, error) {
@@ -67,6 +68,18 @@ func (t TemplateIdSource) String() string {
 	return fmt.Sprintf("template:%s", string(t))
 }
 
+func (t TemplateIdSource) GetName() (string, error) {
+	templateRepo, err := catalog.GetTemplateRepo(string(t))
+	if err != nil {
+		return "", err
+	}
+	gitSource := GitSource{
+		URL: templateRepo.Url,
+		Ref: templateRepo.Ref,
+	}
+	return gitSource.GetName()
+}
+
 type GitSource struct {
 	URL string
 	Ref string
@@ -107,6 +120,17 @@ func (g GitSource) String() string {
 	return fmt.Sprintf("git:%s", g.URL)
 }
 
+func (g GitSource) GetName() (string, error) {
+	cmd := exec.Command("basename", "-s", ".git", g.URL)
+	cmd.Env = os.Environ()
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	outputStr := strings.TrimSpace(string(output))
+	return outputStr, nil
+}
+
 type DirSource struct {
 	Path string
 }
@@ -144,6 +168,10 @@ func (d DirSource) CopyTo(destDir string) error {
 
 func (d DirSource) String() string {
 	return fmt.Sprintf("dir:%s", d.Path)
+}
+
+func (d DirSource) GetName() (string, error) {
+	return filepath.Base(d.Path), nil
 }
 
 func copyDir(src, dst string) error {

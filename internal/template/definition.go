@@ -30,44 +30,42 @@ type Arg struct {
 	Example     string
 }
 
-func ParseDefinition(destDir string) (Template, error) {
-	type composeServiceFile struct {
-		Services map[string]any `yaml:"services"`
-		XTopo    Metadata       `yaml:"x-topo"`
-	}
+type ComposeFile struct {
+	Services map[string]any `yaml:"services"`
+	XTopo    Metadata       `yaml:"x-topo"`
+}
 
+func ParseDefinition(destDir string) (ComposeFile, error) {
 	composeServicePath := filepath.Join(destDir, ComposeFilename)
 	composeServiceData, err := os.ReadFile(composeServicePath)
 	if err != nil {
-		return Template{}, fmt.Errorf("failed to read %s from %s: %w", ComposeFilename, composeServicePath, err)
+		return ComposeFile{}, fmt.Errorf("failed to read %s from %s: %w", ComposeFilename, composeServicePath, err)
 	}
 
-	var parsed composeServiceFile
+	var parsed ComposeFile
 	if err := yaml.Unmarshal(composeServiceData, &parsed); err != nil {
-		return Template{}, fmt.Errorf("failed to parse %s: %w", ComposeFilename, err)
+		return ComposeFile{}, fmt.Errorf("failed to parse %s: %w", ComposeFilename, err)
 	}
 
-	if len(parsed.Services) == 0 {
-		return Template{}, fmt.Errorf("no services defined in %s", ComposeFilename)
+	return parsed, nil
+}
+
+func ParseComposeFileToTemplates(destDir string) ([]Template, error) {
+	parsed, err := ParseDefinition(destDir)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(parsed.Services) > 1 {
-		return Template{}, fmt.Errorf("expected exactly one service in %s, found %d", ComposeFilename, len(parsed.Services))
-	}
-
-	var svcDef map[string]any
-	var svcName string
+	var templates []Template
 	for name, svc := range parsed.Services {
-		svcDef = svc.(map[string]any)
-		svcName = name
-		break
+		templates = append(templates, Template{
+			Metadata:    parsed.XTopo,
+			Service:     svc.(map[string]any),
+			ServiceName: name,
+		})
 	}
 
-	return Template{
-		Metadata:    parsed.XTopo,
-		Service:     svcDef,
-		ServiceName: svcName,
-	}, nil
+	return templates, nil
 }
 
 type rawMetadata struct {

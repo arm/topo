@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitAddServiceAndDeploy(t *testing.T) {
+func TestInitExtendAndDeploy(t *testing.T) {
 	testutil.RequireDocker(t)
 	vm := testutil.StartDockerVM(t)
 	topo := buildBinary(t)
@@ -25,7 +25,7 @@ func TestInitAddServiceAndDeploy(t *testing.T) {
 	require.FileExists(t, composeFile)
 
 	nameArgValue := "Topo"
-	requireAddService(t, topo, projectDir, composeFile, "my-hello-service", nameArgValue)
+	requireExtend(t, topo, projectDir, composeFile, nameArgValue)
 
 	requireDeploy(t, topo, projectDir, vm.SSHConnectionString)
 	expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
@@ -41,17 +41,17 @@ func requireInit(t *testing.T, topo, projectDir string) {
 	require.NoErrorf(t, err, "init failed: %s", out)
 }
 
-func requireAddService(t *testing.T, topo, projectDir, composeFile, serviceName, customName string) {
+func requireExtend(t *testing.T, topo, projectDir, composeFile, customName string) {
 	templateDir, err := filepath.Abs("testdata/services/hello-server")
 	require.NoError(t, err)
-	serviceAddCmd := exec.Command(topo, "service", "add", composeFile, serviceName,
+	extendCmd := exec.Command(topo, "extend", composeFile,
 		fmt.Sprintf("dir:%s", templateDir), "--no-prompt", "--",
 		fmt.Sprintf("NAME=%s", customName))
-	serviceAddCmd.Dir = projectDir
+	extendCmd.Dir = projectDir
 
-	out, err := serviceAddCmd.CombinedOutput()
+	out, err := extendCmd.CombinedOutput()
 
-	require.NoErrorf(t, err, "service add failed: %s", out)
+	require.NoErrorf(t, err, "extend failed: %s", out)
 }
 
 func requireDeploy(t *testing.T, topo, projectDir, sshTarget string) {

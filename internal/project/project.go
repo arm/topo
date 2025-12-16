@@ -69,21 +69,38 @@ func InitTemplate(composeFile string, argCollector arguments.Provider, w io.Writ
 	return nil
 }
 
-func AddService(targetProjectFile, newServiceName string, src template.Source, argProvider arguments.Provider) error {
-	project, err := parse.Read(targetProjectFile)
+func Extend(targetComposeFile string, src template.Source, argProvider arguments.Provider) error {
+	project, err := parse.Read(targetComposeFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}
 
-	destDir := filepath.Join(filepath.Dir(targetProjectFile), newServiceName)
-
-	if err := src.CopyTo(destDir); err != nil {
-		var errDestDirExists template.DestDirExistsError
-		if errors.As(err, &errDestDirExists) {
-			return fmt.Errorf("%w: please choose a different service name or remove the existing directory", errDestDirExists)
-		}
-		return fmt.Errorf("failed to copy Service Template: %w", err)
+	absoluteTargetComposeFile, err := filepath.Abs(targetComposeFile)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path of target compose file: %w", err)
 	}
+	currentDir := filepath.Dir(absoluteTargetComposeFile)
+
+	originalDirName, err := src.GetName()
+	if err != nil {
+		return fmt.Errorf("failed to get repo name from source: %w", err)
+	}
+
+	copiedDirName := originalDirName
+	for i := 1; ; i++ {
+		destPath := filepath.Join(currentDir, copiedDirName)
+		_, err := os.Stat(destPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				break
+			} else {
+				return fmt.Errorf("failed to check if directory exists: %w", err)
+			}
+		}
+		copiedDirName = fmt.Sprintf("%s_%d", originalDirName, i)
+	}
+
+	destDir := filepath.Join(currentDir, copiedDirName)
 
 	var success bool
 	defer func() {
@@ -92,26 +109,36 @@ func AddService(targetProjectFile, newServiceName string, src template.Source, a
 		}
 	}()
 
-	tmpl, err := template.ParseDefinition(destDir)
+	if err := src.CopyTo(destDir); err != nil {
+		return fmt.Errorf("failed to copy Service Template: %w", err)
+	}
+
+	if info, err := os.Stat(destDir); err != nil || !info.IsDir() {
+		return fmt.Errorf("failed to find copied template directory: %w", err)
+	}
+
+	templates, err := template.ParseComposeFileToTemplates(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
 	}
+	if len(templates) == 0 {
+		return fmt.Errorf("no templates found in copied directory %s", destDir)
+	}
 
-	resolvedTemplate, err := template.Resolve(tmpl, argProvider)
+	resolvedTemplates, err := template.Resolve(templates, argProvider)
 	if err != nil {
 		return err
 	}
 
-	newSvc := compose.CreateService(newServiceName, resolvedTemplate)
+	for _, resolvedTemplate := range resolvedTemplates {
+		newSvc := compose.CreateService(copiedDirName, resolvedTemplate)
 
-	if err := compose.InsertService(project, newSvc); err != nil {
-		return err
+		if err := compose.InsertService(project, newSvc); err != nil {
+			return err
+		}
 	}
 
-	volumes, err := compose.ExtractNamedServiceVolumes(
-		newServiceName,
-		resolvedTemplate,
-	)
+	volumes, err := compose.ExtractNamedServiceVolumes(resolvedTemplates)
 	if err != nil {
 		return err
 	}
@@ -124,8 +151,8 @@ func AddService(targetProjectFile, newServiceName string, src template.Source, a
 		return err
 	}
 	_ = enc.Close()
-	if err := os.WriteFile(targetProjectFile, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed to write compose file %s %w", targetProjectFile, err)
+	if err := os.WriteFile(targetComposeFile, buf.Bytes(), 0o644); err != nil {
+		return fmt.Errorf("failed to write compose file %s %w", targetComposeFile, err)
 	}
 
 	success = true

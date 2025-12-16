@@ -13,24 +13,40 @@ import (
 
 func TestExtractNamedServiceVolumes(t *testing.T) {
 	t.Run("extracts only named volumes from volume syntax", func(t *testing.T) {
-		resolved := template.ResolvedTemplate{
-			Service: map[string]interface{}{
-				"volumes": []interface{}{
-					"data:/var/lib/data",
-					"/host/path:/container/path",
-					"cache:/cache:ro",
+		resolved := []template.ResolvedTemplate{
+			{
+				Service: map[string]interface{}{
+					"volumes": []interface{}{
+						"data:/var/lib/data",
+						"/host/path:/container/path",
+						"cache:/cache:ro",
+					},
 				},
+				ServiceName: "service1",
+			},
+			{
+				Service: map[string]interface{}{
+					"volumes": []interface{}{
+						"named:/var/lib/data1",
+						"/host/path:/container/path2",
+						"another_name:/cache:ro3",
+					},
+				},
+				ServiceName: "service2",
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
-
+		volumes, err := compose.ExtractNamedServiceVolumes(resolved)
 		require.NoError(t, err)
-		require.Len(t, volumes, 2)
+		require.Len(t, volumes, 4)
 		assert.Equal(t, "data", volumes[0].Source)
 		assert.Equal(t, "/var/lib/data", volumes[0].Target)
 		assert.Equal(t, "cache", volumes[1].Source)
 		assert.Equal(t, "/cache", volumes[1].Target)
+		assert.Equal(t, "named", volumes[2].Source)
+		assert.Equal(t, "/var/lib/data1", volumes[2].Target)
+		assert.Equal(t, "another_name", volumes[3].Source)
+		assert.Equal(t, "/cache", volumes[3].Target)
 	})
 
 	t.Run("skips bind mounts", func(t *testing.T) {
@@ -46,7 +62,7 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
+		volumes, err := compose.ExtractNamedServiceVolumes([]template.ResolvedTemplate{resolved})
 
 		require.NoError(t, err)
 		assert.Empty(t, volumes)
@@ -63,7 +79,7 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
+		volumes, err := compose.ExtractNamedServiceVolumes([]template.ResolvedTemplate{resolved})
 
 		require.NoError(t, err)
 		assert.Empty(t, volumes)
@@ -81,7 +97,7 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes("test-service", resolved)
+		volumes, err := compose.ExtractNamedServiceVolumes([]template.ResolvedTemplate{resolved})
 
 		require.NoError(t, err)
 		assert.Empty(t, volumes)

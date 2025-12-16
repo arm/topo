@@ -37,6 +37,11 @@ func (m *mockTemplateSource) String() string {
 	return args.String(0)
 }
 
+func (m *mockTemplateSource) GetName() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
+}
+
 func TestInit(t *testing.T) {
 	t.Run("creates an empty compose file at the given location", func(t *testing.T) {
 		dir := t.TempDir()
@@ -52,31 +57,33 @@ func TestInit(t *testing.T) {
 	})
 }
 
-func TestAddService(t *testing.T) {
-	t.Run("adds service from TemplateSource", func(t *testing.T) {
+func TestExtend(t *testing.T) {
+	t.Run("extends service from TemplateSource", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
-		destDir := filepath.Join(dir, "test")
-
-		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
-			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0o755))
+		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), "test")
+		mockSource.On("CopyTo", copiedTemplateDir).Return(nil).Run(func(args mock.Arguments) {
+			require.NoError(t, os.MkdirAll(copiedTemplateDir, 0o755))
 			composeFileContents := `
 services:
   app:
     image: nginx:alpine
+  app2:
+    image: redis:alpine2
 
 x-topo:
   name: "test-service"
   description: "Test service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(copiedTemplateDir, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
+		mockSource.On("GetName").Return("test", nil)
+
 		argProvider := arguments.NewStrictProviderChain()
 
-		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, argProvider))
+		require.NoError(t, project.Extend(targetProjectFile, mockSource, argProvider))
 
 		mockSource.AssertExpectations(t)
 
@@ -84,8 +91,9 @@ x-topo:
 		require.NoError(t, err, "failed to read compose file")
 		var project types.Project
 		require.NoError(t, yaml.Unmarshal(data, &project))
-		assert.Contains(t, project.Services, "test")
-		assert.Len(t, project.Services, 1)
+		assert.Contains(t, project.Services, "app")
+		assert.Contains(t, project.Services, "app2")
+		assert.Len(t, project.Services, 2)
 	})
 
 	t.Run("errors when directory exists", func(t *testing.T) {
@@ -95,10 +103,12 @@ x-topo:
 		destDir := filepath.Join(dir, "test")
 
 		mockSource := &mockTemplateSource{}
-		mockSource.On("CopyTo", destDir).Return(template.DestDirExistsError{Dir: destDir})
+		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), "test")
+		mockSource.On("CopyTo", copiedTemplateDir).Return(template.DestDirExistsError{Dir: destDir})
+		mockSource.On("GetName").Return("test", nil)
 		provider := arguments.NewStrictProviderChain()
 
-		err := project.AddService(targetProjectFile, "test", mockSource, provider)
+		err := project.Extend(targetProjectFile, mockSource, provider)
 
 		require.Error(t, err, "expected error when directory exists")
 		assert.Contains(t, err.Error(), "already exists")
@@ -110,11 +120,9 @@ x-topo:
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
-		destDir := filepath.Join(dir, "test")
-
-		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
-			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0o755))
+		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), "test")
+		mockSource.On("CopyTo", copiedTemplateDir).Return(nil).Run(func(args mock.Arguments) {
+			require.NoError(t, os.MkdirAll(copiedTemplateDir, 0o755))
 			composeFileContents := `
 services:
   app:
@@ -125,11 +133,13 @@ services:
 x-topo:
   name: "test-service"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(copiedTemplateDir, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
+		mockSource.On("GetName").Return("test", nil)
+
 		argProvider := arguments.NewStrictProviderChain()
 
-		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, argProvider))
+		require.NoError(t, project.Extend(targetProjectFile, mockSource, argProvider))
 
 		mockSource.AssertExpectations(t)
 
@@ -139,7 +149,7 @@ x-topo:
 		want := `
 name: example-project
 services:
-  test:
+  app:
     extends:
       file: ./test/compose.yaml
       service: app
@@ -154,11 +164,10 @@ volumes:
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
-		destDir := filepath.Join(dir, "test")
 
-		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
-			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0o755))
+		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), "test")
+		mockSource.On("CopyTo", copiedTemplateDir).Return(nil).Run(func(args mock.Arguments) {
+			require.NoError(t, os.MkdirAll(copiedTemplateDir, 0o755))
 			composeFileContents := `
 services:
   app:
@@ -172,12 +181,13 @@ x-topo:
       required: true
       example: "Hello"
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(copiedTemplateDir, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
+		mockSource.On("GetName").Return("test", nil)
 
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
 
-		require.NoError(t, project.AddService(targetProjectFile, "test", mockSource, provider))
+		require.NoError(t, project.Extend(targetProjectFile, mockSource, provider))
 
 		mockSource.AssertExpectations(t)
 
@@ -187,7 +197,59 @@ x-topo:
 		want := `
 name: example-project
 services:
-  test:
+  app:
+    extends:
+      file: ./test/compose.yaml
+      service: app
+    build:
+      args:
+        GREETING: "Hello, World"
+`
+		assert.YAMLEq(t, want, string(got))
+	})
+
+	t.Run("does not collect optional arguments into x-topo", func(t *testing.T) {
+		dir := t.TempDir()
+		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
+
+		mockSource := &mockTemplateSource{}
+
+		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), "test")
+		mockSource.On("CopyTo", copiedTemplateDir).Return(nil).Run(func(args mock.Arguments) {
+			require.NoError(t, os.MkdirAll(copiedTemplateDir, 0o755))
+			composeFileContents := `
+services:
+  app:
+    image: nginx:alpine
+
+x-topo:
+  name: "test-service"
+  args:
+    GREETING:
+      description: "The greeting message"
+      required: true
+      example: "Hello"
+    SMALLTALK:
+      description: "The small talk message"
+      example: "How are you?"
+`
+			require.NoError(t, os.WriteFile(filepath.Join(copiedTemplateDir, template.ComposeFilename), []byte(composeFileContents), 0o644))
+		})
+		mockSource.On("GetName").Return("test", nil)
+
+		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
+
+		require.NoError(t, project.Extend(targetProjectFile, mockSource, provider))
+
+		mockSource.AssertExpectations(t)
+
+		got, err := os.ReadFile(targetProjectFile)
+		require.NoError(t, err)
+
+		want := `
+name: example-project
+services:
+  app:
     extends:
       file: ./test/compose.yaml
       service: app
@@ -203,11 +265,10 @@ services:
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		mockSource := &mockTemplateSource{}
-		destDir := filepath.Join(dir, "test")
 
-		mockSource.On("CopyTo", destDir).Return(nil).Run(func(args mock.Arguments) {
-			dest := args.String(0)
-			require.NoError(t, os.MkdirAll(dest, 0o755))
+		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), "test")
+		mockSource.On("CopyTo", copiedTemplateDir).Return(nil).Run(func(args mock.Arguments) {
+			require.NoError(t, os.MkdirAll(copiedTemplateDir, 0o755))
 			composeFileContents := `
 services:
   app:
@@ -220,17 +281,18 @@ x-topo:
       description: "The greeting message"
       required: true
 `
-			require.NoError(t, os.WriteFile(filepath.Join(dest, template.ComposeFilename), []byte(composeFileContents), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(copiedTemplateDir, template.ComposeFilename), []byte(composeFileContents), 0o644))
 		})
+		mockSource.On("GetName").Return("test", nil)
 
 		provider := arguments.NewErrorProvider(errors.New("user cancelled"))
 
-		err := project.AddService(targetProjectFile, "test", mockSource, provider)
+		err := project.Extend(targetProjectFile, mockSource, provider)
 
 		require.Error(t, err)
 		assert.EqualError(t, err, "user cancelled")
 
-		_, err = os.Stat(destDir)
+		_, err = os.Stat(copiedTemplateDir)
 		assert.True(t, os.IsNotExist(err), "service directory should be cleaned up after failure")
 
 		mockSource.AssertExpectations(t)
