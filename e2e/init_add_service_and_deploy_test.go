@@ -14,21 +14,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitExtendAndDeploy(t *testing.T) {
+func TestInitAddServiceAndDeploy(t *testing.T) {
 	testutil.RequireDocker(t)
 	vm := testutil.StartDockerVM(t)
 	topo := buildBinary(t)
+
 	projectDir := t.TempDir()
 
 	requireInit(t, topo, projectDir)
 	composeFile := filepath.Join(projectDir, "compose.yaml")
 	require.FileExists(t, composeFile)
-
 	nameArgValue := "Topo"
+	expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
+
 	requireExtend(t, topo, projectDir, composeFile, nameArgValue)
 
 	requireDeploy(t, topo, projectDir, vm.SSHConnectionString)
-	expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
 	assertResponseBody(t, "http://localhost:8080/", expectedResponse)
 }
 
@@ -54,8 +55,10 @@ func requireExtend(t *testing.T, topo, projectDir, composeFile, customName strin
 	require.NoErrorf(t, err, "extend failed: %s", out)
 }
 
-func requireDeploy(t *testing.T, topo, projectDir, sshTarget string) {
-	deployCmd := exec.Command(topo, "deploy", "--target", sshTarget)
+func requireDeploy(t *testing.T, topo, projectDir, sshTarget string, extraArgs ...string) {
+	args := []string{"deploy", "--target", sshTarget}
+	args = append(args, extraArgs...)
+	deployCmd := exec.Command(topo, args...)
 	deployCmd.Dir = projectDir
 
 	out, err := deployCmd.CombinedOutput()
