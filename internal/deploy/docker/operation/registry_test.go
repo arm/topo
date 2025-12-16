@@ -3,8 +3,10 @@ package operation_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/testutil"
 	op "github.com/arm-debug/topo-cli/internal/deploy/operation"
@@ -87,13 +89,38 @@ func TestStartOrRun(t *testing.T) {
 
 		t.Run("prints run command when container does not exist", func(t *testing.T) {
 			var buf bytes.Buffer
-			startOrRun := operation.NewStartOrRun(ssh.Host("user@remote"), "topo-registry", "registry:2",
-				"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort))
+			containerName := testutil.TestContainerName(t)
+			op := operation.NewStartOrRun(
+				ssh.PlainLocalhost,
+				containerName,
+				"registry:2",
+				"-d", "--restart=always",
+			)
 
-			require.NoError(t, startOrRun.DryRun(&buf))
+			err := op.DryRun(&buf)
 
-			expected := "docker -H ssh://user@remote run -d --restart=always -p=127.0.0.1:12737:5000 --name=topo-registry registry:2\n"
-			assert.Equal(t, expected, buf.String())
+			require.NoError(t, err)
+			want := fmt.Sprintf("docker run -d --restart=always --name=%s registry:2\n", containerName)
+			assert.Equal(t, want, buf.String())
+		})
+
+		t.Run("prints start command when container exists", func(t *testing.T) {
+			h := ssh.PlainLocalhost
+			imageName := testutil.TestImageName(t)
+			testutil.BuildMinimalImage(t, h, imageName)
+			containerName := testutil.TestContainerName(t)
+			op := operation.NewStartOrRun(h, containerName, imageName, "-d")
+			require.NoError(t, op.Run(io.Discard))
+			t.Cleanup(func() {
+				_ = command.Docker(h, "rm", "-f", containerName).Run()
+			})
+			var buf bytes.Buffer
+
+			err := op.DryRun(&buf)
+
+			require.NoError(t, err)
+			want := fmt.Sprintf("docker start %s\n", containerName)
+			assert.Equal(t, want, buf.String())
 		})
 	})
 }

@@ -127,7 +127,7 @@ func (s *StartOrRun) Run(w io.Writer) error {
 }
 
 func (s *StartOrRun) DryRun(w io.Writer) error {
-	cmd := s.buildRunCommand()
+	cmd := s.buildCommand()
 	_, err := fmt.Fprintln(w, command.String(cmd))
 	return err
 }
