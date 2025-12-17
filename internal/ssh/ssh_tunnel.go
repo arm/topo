@@ -60,7 +60,7 @@ func (s *SSHTunnelStart) Command() *exec.Cmd {
 	}
 	args = append(args,
 		"-S", ControlSocketPath(string(s.TargetHost)),
-		"-L", fmt.Sprintf("%d:localhost:%d", RegistryPort, RegistryPort),
+		"-R", fmt.Sprintf("%d:localhost:%d", RegistryPort, RegistryPort),
 		host,
 	)
 	return exec.Command(args[0], args[1:]...)

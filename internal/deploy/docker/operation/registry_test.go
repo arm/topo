@@ -18,14 +18,11 @@ import (
 
 func TestNewRunRegistry(t *testing.T) {
 	t.Run("returns expected sequence", func(t *testing.T) {
-		host := ssh.Host("user@remote")
-
-		got := operation.NewRunRegistry(host)
+		got := operation.NewRunRegistry()
 
 		want := op.NewSequence(
 			operation.NewPull(ssh.PlainLocalhost, "registry:2"),
-			operation.NewPipeTransfer("registry:2", ssh.PlainLocalhost, host),
-			operation.NewStartOrRun(host, operation.RegistryContainerName, "registry:2",
+			operation.NewStartOrRun(ssh.PlainLocalhost, operation.RegistryContainerName, "registry:2",
 				"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
 		)
 		assert.Equal(t, want, got)

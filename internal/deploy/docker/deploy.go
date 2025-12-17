@@ -23,17 +23,14 @@ func NewDeployment(composeFile string, targetHost ssh.Host) goperation.Sequence 
 	return goperation.NewSequence(ops...)
 }
 
-func NewDeploymentWithRegistry(composeFile string, targetHost ssh.Host, goos string) goperation.Sequence {
+func NewDeploymentWithRegistry(composeFile string, targetHost ssh.Host) goperation.Sequence {
 	sourceHost := ssh.PlainLocalhost
 	ops := []goperation.Operation{
 		operation.NewDockerComposeBuild(composeFile, sourceHost),
 		operation.NewDockerComposePull(composeFile, sourceHost),
 	}
 	if !targetHost.IsPlainLocalhost() {
-		if goos == "darwin" {
-			ops = append(ops, operation.NewVMHostRegistryBridge())
-		}
-		ops = append(ops, operation.NewRunRegistry(targetHost)...)
+		ops = append(ops, operation.NewRunRegistry()...)
 		ops = append(ops, ssh.NewSSHTunnelStart(targetHost))
 		ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, targetHost))
 		ops = append(ops, ssh.NewSSHTunnelStop(targetHost))
