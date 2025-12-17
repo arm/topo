@@ -57,7 +57,7 @@ Use --dry-run to see what commands would be executed without actually running th
 
 		var deployment goperation.Sequence
 		if useRegistry {
-			deployment = docker.NewDeploymentWithRegistry(composeFile, targetHost, goos)
+			deployment = docker.NewDeploymentWithRegistry(composeFile, targetHost)
 		} else {
 			deployment = docker.NewDeployment(composeFile, targetHost)
 		}

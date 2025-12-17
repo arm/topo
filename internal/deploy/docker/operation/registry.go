@@ -16,11 +16,10 @@ const (
 	registryImage         = "registry:2"
 )
 
-func NewRunRegistry(host ssh.Host) operation.Sequence {
+func NewRunRegistry() operation.Sequence {
 	return operation.NewSequence(
 		NewPull(ssh.PlainLocalhost, registryImage),
-		NewPipeTransfer(registryImage, ssh.PlainLocalhost, host),
-		NewStartOrRun(host, RegistryContainerName, registryImage,
+		NewStartOrRun(ssh.PlainLocalhost, RegistryContainerName, registryImage,
 			"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
 	)
 }
