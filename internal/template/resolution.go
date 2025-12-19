@@ -5,29 +5,25 @@ import (
 )
 
 type ResolvedTemplate struct {
-	Service     map[string]any
-	ServiceName string
-	Args        []arguments.ResolvedArg
+	Services []Service
+	Args     []arguments.ResolvedArg
 }
 
-func Resolve(templates []Template, argProvider arguments.Provider) ([]ResolvedTemplate, error) {
-	var resolvedTemplates []ResolvedTemplate
-	for _, template := range templates {
-		args := make([]arguments.Arg, len(template.Metadata.Args))
-		for i, metaArg := range template.Metadata.Args {
-			args[i] = arguments.Arg(metaArg)
-		}
-
-		resolvedArgs, err := argProvider.Provide(args)
-		if err != nil {
-			return nil, err
-		}
-
-		resolvedTemplates = append(resolvedTemplates, ResolvedTemplate{
-			Service:     template.Service,
-			Args:        resolvedArgs,
-			ServiceName: template.ServiceName,
-		})
+func Resolve(template Template, argProvider arguments.Provider) (ResolvedTemplate, error) {
+	resolvedArgs, err := argProvider.Provide(castArgs(template.Metadata.Args))
+	if err != nil {
+		return ResolvedTemplate{}, err
 	}
-	return resolvedTemplates, nil
+	return ResolvedTemplate{
+		Services: template.Services,
+		Args:     resolvedArgs,
+	}, nil
+}
+
+func castArgs(toCast []Arg) []arguments.Arg {
+	casted := make([]arguments.Arg, len(toCast))
+	for i, metaArg := range toCast {
+		casted[i] = arguments.Arg(metaArg)
+	}
+	return casted
 }

@@ -117,28 +117,28 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		return fmt.Errorf("failed to find copied template directory: %w", err)
 	}
 
-	templates, err := template.ParseComposeFileToTemplates(destDir)
+	templates, err := template.ParseComposeFileToTemplate(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
 	}
-	if len(templates) == 0 {
-		return fmt.Errorf("no templates found in copied directory %s", destDir)
+	if len(templates.Services) == 0 {
+		return fmt.Errorf("template found in directory %s, has no services", destDir)
 	}
 
-	resolvedTemplates, err := template.Resolve(templates, argProvider)
+	resolvedTemplate, err := template.Resolve(templates, argProvider)
 	if err != nil {
 		return err
 	}
 
-	for _, resolvedTemplate := range resolvedTemplates {
-		newSvc := compose.CreateService(copiedDirName, resolvedTemplate)
+	for _, service := range resolvedTemplate.Services {
+		newSvc := compose.CreateService(copiedDirName, service, resolvedTemplate.Args)
 
 		if err := compose.InsertService(project, newSvc); err != nil {
 			return err
 		}
 	}
 
-	volumes, err := compose.ExtractNamedServiceVolumes(resolvedTemplates)
+	volumes, err := compose.ExtractNamedServiceVolumes(resolvedTemplate.Services)
 	if err != nil {
 		return err
 	}

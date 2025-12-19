@@ -13,91 +13,95 @@ import (
 
 func TestExtractNamedServiceVolumes(t *testing.T) {
 	t.Run("extracts only named volumes from volume syntax", func(t *testing.T) {
-		resolved := []template.ResolvedTemplate{
+		services := []template.Service{
 			{
-				Service: map[string]interface{}{
-					"volumes": []interface{}{
-						"data:/var/lib/data",
+				Data: map[string]any{
+					"volumes": []any{
+						"lamb:/var/lib/lamb",
 						"/host/path:/container/path",
-						"cache:/cache:ro",
+						"pork:/scratching:ro",
 					},
 				},
-				ServiceName: "service1",
+				Name: "a-meaty-service",
 			},
 			{
-				Service: map[string]interface{}{
-					"volumes": []interface{}{
-						"named:/var/lib/data1",
+				Data: map[string]any{
+					"volumes": []any{
+						"onion:/var/lib/soup",
 						"/host/path:/container/path2",
-						"another_name:/cache:ro3",
+						"broccoli:/yuck:ro3",
 					},
 				},
-				ServiceName: "service2",
+				Name: "a-vegetable-service",
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes(resolved)
+		volumes, err := compose.ExtractNamedServiceVolumes(services)
 		require.NoError(t, err)
-		require.Len(t, volumes, 4)
-		assert.Equal(t, "data", volumes[0].Source)
-		assert.Equal(t, "/var/lib/data", volumes[0].Target)
-		assert.Equal(t, "cache", volumes[1].Source)
-		assert.Equal(t, "/cache", volumes[1].Target)
-		assert.Equal(t, "named", volumes[2].Source)
-		assert.Equal(t, "/var/lib/data1", volumes[2].Target)
-		assert.Equal(t, "another_name", volumes[3].Source)
-		assert.Equal(t, "/cache", volumes[3].Target)
+		want := []simpleVolume{
+			{Source: "lamb", Target: "/var/lib/lamb"},
+			{Source: "pork", Target: "/scratching"},
+			{Source: "onion", Target: "/var/lib/soup"},
+			{Source: "broccoli", Target: "/yuck"},
+		}
+		assertVolumesEqual(t, want, volumes)
 	})
 
 	t.Run("skips bind mounts", func(t *testing.T) {
-		resolved := template.ResolvedTemplate{
-			Service: map[string]interface{}{
-				"volumes": []interface{}{
-					map[string]interface{}{
-						"type":   types.VolumeTypeBind,
-						"source": "/host/path",
-						"target": "/container/path",
+		services := []template.Service{
+			{
+				Data: map[string]any{
+					"volumes": []any{
+						map[string]any{
+							"type":   types.VolumeTypeBind,
+							"source": "/host/path",
+							"target": "/container/path",
+						},
 					},
 				},
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes([]template.ResolvedTemplate{resolved})
+		volumes, err := compose.ExtractNamedServiceVolumes(services)
 
 		require.NoError(t, err)
 		assert.Empty(t, volumes)
 	})
 
 	t.Run("skips tmpfs", func(t *testing.T) {
-		resolved := template.ResolvedTemplate{
-			Service: map[string]interface{}{
-				"volumes": []interface{}{
-					map[string]interface{}{
-						"target": "/tmp",
+		services := []template.Service{
+			{
+				Data: map[string]any{
+					"volumes": []any{
+						map[string]any{
+							"target": "/tmp",
+						},
 					},
 				},
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes([]template.ResolvedTemplate{resolved})
+		volumes, err := compose.ExtractNamedServiceVolumes(services)
 
 		require.NoError(t, err)
 		assert.Empty(t, volumes)
 	})
 
 	t.Run("skips volumes with empty source", func(t *testing.T) {
-		resolved := template.ResolvedTemplate{
-			Service: map[string]interface{}{
-				"volumes": []interface{}{
-					map[string]interface{}{
-						"source": "",
-						"target": "/data",
+		services := []template.Service{
+			{
+				Data: map[string]any{
+					"volumes": []any{
+						map[string]any{
+							"source": "",
+							"target": "/data",
+						},
 					},
 				},
 			},
 		}
 
-		volumes, err := compose.ExtractNamedServiceVolumes([]template.ResolvedTemplate{resolved})
+		volumes, err := compose.ExtractNamedServiceVolumes(services)
 
 		require.NoError(t, err)
 		assert.Empty(t, volumes)
@@ -106,39 +110,38 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 
 func TestCreateService(t *testing.T) {
 	t.Run("generates service with extends field", func(t *testing.T) {
-		resolved := template.ResolvedTemplate{
-			Service: map[string]interface{}{
+		service := template.Service{
+			Data: map[string]any{
 				"name": "test-service",
-				"build": map[string]interface{}{
+				"build": map[string]any{
 					"context": ".",
 				},
 			},
-			ServiceName: "test-service-template",
-			Args:        nil,
+			Name: "test-service-template",
 		}
 
-		svc := compose.CreateService("test-service", resolved)
+		svc := compose.CreateService("test-service", service, nil)
 
 		assert.Equal(t, "./test-service/compose.yaml", svc.Extends.File)
 		assert.Equal(t, "test-service-template", svc.Extends.Service)
 	})
 
 	t.Run("injects build arguments", func(t *testing.T) {
-		resolved := template.ResolvedTemplate{
-			Service: map[string]interface{}{
+		service := template.Service{
+			Data: map[string]any{
 				"name": "test-service",
-				"build": map[string]interface{}{
+				"build": map[string]any{
 					"context": ".",
 				},
 			},
-			ServiceName: "test-service-template",
-			Args: []arguments.ResolvedArg{
-				{Name: "GREETING", Value: "Hello"},
-				{Name: "PORT", Value: "8080"},
-			},
+			Name: "test-service-template",
+		}
+		args := []arguments.ResolvedArg{
+			{Name: "GREETING", Value: "Hello"},
+			{Name: "PORT", Value: "8080"},
 		}
 
-		svc := compose.CreateService("test-service", resolved)
+		svc := compose.CreateService("test-service", service, args)
 
 		require.NotNil(t, svc.Build)
 		require.NotNil(t, svc.Build.Args)
@@ -179,4 +182,17 @@ func TestRegisterVolumes(t *testing.T) {
 			"new":      types.VolumeConfig{},
 		}, project.Volumes)
 	})
+}
+
+type simpleVolume struct {
+	Source string
+	Target string
+}
+
+func assertVolumesEqual(t *testing.T, want []simpleVolume, got []types.ServiceVolumeConfig) {
+	var gotSimpleVolumes []simpleVolume
+	for _, v := range got {
+		gotSimpleVolumes = append(gotSimpleVolumes, simpleVolume{Source: v.Source, Target: v.Target})
+	}
+	assert.ElementsMatch(t, want, gotSimpleVolumes)
 }

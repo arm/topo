@@ -2,7 +2,6 @@ package template_test
 
 import (
 	"path/filepath"
-	"sort"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/template"
@@ -51,65 +50,47 @@ services:
 `
 		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		got, err := template.ParseComposeFileToTemplates(dir)
+		tpl, err := template.ParseComposeFileToTemplate(dir)
+		got := tpl.Services
 
 		require.NoError(t, err)
-		sort.Slice(got, func(i, j int) bool {
-			return got[i].ServiceName < got[j].ServiceName
-		})
-
-		want := []template.Template{
+		want := []template.Service{
 			{
-				Service: map[string]any{
+				Name: "app1",
+				Data: map[string]any{
 					"image": "nginx:alpine",
 				},
-				ServiceName: "app1",
 			},
 			{
-				Service: map[string]any{
+				Name: "app2",
+				Data: map[string]any{
 					"image": "redis:alpine",
 				},
-				ServiceName: "app2",
 			},
 		}
-		sort.Slice(want, func(i, j int) bool {
-			return want[i].ServiceName < want[j].ServiceName
-		})
-
-		assert.Equal(t, want, got)
+		assert.ElementsMatch(t, want, got)
 	})
 
 	t.Run("parses x-topo metadata", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
-services:
-  app:
-    image: nginx:alpine
-
-x-topo:
-  name: "test-service"
-  description: "Test service"
-  features:
-    - "SME"
-    - "NEON"
+  x-topo:
+    name: "test-service"
+    description: "Test service"
+    features:
+      - "SME"
+      - "NEON"
 `
 		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		got, err := template.ParseComposeFileToTemplates(dir)
+		tpl, err := template.ParseComposeFileToTemplate(dir)
+		got := tpl.Metadata
 
 		require.NoError(t, err)
-		want := []template.Template{
-			{
-				Service: map[string]any{
-					"image": "nginx:alpine",
-				},
-				ServiceName: "app",
-				Metadata: template.Metadata{
-					Name:        "test-service",
-					Description: "Test service",
-					Features:    []string{"SME", "NEON"},
-				},
-			},
+		want := template.Metadata{
+			Name:        "test-service",
+			Description: "Test service",
+			Features:    []string{"SME", "NEON"},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -117,46 +98,33 @@ x-topo:
 	t.Run("parses args from x-topo metadata", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
-services:
-  app:
-    image: nginx:alpine
-
-x-topo:
-  args:
-    GREETING:
-      description: "The greeting message to display"
-      required: true
-      example: "Hello, World"
-    PORT:
-      description: "Port number"
-      required: false
-`
+  x-topo:
+    args:
+      GREETING:
+        description: "The greeting message to display"
+        required: true
+        example: "Hello, World"
+      PORT:
+        description: "Port number"
+        required: false
+  `
 		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
 
-		got, err := template.ParseComposeFileToTemplates(dir)
+		tpl, err := template.ParseComposeFileToTemplate(dir)
+		got := tpl.Metadata.Args
 
 		require.NoError(t, err)
-		want := []template.Template{
+		want := []template.Arg{
 			{
-				Metadata: template.Metadata{
-					Args: []template.Arg{
-						{
-							Name:        "GREETING",
-							Description: "The greeting message to display",
-							Required:    true,
-							Example:     "Hello, World",
-						},
-						{
-							Name:        "PORT",
-							Description: "Port number",
-							Required:    false,
-						},
-					},
-				},
-				Service: map[string]any{
-					"image": "nginx:alpine",
-				},
-				ServiceName: "app",
+				Name:        "GREETING",
+				Description: "The greeting message to display",
+				Required:    true,
+				Example:     "Hello, World",
+			},
+			{
+				Name:        "PORT",
+				Description: "Port number",
+				Required:    false,
 			},
 		}
 		assert.Equal(t, want, got)
@@ -165,7 +133,7 @@ x-topo:
 	t.Run("errors when compose.yaml missing", func(t *testing.T) {
 		dir := t.TempDir()
 
-		_, err := template.ParseComposeFileToTemplates(dir)
+		_, err := template.ParseComposeFileToTemplate(dir)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), template.ComposeFilename)

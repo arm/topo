@@ -10,13 +10,13 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ExtractNamedServiceVolumes(resolved []template.ResolvedTemplate) ([]types.ServiceVolumeConfig, error) {
+func ExtractNamedServiceVolumes(services []template.Service) ([]types.ServiceVolumeConfig, error) {
 	// Create an in-memory compose file to dump the service definition into
 	composeDict := map[string]any{
 		"services": map[string]any{},
 	}
-	for _, r := range resolved {
-		composeDict["services"].(map[string]any)[r.ServiceName] = r.Service
+	for _, service := range services {
+		composeDict["services"].(map[string]any)[service.Name] = service.Data
 	}
 
 	// Use compose-spec's transform.Canonical to convert the supported syntaxes to their canonical representation
@@ -32,10 +32,10 @@ func ExtractNamedServiceVolumes(resolved []template.ResolvedTemplate) ([]types.S
 	}
 
 	namedVolumes := []types.ServiceVolumeConfig{}
-	for _, r := range resolved {
-		serviceDict, ok := servicesDict[r.ServiceName]
+	for _, service := range services {
+		serviceDict, ok := servicesDict[service.Name]
 		if !ok {
-			return nil, fmt.Errorf("service %q not found after canonicalization", r.ServiceName)
+			return nil, fmt.Errorf("service %q not found after canonicalization", service.Name)
 		}
 
 		var svc types.ServiceConfig
@@ -53,15 +53,15 @@ func ExtractNamedServiceVolumes(resolved []template.ResolvedTemplate) ([]types.S
 	return namedVolumes, nil
 }
 
-func CreateService(templateRepoPath string, resolved template.ResolvedTemplate) types.ServiceConfig {
+func CreateService(templateRepoPath string, service template.Service, args []arguments.ResolvedArg) types.ServiceConfig {
 	projectService := types.ServiceConfig{}
-	projectService.Name = resolved.ServiceName
+	projectService.Name = service.Name
 	projectService.Extends = &types.ExtendsConfig{
 		File:    "./" + templateRepoPath + "/" + template.ComposeFilename,
-		Service: resolved.ServiceName,
+		Service: service.Name,
 	}
 
-	if args := convertResolvedArgsToBuildArgs(resolved.Args); args != nil {
+	if args := convertResolvedArgsToBuildArgs(args); args != nil {
 		projectService.Build = &types.BuildConfig{}
 		projectService.Build.Args = args
 	}

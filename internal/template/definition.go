@@ -10,10 +10,14 @@ import (
 
 const ComposeFilename = "compose.yaml"
 
+type Service struct {
+	Name string
+	Data map[string]any
+}
+
 type Template struct {
-	Metadata    Metadata
-	Service     map[string]any
-	ServiceName string
+	Metadata Metadata
+	Services []Service
 }
 
 type Metadata struct {
@@ -50,22 +54,24 @@ func ParseDefinition(destDir string) (ComposeFile, error) {
 	return parsed, nil
 }
 
-func ParseComposeFileToTemplates(destDir string) ([]Template, error) {
+func ParseComposeFileToTemplate(destDir string) (Template, error) {
 	parsed, err := ParseDefinition(destDir)
 	if err != nil {
-		return nil, err
+		return Template{}, err
 	}
 
-	var templates []Template
+	var services []Service
 	for name, svc := range parsed.Services {
-		templates = append(templates, Template{
-			Metadata:    parsed.XTopo,
-			Service:     svc.(map[string]any),
-			ServiceName: name,
+		services = append(services, Service{
+			Data: svc.(map[string]any),
+			Name: name,
 		})
 	}
 
-	return templates, nil
+	return Template{
+		Services: services,
+		Metadata: parsed.XTopo,
+	}, nil
 }
 
 type rawMetadata struct {
