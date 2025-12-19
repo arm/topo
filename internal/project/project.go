@@ -117,15 +117,15 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		return fmt.Errorf("failed to find copied template directory: %w", err)
 	}
 
-	templates, err := template.ParseComposeFileToTemplate(destDir)
+	tpl, err := template.FromDir(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
 	}
-	if len(templates.Services) == 0 {
+	if len(tpl.Services) == 0 {
 		return fmt.Errorf("template found in directory %s, has no services", destDir)
 	}
 
-	resolvedTemplate, err := template.Resolve(templates, argProvider)
+	resolvedTemplate, err := template.Resolve(tpl, argProvider)
 	if err != nil {
 		return err
 	}

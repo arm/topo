@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -10,14 +11,14 @@ import (
 
 const ComposeFilename = "compose.yaml"
 
-type Service struct {
-	Name string
-	Data map[string]any
-}
-
 type Template struct {
 	Metadata Metadata
 	Services []Service
+}
+
+type Service struct {
+	Name string
+	Data map[string]any
 }
 
 type Metadata struct {
@@ -34,30 +35,16 @@ type Arg struct {
 	Example     string
 }
 
-type ComposeFile struct {
-	Services map[string]any `yaml:"services"`
-	XTopo    Metadata       `yaml:"x-topo"`
-}
-
-func ParseDefinition(destDir string) (ComposeFile, error) {
-	composeServicePath := filepath.Join(destDir, ComposeFilename)
-	composeServiceData, err := os.ReadFile(composeServicePath)
-	if err != nil {
-		return ComposeFile{}, fmt.Errorf("failed to read %s from %s: %w", ComposeFilename, composeServicePath, err)
+func FromContent(reader io.Reader) (Template, error) {
+	type composeFile struct {
+		Services map[string]any `yaml:"services"`
+		XTopo    Metadata       `yaml:"x-topo"`
 	}
 
-	var parsed ComposeFile
-	if err := yaml.Unmarshal(composeServiceData, &parsed); err != nil {
-		return ComposeFile{}, fmt.Errorf("failed to parse %s: %w", ComposeFilename, err)
-	}
-
-	return parsed, nil
-}
-
-func ParseComposeFileToTemplate(destDir string) (Template, error) {
-	parsed, err := ParseDefinition(destDir)
-	if err != nil {
-		return Template{}, err
+	var parsed composeFile
+	decoder := yaml.NewDecoder(reader)
+	if err := decoder.Decode(&parsed); err != nil {
+		return Template{}, fmt.Errorf("failed to decode template: %w", err)
 	}
 
 	var services []Service
@@ -72,6 +59,18 @@ func ParseComposeFileToTemplate(destDir string) (Template, error) {
 		Services: services,
 		Metadata: parsed.XTopo,
 	}, nil
+}
+
+func FromDir(destDir string) (Template, error) {
+	composeServicePath := filepath.Join(destDir, ComposeFilename)
+
+	f, err := os.Open(composeServicePath)
+	if err != nil {
+		return Template{}, err
+	}
+	defer func() { _ = f.Close() }()
+
+	return FromContent(f)
 }
 
 type rawMetadata struct {
