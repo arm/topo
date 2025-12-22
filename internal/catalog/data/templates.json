@@ -25,7 +25,7 @@
   },
   {
     "id": "armv9-cpu-llm-chat",
-    "description": "Complete LLM chat application optimized for Arm v9 CPU inference. This project demonstrates running large language models entirely on CPU using llama.cpp compiled with Arm v9-specific optimizations including NEON and SVE (Scalable Vector Extension). The stack includes:- llama.cpp server with Arm v9 SIMD optimizations (NEON, SVE)- Qwen2.5-3B-Instruct model bundled in the image (~1.93 GB)- Simple web-based chat interface- No GPU required - pure CPU inference Perfect for demos and testing! The bundled Qwen2.5-3B model allows the project to run immediately without downloading additional models. Ideal for testing LLM workloads on Arm v9 hardware without GPU dependencies, showcasing the performance benefits of SVE for AI inference tasks.",
+    "description": "Complete LLM chat application optimized for Arm v9 CPU inference.\n\nThis project demonstrates running large language models entirely on CPU\nusing llama.cpp compiled with Arm v9-specific optimizations including\nNEON and SVE (Scalable Vector Extension).\n\nThe stack includes:\n- llama.cpp server with Arm v9 SIMD optimizations (NEON, SVE)\n- Qwen2.5-3B-Instruct model bundled in the image (~1.93 GB)\n- Simple web-based chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The bundled Qwen2.5-3B model allows the\nproject to run immediately without downloading additional models.\n\nIdeal for testing LLM workloads on Arm v9 hardware without GPU dependencies,\nshowcasing the performance benefits of SVE for AI inference tasks.\n",
     "features": [
       "Armv9",
       "SVE",
@@ -36,7 +36,7 @@
   },
   {
     "id": "simd-visual-benchmark",
-    "description": "Visual demonstration of SIMD performance benefits on Arm processors.Compare scalar (no SIMD), NEON (128-bit), and SVE (scalable vector) implementations running identical image processing workloads side-by-side. This demo shows real hardware acceleration through three C++ services compiled with different architecture flags, processing the same box blur algorithm on images. Performance differences are measured in real-time and displayed in an interactive web dashboard. Perfect for demonstrating to non-technical audiences the concrete benefits of SIMD optimizations, with visual results and quantified speedups.",
+    "description": "Visual demonstration of SIMD performance benefits on Arm processors.\nCompare scalar (no SIMD), NEON (128-bit), and SVE (scalable vector)\nimplementations running identical image processing workloads side-by-side.\n\nThis demo shows real hardware acceleration through three C++ services\ncompiled with different architecture flags, processing the same box blur\nalgorithm on images. Performance differences are measured in real-time\nand displayed in an interactive web dashboard.\n\nPerfect for demonstrating to non-technical audiences the concrete benefits\nof SIMD optimizations, with visual results and quantified speedups.\n",
     "features": [
       "NEON",
       "SVE"
