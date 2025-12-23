@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/arm-debug/topo-cli/internal/project/parse"
+	"github.com/arm-debug/topo-cli/internal/compose"
 )
 
 func PrintProject(w io.Writer, targetProjectFile string) error {
-	project, err := parse.Read(targetProjectFile)
+	project, err := compose.Read(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}

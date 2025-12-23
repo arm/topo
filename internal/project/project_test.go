@@ -151,7 +151,7 @@ name: example-project
 services:
   app:
     extends:
-      file: ./test/compose.yaml
+      file: test/compose.yaml
       service: app
 volumes:
   pretty_data: {}
@@ -199,7 +199,7 @@ name: example-project
 services:
   app:
     extends:
-      file: ./test/compose.yaml
+      file: test/compose.yaml
       service: app
     build:
       args:
@@ -251,7 +251,7 @@ name: example-project
 services:
   app:
     extends:
-      file: ./test/compose.yaml
+      file: test/compose.yaml
       service: app
     build:
       args:
@@ -299,17 +299,17 @@ x-topo:
 	})
 }
 
-func TestInitTemplate(t *testing.T) {
+func TestResolveAndApplyArgs(t *testing.T) {
 	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
 		argProvider := arguments.NewStrictProviderChain()
 
-		err := project.InitTemplate(invalidPath, argProvider, io.Discard)
+		err := project.ResolveAndApplyArgs(invalidPath, argProvider, io.Discard)
 
-		require.ErrorContains(t, err, "error reading project file")
+		require.ErrorContains(t, err, "can't read compose file")
 	})
 
-	t.Run("succeeds and writes an updated file", func(t *testing.T) {
+	t.Run("updates the compose file with resolved arguments", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
 services:
@@ -332,7 +332,7 @@ x-topo:
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
 		argProvider := arguments.NewStrictProviderChain(provider)
 
-		err := project.InitTemplate(composeFilePath, argProvider, io.Discard)
+		err := project.ResolveAndApplyArgs(composeFilePath, argProvider, io.Discard)
 		require.NoError(t, err)
 
 		want := `
