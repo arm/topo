@@ -3,14 +3,13 @@ package compose
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-func ReadNodes(composeFilePath string) (*yaml.Node, error) {
-	fileData, err := os.ReadFile(composeFilePath)
+func ReadNodes(composeFile io.Reader) (*yaml.Node, error) {
+	fileData, err := io.ReadAll(composeFile)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +19,7 @@ func ReadNodes(composeFilePath string) (*yaml.Node, error) {
 		return nil, err
 	}
 	if len(root.Content) == 0 {
-		return nil, fmt.Errorf("%s is empty", composeFilePath)
+		return nil, fmt.Errorf("compose file is empty")
 	}
 	doc := root.Content[0]
 	return doc, nil

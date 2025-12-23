@@ -11,7 +11,6 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 const TestSshTarget = "test-target"
@@ -56,13 +55,4 @@ func WriteComposeFile(t *testing.T, dir, content string) string {
 	composePath := filepath.Join(dir, template.ComposeFilename)
 	RequireWriteFile(t, composePath, content)
 	return composePath
-}
-
-func ParseYAMLString(s string) (*yaml.Node, error) {
-	var root yaml.Node
-	if err := yaml.Unmarshal([]byte(s), &root); err != nil {
-		return nil, err
-	}
-	doc := root.Content[0]
-	return doc, nil
 }

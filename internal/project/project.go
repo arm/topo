@@ -190,7 +190,13 @@ func Init(projectDir string) error {
 }
 
 func applyArgs(composeFilePath string, args []arguments.ResolvedArg, logOutput io.Writer) error {
-	yamlNodes, err := compose.ReadNodes(composeFilePath)
+	f, err := os.Open(composeFilePath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	yamlNodes, err := compose.ReadNodes(f)
 	if err != nil {
 		return err
 	}

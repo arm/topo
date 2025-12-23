@@ -2,50 +2,56 @@ package compose_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/compose"
-	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestReadNodes(t *testing.T) {
-	t.Run("returns error when project file not found", func(t *testing.T) {
-		dir := t.TempDir()
-
-		_, err := compose.ReadNodes(dir)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("returns a yaml node when project file found", func(t *testing.T) {
-		dir := t.TempDir()
-		composeFileContents := `
-name: test
+	t.Run("parses compose yaml into nodes", func(t *testing.T) {
+		composeFileContents := `name: test
 services:
   test-service:
     build:
       context: .
-      args:
-        FOO: new-foo
-        BAR: new-bar
 `
-		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
-		got, err := compose.ReadNodes(composeFilePath)
-		require.NoError(t, err)
+		composeFileReader := strings.NewReader(composeFileContents)
 
-		want, err := testutil.ParseYAMLString(composeFileContents)
-		require.NoError(t, err)
+		got, err := compose.ReadNodes(composeFileReader)
 
-		assert.Equal(t, want, got)
+		require.NoError(t, err)
+		gotYAML, err := yaml.Marshal(got)
+		require.NoError(t, err)
+		assert.YAMLEq(t, composeFileContents, string(gotYAML))
+	})
+
+	t.Run("returns error when compose file is empty", func(t *testing.T) {
+		composeFileReader := strings.NewReader("")
+
+		got, err := compose.ReadNodes(composeFileReader)
+
+		assert.Error(t, err)
+		assert.Nil(t, got)
+		assert.Contains(t, err.Error(), "empty")
+	})
+
+	t.Run("returns error when yaml is invalid", func(t *testing.T) {
+		composeFileReader := strings.NewReader("invalid: yaml: content:")
+
+		got, err := compose.ReadNodes(composeFileReader)
+
+		assert.Error(t, err)
+		assert.Nil(t, got)
 	})
 }
 
 func TestApplyArgs(t *testing.T) {
 	t.Run("updates all matching services when arg matches in multiple services", func(t *testing.T) {
-		composeFileContents := `
+		project := yamlToNode(t, `
 services:
   test-service:
     build:
@@ -57,15 +63,13 @@ services:
       context: .
       args:
         FOO: elephant
-`
-		proj, err := testutil.ParseYAMLString(composeFileContents)
-		require.NoError(t, err)
+`)
 		args := map[string]string{"FOO": "baz"}
 
-		err = compose.ApplyArgs(proj, args, nil)
+		err := compose.ApplyArgs(project, args, nil)
 
 		require.NoError(t, err)
-		got, err := yaml.Marshal(proj)
+		got, err := yaml.Marshal(project)
 		require.NoError(t, err)
 		want := `
 services:
@@ -84,7 +88,7 @@ services:
 	})
 
 	t.Run("when some services lack args only matching services are updated", func(t *testing.T) {
-		composeFileContents := `
+		project := yamlToNode(t, `
 services:
   with-arg:
     build:
@@ -96,15 +100,13 @@ services:
   with-build-no-args:
     build:
       context: .
-`
-		proj, err := testutil.ParseYAMLString(composeFileContents)
-		require.NoError(t, err)
+`)
 		args := map[string]string{"FOO": "baz"}
 
-		err = compose.ApplyArgs(proj, args, nil)
+		err := compose.ApplyArgs(project, args, nil)
 
 		require.NoError(t, err)
-		got, err := yaml.Marshal(proj)
+		got, err := yaml.Marshal(project)
 		require.NoError(t, err)
 		want := `
 services:
@@ -123,7 +125,7 @@ services:
 	})
 
 	t.Run("when no args are provided returns nil and leaves project unchanged ", func(t *testing.T) {
-		composeFileContents := `
+		yamlContents := `
 services:
   test-service:
     build:
@@ -131,21 +133,18 @@ services:
       args:
         FOO: bar
 `
-		proj, err := testutil.ParseYAMLString(composeFileContents)
-		require.NoError(t, err)
-		orig, err := yaml.Marshal(proj)
-		require.NoError(t, err)
+		project := yamlToNode(t, yamlContents)
 
-		err = compose.ApplyArgs(proj, nil, nil)
+		err := compose.ApplyArgs(project, nil, nil)
 
 		require.NoError(t, err)
-		got, err := yaml.Marshal(proj)
+		got, err := yaml.Marshal(project)
 		require.NoError(t, err)
-		assert.YAMLEq(t, string(orig), string(got))
+		assert.YAMLEq(t, yamlContents, string(got))
 	})
 
 	t.Run("when multiple args are provided applies all of them", func(t *testing.T) {
-		composeFileContents := `
+		project := yamlToNode(t, `
 services:
   test-service:
     build:
@@ -153,19 +152,16 @@ services:
       args:
         FOO: foo
         BAR: bar
-`
-		proj, err := testutil.ParseYAMLString(composeFileContents)
-		require.NoError(t, err)
-
+`)
 		args := map[string]string{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}
 
-		err = compose.ApplyArgs(proj, args, nil)
+		err := compose.ApplyArgs(project, args, nil)
 
 		require.NoError(t, err)
-		got, err := yaml.Marshal(proj)
+		got, err := yaml.Marshal(project)
 		require.NoError(t, err)
 		want := `
 services:
@@ -180,45 +176,40 @@ services:
 	})
 
 	t.Run("when resolved args are unused writes warning to provided writer", func(t *testing.T) {
-		composeFileContents := `
+		project := yamlToNode(t, `
 services:
   test-service:
     build:
       context: .
       args:
         FOO: foo
-`
-		proj, err := testutil.ParseYAMLString(composeFileContents)
-		require.NoError(t, err)
+`)
 		args := map[string]string{"BAR": "baz"}
 		buf := &bytes.Buffer{}
 
-		err = compose.ApplyArgs(proj, args, buf)
+		err := compose.ApplyArgs(project, args, buf)
 
 		require.NoError(t, err)
 		assert.Equal(t, "warning: arg \"BAR\" was resolved but not found in any service build args\n", buf.String())
 	})
 
 	t.Run("when build args are a YAML sequence applies all resolved values", func(t *testing.T) {
-		composeFileContents := `
+		project := yamlToNode(t, `
 services:
   test-service:
     build:
       context: .
       args: ["FOO=foo", "BAR"]
-`
-
-		proj, err := testutil.ParseYAMLString(composeFileContents)
-		require.NoError(t, err)
+`)
 		args := map[string]string{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}
 
-		err = compose.ApplyArgs(proj, args, nil)
+		err := compose.ApplyArgs(project, args, nil)
 
 		require.NoError(t, err)
-		got, err := yaml.Marshal(proj)
+		got, err := yaml.Marshal(project)
 		require.NoError(t, err)
 		want := `
 services:
@@ -229,4 +220,11 @@ services:
 `
 		assert.YAMLEq(t, want, string(got))
 	})
+}
+
+func yamlToNode(t *testing.T, yamlContents string) *yaml.Node {
+	t.Helper()
+	project, err := compose.ReadNodes(strings.NewReader(yamlContents))
+	require.NoError(t, err)
+	return project
 }
