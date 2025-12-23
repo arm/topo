@@ -99,14 +99,13 @@ func Read(targetProjectFile string) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
 		[]string{targetProjectFile},
-		cli.WithOsEnv, cli.WithDotEnv,
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 	)
 	if err != nil {
 		return nil, err
 	}
-	project, err := cli.ProjectFromOptions(ctx, options)
+	project, err := options.LoadProject(ctx)
 	if err != nil {
 		return nil, err
 	}
