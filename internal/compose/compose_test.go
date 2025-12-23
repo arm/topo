@@ -3,36 +3,21 @@ package compose_test
 import (
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/arguments"
-	"github.com/arm-debug/topo-cli/internal/core/compose"
-	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/compose"
+	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestExtractNamedServiceVolumes(t *testing.T) {
 	t.Run("extracts only named volumes from volume syntax", func(t *testing.T) {
-		services := []template.Service{
-			{
-				Data: map[string]any{
-					"volumes": []any{
-						"lamb:/var/lib/lamb",
-						"/host/path:/container/path",
-						"pork:/scratching:ro",
-					},
-				},
-				Name: "a-meaty-service",
-			},
-			{
-				Data: map[string]any{
-					"volumes": []any{
-						"onion:/var/lib/soup",
-						"/host/path:/container/path2",
-						"broccoli:/yuck:ro3",
-					},
-				},
-				Name: "a-vegetable-service",
+		services := map[string]any{
+			"volumes": []any{
+				"lamb:/var/lib/lamb",
+				"/host/path:/container/path",
+				"pork:/scratching:ro",
 			},
 		}
 
@@ -41,23 +26,17 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 		want := []simpleVolume{
 			{Source: "lamb", Target: "/var/lib/lamb"},
 			{Source: "pork", Target: "/scratching"},
-			{Source: "onion", Target: "/var/lib/soup"},
-			{Source: "broccoli", Target: "/yuck"},
 		}
 		assertVolumesEqual(t, want, volumes)
 	})
 
 	t.Run("skips bind mounts", func(t *testing.T) {
-		services := []template.Service{
-			{
-				Data: map[string]any{
-					"volumes": []any{
-						map[string]any{
-							"type":   types.VolumeTypeBind,
-							"source": "/host/path",
-							"target": "/container/path",
-						},
-					},
+		services := map[string]any{
+			"volumes": []any{
+				map[string]any{
+					"type":   types.VolumeTypeBind,
+					"source": "/host/path",
+					"target": "/container/path",
 				},
 			},
 		}
@@ -69,14 +48,10 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 	})
 
 	t.Run("skips tmpfs", func(t *testing.T) {
-		services := []template.Service{
-			{
-				Data: map[string]any{
-					"volumes": []any{
-						map[string]any{
-							"target": "/tmp",
-						},
-					},
+		services := map[string]any{
+			"volumes": []any{
+				map[string]any{
+					"target": "/tmp",
 				},
 			},
 		}
@@ -88,15 +63,11 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 	})
 
 	t.Run("skips volumes with empty source", func(t *testing.T) {
-		services := []template.Service{
-			{
-				Data: map[string]any{
-					"volumes": []any{
-						map[string]any{
-							"source": "",
-							"target": "/data",
-						},
-					},
+		services := map[string]any{
+			"volumes": []any{
+				map[string]any{
+					"source": "",
+					"target": "/data",
 				},
 			},
 		}
@@ -108,45 +79,29 @@ func TestExtractNamedServiceVolumes(t *testing.T) {
 	})
 }
 
-func TestCreateService(t *testing.T) {
+func TestCreateServiceByExtension(t *testing.T) {
 	t.Run("generates service with extends field", func(t *testing.T) {
-		service := template.Service{
-			Data: map[string]any{
-				"name": "test-service",
-				"build": map[string]any{
-					"context": ".",
-				},
-			},
-			Name: "test-service-template",
-		}
+		serviceName := "very-fancy-service"
+		composeFilePath := "a-path-to-service/compose.yaml"
 
-		svc := compose.CreateService("test-service", service, nil)
+		got := compose.CreateServiceByExtension(composeFilePath, serviceName, nil)
 
-		assert.Equal(t, "./test-service/compose.yaml", svc.Extends.File)
-		assert.Equal(t, "test-service-template", svc.Extends.Service)
+		assert.Equal(t, composeFilePath, got.Extends.File)
+		assert.Equal(t, serviceName, got.Extends.Service)
 	})
 
 	t.Run("injects build arguments", func(t *testing.T) {
-		service := template.Service{
-			Data: map[string]any{
-				"name": "test-service",
-				"build": map[string]any{
-					"context": ".",
-				},
-			},
-			Name: "test-service-template",
-		}
-		args := []arguments.ResolvedArg{
-			{Name: "GREETING", Value: "Hello"},
-			{Name: "PORT", Value: "8080"},
+		args := map[string]string{
+			"GREETING": "Hello",
+			"PORT":     "8080",
 		}
 
-		svc := compose.CreateService("test-service", service, args)
+		got := compose.CreateServiceByExtension("some-path.yaml", "some-name", args)
 
-		require.NotNil(t, svc.Build)
-		require.NotNil(t, svc.Build.Args)
-		assert.Equal(t, "Hello", *svc.Build.Args["GREETING"])
-		assert.Equal(t, "8080", *svc.Build.Args["PORT"])
+		require.NotNil(t, got.Build)
+		require.NotNil(t, got.Build.Args)
+		assert.Equal(t, "Hello", *got.Build.Args["GREETING"])
+		assert.Equal(t, "8080", *got.Build.Args["PORT"])
 	})
 }
 
@@ -181,6 +136,38 @@ func TestRegisterVolumes(t *testing.T) {
 			"existing": types.VolumeConfig{Name: "existing", Driver: "local"},
 			"new":      types.VolumeConfig{},
 		}, project.Volumes)
+	})
+}
+
+func TestRead(t *testing.T) {
+	t.Run("when project file not found returns error", func(t *testing.T) {
+		dir := t.TempDir()
+
+		_, err := compose.Read(dir)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("when project file found returns correct project type", func(t *testing.T) {
+		dir := t.TempDir()
+		composeFileContents := `
+name: test
+services:
+  test-service:
+    build:
+      context: .
+      args:
+        FOO: new-foo
+        BAR: new-bar
+`
+		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
+		proj, err := compose.Read(composeFilePath)
+		require.NoError(t, err)
+
+		got, err := yaml.Marshal(proj)
+		require.NoError(t, err)
+
+		assert.YAMLEq(t, composeFileContents, string(got))
 	})
 }
 
