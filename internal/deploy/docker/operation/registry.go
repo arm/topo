@@ -18,36 +18,10 @@ const (
 
 func NewRunRegistry() operation.Sequence {
 	return operation.NewSequence(
-		NewPull(ssh.PlainLocalhost, registryImage),
+		NewDockerPull(ssh.PlainLocalhost, registryImage),
 		NewStartOrRun(ssh.PlainLocalhost, RegistryContainerName, registryImage,
-			"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
+			"-d", "--restart", "always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
 	)
-}
-
-type Pull struct {
-	host  ssh.Host
-	image string
-}
-
-func NewPull(host ssh.Host, image string) *Pull {
-	return &Pull{host: host, image: image}
-}
-
-func (p *Pull) Description() string {
-	return fmt.Sprintf("Pull image %s", p.image)
-}
-
-func (p *Pull) Run(w io.Writer) error {
-	cmd := command.Docker(p.host, "pull", p.image)
-	cmd.Stdout = w
-	cmd.Stderr = w
-	return cmd.Run()
-}
-
-func (p *Pull) DryRun(w io.Writer) error {
-	cmd := command.Docker(p.host, "pull", p.image)
-	_, err := fmt.Fprintln(w, command.String(cmd))
-	return err
 }
 
 type PipeTransfer struct {
@@ -115,27 +89,22 @@ func NewStartOrRun(host ssh.Host, containerName, image string, runArgs ...string
 }
 
 func (s *StartOrRun) Description() string {
-	return fmt.Sprintf("Start image %s", s.containerName)
+	return s.buildOperation().Description()
 }
 
 func (s *StartOrRun) Run(w io.Writer) error {
-	cmd := s.buildCommand()
-	cmd.Stdout = w
-	cmd.Stderr = w
-	return cmd.Run()
+	return s.buildOperation().Run(w)
 }
 
 func (s *StartOrRun) DryRun(w io.Writer) error {
-	cmd := s.buildCommand()
-	_, err := fmt.Fprintln(w, command.String(cmd))
-	return err
+	return s.buildOperation().DryRun(w)
 }
 
-func (s *StartOrRun) buildCommand() *exec.Cmd {
+func (s *StartOrRun) buildOperation() operation.Operation {
 	if s.containerExists() {
-		return s.buildStartCommand()
+		return NewDockerStart(s.host, s.containerName)
 	}
-	return s.buildRunCommand()
+	return NewDockerRun(s.host, s.image, s.containerName, s.runArgs)
 }
 
 func (s *StartOrRun) containerExists() bool {
@@ -143,14 +112,4 @@ func (s *StartOrRun) containerExists() bool {
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	return cmd.Run() == nil
-}
-
-func (s *StartOrRun) buildStartCommand() *exec.Cmd {
-	return command.Docker(s.host, "start", s.containerName)
-}
-
-func (s *StartOrRun) buildRunCommand() *exec.Cmd {
-	args := append([]string{"run"}, s.runArgs...)
-	args = append(args, fmt.Sprintf("--name=%s", s.containerName), s.image)
-	return command.Docker(s.host, args...)
 }

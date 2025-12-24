@@ -21,9 +21,9 @@ func TestNewRunRegistry(t *testing.T) {
 		got := operation.NewRunRegistry()
 
 		want := op.NewSequence(
-			operation.NewPull(ssh.PlainLocalhost, "registry:2"),
+			operation.NewDockerPull(ssh.PlainLocalhost, "registry:2"),
 			operation.NewStartOrRun(ssh.PlainLocalhost, operation.RegistryContainerName, "registry:2",
-				"-d", "--restart=always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
+				"-d", "--restart", "always", fmt.Sprintf("-p=127.0.0.1:%d:5000", ssh.RegistryPort)),
 		)
 		assert.Equal(t, want, got)
 	})
@@ -32,7 +32,7 @@ func TestNewRunRegistry(t *testing.T) {
 func TestPull(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("returns image name", func(t *testing.T) {
-			pull := operation.NewPull(ssh.PlainLocalhost, "registry:2")
+			pull := operation.NewDockerPull(ssh.PlainLocalhost, "registry:2")
 
 			assert.Equal(t, "Pull image registry:2", pull.Description())
 		})
@@ -41,7 +41,7 @@ func TestPull(t *testing.T) {
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("prints docker pull command", func(t *testing.T) {
 			var buf bytes.Buffer
-			pull := operation.NewPull(ssh.PlainLocalhost, "registry:2")
+			pull := operation.NewDockerPull(ssh.PlainLocalhost, "registry:2")
 
 			require.NoError(t, pull.DryRun(&buf))
 
@@ -73,11 +73,14 @@ func TestPipeTransfer(t *testing.T) {
 }
 
 func TestStartOrRun(t *testing.T) {
+	testutil.RequireDocker(t)
+
 	t.Run("Description", func(t *testing.T) {
-		t.Run("returns container name", func(t *testing.T) {
+		t.Run("prints run description if container does not exist", func(t *testing.T) {
 			startOrRun := operation.NewStartOrRun(ssh.Host("user@remote"), "my-container", "my-image:latest")
 
-			assert.Equal(t, "Start image my-container", startOrRun.Description())
+			want := "Run image my-image:latest as container my-container"
+			assert.Equal(t, want, startOrRun.Description())
 		})
 	})
 
@@ -91,13 +94,13 @@ func TestStartOrRun(t *testing.T) {
 				ssh.PlainLocalhost,
 				containerName,
 				"registry:2",
-				"-d", "--restart=always",
+				"-d", "--restart", "always",
 			)
 
 			err := op.DryRun(&buf)
 
 			require.NoError(t, err)
-			want := fmt.Sprintf("docker run -d --restart=always --name=%s registry:2\n", containerName)
+			want := fmt.Sprintf("docker run -d --restart always --name %s registry:2\n", containerName)
 			assert.Equal(t, want, buf.String())
 		})
 
