@@ -1,7 +1,6 @@
 package health_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/health"
@@ -127,95 +126,92 @@ func TestGenerateReport(t *testing.T) {
 	})
 }
 
-func TestRenderReportAsPlainText(t *testing.T) {
-	t.Run("it renders the dependencies", func(t *testing.T) {
-		report := health.Report{}
-		report.Host.Dependencies = []health.HealthCheck{{
-			Name:    "Flux Capacitor",
-			Healthy: true,
-		}}
-		var buf bytes.Buffer
+func TestReport(t *testing.T) {
+	t.Run("AsPlain", func(t *testing.T) {
+		t.Run("it renders the dependencies", func(t *testing.T) {
+			report := health.Report{}
+			report.Host.Dependencies = []health.HealthCheck{{
+				Name:    "Flux Capacitor",
+				Healthy: true,
+			}}
 
-		err := health.RenderReportAsPlainText(report, &buf)
+			got, err := report.AsPlain()
 
-		require.NoError(t, err)
-		assert.Contains(t, buf.String(), "Flux Capacitor")
+			require.NoError(t, err)
+			assert.Contains(t, got, "Flux Capacitor")
+		})
+
+		t.Run("it renders connection failures", func(t *testing.T) {
+			report := health.Report{}
+			report.Target.Connectivity = health.HealthCheck{
+				Name:    "Connected",
+				Healthy: false,
+			}
+
+			got, err := report.AsPlain()
+
+			require.NoError(t, err)
+			assert.Contains(t, got, "Connected: ❌")
+		})
+
+		t.Run("when connected it renders cpu features", func(t *testing.T) {
+			report := health.Report{}
+			report.Target.Connectivity = health.HealthCheck{
+				Name:    "Connected",
+				Healthy: true,
+			}
+			report.Target.Features = []string{"FOO", "BAR"}
+
+			got, err := report.AsPlain()
+
+			require.NoError(t, err)
+			assert.Contains(t, got, "FOO, BAR")
+		})
+
+		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
+			report := health.Report{}
+			report.Target.Connectivity = health.HealthCheck{
+				Name:    "Connected",
+				Healthy: false,
+			}
+
+			got, err := report.AsPlain()
+
+			require.NoError(t, err)
+			assert.NotContains(t, got, "Features")
+		})
 	})
 
-	t.Run("it renders connection failures", func(t *testing.T) {
-		report := health.Report{}
-		report.Target.Connectivity = health.HealthCheck{
-			Name:    "Connected",
-			Healthy: false,
-		}
-		var buf bytes.Buffer
-
-		err := health.RenderReportAsPlainText(report, &buf)
-
-		require.NoError(t, err)
-		assert.Contains(t, buf.String(), "Connected: ❌")
-	})
-
-	t.Run("when connected it renders cpu features", func(t *testing.T) {
-		report := health.Report{}
-		report.Target.Connectivity = health.HealthCheck{
-			Name:    "Connected",
-			Healthy: true,
-		}
-		report.Target.Features = []string{"FOO", "BAR"}
-		var buf bytes.Buffer
-
-		err := health.RenderReportAsPlainText(report, &buf)
-
-		require.NoError(t, err)
-		assert.Contains(t, buf.String(), "FOO, BAR")
-	})
-
-	t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
-		report := health.Report{}
-		report.Target.Connectivity = health.HealthCheck{
-			Name:    "Connected",
-			Healthy: false,
-		}
-		var buf bytes.Buffer
-
-		err := health.RenderReportAsPlainText(report, &buf)
-
-		require.NoError(t, err)
-		assert.NotContains(t, buf.String(), "Features")
-	})
-}
-
-func TestRenderReportAsJSON(t *testing.T) {
-	t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
-		report := health.Report{
-			Host: health.HostReport{
-				Dependencies: []health.HealthCheck{
-					{Name: "Flux Capacitor", Healthy: true},
+	t.Run("AsJSON", func(t *testing.T) {
+		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
+			report := health.Report{
+				Host: health.HostReport{
+					Dependencies: []health.HealthCheck{
+						{Name: "Flux Capacitor", Healthy: true},
+					},
 				},
-			},
-			Target: health.TargetReport{
-				Connectivity: health.HealthCheck{Name: "Connected", Healthy: true},
-			},
-		}
-		var buf bytes.Buffer
+				Target: health.TargetReport{
+					Connectivity: health.HealthCheck{Name: "Connected", Healthy: true},
+				},
+			}
 
-		err := health.RenderReportAsJSON(report, &buf)
-		require.NoError(t, err)
+			got, err := report.AsJSON()
+			require.NoError(t, err)
 
-		want := `{
-            "Host": {
-              "Dependencies": [
-                {"Name":"Flux Capacitor","Healthy":true,"Value":""}
-              ]
-            },
-            "Target": {
-              "Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
-              "Dependencies": [],
-              "Features": [],
-              "SubsystemDriver": {"Name":"","Healthy":false,"Value":""}
-            }
-          }`
-		assert.JSONEq(t, want, buf.String())
+			want := `{
+				"Host": {
+				"Dependencies": [
+					{"Name":"Flux Capacitor","Healthy":true,"Value":""}
+				]
+				},
+				"Target": {
+				"Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
+				"Dependencies": [],
+				"Features": [],
+				"SubsystemDriver": {"Name":"","Healthy":false,"Value":""}
+				}
+			}`
+			assert.JSONEq(t, want, got)
+		})
 	})
 }

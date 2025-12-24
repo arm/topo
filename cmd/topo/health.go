@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm-debug/topo-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -26,8 +27,8 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		return health.Check(sshTarget, outputFormat, os.Stdout)
+		printer := output.NewPrinter(os.Stdout, outputFormat)
+		return health.Check(sshTarget, printer)
 	},
 }
 
