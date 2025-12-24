@@ -222,6 +222,46 @@ services:
 	})
 }
 
+func TestRemoveService(t *testing.T) {
+	t.Run("errors when specified service is not defined in the yaml", func(t *testing.T) {
+		content := `services:
+  keepMe:
+    build:
+      context: ./keepMe
+`
+		project := yamlToNode(t, content)
+
+		err := compose.RemoveService(project, "removeMe")
+
+		require.ErrorContains(t, err, "service removeMe not found")
+	})
+
+	t.Run("removes specified service from compose file", func(t *testing.T) {
+		content := `services:
+  keepMe:
+    build:
+      context: ./keepMe
+  removeMe:
+    build:
+      context: ./removeMe
+`
+		project := yamlToNode(t, content)
+
+		err := compose.RemoveService(project, "removeMe")
+
+		require.NoError(t, err)
+		got, err := yaml.Marshal(project)
+		require.NoError(t, err)
+		want := `
+services:
+  keepMe:
+    build:
+      context: ./keepMe
+`
+		assert.YAMLEq(t, want, string(got))
+	})
+}
+
 func TestWriteNode(t *testing.T) {
 	t.Run("writes YAML node to compose file", func(t *testing.T) {
 		want := `

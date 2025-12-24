@@ -359,16 +359,51 @@ x-topo:
 }
 
 func TestRemoveService(t *testing.T) {
-	dir := t.TempDir()
-	compose := `name: example-project
+	t.Run("removes specified service from compose file", func(t *testing.T) {
+		dir := t.TempDir()
+		compose := `name: example-project
 services:
   removeMe:
     build:
       context: ./removeMe
 `
-	targetProjectFile := testutil.WriteComposeFile(t, dir, compose)
-	require.NoError(t, project.RemoveService(targetProjectFile, "removeMe"))
-	data, err := os.ReadFile(targetProjectFile)
-	require.NoError(t, err)
-	assert.NotContains(t, string(data), "removeMe")
+		targetProjectFile := testutil.WriteComposeFile(t, dir, compose)
+
+		require.NoError(t, project.RemoveService(targetProjectFile, "removeMe"))
+
+		data, err := os.ReadFile(targetProjectFile)
+		require.NoError(t, err)
+		want := `name: example-project
+services: {}
+`
+		assert.YAMLEq(t, want, string(data))
+	})
+
+	t.Run("preserves comments when a service is removed", func(t *testing.T) {
+		dir := t.TempDir()
+		compose := `name: example-project
+services:
+  removeMe:
+    build:
+      context: ./removeMe
+  # This is a comment that should be preserved
+  keepMe:
+    build:
+      context: ./keepMe
+`
+		targetProjectFile := testutil.WriteComposeFile(t, dir, compose)
+
+		require.NoError(t, project.RemoveService(targetProjectFile, "removeMe"))
+
+		data, err := os.ReadFile(targetProjectFile)
+		require.NoError(t, err)
+		want := `name: example-project
+services:
+  # This is a comment that should be preserved
+  keepMe:
+    build:
+      context: ./keepMe
+`
+		assert.Equal(t, want, string(data))
+	})
 }

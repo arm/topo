@@ -70,6 +70,19 @@ func ApplyArgs(root *yaml.Node, toApply map[string]string, w io.Writer) error {
 	return nil
 }
 
+func RemoveService(project *yaml.Node, serviceName string) error {
+	services := find(project, "services")
+	if services != nil {
+		for i := 0; i < len(services.Content); i += 2 {
+			if services.Content[i].Value == serviceName {
+				services.Content = append(services.Content[:i], services.Content[i+2:]...)
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("service %s not found", serviceName)
+}
+
 func WriteNode(project *yaml.Node, target io.Writer) error {
 	buf := &bytes.Buffer{}
 	enc := yaml.NewEncoder(buf)

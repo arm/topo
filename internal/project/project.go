@@ -137,20 +137,27 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 }
 
 func RemoveService(composeFilePath, serviceName string) error {
-	project, err := compose.ReadProject(composeFilePath)
+	fileToRead, err := os.Open(composeFilePath)
 	if err != nil {
 		return err
 	}
-	newServices := types.Services{}
-	for k, svc := range project.Services {
-		if k == serviceName {
-			continue
-		}
-		newServices[k] = svc
+	defer func() { _ = fileToRead.Close() }()
+	project, err := compose.ReadNode(fileToRead)
+	if err != nil {
+		return err
 	}
-	project.Services = newServices
 
-	if err := compose.WriteProject(project, composeFilePath); err != nil {
+	if err := compose.RemoveService(project, serviceName); err != nil {
+		return fmt.Errorf("failed to remove service %s: %w", serviceName, err)
+	}
+
+	fileToWrite, err := os.Create(composeFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open compose file for writing: %w", err)
+	}
+	defer func() { _ = fileToWrite.Close() }()
+
+	if err := compose.WriteNode(project, fileToWrite); err != nil {
 		return fmt.Errorf("failed to write compose file after removing service: %w", err)
 	}
 
