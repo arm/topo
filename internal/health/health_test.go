@@ -1,6 +1,7 @@
 package health_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/health"
@@ -15,9 +16,11 @@ func TestExtractArmFeatures(t *testing.T) {
 				Features: []string{"fp", "asimd", "sve2", "sme"},
 			},
 		}
+
 		res := health.ExtractArmFeatures(ts)
-		expected := []string{"NEON", "SVE2", "SME"}
-		assert.Equal(t, expected, res)
+
+		want := []string{"NEON", "SVE2", "SME"}
+		assert.Equal(t, want, res)
 	})
 
 	t.Run("returns empty slice if no matching features", func(t *testing.T) {
@@ -26,7 +29,9 @@ func TestExtractArmFeatures(t *testing.T) {
 				Features: []string{"fp", "crc32"},
 			},
 		}
+
 		res := health.ExtractArmFeatures(ts)
+
 		assert.Empty(t, res)
 	})
 }
@@ -129,11 +134,12 @@ func TestRenderReportAsPlainText(t *testing.T) {
 			Name:    "Flux Capacitor",
 			Healthy: true,
 		}}
+		var buf bytes.Buffer
 
-		got, err := health.RenderReportAsPlainText(report)
+		err := health.RenderReportAsPlainText(report, &buf)
 
 		require.NoError(t, err)
-		assert.Contains(t, got, "Flux Capacitor")
+		assert.Contains(t, buf.String(), "Flux Capacitor")
 	})
 
 	t.Run("it renders connection failures", func(t *testing.T) {
@@ -142,11 +148,12 @@ func TestRenderReportAsPlainText(t *testing.T) {
 			Name:    "Connected",
 			Healthy: false,
 		}
+		var buf bytes.Buffer
 
-		got, err := health.RenderReportAsPlainText(report)
+		err := health.RenderReportAsPlainText(report, &buf)
 
 		require.NoError(t, err)
-		assert.Contains(t, got, "Connected: ❌")
+		assert.Contains(t, buf.String(), "Connected: ❌")
 	})
 
 	t.Run("when connected it renders cpu features", func(t *testing.T) {
@@ -156,11 +163,12 @@ func TestRenderReportAsPlainText(t *testing.T) {
 			Healthy: true,
 		}
 		report.Target.Features = []string{"FOO", "BAR"}
+		var buf bytes.Buffer
 
-		got, err := health.RenderReportAsPlainText(report)
+		err := health.RenderReportAsPlainText(report, &buf)
 
 		require.NoError(t, err)
-		assert.Contains(t, got, "FOO, BAR")
+		assert.Contains(t, buf.String(), "FOO, BAR")
 	})
 
 	t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
@@ -169,10 +177,45 @@ func TestRenderReportAsPlainText(t *testing.T) {
 			Name:    "Connected",
 			Healthy: false,
 		}
+		var buf bytes.Buffer
 
-		got, err := health.RenderReportAsPlainText(report)
+		err := health.RenderReportAsPlainText(report, &buf)
 
 		require.NoError(t, err)
-		assert.NotContains(t, got, "Features")
+		assert.NotContains(t, buf.String(), "Features")
+	})
+}
+
+func TestRenderReportAsJSON(t *testing.T) {
+	t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
+		report := health.Report{
+			Host: health.HostReport{
+				Dependencies: []health.HealthCheck{
+					{Name: "Flux Capacitor", Healthy: true},
+				},
+			},
+			Target: health.TargetReport{
+				Connectivity: health.HealthCheck{Name: "Connected", Healthy: true},
+			},
+		}
+		var buf bytes.Buffer
+
+		err := health.RenderReportAsJSON(report, &buf)
+		require.NoError(t, err)
+
+		want := `{
+            "Host": {
+              "Dependencies": [
+                {"Name":"Flux Capacitor","Healthy":true,"Value":""}
+              ]
+            },
+            "Target": {
+              "Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
+              "Dependencies": [],
+              "Features": [],
+              "SubsystemDriver": {"Name":"","Healthy":false,"Value":""}
+            }
+          }`
+		assert.JSONEq(t, want, buf.String())
 	})
 }

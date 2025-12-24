@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/arm-debug/topo-cli/internal/output"
 	"github.com/arm-debug/topo-cli/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,10 @@ func addTargetFlag(cmd *cobra.Command, target *string) {
 	cmd.Flags().StringVar(target, "target", "", "The SSH destination.")
 }
 
+func addOutputFlag(cmd *cobra.Command, output *string) {
+	cmd.Flags().StringVarP(output, "output", "o", "plain", "Output format: plain or json")
+}
+
 func resolveTarget(flagValue string) (string, error) {
 	const targetEnvVar = "TOPO_TARGET"
 
@@ -29,4 +34,17 @@ func resolveTarget(flagValue string) (string, error) {
 		return env, nil
 	}
 	return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
+}
+
+func resolveOutput(flagValue string) (output.Format, error) {
+	v := strings.TrimSpace(strings.ToLower(flagValue))
+	switch v {
+	case "plain":
+		return output.PlainFormat, nil
+	case "json":
+		return output.JSONFormat, nil
+	default:
+		err := fmt.Errorf("invalid output value %q: must be 'plain' or 'json'", flagValue)
+		return output.PlainFormat, err
+	}
 }

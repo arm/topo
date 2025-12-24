@@ -1,11 +1,16 @@
 package main
 
 import (
+	"os"
+
 	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/spf13/cobra"
 )
 
-var healthTarget string
+var (
+	healthTarget string
+	healthOutput string
+)
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
@@ -13,15 +18,21 @@ var healthCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		resolved, err := resolveTarget(healthTarget)
+		sshTarget, err := resolveTarget(healthTarget)
 		if err != nil {
 			return err
 		}
-		return health.Check(resolved)
+		outputFormat, err := resolveOutput(healthOutput)
+		if err != nil {
+			return err
+		}
+
+		return health.Check(sshTarget, outputFormat, os.Stdout)
 	},
 }
 
 func init() {
 	addTargetFlag(healthCmd, &healthTarget)
+	addOutputFlag(healthCmd, &healthOutput)
 	rootCmd.AddCommand(healthCmd)
 }
