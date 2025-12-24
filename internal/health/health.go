@@ -2,9 +2,13 @@ package health
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"strings"
+
+	"github.com/arm-debug/topo-cli/internal/output"
 )
 
 var searchFlags = map[string]string{
@@ -120,29 +124,57 @@ Features (Linux Host): {{ join .Target.Features ", " }}
 {{- end }}
 `
 
-func RenderReportAsPlainText(report Report) (string, error) {
+func RenderReportAsPlainText(report Report, w io.Writer) error {
 	var buf bytes.Buffer
 	funcMap := template.FuncMap{
 		"join": strings.Join,
 	}
 	tmpl := template.Must(template.New("health").Funcs(funcMap).Parse(healthCheckTemplate))
 	if err := tmpl.Execute(&buf, report); err != nil {
-		return "", err
+		return err
 	}
 
-	return buf.String(), nil
+	_, err := fmt.Fprint(w, buf.String())
+	return err
 }
 
-func Check(sshTarget string) error {
+func RenderReportAsJSON(report Report, w io.Writer) error {
+	if report.Host.Dependencies == nil {
+		report.Host.Dependencies = []HealthCheck{}
+	}
+	if report.Target.Dependencies == nil {
+		report.Target.Dependencies = []HealthCheck{}
+	}
+	if report.Target.Features == nil {
+		report.Target.Features = []string{}
+	}
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(report); err != nil {
+		return fmt.Errorf("encode report as json: %w", err)
+	}
+	return nil
+}
+
+func Check(sshTarget string, outputFormat output.Format, w io.Writer) error {
+	report, err := CheckReport(sshTarget)
+	if err != nil {
+		return err
+	}
+	if outputFormat == output.JSONFormat {
+		return RenderReportAsJSON(report, w)
+	} else {
+		return RenderReportAsPlainText(report, w)
+	}
+}
+
+// CheckReport runs the health probes and returns the structured Report.
+func CheckReport(sshTarget string) (Report, error) {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 
 	conn := NewConnection(sshTarget, ExecSSH)
 	targetStatus := conn.Probe()
 	report := GenerateReport(dependencyStatuses, targetStatus)
-	healthCheck, err := RenderReportAsPlainText(report)
-	if err != nil {
-		return err
-	}
-	fmt.Println(healthCheck)
-	return nil
+	return report, nil
 }
