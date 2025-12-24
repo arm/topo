@@ -1,6 +1,8 @@
 package compose_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/compose"
@@ -139,11 +141,11 @@ func TestRegisterVolumes(t *testing.T) {
 	})
 }
 
-func TestRead(t *testing.T) {
+func TestReadProject(t *testing.T) {
 	t.Run("when project file not found returns error", func(t *testing.T) {
 		dir := t.TempDir()
 
-		_, err := compose.Read(dir)
+		_, err := compose.ReadProject(dir)
 
 		assert.Error(t, err)
 	})
@@ -161,12 +163,40 @@ services:
         BAR: new-bar
 `
 		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
-		proj, err := compose.Read(composeFilePath)
+		proj, err := compose.ReadProject(composeFilePath)
 		require.NoError(t, err)
 
 		got, err := yaml.Marshal(proj)
 		require.NoError(t, err)
 
+		assert.YAMLEq(t, composeFileContents, string(got))
+	})
+}
+
+func TestWriteProject(t *testing.T) {
+	t.Run("writes project to compose file", func(t *testing.T) {
+		composeFileContents := `
+name: test
+services:
+  test-service:
+    build:
+      context: .
+      args:
+        FOO: new-foo
+        BAR: new-bar
+`
+		temporaryComposeFilePath := filepath.Join(t.TempDir(), "expected-compose.yml")
+		err := os.WriteFile(temporaryComposeFilePath, []byte(composeFileContents), 0o644)
+		require.NoError(t, err)
+		proj, err := compose.ReadProject(temporaryComposeFilePath)
+		require.NoError(t, err)
+		composeFilePath := filepath.Join(t.TempDir(), "test-compose.yml")
+
+		err = compose.WriteProject(proj, composeFilePath)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(composeFilePath)
+		require.NoError(t, err)
 		assert.YAMLEq(t, composeFileContents, string(got))
 	})
 }

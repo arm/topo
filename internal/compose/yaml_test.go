@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestReadNodes(t *testing.T) {
+func TestReadNode(t *testing.T) {
 	t.Run("parses compose yaml into nodes", func(t *testing.T) {
 		composeFileContents := `name: test
 services:
@@ -21,7 +21,7 @@ services:
 `
 		composeFileReader := strings.NewReader(composeFileContents)
 
-		got, err := compose.ReadNodes(composeFileReader)
+		got, err := compose.ReadNode(composeFileReader)
 
 		require.NoError(t, err)
 		gotYAML, err := yaml.Marshal(got)
@@ -32,7 +32,7 @@ services:
 	t.Run("returns error when compose file is empty", func(t *testing.T) {
 		composeFileReader := strings.NewReader("")
 
-		got, err := compose.ReadNodes(composeFileReader)
+		got, err := compose.ReadNode(composeFileReader)
 
 		assert.Error(t, err)
 		assert.Nil(t, got)
@@ -42,7 +42,7 @@ services:
 	t.Run("returns error when yaml is invalid", func(t *testing.T) {
 		composeFileReader := strings.NewReader("invalid: yaml: content:")
 
-		got, err := compose.ReadNodes(composeFileReader)
+		got, err := compose.ReadNode(composeFileReader)
 
 		assert.Error(t, err)
 		assert.Nil(t, got)
@@ -222,9 +222,30 @@ services:
 	})
 }
 
+func TestWriteNode(t *testing.T) {
+	t.Run("writes YAML node to compose file", func(t *testing.T) {
+		want := `
+name: test
+services:
+  test-service:
+    build:
+      context: .
+      args: ["FOO=new-foo", "BAR=new-bar"]
+`
+		project := yamlToNode(t, want)
+		var buf bytes.Buffer
+
+		err := compose.WriteNode(project, &buf)
+		require.NoError(t, err)
+
+		got := buf.String()
+		assert.YAMLEq(t, want, got)
+	})
+}
+
 func yamlToNode(t *testing.T, yamlContents string) *yaml.Node {
 	t.Helper()
-	project, err := compose.ReadNodes(strings.NewReader(yamlContents))
+	project, err := compose.ReadNode(strings.NewReader(yamlContents))
 	require.NoError(t, err)
 	return project
 }

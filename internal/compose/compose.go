@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/loader"
@@ -95,7 +96,7 @@ func RegisterVolumes(targetProject *types.Project, volumes []types.ServiceVolume
 	}
 }
 
-func Read(targetProjectFile string) (*types.Project, error) {
+func ReadProject(targetProjectFile string) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
 		[]string{targetProjectFile},
@@ -110,4 +111,16 @@ func Read(targetProjectFile string) (*types.Project, error) {
 		return nil, err
 	}
 	return project, nil
+}
+
+func WriteProject(project *types.Project, targetComposeFile string) error {
+	projectInYAML, err := project.MarshalYAML()
+	if err != nil {
+		return fmt.Errorf("failed to marshal project to YAML: %w", err)
+	}
+
+	if err := os.WriteFile(targetComposeFile, projectInYAML, 0o644); err != nil {
+		return fmt.Errorf("failed to write compose file %s %w", targetComposeFile, err)
+	}
+	return nil
 }

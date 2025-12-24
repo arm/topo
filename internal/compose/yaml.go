@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -8,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ReadNodes(composeFile io.Reader) (*yaml.Node, error) {
+func ReadNode(composeFile io.Reader) (*yaml.Node, error) {
 	fileData, err := io.ReadAll(composeFile)
 	if err != nil {
 		return nil, err
@@ -65,6 +66,20 @@ func ApplyArgs(root *yaml.Node, toApply map[string]string, w io.Writer) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func WriteNode(project *yaml.Node, target io.Writer) error {
+	buf := &bytes.Buffer{}
+	enc := yaml.NewEncoder(buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(project); err != nil {
+		return err
+	}
+	_ = enc.Close()
+	if _, err := target.Write(buf.Bytes()); err != nil {
+		return fmt.Errorf("failed to write compose file: %w", err)
 	}
 	return nil
 }

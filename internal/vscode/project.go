@@ -9,7 +9,7 @@ import (
 )
 
 func PrintProject(w io.Writer, targetProjectFile string) error {
-	project, err := compose.Read(targetProjectFile)
+	project, err := compose.ReadProject(targetProjectFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}

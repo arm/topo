@@ -1,7 +1,6 @@
 package project
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -49,7 +48,7 @@ func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider,
 }
 
 func Extend(targetComposeFile string, src template.Source, argProvider arguments.Provider) error {
-	project, err := compose.Read(targetComposeFile)
+	project, err := compose.ReadProject(targetComposeFile)
 	if err != nil {
 		return fmt.Errorf("failed to read project: %w", err)
 	}
@@ -128,15 +127,9 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 	}
 	compose.RegisterVolumes(project, allServicesVolumes)
 
-	buf := &bytes.Buffer{}
-	enc := yaml.NewEncoder(buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(project); err != nil {
+	err = compose.WriteProject(project, targetComposeFile)
+	if err != nil {
 		return err
-	}
-	_ = enc.Close()
-	if err := os.WriteFile(targetComposeFile, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed to write compose file %s %w", targetComposeFile, err)
 	}
 
 	success = true
@@ -144,7 +137,7 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 }
 
 func RemoveService(composeFilePath, serviceName string) error {
-	project, err := compose.Read(composeFilePath)
+	project, err := compose.ReadProject(composeFilePath)
 	if err != nil {
 		return err
 	}
@@ -156,16 +149,11 @@ func RemoveService(composeFilePath, serviceName string) error {
 		newServices[k] = svc
 	}
 	project.Services = newServices
-	buf := &bytes.Buffer{}
-	enc := yaml.NewEncoder(buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(project); err != nil {
-		return err
+
+	if err := compose.WriteProject(project, composeFilePath); err != nil {
+		return fmt.Errorf("failed to write compose file after removing service: %w", err)
 	}
-	_ = enc.Close()
-	if err := os.WriteFile(composeFilePath, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed to write compose file %s %w", composeFilePath, err)
-	}
+
 	return nil
 }
 
@@ -196,7 +184,7 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg, logOutput i
 	}
 	defer func() { _ = f.Close() }()
 
-	yamlNodes, err := compose.ReadNodes(f)
+	yamlNodes, err := compose.ReadNode(f)
 	if err != nil {
 		return err
 	}
@@ -205,15 +193,14 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg, logOutput i
 		return fmt.Errorf("error applying args to project file: %w", err)
 	}
 
-	buf := &bytes.Buffer{}
-	enc := yaml.NewEncoder(buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(yamlNodes); err != nil {
-		return err
+	outFile, err := os.Create(composeFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open compose file for writing: %w", err)
 	}
-	_ = enc.Close()
-	if err := os.WriteFile(composeFilePath, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed to write compose file: %s %w", composeFilePath, err)
+	defer func() { _ = outFile.Close() }()
+
+	if err := compose.WriteNode(yamlNodes, outFile); err != nil {
+		return fmt.Errorf("failed to write compose file after applying args: %w", err)
 	}
 	return nil
 }
