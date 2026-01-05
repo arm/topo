@@ -1,8 +1,7 @@
 # Lima template for Docker with passwordless SSH access
-# Inherits from the standard docker template and adds SSH configuration
 
 base:
-- template://docker
+- docker-template-base.yaml # Lima registers args in order, so we cannot use the remote template and then override the automatic port forwarding in this file- so a local, modified, base is needed.
 
 cpus: 2
 memory: 1GiB
@@ -15,17 +14,27 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    # Create config for passwordless SSH
     cat > /etc/ssh/sshd_config.d/01-passwordless-authentication.conf << 'EOF'
     PasswordAuthentication yes
     PermitEmptyPasswords yes
     UsePAM no
     EOF
-    # Restart SSH daemon to apply changes
     systemctl restart sshd || systemctl restart ssh
-- mode: user
+
+- mode: system
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    # Remove password from current user
-    sudo passwd -d "$(whoami)"
+
+    TARGET_USER="{{.User}}"
+
+    # Ensure the SSH user is in docker group
+    for _ in $(seq 1 120); do
+      if getent passwd "$TARGET_USER" >/dev/null 2>&1 && getent group docker >/dev/null 2>&1; then
+        usermod -aG docker "$TARGET_USER"
+        # Remove password from TARGET_USER)
+        passwd -d "$TARGET_USER" || true
+        break
+      fi
+      sleep 1
+    done
