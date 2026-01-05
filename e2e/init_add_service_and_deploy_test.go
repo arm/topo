@@ -57,9 +57,8 @@ func requireExtend(t *testing.T, topo, projectDir, composeFile, customName strin
 
 func requireDeploy(t *testing.T, topo, projectDir, sshTarget string, extraArgs ...string) {
 	args := []string{"deploy", "--target", sshTarget}
-	// FIX: Weird quirk in lima vms means the reverse proxy isn't working. Investigation required.
-	args = append(args, "--no-registry")
 	args = append(args, extraArgs...)
+
 	deployCmd := exec.Command(topo, args...)
 	deployCmd.Dir = projectDir
 
