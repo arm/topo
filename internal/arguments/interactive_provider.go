@@ -34,10 +34,18 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 			}
 		}
 
+		if arg.Default != "" {
+			_, err := fmt.Fprintf(p.output, "Default: %s\n", arg.Default)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		requiredLabel := ""
 		if arg.Required {
 			requiredLabel = " (required)"
 		}
+
 		_, err = fmt.Fprintf(p.output, "%s%s> ", arg.Name, requiredLabel)
 		if err != nil {
 			return nil, err

@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Clone(path string, src template.Source, argProvider *arguments.StrictProviderChain, logOutput io.Writer) error {
+func Clone(path string, src template.Source, argProvider arguments.Provider, logOutput io.Writer) error {
 	if err := src.CopyTo(path); err != nil {
 		var errDestDirExists template.DestDirExistsError
 		if errors.As(err, &errDestDirExists) {

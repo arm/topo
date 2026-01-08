@@ -5,6 +5,7 @@ type Arg struct {
 	Description string
 	Required    bool
 	Example     string
+	Default     string
 }
 
 type ResolvedArg struct {

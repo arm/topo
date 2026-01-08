@@ -30,11 +30,15 @@ func (p *StrictProviderChain) Provide(args []Arg) ([]ResolvedArg, error) {
 			provided[r.Name] = r.Value
 		}
 
+		remaining = filterProvided(remaining, provided)
+
 		if allRequiredProvided(args, provided) {
 			break
 		}
+	}
 
-		remaining = filterProvided(remaining, provided)
+	if len(remaining) > 0 {
+		defaultNonProvided(remaining, provided)
 	}
 
 	if err := validateRequiredProvided(args, provided); err != nil {
@@ -84,6 +88,14 @@ func allRequiredProvided(args []Arg, provided map[string]string) bool {
 		}
 	}
 	return true
+}
+
+func defaultNonProvided(remaining []Arg, provided map[string]string) {
+	for _, arg := range remaining {
+		if arg.Default != "" {
+			provided[arg.Name] = arg.Default
+		}
+	}
 }
 
 func validateRequiredProvided(args []Arg, provided map[string]string) error {

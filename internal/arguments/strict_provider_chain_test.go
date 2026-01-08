@@ -159,6 +159,43 @@ func TestStrictMultiProvider(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("provides resolved args when default provided", func(t *testing.T) {
+		provider1 := arguments.NewStaticProvider()
+		multi := arguments.NewStrictProviderChain(provider1)
+		args := []arguments.Arg{
+			{
+				Name:     "CINNAMON",
+				Required: true,
+				Default:  "filled",
+			},
+		}
+
+		got, err := multi.Provide(args)
+
+		require.NoError(t, err)
+		want := []arguments.ResolvedArg{
+			{Name: "CINNAMON", Value: "filled"},
+		}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("does not provide resolved args when no default provided", func(t *testing.T) {
+		provider1 := arguments.NewStaticProvider()
+		multi := arguments.NewStrictProviderChain(provider1)
+		args := []arguments.Arg{
+			{
+				Name:     "CINNAMON",
+				Required: false,
+			},
+		}
+
+		got, err := multi.Provide(args)
+
+		require.NoError(t, err)
+		want := []arguments.ResolvedArg(nil)
+		assert.Equal(t, want, got)
+	})
 }
 
 func TestMissingArgsError(t *testing.T) {

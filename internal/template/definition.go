@@ -33,6 +33,7 @@ type Arg struct {
 	Description string
 	Required    bool
 	Example     string
+	Default     string
 }
 
 func FromContent(reader io.Reader) (Template, error) {
@@ -84,6 +85,7 @@ type rawArg struct {
 	Description string `yaml:"description"`
 	Required    bool   `yaml:"required"`
 	Example     string `yaml:"example,omitempty"`
+	Default     string `yaml:"default,omitempty"`
 }
 
 func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
@@ -114,6 +116,7 @@ func parseArgsInOrder(node *yaml.Node, argsMap map[string]rawArg) []Arg {
 						Description: metadata.Description,
 						Required:    metadata.Required,
 						Example:     metadata.Example,
+						Default:     metadata.Default,
 					})
 				}
 			}
