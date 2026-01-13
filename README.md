@@ -30,13 +30,13 @@ This creates a `compose.yaml` in the current directory.
 List available templates:
 
 ```sh
-./topo service templates
+./topo templates
 ```
 
-Add a service using a built-in template:
+Extend the compose file using a built-in template:
 
 ```sh
-./topo service add compose.yaml my-service template:Topo-Welcome
+./topo extend compose.yaml template:Topo-Welcome
 ```
 
 ### Deploy to your target
