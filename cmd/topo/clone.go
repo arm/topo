@@ -14,15 +14,19 @@ var topoCloneCmd = &cobra.Command{
 	Short: "Clone an example project",
 	Long: `Clone an example project to the specified path.
 
-The project-source argument uses scheme prefixes to specify the source type:
+The project-source argument uses scheme prefixes to specify the source type.
+The git: prefix is optional for git@host and https:// URLs.
 
 Template ID (from built-in catalog):
   topo clone my-demo template:Topo-Welcome
 
 Git repository:
+  topo clone my-demo git@github.com:user/repo.git
+  topo clone my-demo https://github.com/user/repo.git#develop
   topo clone my-demo git:git@github.com:user/repo.git
-  topo clone my-demo git:https://github.com/user/repo.git#develop
-  topo clone my-demo git:git@github.com:user/repo.git#main
+  topo clone my-demo git:https://github.com/user/repo.git#main
+  topo clone my-demo git:ubuntu@example.com:repo.git
+  topo clone my-demo git:builder@host:tools/platform.git#v2
 
 Local directory (must contain a Topo template):
   topo clone my-demo dir:/path/to/template/folder
