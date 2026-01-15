@@ -26,28 +26,49 @@ type Source interface {
 }
 
 func NewSource(source string) (Source, error) {
-	parts := strings.SplitN(source, ":", 2)
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)
+	if strings.HasPrefix(source, "template:") || strings.HasPrefix(source, "git:") || strings.HasPrefix(source, "dir:") {
+		parts := strings.SplitN(source, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)
+		}
+
+		sourceType := parts[0]
+		sourceValue := parts[1]
+
+		if sourceValue == "" {
+			return nil, fmt.Errorf("source value cannot be empty")
+		}
+
+		switch sourceType {
+		case "template":
+			return TemplateIdSource(sourceValue), nil
+		case "git":
+			return NewGitSource(sourceValue), nil
+		case "dir":
+			return DirSource{Path: sourceValue}, nil
+		default:
+			return nil, fmt.Errorf("unsupported source type: %s (supported: template:, git:, dir:)", sourceType)
+		}
 	}
 
-	sourceType := parts[0]
-	sourceValue := parts[1]
-
-	if sourceValue == "" {
-		return nil, fmt.Errorf("source value cannot be empty")
+	if isGitURL(source) {
+		return NewGitSource(source), nil
 	}
 
-	switch sourceType {
-	case "template":
-		return TemplateIdSource(sourceValue), nil
-	case "git":
-		return NewGitSource(sourceValue), nil
-	case "dir":
-		return DirSource{Path: sourceValue}, nil
-	default:
+	sourceType, _, hasType := strings.Cut(source, ":")
+	if hasType {
 		return nil, fmt.Errorf("unsupported source type: %s (supported: template:, git:, dir:)", sourceType)
 	}
+
+	return nil, fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)
+}
+
+func isGitURL(source string) bool {
+	return strings.HasPrefix(source, "git@") ||
+		strings.HasPrefix(source, "ssh://") ||
+		strings.HasPrefix(source, "https://") ||
+		strings.HasPrefix(source, "http://") ||
+		strings.HasPrefix(source, "git://")
 }
 
 type TemplateIdSource string

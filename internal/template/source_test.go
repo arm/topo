@@ -59,6 +59,22 @@ func TestNewSource(t *testing.T) {
 			want  template.GitSource
 		}{
 			{
+				name:  "HTTPS without prefix",
+				input: "https://github.com/user/repo.git",
+				want: template.GitSource{
+					URL: "https://github.com/user/repo.git",
+					Ref: "",
+				},
+			},
+			{
+				name:  "HTTPS without prefix with # ref",
+				input: "https://github.com/user/repo.git#develop",
+				want: template.GitSource{
+					URL: "https://github.com/user/repo.git",
+					Ref: "develop",
+				},
+			},
+			{
 				name:  "HTTPS without ref",
 				input: "git:https://github.com/user/repo.git",
 				want: template.GitSource{
@@ -72,6 +88,22 @@ func TestNewSource(t *testing.T) {
 				want: template.GitSource{
 					URL: "https://github.com/user/repo.git",
 					Ref: "develop",
+				},
+			},
+			{
+				name:  "SSH without prefix",
+				input: "git@github.com:user/repo.git",
+				want: template.GitSource{
+					URL: "git@github.com:user/repo.git",
+					Ref: "",
+				},
+			},
+			{
+				name:  "SSH without prefix with # ref",
+				input: "git@github.com:user/repo.git#main",
+				want: template.GitSource{
+					URL: "git@github.com:user/repo.git",
+					Ref: "main",
 				},
 			},
 			{
