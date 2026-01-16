@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/output"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
 var searchFlags = map[string]string{
@@ -39,6 +40,7 @@ type HostReport struct {
 }
 
 type TargetReport struct {
+	IsLocalhost     bool
 	Connectivity    HealthCheck
 	Features        []string
 	Dependencies    []HealthCheck
@@ -77,6 +79,7 @@ func generateHostReport(statuses []DependencyStatus) HostReport {
 
 func generateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
+	report.IsLocalhost = ssh.Host(targetStatus.SSHTarget).IsPlainLocalhost()
 	report.Connectivity = HealthCheck{
 		Name:    "Connected",
 		Healthy: targetStatus.ConnectionError == nil,
@@ -113,8 +116,10 @@ Host
 
 Target
 ------
+{{- if not .Target.IsLocalhost }}
 {{ template "checkRow" .Target.Connectivity }}
-{{- if .Target.Connectivity.Healthy }}
+{{- end }}
+{{- if or .Target.IsLocalhost .Target.Connectivity.Healthy }}
 Features (Linux Host): {{ join .Target.Features ", " }}
 {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
