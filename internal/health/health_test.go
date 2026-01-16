@@ -180,6 +180,18 @@ func TestReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotContains(t, got, "Features")
 		})
+
+		t.Run("when localhost, it skips connectivity check and shows features", func(t *testing.T) {
+			report := health.Report{}
+			report.Target.IsLocalhost = true
+			report.Target.Features = []string{"FOO", "BAR"}
+
+			got, err := report.AsPlain()
+
+			require.NoError(t, err)
+			assert.NotContains(t, got, "Connected")
+			assert.Contains(t, got, "FOO, BAR")
+		})
 	})
 
 	t.Run("AsJSON", func(t *testing.T) {
@@ -205,6 +217,7 @@ func TestReport(t *testing.T) {
 				]
 				},
 				"Target": {
+				"IsLocalhost": false,
 				"Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
 				"Dependencies": [],
 				"Features": [],
