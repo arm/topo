@@ -83,6 +83,22 @@ func AssertContainersRunning(t *testing.T, h ssh.Host, composeFilePath string) {
 	}
 }
 
+func AssertContainersStopped(t *testing.T, h ssh.Host, composeFilePath string) {
+	t.Helper()
+	dockerCmd := command.DockerCompose(h, composeFilePath, "ps", "--format", "json", "--all")
+	output, err := dockerCmd.CombinedOutput()
+	require.NoError(t, err, string(output))
+
+	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported")
+
+	containers, err := unmarshalNDJSON(output)
+	require.NoError(t, err)
+
+	for _, container := range containers {
+		assert.Equal(t, "exited", container["State"], "expected container %s to be exited (state=%s)", container["Name"], container["State"])
+	}
+}
+
 type jsonObject map[string]any
 
 func unmarshalNDJSON(ndJSON []byte) ([]jsonObject, error) {

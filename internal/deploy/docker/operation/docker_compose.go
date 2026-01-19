@@ -54,6 +54,10 @@ func NewDockerComposePull(composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Pull images", composeFile, h, []string{"pull"})
 }
 
+func NewDockerComposeStop(composeFile string, h ssh.Host) *DockerCompose {
+	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
+}
+
 func NewDockerComposeRun(composeFile string, h ssh.Host) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
 	return NewDockerCompose("Start services", composeFile, h, args)

@@ -10,6 +10,13 @@ func SupportsRegistry(noRegistry bool, targetHost ssh.Host, goos string) bool {
 	return !noRegistry && !targetHost.IsPlainLocalhost() && goos != "windows"
 }
 
+func NewDeploymentStop(composeFile string, targetHost ssh.Host) goperation.Sequence {
+	ops := []goperation.Operation{
+		operation.NewDockerComposeStop(composeFile, targetHost),
+	}
+	return goperation.NewSequence(ops...)
+}
+
 func NewDeployment(composeFile string, targetHost ssh.Host) goperation.Sequence {
 	sourceHost := ssh.PlainLocalhost
 	ops := []goperation.Operation{
