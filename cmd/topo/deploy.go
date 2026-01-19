@@ -20,8 +20,8 @@ var (
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
-	Short: "Deploy services using Docker Compose",
-	Long: `Deploy services to the target host using Docker Compose.
+	Short: "Deploy services using the compose file",
+	Long: `Deploy services to the target host using definitions in the compose file.
 
 This command performs the following operations in sequence:
   1. Build - Builds Container images defined in the compose file on the local host
@@ -29,8 +29,7 @@ This command performs the following operations in sequence:
   3. Transfer - Transfers built and pulled images and compose file to the target host
   4. Run - Runs docker compose up on the target host
 
-The compose file (compose.yaml) is assumed to be in the current working directory,
-similar to how 'docker compose' works without the -f flag.
+The compose file (compose.yaml) must be in the current working directory, as this is used to select the containers to be deployed.
 
 Use --dry-run to see what commands would be executed without actually running them.`,
 	Args: cobra.ExactArgs(0),
