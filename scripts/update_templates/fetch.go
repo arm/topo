@@ -11,7 +11,7 @@ import (
 func fetchComposeFile(client *http.Client, githubToken string, repoSpec string) (io.Reader, error) {
 	repo, ref := parseRepoSpec(repoSpec)
 
-	u := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/compose.yaml", orgName, repo)
+	u := fmt.Sprintf("https://api.github.com/repos/%s/contents/compose.yaml", repo)
 
 	if ref != "" {
 		v := url.Values{}

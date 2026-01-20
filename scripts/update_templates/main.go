@@ -8,16 +8,12 @@ import (
 
 const outputJSONPath = "internal/catalog/data/templates.json"
 
-const (
-	orgName = "Arm-Debug"
-)
-
 var repoList = []string{
-	"topo-cortexa-welcome#main",
-	"topo-kleidi-service#main",
-	"STM32-Heteogenous-Communications-example#main",
-	"topo-armv9-cpu-llm-chat#master",
-	"topo-simd-visual-benchmark#master",
+	"Arm-Debug/topo-cortexa-welcome#main",
+	"Arm-Debug/topo-kleidi-service#main",
+	"Arm-Debug/STM32-Heteogenous-Communications-example#main",
+	"Arm-Debug/topo-armv9-cpu-llm-chat#master",
+	"Arm-Debug/topo-simd-visual-benchmark#master",
 }
 
 type Template struct {
@@ -50,7 +46,7 @@ func main() {
 			continue
 		}
 
-		repoURL := fmt.Sprintf("git@github.com:%s/%s.git", orgName, repo)
+		repoURL := fmt.Sprintf("git@github.com:%s.git", repo)
 
 		tmpl, err := BuildTemplate(repoURL, composeBytes)
 		if err != nil {
