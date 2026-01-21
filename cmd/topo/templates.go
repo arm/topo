@@ -12,7 +12,7 @@ var templatesCmd = &cobra.Command{
 	Short: "List available Service Templates",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
-		return catalog.PrintTemplateRepos(os.Stdout)
+		return catalog.PrintTemplateRepos(os.Stdout, catalog.TemplatesJSON)
 	},
 }
 

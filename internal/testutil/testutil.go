@@ -1,8 +1,6 @@
 package testutil
 
 import (
-	"bytes"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,19 +12,6 @@ import (
 )
 
 const TestSshTarget = "test-target"
-
-// captureOutput captures stdout produced during f and returns it as string.
-func CaptureOutput(f func()) string {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	f()
-	_ = w.Close()
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
-	os.Stdout = old
-	return buf.String()
-}
 
 func RequireDocker(t testing.TB) {
 	t.Helper()
