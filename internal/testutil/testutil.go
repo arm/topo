@@ -35,6 +35,17 @@ func RequireDocker(t testing.TB) {
 	}
 }
 
+func RequireLinuxDockerEngine(t testing.TB) {
+	t.Helper()
+	RequireDocker(t)
+	cmd := exec.Command("docker", "info", "--format", "{{.OSType}}")
+	output, err := cmd.Output()
+	require.NoError(t, err, "failed to get docker info")
+	if strings.TrimSpace(string(output)) != "linux" {
+		t.Skip("skipping test that requires linux docker engine")
+	}
+}
+
 func RequireWriteFile(t testing.TB, path, content string) {
 	t.Helper()
 	err := os.WriteFile(path, []byte(content), 0o644)

@@ -69,7 +69,7 @@ docker -H ssh://user@remote tag %[2]s nginx:latest
 
 	t.Run("Run", func(t *testing.T) {
 		t.Run("it transfers images via registry", func(t *testing.T) {
-			testutil.RequireDocker(t)
+			testutil.RequireLinuxDockerEngine(t)
 			h := ssh.PlainLocalhost
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")

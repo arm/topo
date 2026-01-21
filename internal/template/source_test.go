@@ -3,6 +3,7 @@ package template_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/template"
@@ -284,7 +285,11 @@ func TestDirSource(t *testing.T) {
 			for _, f := range files {
 				info, err := os.Stat(filepath.Join(dstDir, f.name))
 				require.NoError(t, err)
-				assert.Equal(t, f.perm, info.Mode().Perm(), "permission mismatch for %s", f.name)
+				expectedPerm := f.perm
+				if runtime.GOOS == "windows" {
+					expectedPerm = windowsFilePermissions(f.perm)
+				}
+				assert.Equal(t, expectedPerm, info.Mode().Perm(), "permission mismatch for %s", f.name)
 			}
 		})
 
@@ -373,4 +378,11 @@ func TestDirSource(t *testing.T) {
 			assert.Equal(t, "template", name)
 		})
 	})
+}
+
+func windowsFilePermissions(original os.FileMode) os.FileMode {
+	if original&0o222 == 0 {
+		return 0o444
+	}
+	return 0o666
 }

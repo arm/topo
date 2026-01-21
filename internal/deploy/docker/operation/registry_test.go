@@ -38,7 +38,7 @@ func TestNewRunRegistry(t *testing.T) {
 
 func TestContainerExistsPredicate(t *testing.T) {
 	t.Run("evaluates to true when container exists", func(t *testing.T) {
-		testutil.RequireDocker(t)
+		testutil.RequireLinuxDockerEngine(t)
 		containerName := testutil.TestContainerName(t)
 		imageName := testutil.TestImageName(t)
 		testutil.BuildMinimalImage(t, ssh.PlainLocalhost, imageName)
