@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"os/exec"
 	"testing"
 
@@ -14,11 +13,13 @@ func TestListTemplates(t *testing.T) {
 
 	cmd := exec.Command(bin, "templates")
 	out, err := cmd.CombinedOutput()
-
 	require.NoError(t, err)
-	var arr []map[string]any
-	require.NoError(t, json.Unmarshal(out, &arr))
-	assert.NotEmpty(t, arr)
+
+	output := string(out)
+
+	assert.Contains(t, output, "Topo-Welcome")
+	assert.Contains(t, output, "git@github.com:")
+	assert.Contains(t, output, "Features:")
 }
 
 func TestUnknownCommand(t *testing.T) {
