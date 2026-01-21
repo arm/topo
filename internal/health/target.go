@@ -14,6 +14,14 @@ type HardwareProfile struct {
 	RemoteCPU []string
 }
 
+func (hw HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
+	capabilities := make(map[HardwareCapability]struct{})
+	if len(hw.RemoteCPU) > 0 {
+		capabilities[Remoteproc] = struct{}{}
+	}
+	return capabilities
+}
+
 type Status struct {
 	SSHTarget       string
 	ConnectionError error
@@ -41,7 +49,7 @@ func (c *Connection) BinaryExists(bin string) (bool, error) {
 	if !BinaryRegex.MatchString(bin) {
 		return false, fmt.Errorf("%q is not a valid binary name (contains invalid characters)", bin)
 	}
-	_, err := c.exec(c.sshTarget, fmt.Sprintf("command -v %s", bin))
+	_, err := c.exec(c.sshTarget, fmt.Sprintf("/bin/sh -c 'exec ${SHELL:-/bin/sh} -l -c \"command -v %s\"'", bin))
 	return err == nil, nil
 }
 
@@ -54,8 +62,8 @@ func (c *Connection) Probe() Status {
 		return targetStatus
 	}
 
-	targetStatus.Dependencies = c.CheckDependencies()
 	targetStatus.Hardware, _ = c.ProbeHardware()
+	targetStatus.Dependencies = c.CheckDependencies(targetStatus.Hardware.Capabilities())
 
 	return targetStatus
 }
@@ -65,8 +73,9 @@ func (c *Connection) ProbeConnection() error {
 	return err
 }
 
-func (c *Connection) CheckDependencies() []DependencyStatus {
-	return CheckInstalled(TargetRequiredDependencies, c.BinaryExists)
+func (c *Connection) CheckDependencies(hardware map[HardwareCapability]struct{}) []DependencyStatus {
+	deps := FilterByHardware(TargetRequiredDependencies, hardware)
+	return CheckInstalled(deps, c.BinaryExists)
 }
 
 func (c *Connection) ProbeHardware() (HardwareProfile, error) {
