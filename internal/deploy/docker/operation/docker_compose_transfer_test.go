@@ -16,8 +16,6 @@ import (
 )
 
 func TestDockerComposePipeTransfer(t *testing.T) {
-	testutil.RequireDocker(t)
-
 	t.Run("Description", func(t *testing.T) {
 		h := ssh.PlainLocalhost
 		tmpDir := t.TempDir()
@@ -31,6 +29,7 @@ func TestDockerComposePipeTransfer(t *testing.T) {
 
 	t.Run("Run", func(t *testing.T) {
 		t.Run("transfers images from source to target", func(t *testing.T) {
+			testutil.RequireLinuxDockerEngine(t)
 			// Note: The Run test doesn't perfectly verify that the image was transferred through
 			// the pipe rather than just existing on the target.
 			// To properly test this, we would need to either:
@@ -67,6 +66,8 @@ services:
 
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("prints transfer commands", func(t *testing.T) {
+			// DryRun still shells out to `docker compose config --images`.
+			testutil.RequireDocker(t)
 			var buf bytes.Buffer
 			h := ssh.PlainLocalhost
 			tmpDir := t.TempDir()

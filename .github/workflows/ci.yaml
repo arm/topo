@@ -27,7 +27,11 @@ jobs:
           version: v2.7.2
 
   build-and-test:
-    runs-on: [ ubuntu-latest ]
+    strategy:
+      fail-fast: false
+      matrix: 
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -45,12 +49,14 @@ jobs:
           go build -v ./cmd/topo
 
       - name: Set up Lima
+        if: runner.os == 'Linux'
         uses: lima-vm/lima-actions/setup@55627e31b78637bf254a8b2a14da8ea7d12564e5 # v1.1.0
         id: lima-actions-setup
         with:
           version: v2.0.2
 
       - name: Cache ~/.cache/lima
+        if: runner.os == 'Linux'
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ~/.cache/lima
@@ -61,9 +67,11 @@ jobs:
           go test ./... -v -covermode=atomic -coverprofile=coverage.out
 
       - name: Install Qlty Cloud
+        if: runner.os != 'Windows'
         uses: qltysh/qlty-action/install@v2.2.0
 
       - name: Upload coverage to Qlty Cloud
+        if: runner.os != 'Windows'
         uses: qltysh/qlty-action/coverage@v2.2.0
         with:
           token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
