@@ -142,14 +142,9 @@ func (g GitSource) String() string {
 }
 
 func (g GitSource) GetName() (string, error) {
-	cmd := exec.Command("basename", "-s", ".git", g.URL)
-	cmd.Env = os.Environ()
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	outputStr := strings.TrimSpace(string(output))
-	return outputStr, nil
+	base := filepath.Base(strings.TrimSpace(g.URL))
+	base = strings.TrimSuffix(base, ".git")
+	return base, nil
 }
 
 type DirSource struct {

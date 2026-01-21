@@ -25,3 +25,8 @@ func acquireFlock(t *testing.T, lockPath string) func() {
 		_ = f.Close()
 	}
 }
+
+func IsPrivilegeError(t *testing.T, err error) bool {
+	t.Helper()
+	return false
+}

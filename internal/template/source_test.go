@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -298,7 +299,14 @@ func TestDirSource(t *testing.T) {
 			targetFile := filepath.Join(srcDir, "target.txt")
 			require.NoError(t, os.WriteFile(targetFile, []byte("target content"), 0o644))
 			symlinkPath := filepath.Join(srcDir, "link.txt")
-			require.NoError(t, os.Symlink("target.txt", symlinkPath))
+			if err := os.Symlink("target.txt", symlinkPath); err != nil {
+				if linkError, ok := err.(*os.LinkError); ok {
+					if testutil.IsPrivilegeError(t, linkError.Err) {
+						t.Skip("skipping symlink test on Windows without admin privileges")
+					}
+				}
+				require.NoError(t, err)
+			}
 			dstDir := filepath.Join(t.TempDir(), "dest")
 			src := template.DirSource{Path: srcDir}
 
