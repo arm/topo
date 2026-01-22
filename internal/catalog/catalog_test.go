@@ -174,7 +174,7 @@ func TestListRepos(t *testing.T) {
 			}
 		]`)
 
-		templates, err := catalog.ListRepos(jsonData)
+		templates, err := catalog.ParseRepos(jsonData)
 
 		require.NoError(t, err)
 		assert.Len(t, templates, 2)
@@ -197,7 +197,7 @@ func TestListRepos(t *testing.T) {
 	t.Run("returns error for invalid JSON", func(t *testing.T) {
 		jsonData := []byte(`[{"id": "test", invalid}]`)
 
-		_, err := catalog.ListRepos(jsonData)
+		_, err := catalog.ParseRepos(jsonData)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to unmarshal templates")
@@ -214,7 +214,7 @@ func TestListRepos(t *testing.T) {
 			}
 		]`)
 
-		_, err := catalog.ListRepos(jsonData)
+		_, err := catalog.ParseRepos(jsonData)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "failed to unmarshal templates")

@@ -15,9 +15,10 @@ import (
 var TemplatesJSON []byte
 
 const (
-	reset = "\033[0m"
-	red   = "\033[31m"
-	green = "\033[32m"
+	reset  = "\033[0m"
+	yellow = "\033[33m"
+	blue   = "\033[34m"
+	cyan   = "\033[36m"
 )
 
 type Repo struct {
@@ -33,19 +34,19 @@ func GetTemplateRepo(id string) (*Repo, error) {
 }
 
 func PrintTemplateRepos(w io.Writer, templatesJSON []byte) error {
-	repos, err := ListRepos(templatesJSON)
+	repos, err := ParseRepos(templatesJSON)
 	if err != nil {
 		return err
 	}
 	for _, repo := range repos {
 		if err := printRepo(w, repo); err != nil {
-			return err
+			return fmt.Errorf("failed to load template catalog: %w", err)
 		}
 	}
 	return err
 }
 
-func ListRepos(b []byte) ([]Repo, error) {
+func ParseRepos(b []byte) ([]Repo, error) {
 	var templates []Repo
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
@@ -56,7 +57,7 @@ func ListRepos(b []byte) ([]Repo, error) {
 }
 
 func GetRepo(id string, b []byte) (*Repo, error) {
-	repos, err := ListRepos(b)
+	repos, err := ParseRepos(b)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ const repoTemplate = `
 {{ end }}
 {{- end }}
 
-{{- green .Id }} | {{ red .Url }} | {{ red .Ref }}
+{{- cyan .Id }} | {{ blue .Url }} | {{ yellow .Ref }}
 {{- template "featuresRow" . }}
 {{- template "descriptionRow" . }}
 `
@@ -89,10 +90,11 @@ const repoTemplate = `
 var baseRepoTemplate = template.Must(
 	template.New("repo").
 		Funcs(template.FuncMap{
-			"join":  strings.Join,
-			"wrap":  func(s string) string { return WrapText(s, 80, 2) },
-			"green": func(s string) string { return s },
-			"red":   func(s string) string { return s },
+			"join":   strings.Join,
+			"wrap":   func(s string) string { return WrapText(s, 80, 2) },
+			"cyan":   func(s string) string { return s },
+			"blue":   func(s string) string { return s },
+			"yellow": func(s string) string { return s },
 		}).
 		Parse(repoTemplate),
 )
@@ -111,10 +113,7 @@ func isTTY(w io.Writer) bool {
 	return (info.Mode() & os.ModeCharDevice) != 0
 }
 
-func colour(w io.Writer, col, str string) string {
-	if !isTTY(w) {
-		return str
-	}
+func colour(col, str string) string {
 	return col + str + reset
 }
 
@@ -123,12 +122,13 @@ func printRepo(w io.Writer, r Repo) error {
 	if err != nil {
 		return err
 	}
-
-	tmpl = tmpl.Funcs(template.FuncMap{
-		"green": func(s string) string { return colour(w, green, s) },
-		"red":   func(s string) string { return colour(w, red, s) },
-	})
-
+	if isTTY(w) {
+		tmpl = tmpl.Funcs(template.FuncMap{
+			"cyan":   func(s string) string { return colour(cyan, s) },
+			"blue":   func(s string) string { return colour(blue, s) },
+			"yellow": func(s string) string { return colour(yellow, s) },
+		})
+	}
 	return tmpl.Execute(w, r)
 }
 
