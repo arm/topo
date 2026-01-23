@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"text/template"
+
+	"github.com/arm-debug/topo-cli/internal/output"
 )
 
 //go:embed data/templates.json
@@ -29,31 +31,52 @@ type Repo struct {
 	Ref         string   `json:"ref"`
 }
 
+type RepoCollection []Repo
+
 func GetTemplateRepo(id string) (*Repo, error) {
 	return GetRepo(id, TemplatesJSON)
 }
 
-func PrintTemplateRepos(w io.Writer, templatesJSON []byte) error {
+func PrintTemplateRepos(printer *output.Printer, templatesJSON []byte) error {
 	repos, err := ParseRepos(templatesJSON)
 	if err != nil {
 		return err
 	}
-	for _, repo := range repos {
-		if err := printRepo(w, repo); err != nil {
-			return fmt.Errorf("failed to load template catalog: %w", err)
-		}
+	if isTTY(printer.Target) {
+		baseRepoTemplate = baseRepoTemplate.Funcs(template.FuncMap{
+			"cyan":   func(s string) string { return colour(cyan, s) },
+			"blue":   func(s string) string { return colour(blue, s) },
+			"yellow": func(s string) string { return colour(yellow, s) },
+		})
 	}
-	return err
+	return printer.Print(repos)
 }
 
-func ParseRepos(b []byte) ([]Repo, error) {
+func (r RepoCollection) AsJSON() (string, error) {
+	b, err := json.MarshalIndent(r, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func (r RepoCollection) AsPlain() (string, error) {
+	var buf bytes.Buffer
+	if err := baseRepoTemplate.ExecuteTemplate(&buf, "repoList", r); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func ParseRepos(b []byte) (RepoCollection, error) {
 	var templates []Repo
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&templates); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal templates: %w", err)
 	}
-	return templates, nil
+	return RepoCollection(templates), nil
 }
 
 func GetRepo(id string, b []byte) (*Repo, error) {
@@ -76,16 +99,24 @@ const repoTemplate = `
 {{- end }}
 {{- end }}
 
-{{- define "descriptionRow"}}
+{{- define "descriptionRow" -}}
 {{- if .Description }}
 {{ wrap .Description }}
-{{ end }}
+{{- end }}
 {{- end }}
 
+{{- define "repoRow" }}
 {{- cyan .Id }} | {{ blue .Url }} | {{ yellow .Ref }}
 {{- template "featuresRow" . }}
 {{- template "descriptionRow" . }}
-`
+{{- end }}
+
+{{- define "repoList" }}
+{{- range . }}
+{{- template "repoRow" . }}
+
+{{ end }}
+{{- end }}`
 
 var baseRepoTemplate = template.Must(
 	template.New("repo").
@@ -115,21 +146,6 @@ func isTTY(w io.Writer) bool {
 
 func colour(col, str string) string {
 	return col + str + reset
-}
-
-func printRepo(w io.Writer, r Repo) error {
-	tmpl, err := baseRepoTemplate.Clone()
-	if err != nil {
-		return err
-	}
-	if isTTY(w) {
-		tmpl = tmpl.Funcs(template.FuncMap{
-			"cyan":   func(s string) string { return colour(cyan, s) },
-			"blue":   func(s string) string { return colour(blue, s) },
-			"yellow": func(s string) string { return colour(yellow, s) },
-		})
-	}
-	return tmpl.Execute(w, r)
 }
 
 func WrapText(s string, maxWidth, indentSpaces int) string {

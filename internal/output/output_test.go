@@ -30,7 +30,7 @@ func TestPrintable(t *testing.T) {
 			err := p.Print(fp)
 
 			require.NoError(t, err)
-			assert.Equal(t, "hello-plain\n", buf.String())
+			assert.Equal(t, "hello-plain", buf.String())
 		})
 
 		t.Run("propagates error", func(t *testing.T) {

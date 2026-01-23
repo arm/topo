@@ -1,7 +1,7 @@
 package catalog_test
 
 import (
-	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/catalog"
@@ -36,22 +36,24 @@ func TestPrintTemplateRepos(t *testing.T) {
 		dummyJSON := []byte(`[
   {
     "id": "name-of-project",
-		"description": "blah blah blah",
+    "description": "blah blah blah",
     "features": null,
     "url": "url.git",
     "ref": "main"
   },
   {
     "id": "name-of-other-project",
-		"description": "blah blah blah",
+    "description": "blah blah blah",
     "features": null,
     "url": "url.git",
     "ref": "main"
   }
 ]`)
+		repos, err := catalog.ParseRepos(dummyJSON)
+		require.NoError(t, err)
 
-		var got bytes.Buffer
-		err := catalog.PrintTemplateRepos(&got, dummyJSON)
+		got, err := repos.AsPlain()
+		require.NoError(t, err)
 
 		want := `name-of-project | url.git | main
   blah blah blah
@@ -60,43 +62,47 @@ name-of-other-project | url.git | main
   blah blah blah
 
 `
-		require.NoError(t, err)
-		assert.Equal(t, want, got.String())
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("ignores features when none present", func(t *testing.T) {
 		dummyJSON := []byte(`[
   {
     "id": "name-of-project",
-		"description": "blah blah blah",
+    "description": "blah blah blah",
     "features": null,
     "url": "url.git",
     "ref": "main"
   }
 ]`)
-		var got bytes.Buffer
-		err := catalog.PrintTemplateRepos(&got, dummyJSON)
+		repos, err := catalog.ParseRepos(dummyJSON)
+		require.NoError(t, err)
+
+		got, err := repos.AsPlain()
+		require.NoError(t, err)
 
 		want := `name-of-project | url.git | main
   blah blah blah
 
 `
-		require.NoError(t, err)
-		assert.Equal(t, want, got.String())
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("includes features when present", func(t *testing.T) {
 		dummyJSON := []byte(`[
   {
     "id": "name-of-project",
-		"description": "blah blah blah",
+    "description": "blah blah blah",
     "features": ["walnut", "almond"],
     "url": "url.git",
     "ref": "main"
   }
 ]`)
-		var got bytes.Buffer
-		err := catalog.PrintTemplateRepos(&got, dummyJSON)
+		repos, err := catalog.ParseRepos(dummyJSON)
+		require.NoError(t, err)
+
+		got, err := repos.AsPlain()
+		require.NoError(t, err)
 
 		want := `name-of-project | url.git | main
   Features: walnut, almond
@@ -104,21 +110,24 @@ name-of-other-project | url.git | main
 
 `
 		require.NoError(t, err)
-		assert.Equal(t, want, got.String())
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("correctly wraps new lines in the description", func(t *testing.T) {
 		dummyJSON := []byte(`[
   {
     "id": "name-of-project",
-		"description": "This sentence exists purely to verify that text wrapping behaves correctly when the content is long enough to span multiple lines.",
+    "description": "This sentence exists purely to verify that text wrapping behaves correctly when the content is long enough to span multiple lines.",
     "features": ["walnut", "almond"],
     "url": "url.git",
     "ref": "main"
   }
 ]`)
-		var got bytes.Buffer
-		err := catalog.PrintTemplateRepos(&got, dummyJSON)
+		repos, err := catalog.ParseRepos(dummyJSON)
+		require.NoError(t, err)
+
+		got, err := repos.AsPlain()
+		require.NoError(t, err)
 
 		want := `name-of-project | url.git | main
   Features: walnut, almond
@@ -126,22 +135,24 @@ name-of-other-project | url.git | main
   when the content is long enough to span multiple lines.
 
 `
-		require.NoError(t, err)
-		assert.Equal(t, want, got.String())
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("correctly splits paragraphs in the description", func(t *testing.T) {
 		dummyJSON := []byte(`[
   {
     "id": "name-of-project",
-		"description": "blah blah blah\n\nblah blah blah",
+    "description": "blah blah blah\n\nblah blah blah",
     "features": ["walnut", "almond"],
     "url": "url.git",
     "ref": "main"
   }
 ]`)
-		var got bytes.Buffer
-		err := catalog.PrintTemplateRepos(&got, dummyJSON)
+		repos, err := catalog.ParseRepos(dummyJSON)
+		require.NoError(t, err)
+
+		got, err := repos.AsPlain()
+		require.NoError(t, err)
 
 		want := `name-of-project | url.git | main
   Features: walnut, almond
@@ -151,7 +162,31 @@ name-of-other-project | url.git | main
 
 `
 		require.NoError(t, err)
-		assert.Equal(t, want, got.String())
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("correctly prints to json", func(t *testing.T) {
+		dummyJSON := []byte(`[
+  {
+    "id": "name-of-project",
+    "description": "blah blah blah\n\nblah blah blah",
+    "features": ["walnut", "almond"],
+    "url": "url.git",
+    "ref": "main"
+  }
+]`)
+		repos, err := catalog.ParseRepos(dummyJSON)
+		require.NoError(t, err)
+
+		got, err := repos.AsJSON()
+		require.NoError(t, err)
+
+		var wantObj any
+		var gotObj any
+		require.NoError(t, json.Unmarshal(dummyJSON, &wantObj))
+		require.NoError(t, json.Unmarshal([]byte(got), &gotObj))
+
+		assert.Equal(t, wantObj, gotObj)
 	})
 }
 

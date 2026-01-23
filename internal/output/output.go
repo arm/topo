@@ -21,12 +21,12 @@ type Printable interface {
 }
 
 type Printer struct {
-	target io.Writer
+	Target io.Writer
 	format Format
 }
 
 func NewPrinter(target io.Writer, format Format) *Printer {
-	return &Printer{target: target, format: format}
+	return &Printer{Target: target, format: format}
 }
 
 func (p *Printer) Print(printable Printable) error {
@@ -35,7 +35,7 @@ func (p *Printer) Print(printable Printable) error {
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Fprintln(p.target, jsonStr)
+		_, err = fmt.Fprintln(p.Target, jsonStr)
 		return err
 	}
 
@@ -43,6 +43,6 @@ func (p *Printer) Print(printable Printable) error {
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(p.target, plainStr)
+	_, err = fmt.Fprint(p.Target, plainStr)
 	return err
 }
