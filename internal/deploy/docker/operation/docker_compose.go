@@ -58,7 +58,10 @@ func NewDockerComposeStop(composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
 }
 
-func NewDockerComposeRun(composeFile string, h ssh.Host) *DockerCompose {
+func NewDockerComposeRun(composeFile string, h ssh.Host, forceRecreate bool) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
+	if forceRecreate {
+		args = append(args, "--force-recreate")
+	}
 	return NewDockerCompose("Start services", composeFile, h, args)
 }

@@ -17,7 +17,7 @@ func NewDeploymentStop(composeFile string, targetHost ssh.Host) goperation.Seque
 	return goperation.NewSequence(ops...)
 }
 
-func NewDeployment(composeFile string, targetHost ssh.Host) goperation.Sequence {
+func NewDeployment(composeFile string, targetHost ssh.Host, forceRecreate bool) goperation.Sequence {
 	sourceHost := ssh.PlainLocalhost
 	ops := []goperation.Operation{
 		operation.NewDockerComposeBuild(composeFile, sourceHost),
@@ -26,11 +26,11 @@ func NewDeployment(composeFile string, targetHost ssh.Host) goperation.Sequence 
 	if !targetHost.IsPlainLocalhost() {
 		ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, targetHost))
 	}
-	ops = append(ops, operation.NewDockerComposeRun(composeFile, targetHost))
+	ops = append(ops, operation.NewDockerComposeRun(composeFile, targetHost, forceRecreate))
 	return goperation.NewSequence(ops...)
 }
 
-func NewDeploymentWithRegistry(composeFile string, targetHost ssh.Host) goperation.Sequence {
+func NewDeploymentWithRegistry(composeFile string, targetHost ssh.Host, forceRecreate bool) goperation.Sequence {
 	sourceHost := ssh.PlainLocalhost
 	ops := []goperation.Operation{
 		operation.NewDockerComposeBuild(composeFile, sourceHost),
@@ -42,6 +42,6 @@ func NewDeploymentWithRegistry(composeFile string, targetHost ssh.Host) goperati
 		ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, targetHost))
 		ops = append(ops, ssh.NewSSHTunnelStop(targetHost))
 	}
-	ops = append(ops, operation.NewDockerComposeRun(composeFile, targetHost))
+	ops = append(ops, operation.NewDockerComposeRun(composeFile, targetHost, forceRecreate))
 	return goperation.NewSequence(ops...)
 }

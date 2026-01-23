@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	deployTarget string
-	deployDryRun bool
-	noRegistry   bool
+	deployTarget  string
+	deployDryRun  bool
+	forceRecreate bool
+	noRegistry    bool
 )
 
 var deployCmd = &cobra.Command{
@@ -56,9 +57,9 @@ Use --dry-run to see what commands would be executed without actually running th
 
 		var deployment goperation.Sequence
 		if useRegistry {
-			deployment = docker.NewDeploymentWithRegistry(composeFile, targetHost)
+			deployment = docker.NewDeploymentWithRegistry(composeFile, targetHost, forceRecreate)
 		} else {
-			deployment = docker.NewDeployment(composeFile, targetHost)
+			deployment = docker.NewDeployment(composeFile, targetHost, forceRecreate)
 		}
 
 		if deployDryRun {
@@ -88,5 +89,6 @@ func init() {
 	addTargetFlag(deployCmd, &deployTarget)
 	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
+	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
 	rootCmd.AddCommand(deployCmd)
 }
