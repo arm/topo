@@ -21,15 +21,36 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("includes transfer operation for remote host", func(t *testing.T) {
 		remoteHost := ssh.Host("user@remote")
-
-		got := docker.NewDeployment(composeFile, remoteHost, false)
+		deployOpts := docker.DeployOptions{TargetHost: remoteHost}
+		got := docker.NewDeployment(composeFile, deployOpts)
 
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePipeTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
-			operation.NewDockerComposeRun(composeFile, remoteHost, false),
+			operation.NewDockerComposeRun(composeFile, remoteHost, deployOpts.ForceRecreate),
 		}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
+		remoteHost := ssh.Host("user@remote")
+		opts := docker.DeployOptions{WithRegistry: true, ForceRecreate: false}
+		opts.TargetHost = remoteHost
+		got := docker.NewDeployment(composeFile, opts)
+
+		want := goperation.Sequence{
+			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
+			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
+		}
+		want = append(want, operation.NewRunRegistry()...)
+		want = append(want,
+			ssh.NewSSHTunnelStart(remoteHost),
+			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
+			ssh.NewSSHTunnelStop(remoteHost),
+			operation.NewDockerComposeRun(composeFile, remoteHost, opts.ForceRecreate),
+		)
+
 		assert.Equal(t, want, got)
 	})
 
@@ -43,7 +64,11 @@ func TestNewDeployment(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				got := docker.NewDeployment(composeFile, ssh.PlainLocalhost, tt.ForceRecreate)
+				deployOpts := docker.DeployOptions{
+					TargetHost:    ssh.PlainLocalhost,
+					ForceRecreate: tt.ForceRecreate,
+				}
+				got := docker.NewDeployment(composeFile, deployOpts)
 
 				want := goperation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
@@ -84,7 +109,8 @@ services:
 `, testutil.TestProjectName(t))
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
-			d := docker.NewDeployment(composeFilePath, remoteDockerHost, false)
+			deployOpts := docker.DeployOptions{TargetHost: remoteDockerHost}
+			d := docker.NewDeployment(composeFilePath, deployOpts)
 
 			err := d.Run(os.Stdout)
 
@@ -107,7 +133,8 @@ services:
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			targetHost := ssh.Host("user@remote")
-			d := docker.NewDeployment(composeFilePath, targetHost, false)
+			deployOpts := docker.DeployOptions{TargetHost: targetHost}
+			d := docker.NewDeployment(composeFilePath, deployOpts)
 
 			err := d.DryRun(&buf)
 

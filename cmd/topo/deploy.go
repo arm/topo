@@ -6,18 +6,18 @@ import (
 	"runtime"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
-	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	deployTarget  string
-	deployDryRun  bool
-	forceRecreate bool
-	noRegistry    bool
+	deployTarget string
+	deployDryRun bool
+	noRegistry   bool
 )
+
+var deployOpts docker.DeployOptions
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
@@ -48,25 +48,22 @@ Use --dry-run to see what commands would be executed without actually running th
 		}
 
 		targetHost := ssh.Host(resolvedTarget)
-		goos := runtime.GOOS
-		useRegistry := docker.SupportsRegistry(noRegistry, targetHost, goos)
+		deployOpts.TargetHost = targetHost
 
-		if !useRegistry {
+		goos := runtime.GOOS
+		deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, targetHost, goos)
+
+		if !deployOpts.WithRegistry {
 			_, _ = fmt.Fprintln(os.Stderr, "WARN: Registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
 		}
 
-		var deployment goperation.Sequence
-		if useRegistry {
-			deployment = docker.NewDeploymentWithRegistry(composeFile, targetHost, forceRecreate)
-		} else {
-			deployment = docker.NewDeployment(composeFile, targetHost, forceRecreate)
-		}
+		deployment := docker.NewDeployment(composeFile, deployOpts)
 
 		if deployDryRun {
 			return deployment.DryRun(os.Stdout)
 		}
 
-		if useRegistry {
+		if deployOpts.WithRegistry {
 			cancel, cleanup := ssh.SetupTunnelCleanup(targetHost, os.Stdout)
 			defer cleanup()
 			defer cancel()
@@ -89,6 +86,6 @@ func init() {
 	addTargetFlag(deployCmd, &deployTarget)
 	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
-	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
+	deployCmd.Flags().BoolVar(&deployOpts.ForceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
 	rootCmd.AddCommand(deployCmd)
 }
