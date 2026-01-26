@@ -1,13 +1,13 @@
 package health
 
 import (
-	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
+
+	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
-type execSSH func(target, command string) (string, error)
+type execSSH func(target ssh.Host, command string) (string, error)
 
 type HardwareProfile struct {
 	Features  []string
@@ -30,13 +30,13 @@ type Status struct {
 }
 
 type Connection struct {
-	sshTarget string
+	sshTarget ssh.Host
 	exec      execSSH
 }
 
 func NewConnection(sshTarget string, exec execSSH) Connection {
 	return Connection{
-		sshTarget: sshTarget,
+		sshTarget: ssh.Host(sshTarget),
 		exec:      exec,
 	}
 }
@@ -46,16 +46,16 @@ func (c *Connection) Run(command string) (string, error) {
 }
 
 func (c *Connection) BinaryExists(bin string) (bool, error) {
-	if !BinaryRegex.MatchString(bin) {
-		return false, fmt.Errorf("%q is not a valid binary name (contains invalid characters)", bin)
+	if err := ssh.ValidateBinaryName(bin); err != nil {
+		return false, err
 	}
-	_, err := c.exec(c.sshTarget, fmt.Sprintf("/bin/sh -c 'exec ${SHELL:-/bin/sh} -l -c \"command -v %s\"'", bin))
+	_, err := c.exec(c.sshTarget, ssh.ShellCommand(fmt.Sprintf("command -v %s", bin)))
 	return err == nil, nil
 }
 
 func (c *Connection) Probe() Status {
 	var targetStatus Status
-	targetStatus.SSHTarget = c.sshTarget
+	targetStatus.SSHTarget = string(c.sshTarget)
 
 	if err := c.ProbeConnection(); err != nil {
 		targetStatus.ConnectionError = err
@@ -121,17 +121,4 @@ func (c *Connection) collectRemoteCPU() ([]string, error) {
 
 	remoteCPU := strings.Fields(out)
 	return remoteCPU, nil
-}
-
-func ExecSSH(target, command string) (string, error) {
-	cmd := exec.Command("ssh", target, command)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("ssh command to %s failed: %w | stderr: %s", target, err, stderr.String())
-	}
-
-	return stdout.String(), nil
 }

@@ -102,7 +102,7 @@ func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Re
 func Check(sshTarget string) (Report, error) {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 
-	conn := NewConnection(sshTarget, ExecSSH)
+	conn := NewConnection(sshTarget, ssh.ExecSSH)
 	targetStatus := conn.Probe()
 	report := GenerateReport(dependencyStatuses, targetStatus)
 	return report, nil

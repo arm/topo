@@ -1,9 +1,9 @@
 package health
 
 import (
-	"fmt"
 	"os/exec"
-	"regexp"
+
+	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
 type HardwareCapability int
@@ -45,8 +45,6 @@ type DependencyStatus struct {
 	Dependency Dependency
 	Installed  bool
 }
-
-var BinaryRegex = regexp.MustCompile(`^[A-Za-z0-9_+-]+$`)
 
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
 	result := make([]Dependency, 0, len(deps))
@@ -102,8 +100,8 @@ func hasAnyInstalledPrerequisite(required []SoftwareDependency, installed map[So
 }
 
 func BinaryExistsLocally(bin string) (bool, error) {
-	if !BinaryRegex.MatchString(bin) {
-		return false, fmt.Errorf("%q is not a valid binary name (contains invalid characters)", bin)
+	if err := ssh.ValidateBinaryName(bin); err != nil {
+		return false, err
 	}
 	_, err := exec.LookPath(bin)
 	return err == nil, nil

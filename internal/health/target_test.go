@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
-		mockExec := func(_, _ string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "success", nil
 		}
 		conn := health.NewConnection("hostname", mockExec)
@@ -24,7 +25,7 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run returns error", func(t *testing.T) {
-		mockExec := func(_, _ string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "", errors.New("ssh failed")
 		}
 		conn := health.NewConnection("hostname", mockExec)
@@ -38,7 +39,7 @@ func TestRun(t *testing.T) {
 
 func TestProbe(t *testing.T) {
 	t.Run("probe succeeds and collects features", func(t *testing.T) {
-		mockExec := func(_, command string) (string, error) {
+		mockExec := func(_ ssh.Host, command string) (string, error) {
 			if command == "" {
 				return "", nil // simulate successful initial connection
 			}
@@ -53,7 +54,7 @@ func TestProbe(t *testing.T) {
 	})
 
 	t.Run("probe succeeds but features collection returns empty", func(t *testing.T) {
-		mockExec := func(_, command string) (string, error) {
+		mockExec := func(_ ssh.Host, command string) (string, error) {
 			if command == "" {
 				return "", nil
 			}
@@ -68,7 +69,7 @@ func TestProbe(t *testing.T) {
 	})
 
 	t.Run("probe fails connection", func(t *testing.T) {
-		mockExec := func(_, _ string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "", fmt.Errorf("connection refused")
 		}
 
@@ -80,7 +81,7 @@ func TestProbe(t *testing.T) {
 	})
 
 	t.Run("probe finds remote cpu", func(t *testing.T) {
-		mockExec := func(_, command string) (string, error) {
+		mockExec := func(_ ssh.Host, command string) (string, error) {
 			if strings.Contains(command, "remoteproc") {
 				return "foo\nbar", nil
 			}
@@ -97,7 +98,7 @@ func TestProbe(t *testing.T) {
 
 func TestBinaryExists(t *testing.T) {
 	t.Run("when binary found, returns true", func(t *testing.T) {
-		mockExec := func(_, _ string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
 		conn := health.NewConnection("hostname", mockExec)
@@ -109,7 +110,7 @@ func TestBinaryExists(t *testing.T) {
 	})
 
 	t.Run("invalid format returns an error", func(t *testing.T) {
-		mockExec := func(_, _ string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
 		conn := health.NewConnection("hostname", mockExec)
