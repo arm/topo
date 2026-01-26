@@ -28,15 +28,17 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePipeTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
-			operation.NewDockerComposeRun(composeFile, remoteHost, deployOpts.ForceRecreate),
+			operation.NewDockerComposeRun(composeFile, remoteHost, operation.DockerComposeUpArgs{}),
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteHost := ssh.Host("user@remote")
-		opts := docker.DeployOptions{WithRegistry: true, ForceRecreate: false}
-		opts.TargetHost = remoteHost
+		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false}
+		upArgs := operation.DockerComposeUpArgs{
+			ForceRecreate: opts.ForceRecreate,
+		}
 		got := docker.NewDeployment(composeFile, opts)
 
 		want := goperation.Sequence{
@@ -48,7 +50,7 @@ func TestNewDeployment(t *testing.T) {
 			ssh.NewSSHTunnelStart(remoteHost),
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
 			ssh.NewSSHTunnelStop(remoteHost),
-			operation.NewDockerComposeRun(composeFile, remoteHost, opts.ForceRecreate),
+			operation.NewDockerComposeRun(composeFile, remoteHost, upArgs),
 		)
 
 		assert.Equal(t, want, got)
@@ -56,24 +58,43 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("excludes transfer operation for local host", func(t *testing.T) {
 		tests := []struct {
-			name          string
-			ForceRecreate bool
+			name string
+			opts docker.DeployOptions
 		}{
-			{"ForceRecreate=false", false},
-			{"ForceRecreate=true", true},
+			{
+				name: "default",
+				opts: docker.DeployOptions{},
+			},
+			{
+				name: "force recreate",
+				opts: docker.DeployOptions{
+					ForceRecreate: true,
+				},
+			},
+			{
+				name: "no recreate",
+				opts: docker.DeployOptions{
+					NoRecreate: true,
+				},
+			},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				deployOpts := docker.DeployOptions{
 					TargetHost:    ssh.PlainLocalhost,
-					ForceRecreate: tt.ForceRecreate,
+					ForceRecreate: tt.opts.ForceRecreate,
+					NoRecreate:    tt.opts.NoRecreate,
 				}
 				got := docker.NewDeployment(composeFile, deployOpts)
 
+				upArgs := operation.DockerComposeUpArgs{
+					ForceRecreate: tt.opts.ForceRecreate,
+					NoRecreate:    tt.opts.NoRecreate,
+				}
 				want := goperation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 					operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
-					operation.NewDockerComposeRun(composeFile, ssh.PlainLocalhost, tt.ForceRecreate),
+					operation.NewDockerComposeRun(composeFile, ssh.PlainLocalhost, upArgs),
 				}
 
 				assert.Equal(t, want, got)
@@ -109,6 +130,7 @@ services:
 `, testutil.TestProjectName(t))
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
+
 			deployOpts := docker.DeployOptions{TargetHost: remoteDockerHost}
 			d := docker.NewDeployment(composeFilePath, deployOpts)
 
@@ -132,8 +154,7 @@ services:
     image: busybox
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			targetHost := ssh.Host("user@remote")
-			deployOpts := docker.DeployOptions{TargetHost: targetHost}
+			deployOpts := docker.DeployOptions{TargetHost: ssh.Host("user@remote")}
 			d := docker.NewDeployment(composeFilePath, deployOpts)
 
 			err := d.DryRun(&buf)

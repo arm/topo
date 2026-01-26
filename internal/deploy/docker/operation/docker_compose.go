@@ -16,6 +16,11 @@ type DockerCompose struct {
 	args        []string
 }
 
+type DockerComposeUpArgs struct {
+	ForceRecreate bool
+	NoRecreate    bool
+}
+
 func NewDockerCompose(description string, composeFile string, h ssh.Host, args []string) *DockerCompose {
 	return &DockerCompose{
 		description: description,
@@ -58,10 +63,13 @@ func NewDockerComposeStop(composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
 }
 
-func NewDockerComposeRun(composeFile string, h ssh.Host, forceRecreate bool) *DockerCompose {
+func NewDockerComposeRun(composeFile string, h ssh.Host, upArgs DockerComposeUpArgs) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
-	if forceRecreate {
+	if upArgs.ForceRecreate {
 		args = append(args, "--force-recreate")
+	}
+	if upArgs.NoRecreate {
+		args = append(args, "--no-recreate")
 	}
 	return NewDockerCompose("Start services", composeFile, h, args)
 }

@@ -10,6 +10,7 @@ type DeployOptions struct {
 	ForceRecreate bool
 	WithRegistry  bool
 	TargetHost    ssh.Host
+	NoRecreate    bool
 }
 
 func SupportsRegistry(noRegistry bool, targetHost ssh.Host, goos string) bool {
@@ -40,6 +41,10 @@ func NewDeployment(composeFile string, opts DeployOptions) goperation.Sequence {
 			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, opts.TargetHost))
 		}
 	}
-	ops = append(ops, operation.NewDockerComposeRun(composeFile, opts.TargetHost, opts.ForceRecreate))
+	upArgs := operation.DockerComposeUpArgs{
+		ForceRecreate: opts.ForceRecreate,
+		NoRecreate:    opts.NoRecreate,
+	}
+	ops = append(ops, operation.NewDockerComposeRun(composeFile, opts.TargetHost, upArgs))
 	return goperation.NewSequence(ops...)
 }

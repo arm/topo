@@ -70,6 +70,7 @@ services:
 
 			deployOpts := docker.DeployOptions{TargetHost: remoteDockerHost}
 			deploy := docker.NewDeployment(composeFilePath, deployOpts)
+
 			require.NoError(t, deploy.Run(os.Stdout))
 			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
 
