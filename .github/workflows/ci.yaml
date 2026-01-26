@@ -86,24 +86,11 @@ jobs:
         run: |
           go build -v ./cmd/topo
 
-      - name: Set up Lima
-        if: runner.os == 'Linux'
-        uses: lima-vm/lima-actions/setup@55627e31b78637bf254a8b2a14da8ea7d12564e5 # v1.1.0
-        id: lima-actions-setup
-        with:
-          version: v2.0.2
-
-      - name: Cache ~/.cache/lima
-        if: runner.os == 'Linux'
-        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
-        with:
-          path: ~/.cache/lima
-          key: lima-${{ steps.lima-actions-setup.outputs.version }}
-
       - name: Run tests with coverage
         env: 
           DOCKER_HOST: ${{ matrix.docker_host }}
         run: |
+          docker build -t topo-e2e-target:latest ./internal/testutil/test-container
           go test ./... -v -covermode=atomic -coverprofile=coverage.out
 
       - name: Install Qlty Cloud

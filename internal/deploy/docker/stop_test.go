@@ -44,10 +44,10 @@ func TestDeploymentStop(t *testing.T) {
 	testutil.RequireDocker(t)
 
 	t.Run("Run", func(t *testing.T) {
-		dockerVM := testutil.StartDockerVM(t)
+		target := testutil.StartTargetContainer(t)
 
 		t.Run("deploys services then confirms stop shuts down containers", func(t *testing.T) {
-			remoteDockerHost := ssh.Host(dockerVM.SSHConnectionString)
+			remoteDockerHost := ssh.Host(target.SSHConnectionString)
 			tmpDir := t.TempDir()
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
 			dockerFileContent := `

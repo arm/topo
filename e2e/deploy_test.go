@@ -15,15 +15,14 @@ import (
 )
 
 func TestDeploy(t *testing.T) {
-	testutil.RequireDocker(t)
-	vm := testutil.StartDockerVM(t)
+	target := testutil.StartTargetContainer(t)
 	topo := buildBinary(t)
 
 	t.Run("Init, add and Deploy", func(t *testing.T) {
 		projectDir := t.TempDir()
 		composeFile := filepath.Join(projectDir, "compose.yaml")
 		t.Cleanup(func() {
-			composeDown(t, composeFile, vm.SSHConnectionString)
+			composeDown(t, composeFile, target.SSHConnectionString)
 		})
 
 		requireInit(t, topo, projectDir)
@@ -33,8 +32,10 @@ func TestDeploy(t *testing.T) {
 
 		requireExtend(t, topo, projectDir, composeFile, nameArgValue)
 
-		requireDeploy(t, topo, projectDir, vm.SSHConnectionString)
-		assertResponseBody(t, "http://localhost:8080/", expectedResponse)
+		requireDeploy(t, topo, projectDir, target.SSHConnectionString)
+		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
+		require.NoError(t, err)
+		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 	})
 
 	t.Run("Clone and deploy", func(t *testing.T) {
@@ -42,15 +43,16 @@ func TestDeploy(t *testing.T) {
 		cloneDir := filepath.Join(baseDir, "project")
 		composeFile := filepath.Join(cloneDir, "compose.yaml")
 		t.Cleanup(func() {
-			composeDown(t, composeFile, vm.SSHConnectionString)
+			composeDown(t, composeFile, target.SSHConnectionString)
 		})
 
 		nameArgValue := "Topo"
 		requireClone(t, topo, baseDir, cloneDir, "testdata/services/hello-server", fmt.Sprintf("NAME=%s", nameArgValue))
-		requireDeploy(t, topo, cloneDir, vm.SSHConnectionString)
+		requireDeploy(t, topo, cloneDir, target.SSHConnectionString)
 		expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
-
-		assertResponseBody(t, "http://localhost:8080/", expectedResponse)
+		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
+		require.NoError(t, err)
+		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 	})
 }
 

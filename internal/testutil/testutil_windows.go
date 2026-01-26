@@ -7,12 +7,6 @@ import (
 	"testing"
 )
 
-func acquireFlock(t *testing.T, lockPath string) func() {
-	t.Helper()
-	t.Fatal("file locking is not implemented on Windows")
-	return func() {}
-}
-
 func IsPrivilegeError(t *testing.T, err error) bool {
 	t.Helper()
 	sysCallErr, ok := err.(syscall.Errno)
