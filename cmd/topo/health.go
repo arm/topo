@@ -28,7 +28,11 @@ var healthCmd = &cobra.Command{
 			return err
 		}
 		printer := output.NewPrinter(os.Stdout, outputFormat)
-		return health.Check(sshTarget, printer)
+		report, err := health.Check(sshTarget)
+		if err != nil {
+			return err
+		}
+		return output.PrintHealthReport(printer, report)
 	},
 }
 

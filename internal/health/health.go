@@ -1,13 +1,8 @@
 package health
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"html/template"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/output"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
@@ -104,75 +99,11 @@ func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Re
 	return report
 }
 
-const healthCheckTemplate = `
-{{- define "checkRow" -}}
-  {{ .Name }}:{{- if .Healthy }} ✅{{- else }} ❌{{- end }}{{- if .Value }} ({{ .Value }}){{- end }}
-{{- end -}}
-Host
-----
-{{- range $hostCheckRow := .Host.Dependencies }}
-{{ template "checkRow" $hostCheckRow }}
-{{- end }}
-
-Target
-------
-{{- if not .Target.IsLocalhost }}
-{{ template "checkRow" .Target.Connectivity }}
-{{- end }}
-{{- if or .Target.IsLocalhost .Target.Connectivity.Healthy }}
-Features (Linux Host): {{ join .Target.Features ", " }}
-{{- range $targetCheckRow := .Target.Dependencies }}
-{{ template "checkRow" $targetCheckRow }}
-{{- end }}
-{{ template "checkRow" .Target.SubsystemDriver }}
-{{- end }}
-`
-
-func Check(sshTarget string, printer *output.Printer) error {
-	report, err := CheckReport(sshTarget)
-	if err != nil {
-		return err
-	}
-	return printer.Print(report)
-}
-
-// CheckReport runs the health probes and returns the structured Report.
-func CheckReport(sshTarget string) (Report, error) {
+func Check(sshTarget string) (Report, error) {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 
 	conn := NewConnection(sshTarget, ExecSSH)
 	targetStatus := conn.Probe()
 	report := GenerateReport(dependencyStatuses, targetStatus)
 	return report, nil
-}
-
-func (r Report) AsPlain() (string, error) {
-	var buf bytes.Buffer
-	funcMap := template.FuncMap{
-		"join": strings.Join,
-	}
-	tmpl := template.Must(template.New("health").Funcs(funcMap).Parse(healthCheckTemplate))
-	if err := tmpl.Execute(&buf, r); err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
-}
-
-func (r Report) AsJSON() (string, error) {
-	if r.Host.Dependencies == nil {
-		r.Host.Dependencies = []HealthCheck{}
-	}
-	if r.Target.Dependencies == nil {
-		r.Target.Dependencies = []HealthCheck{}
-	}
-	if r.Target.Features == nil {
-		r.Target.Features = []string{}
-	}
-
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode report as json: %w", err)
-	}
-	return string(b), nil
 }

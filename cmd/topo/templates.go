@@ -19,8 +19,14 @@ var templatesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		repos, err := catalog.ParseRepos(catalog.TemplatesJSON)
+		if err != nil {
+			return err
+		}
+
 		printer := output.NewPrinter(os.Stdout, outputFormat)
-		return catalog.PrintTemplateRepos(printer, catalog.TemplatesJSON)
+		return output.PrintTemplateRepos(printer, repos)
 	},
 }
 

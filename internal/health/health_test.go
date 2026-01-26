@@ -5,7 +5,6 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestExtractArmFeatures(t *testing.T) {
@@ -123,108 +122,5 @@ func TestGenerateReport(t *testing.T) {
 			{Name: "bar", Healthy: true, Value: "foo"},
 		}
 		assert.Equal(t, want, got.Target.Dependencies)
-	})
-}
-
-func TestReport(t *testing.T) {
-	t.Run("AsPlain", func(t *testing.T) {
-		t.Run("it renders the dependencies", func(t *testing.T) {
-			report := health.Report{}
-			report.Host.Dependencies = []health.HealthCheck{{
-				Name:    "Flux Capacitor",
-				Healthy: true,
-			}}
-
-			got, err := report.AsPlain()
-
-			require.NoError(t, err)
-			assert.Contains(t, got, "Flux Capacitor")
-		})
-
-		t.Run("it renders connection failures", func(t *testing.T) {
-			report := health.Report{}
-			report.Target.Connectivity = health.HealthCheck{
-				Name:    "Connected",
-				Healthy: false,
-			}
-
-			got, err := report.AsPlain()
-
-			require.NoError(t, err)
-			assert.Contains(t, got, "Connected: ❌")
-		})
-
-		t.Run("when connected it renders cpu features", func(t *testing.T) {
-			report := health.Report{}
-			report.Target.Connectivity = health.HealthCheck{
-				Name:    "Connected",
-				Healthy: true,
-			}
-			report.Target.Features = []string{"FOO", "BAR"}
-
-			got, err := report.AsPlain()
-
-			require.NoError(t, err)
-			assert.Contains(t, got, "FOO, BAR")
-		})
-
-		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
-			report := health.Report{}
-			report.Target.Connectivity = health.HealthCheck{
-				Name:    "Connected",
-				Healthy: false,
-			}
-
-			got, err := report.AsPlain()
-
-			require.NoError(t, err)
-			assert.NotContains(t, got, "Features")
-		})
-
-		t.Run("when localhost, it skips connectivity check and shows features", func(t *testing.T) {
-			report := health.Report{}
-			report.Target.IsLocalhost = true
-			report.Target.Features = []string{"FOO", "BAR"}
-
-			got, err := report.AsPlain()
-
-			require.NoError(t, err)
-			assert.NotContains(t, got, "Connected")
-			assert.Contains(t, got, "FOO, BAR")
-		})
-	})
-
-	t.Run("AsJSON", func(t *testing.T) {
-		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
-			report := health.Report{
-				Host: health.HostReport{
-					Dependencies: []health.HealthCheck{
-						{Name: "Flux Capacitor", Healthy: true},
-					},
-				},
-				Target: health.TargetReport{
-					Connectivity: health.HealthCheck{Name: "Connected", Healthy: true},
-				},
-			}
-
-			got, err := report.AsJSON()
-			require.NoError(t, err)
-
-			want := `{
-				"Host": {
-				"Dependencies": [
-					{"Name":"Flux Capacitor","Healthy":true,"Value":""}
-				]
-				},
-				"Target": {
-				"IsLocalhost": false,
-				"Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
-				"Dependencies": [],
-				"Features": [],
-				"SubsystemDriver": {"Name":"","Healthy":false,"Value":""}
-				}
-			}`
-			assert.JSONEq(t, want, got)
-		})
 	})
 }
