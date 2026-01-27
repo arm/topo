@@ -39,13 +39,19 @@ Extend the compose file using a built-in template:
 ./topo extend compose.yaml template:Topo-Welcome
 ```
 
+### Check the status of the host and target systems
+
+```sh
+./topo health --target my-board
+```
+
+The `--target` flag accepts SSH config host aliases or `user@host` destinations. You can also set the `TOPO_TARGET` environment variable to avoid repeating this flag.
+
 ### Deploy to your target
 
 ```sh
 ./topo deploy --target my-board
 ```
-
-The `--target` flag accepts SSH config host aliases or `user@host` destinations. You can also set the `TOPO_TARGET` environment variable to avoid repeating this flag.
 
 ## Usage
 
