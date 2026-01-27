@@ -30,6 +30,82 @@ func TestGetTemplateRepo(t *testing.T) {
 	})
 }
 
+func TestFilterTemplateRepos(t *testing.T) {
+	t.Run("correctly filters for single search feature", func(t *testing.T) {
+		flags := catalog.TemplateFilters{
+			Features: []string{"walnut"},
+		}
+
+		collection := []catalog.Repo{
+			{
+				Id:          "name-of-project",
+				Description: "blah blah blah",
+				Features:    []string{"walnut"},
+				Url:         "url.git",
+				Ref:         "main",
+			},
+			{
+				Id:          "name-of-other-project",
+				Description: "blah blah blah",
+				Features:    []string{"almond"},
+				Url:         "url.git",
+				Ref:         "main",
+			},
+		}
+
+		got := catalog.FilterTemplateRepos(flags, collection)
+
+		want := []catalog.Repo{
+			{
+				Id:          "name-of-project",
+				Description: "blah blah blah",
+				Features:    []string{"walnut"},
+				Url:         "url.git",
+				Ref:         "main",
+			},
+		}
+
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("is case insensitive", func(t *testing.T) {
+		flags := catalog.TemplateFilters{
+			Features: []string{"walnut"},
+		}
+
+		collection := []catalog.Repo{
+			{
+				Id:          "name-of-project",
+				Description: "blah blah blah",
+				Features:    []string{"WALNUT"},
+				Url:         "url.git",
+				Ref:         "main",
+			},
+			{
+				Id:          "name-of-other-project",
+				Description: "blah blah blah",
+				Features:    []string{"almond"},
+				Url:         "url.git",
+				Ref:         "main",
+			},
+		}
+
+		got := catalog.FilterTemplateRepos(flags, collection)
+
+		want := []catalog.Repo{
+			{
+				Id:          "name-of-project",
+				Description: "blah blah blah",
+				Features:    []string{"WALNUT"},
+				Url:         "url.git",
+				Ref:         "main",
+			},
+		}
+
+		assert.Equal(t, want, got)
+	})
+}
+
 func TestListRepos(t *testing.T) {
 	t.Run("parses valid JSON successfully", func(t *testing.T) {
 		jsonData := []byte(`[
