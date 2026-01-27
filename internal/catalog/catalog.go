@@ -5,10 +5,20 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
 //go:embed data/templates.json
 var TemplatesJSON []byte
+
+type TemplateFilters struct {
+	Target   string
+	Features []string
+}
 
 type Repo struct {
 	Id          string   `json:"id"`
@@ -20,6 +30,57 @@ type Repo struct {
 
 func GetTemplateRepo(id string) (*Repo, error) {
 	return GetRepo(id, TemplatesJSON)
+}
+
+func FilterTemplateRepos(flags TemplateFilters, repos []Repo) []Repo {
+	targetMode := false
+
+	if flags.Target != "" {
+		conn := health.NewConnection(flags.Target, ssh.ExecSSH)
+		targetStatus := conn.Probe()
+		flags.Features = health.ExtractArmFeatures(targetStatus)
+		targetMode = true
+	}
+
+	var filtered []Repo
+	for _, repo := range repos {
+		if supportsFeatures(flags.Features, repo, targetMode) {
+			filtered = append(filtered, repo)
+		}
+	}
+	return filtered
+}
+
+func supportsFeatures(features []string, repo Repo, targetMode bool) bool {
+	if len(features) == 0 && !targetMode {
+		return true
+	}
+
+	lowerRequested := make([]string, len(features))
+	for i, f := range features {
+		lowerRequested[i] = strings.ToLower(f)
+	}
+
+	lowerRepo := make([]string, len(repo.Features))
+	for i, f := range repo.Features {
+		lowerRepo[i] = strings.ToLower(f)
+	}
+
+	if targetMode {
+		for _, feature := range lowerRepo {
+			if !slices.Contains(lowerRequested, feature) {
+				return false
+			}
+		}
+		return true
+	}
+
+	for _, requested := range lowerRequested {
+		if !slices.Contains(lowerRepo, requested) {
+			return false
+		}
+	}
+	return true
 }
 
 func ParseRepos(b []byte) ([]Repo, error) {

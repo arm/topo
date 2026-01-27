@@ -8,7 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var templatesOutput string
+var (
+	templateFilters catalog.TemplateFilters
+	templatesOutput string
+)
 
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
@@ -20,17 +23,34 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
+		if templateFilters.Target != "" {
+			target, err := resolveTarget(templateFilters.Target)
+			if err != nil {
+				return err
+			}
+			templateFilters.Target = target
+		}
+
 		repos, err := catalog.ParseRepos(catalog.TemplatesJSON)
 		if err != nil {
 			return err
 		}
 
+		repos = catalog.FilterTemplateRepos(templateFilters, repos)
 		printer := output.NewPrinter(os.Stdout, outputFormat)
 		return output.PrintTemplateRepos(printer, repos)
 	},
 }
 
 func init() {
+	addTargetFlag(templatesCmd, &templateFilters.Target)
 	addOutputFlag(templatesCmd, &templatesOutput)
+	templatesCmd.Flags().StringSliceVar(
+		&templateFilters.Features,
+		"feature",
+		[]string{},
+		"Only show templates that use the indicated arm feature (NEON, SVE, SME, SVE2, SME2)",
+	)
+	templatesCmd.MarkFlagsMutuallyExclusive("target", "feature")
 	rootCmd.AddCommand(templatesCmd)
 }
