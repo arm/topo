@@ -14,9 +14,6 @@ RUN echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
     echo "    AllowTcpForwarding yes" >> /etc/ssh/sshd_config && \
     echo "    DisableForwarding no" >> /etc/ssh/sshd_config
 
-RUN mkdir -p /etc/docker && \
-    echo "{ \"features\": { \"containerd-snapshotter\": true, \"cdi\": true } }" > /etc/docker/daemon.json
-
 RUN passwd -d root
 RUN ssh-keygen -A
 

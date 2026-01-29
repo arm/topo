@@ -13,6 +13,8 @@ import (
 
 const TargetContainerHost = "root@localhost"
 
+const TargetContainerImage = "topo-e2e-target:latest"
+
 type TargetContainer struct {
 	SSHConnectionString string
 	ContainerName       string
@@ -31,7 +33,7 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 		deleteContainer(containerName)
 	})
 
-	if err := createTargetContainer(containerName); err != nil {
+	if err := createTargetContainer(t, containerName); err != nil {
 		t.Fatalf("failed to create vm: %v", err)
 	}
 
@@ -53,9 +55,23 @@ func generateTargetContainerName(t *testing.T) string {
 	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
 }
 
-func createTargetContainer(containerName string) error {
+func requireImageExists(t *testing.T, imageName string) {
+	t.Helper()
+	cmd := exec.Command("docker", "images", "-q", imageName)
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("failed to check for docker image %s: %v", imageName, err)
+	}
+	if len(strings.TrimSpace(string(output))) == 0 {
+		t.Skipf("required docker image %s not found. Please build it before running the tests.", imageName)
+	}
+}
+
+func createTargetContainer(t *testing.T, containerName string) error {
+	t.Helper()
+	requireImageExists(t, TargetContainerImage)
 	deleteContainer(containerName)
-	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", "topo-e2e-target:latest")
+	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", TargetContainerImage)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
