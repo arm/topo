@@ -70,7 +70,7 @@ func getTemplate(printer *Printer, name string, tplText string) *template.Templa
 		"yellow": func(s string) string { return s },
 	}
 
-	if isTTY(printer.Target) {
+	if IsTTY(printer.Target) {
 		funcs["cyan"] = func(s string) string { return colour(cyan, s) }
 		funcs["blue"] = func(s string) string { return colour(blue, s) }
 		funcs["yellow"] = func(s string) string { return colour(yellow, s) }
@@ -83,7 +83,7 @@ func getTemplate(printer *Printer, name string, tplText string) *template.Templa
 	)
 }
 
-func isTTY(w io.Writer) bool {
+func IsTTY(w io.Writer) bool {
 	f, ok := w.(*os.File)
 	if !ok {
 		return false
