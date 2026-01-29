@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/catalog"
@@ -364,5 +365,26 @@ func TestPrintHealthReport(t *testing.T) {
 
 			assert.JSONEq(t, want, buf.String())
 		})
+	})
+}
+
+func TestIsTTY(t *testing.T) {
+	t.Run("returns false for a pipe", func(t *testing.T) {
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, r.Close())
+		}()
+		defer func() {
+			require.NoError(t, w.Close())
+		}()
+
+		assert.False(t, output.IsTTY(w))
+	})
+
+	t.Run("stdout returns a boolean", func(t *testing.T) {
+		got := output.IsTTY(os.Stdout)
+
+		assert.IsType(t, true, got)
 	})
 }

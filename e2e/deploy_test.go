@@ -84,7 +84,7 @@ func requireExtend(t *testing.T, topo, projectDir, composeFile, customName strin
 	templateDir, err := filepath.Abs("testdata/services/hello-server")
 	require.NoError(t, err)
 	extendCmd := exec.Command(topo, "extend", composeFile,
-		fmt.Sprintf("dir:%s", templateDir), "--no-prompt", "--",
+		fmt.Sprintf("dir:%s", templateDir), "--",
 		fmt.Sprintf("NAME=%s", customName))
 	extendCmd.Dir = projectDir
 

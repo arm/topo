@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
+	"github.com/arm-debug/topo-cli/internal/output"
 	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/spf13/cobra"
@@ -57,7 +58,9 @@ Some projects require build arguments. Supply them on the command line or answer
 			}
 			providers = append(providers, cliProvider)
 		}
-		providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
+		if output.IsTTY(os.Stdout) && output.IsTTY(os.Stdin) {
+			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
+		}
 
 		argProvider := arguments.NewStrictProviderChain(providers...)
 

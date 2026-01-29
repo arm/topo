@@ -4,12 +4,11 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
+	"github.com/arm-debug/topo-cli/internal/output"
 	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/spf13/cobra"
 )
-
-var extendNoPrompt bool
 
 var extendCmd = &cobra.Command{
 	Use:   "extend <compose-filepath> <source> [flags] [-- ARG=VALUE ...]",
@@ -42,8 +41,6 @@ or interactively when prompted:
   topo extend compose.yaml git:url
   # Provide args explicitly
   topo extend compose.yaml git:url -- GREETING="Hello" PORT=8080
-  # Don't prompt, raise an error if required args are missing
-  topo extend compose.yaml git:url --no-prompt
 `,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -68,7 +65,7 @@ or interactively when prompted:
 			}
 			providers = append(providers, cliProvider)
 		}
-		if !extendNoPrompt {
+		if output.IsTTY(os.Stdout) && output.IsTTY(os.Stdin) {
 			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
 		}
 
@@ -79,6 +76,5 @@ or interactively when prompted:
 }
 
 func init() {
-	extendCmd.Flags().BoolVar(&extendNoPrompt, "no-prompt", false, "Error if required arguments are missing instead of prompting")
 	rootCmd.AddCommand(extendCmd)
 }
