@@ -1,8 +1,10 @@
 package operation
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
 	"github.com/arm-debug/topo-cli/internal/deploy/operation"
@@ -11,24 +13,45 @@ import (
 
 const (
 	RegistryContainerName = "topo-registry"
+	DefaultRegistryPort   = "12737"
 	registryImage         = "registry:2"
 )
 
-func NewRunRegistry() operation.Sequence {
+func NewRunRegistry(port string) operation.Sequence {
 	return operation.NewSequence(
 		NewDockerPull(ssh.PlainLocalhost, registryImage),
 		operation.NewConditional(
 			NewContainerExistsPredicate(ssh.PlainLocalhost, RegistryContainerName),
 			NewDockerStart(ssh.PlainLocalhost, RegistryContainerName),
-			NewDockerRun(ssh.PlainLocalhost, registryImage, RegistryContainerName,
+			NewRegistryRunWrapper(NewDockerRun(ssh.PlainLocalhost, registryImage, RegistryContainerName,
 				[]string{
 					"-d",
 					"--restart", "always",
-					"-p", fmt.Sprintf("127.0.0.1:%d:5000", ssh.RegistryPort),
+					"-p", fmt.Sprintf("127.0.0.1:%s:5000", port),
 				},
-			),
+			)),
 		),
 	)
+}
+
+type RegistryRunWrapper struct {
+	*Docker
+}
+
+func NewRegistryRunWrapper(d *Docker) *RegistryRunWrapper {
+	return &RegistryRunWrapper{Docker: d}
+}
+
+func (r *RegistryRunWrapper) Run(w io.Writer) error {
+	var buf bytes.Buffer
+	combined := io.MultiWriter(w, &buf)
+	if err := r.Docker.Run(combined); err != nil {
+		if strings.Contains(buf.String(), "already in use") || strings.Contains(buf.String(), "already allocated") {
+			return fmt.Errorf("%w\nport is already in use, this could be an existing %s or another process", err, RegistryContainerName)
+		}
+		return err
+	}
+	return nil
 }
 
 type ContainerExistsPredicate struct {

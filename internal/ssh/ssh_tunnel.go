@@ -11,8 +11,6 @@ import (
 	"strings"
 )
 
-const RegistryPort = 12737 // Not 5000 to try to avoid conflicts with the user.
-
 func ControlSocketPath(targetHost string) string {
 	hash := sha256.Sum256([]byte(targetHost))
 	hostHash := fmt.Sprintf("%x", hash[:8]) // Hash to avoid filepath limits
@@ -37,20 +35,21 @@ func splitHostPort(raw string) (host, port string) {
 	return raw, ""
 }
 
-func NewSSHTunnel(targetHost Host) (*SSHTunnelStart, *SSHTunnelStop) {
-	return &SSHTunnelStart{TargetHost: targetHost}, &SSHTunnelStop{TargetHost: targetHost}
+func NewSSHTunnel(targetHost Host, port string) (*SSHTunnelStart, *SSHTunnelStop) {
+	return &SSHTunnelStart{TargetHost: targetHost, Port: port}, &SSHTunnelStop{TargetHost: targetHost}
 }
 
 type SSHTunnelStart struct {
 	TargetHost Host
+	Port       string
 }
 
 func (s *SSHTunnelStart) Description() string {
 	return "Open registry SSH tunnel"
 }
 
-func NewSSHTunnelStart(targetHost Host) *SSHTunnelStart {
-	return &SSHTunnelStart{TargetHost: targetHost}
+func NewSSHTunnelStart(targetHost Host, port string) *SSHTunnelStart {
+	return &SSHTunnelStart{TargetHost: targetHost, Port: port}
 }
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
@@ -61,7 +60,7 @@ func (s *SSHTunnelStart) Command() *exec.Cmd {
 	}
 	args = append(args,
 		"-S", ControlSocketPath(string(s.TargetHost)),
-		"-R", fmt.Sprintf("%d:localhost:%d", RegistryPort, RegistryPort),
+		"-R", fmt.Sprintf("%s:localhost:%s", s.Port, s.Port),
 		host,
 	)
 	return exec.Command(args[0], args[1:]...)

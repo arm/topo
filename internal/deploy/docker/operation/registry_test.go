@@ -16,20 +16,22 @@ import (
 
 func TestNewRunRegistry(t *testing.T) {
 	t.Run("returns expected sequence", func(t *testing.T) {
-		got := operation.NewRunRegistry()
+		port := operation.DefaultRegistryPort
+
+		got := operation.NewRunRegistry(port)
 
 		want := op.NewSequence(
 			operation.NewDockerPull(ssh.PlainLocalhost, "registry:2"),
 			op.NewConditional(
 				operation.NewContainerExistsPredicate(ssh.PlainLocalhost, operation.RegistryContainerName),
 				operation.NewDockerStart(ssh.PlainLocalhost, operation.RegistryContainerName),
-				operation.NewDockerRun(ssh.PlainLocalhost, "registry:2", operation.RegistryContainerName,
+				operation.NewRegistryRunWrapper(operation.NewDockerRun(ssh.PlainLocalhost, "registry:2", operation.RegistryContainerName,
 					[]string{
 						"-d",
 						"--restart", "always",
-						"-p", fmt.Sprintf("127.0.0.1:%d:5000", ssh.RegistryPort),
+						"-p", fmt.Sprintf("127.0.0.1:%s:5000", port),
 					},
-				),
+				)),
 			),
 		)
 		assert.Equal(t, want, got)

@@ -35,7 +35,8 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteHost := ssh.Host("user@remote")
-		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false}
+		port := operation.DefaultRegistryPort
+		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false, Port: port}
 		upArgs := operation.DockerComposeUpArgs{
 			ForceRecreate: opts.ForceRecreate,
 		}
@@ -45,10 +46,10 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 		}
-		want = append(want, operation.NewRunRegistry()...)
+		want = append(want, operation.NewRunRegistry(port)...)
 		want = append(want,
-			ssh.NewSSHTunnelStart(remoteHost),
-			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
+			ssh.NewSSHTunnelStart(remoteHost, port),
+			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
 			ssh.NewSSHTunnelStop(remoteHost),
 			operation.NewDockerComposeRun(composeFile, remoteHost, upArgs),
 		)

@@ -19,7 +19,7 @@ import (
 func TestRegistryTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
-			transfer := operation.NewRegistryTransfer("any.yaml", ssh.PlainLocalhost, ssh.PlainLocalhost)
+			transfer := operation.NewRegistryTransfer("any.yaml", ssh.PlainLocalhost, ssh.PlainLocalhost, operation.DefaultRegistryPort)
 
 			got := transfer.Description()
 
@@ -32,6 +32,7 @@ func TestRegistryTransfer(t *testing.T) {
 			testutil.RequireDocker(t)
 			var buf bytes.Buffer
 			h := ssh.PlainLocalhost
+			port := operation.DefaultRegistryPort
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			composeFileContent := `
@@ -42,15 +43,15 @@ services:
     image: nginx:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewRegistryTransfer(composeFilePath, h, ssh.Host("user@remote"))
+			transfer := operation.NewRegistryTransfer(composeFilePath, h, ssh.Host("user@remote"), port)
 
 			err := transfer.DryRun(&buf)
 
 			require.NoError(t, err)
 			got := buf.String()
 
-			alpineTag := fmt.Sprintf("localhost:%d/alpine:latest", ssh.RegistryPort)
-			nginxTag := fmt.Sprintf("localhost:%d/nginx:latest", ssh.RegistryPort)
+			alpineTag := fmt.Sprintf("localhost:%s/alpine:latest", port)
+			nginxTag := fmt.Sprintf("localhost:%s/nginx:latest", port)
 
 			expected := strings.TrimSpace(fmt.Sprintf(`
 docker tag alpine:latest %[1]s
@@ -71,6 +72,7 @@ docker -H ssh://user@remote tag %[2]s nginx:latest
 		t.Run("it transfers images via registry", func(t *testing.T) {
 			testutil.RequireLinuxDockerEngine(t)
 			h := ssh.PlainLocalhost
+			port := operation.DefaultRegistryPort
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
@@ -95,7 +97,7 @@ services:
 				t.Logf("registry container cleanup (expected if not running): %s", string(rmOut))
 			}
 
-			startReg := command.Docker(h, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", ssh.RegistryPort), "--name", operation.RegistryContainerName, "registry:2")
+			startReg := command.Docker(h, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", port), "--name", operation.RegistryContainerName, "registry:2")
 			startOut, err := startReg.CombinedOutput()
 			require.NoError(t, err, "could not start registry for test: %s", string(startOut))
 			t.Cleanup(func() {
@@ -103,7 +105,7 @@ services:
 				_ = rmReg.Run()
 			})
 
-			transfer := operation.NewRegistryTransfer(composeFilePath, h, h)
+			transfer := operation.NewRegistryTransfer(composeFilePath, h, h, port)
 			err = transfer.Run(os.Stdout)
 			require.NoError(t, err)
 			testutil.RequireImageExists(t, h, imageName)

@@ -11,6 +11,7 @@ type DeployOptions struct {
 	WithRegistry  bool
 	TargetHost    ssh.Host
 	NoRecreate    bool
+	Port          string
 }
 
 func SupportsRegistry(noRegistry bool, targetHost ssh.Host, goos string) bool {
@@ -34,11 +35,11 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 	var cleanup goperation.Operation
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.WithRegistry {
-			start, stop := ssh.NewSSHTunnel(opts.TargetHost)
+			start, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.Port)
 			cleanup = stop
-			ops = append(ops, operation.NewRunRegistry()...)
+			ops = append(ops, operation.NewRunRegistry(opts.Port)...)
 			ops = append(ops, start)
-			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, opts.TargetHost))
+			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, opts.TargetHost, opts.Port))
 			ops = append(ops, stop)
 		} else {
 			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, opts.TargetHost))
