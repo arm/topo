@@ -78,41 +78,63 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
 
-      - name: Configure Artifactory proxy
-        id: artifactory-proxy
-        uses: Arm-Debug/artifactory-proxy-action@v2
+      - name: Upload all archive artifacts
+        uses: actions/upload-artifact@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: topo-cli-v${{ steps.version.outputs.version }}-archives
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
 
-      - name: Publish archives to Artifactory
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          upload_base="${ARTIFACTORY_HOST}/artifactory/topo-cli/${RELEASE_VERSION}"
+      - name: Upload unsigned macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: topo-cli-v${{ steps.version.outputs.version }}-macos-unsigned
+          path: dist/topo_darwin_arm64_*/topo
 
-          archives=(dist/*.tar.gz dist/*.zip)
-          if [ ${#archives[@]} -eq 0 ]; then
-            echo "::error::No archives found in dist/"
-            exit 1
-          fi
+      - name: Create GitHub App token for signer
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
+          private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
+          owner: Arm-debug
+          repositories: signer
 
-          checksum_file="dist/checksums.txt"
-          if [ ! -f "$checksum_file" ]; then
-            echo "::error::Expected $checksum_file to exist"
-            exit 1
-          fi
-
-          artifacts_to_upload=("${archives[@]}" "$checksum_file")
-
-          for file in "${artifacts_to_upload[@]}"; do
-            artifact_name=$(basename "$file")
-            remote_path="${upload_base}/${artifact_name}"
-            echo "Uploading $file to $remote_path"
-            curl -u "${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}" \
-              -X PUT "$remote_path" -T "$file" --fail-with-body
-          done
+      - name: Trigger signer workflow
         env:
-          ARTIFACTORY_HOST: ${{ steps.artifactory-proxy.outputs.artifactory-host }}
-          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
-          ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_PASSWORD }}
-          RELEASE_VERSION: v${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: Arm-debug
+          REPO: signer
+          WORKFLOW_FILE: sign-and-post-macos.yml
+          REF: main
+          UPSTREAM_RUN_ID: ${{ github.run_id }}
+        run: |
+          gh workflow run "$WORKFLOW_FILE" \
+            --repo "$OWNER/$REPO" \
+            --ref "$REF" \
+            -f "run-id=$UPSTREAM_RUN_ID" \
+            -f "artifact=topo-cli-v${{ steps.version.outputs.version }}-macos-unsigned" \
+            -f "release-version=${{ steps.version.outputs.version }}" \
+            -f "repo-name=topo-cli" \
+            -f "org-name=Arm-Debug" \
+            -f "binary-name=topo" \
+
+      - name: Trigger upload archives to artifactory workflow
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: Arm-debug
+          REPO: signer
+          WORKFLOW_FILE: upload_archives_to_artifactory.yml
+          REF: main
+          UPSTREAM_RUN_ID: ${{ github.run_id }}
+        run: |
+          gh workflow run "$WORKFLOW_FILE" \
+            --repo "$OWNER/$REPO" \
+            --ref "$REF" \
+            -f "run-id=$UPSTREAM_RUN_ID" \
+            -f "release-version=${{ steps.version.outputs.version }}" \
+            -f "archive-name=topo-cli-v${{ steps.version.outputs.version }}-archives" \
+            -f "repo-name=topo-cli" \
+            -f "org-name=Arm-Debug" \
