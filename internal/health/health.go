@@ -74,7 +74,7 @@ func generateHostReport(statuses []DependencyStatus) HostReport {
 
 func generateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
-	report.IsLocalhost = ssh.Host(targetStatus.SSHTarget).IsPlainLocalhost()
+	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
 	report.Connectivity = HealthCheck{
 		Name:    "Connected",
 		Healthy: targetStatus.ConnectionError == nil,
