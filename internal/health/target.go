@@ -23,7 +23,7 @@ func (hw HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
 }
 
 type Status struct {
-	SSHTarget       string
+	SSHTarget       ssh.Host
 	ConnectionError error
 	Dependencies    []DependencyStatus
 	Hardware        HardwareProfile
@@ -55,7 +55,7 @@ func (c *Connection) BinaryExists(bin string) (bool, error) {
 
 func (c *Connection) Probe() Status {
 	var targetStatus Status
-	targetStatus.SSHTarget = string(c.sshTarget)
+	targetStatus.SSHTarget = c.sshTarget
 
 	if err := c.ProbeConnection(); err != nil {
 		targetStatus.ConnectionError = err
