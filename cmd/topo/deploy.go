@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
+	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 
 	"github.com/spf13/cobra"
@@ -57,16 +58,12 @@ Use --dry-run to see what commands would be executed without actually running th
 			_, _ = fmt.Fprintln(os.Stderr, "WARN: Registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
 		}
 
-		deployment := docker.NewDeployment(composeFile, deployOpts)
+		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
+		stop := goperation.SetupExitCleanup(cleanup, os.Stderr, os.Exit)
+		defer stop()
 
 		if deployDryRun {
 			return deployment.DryRun(os.Stdout)
-		}
-
-		if deployOpts.WithRegistry {
-			cancel, cleanup := ssh.SetupTunnelCleanup(targetHost, os.Stdout)
-			defer cleanup()
-			defer cancel()
 		}
 		return deployment.Run(os.Stdout)
 	},

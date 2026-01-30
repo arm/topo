@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -28,6 +29,13 @@ func RequireLinuxDockerEngine(t testing.TB) {
 	require.NoError(t, err, "failed to get docker info")
 	if strings.TrimSpace(string(output)) != "linux" {
 		t.Skip("skipping test that requires linux docker engine")
+	}
+}
+
+func RequirePosix(t testing.TB) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test that requires POSIX OS")
 	}
 }
 

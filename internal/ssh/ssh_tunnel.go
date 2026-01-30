@@ -7,11 +7,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync"
-	"syscall"
 )
 
 const RegistryPort = 12737 // Not 5000 to try to avoid conflicts with the user.
@@ -38,6 +35,10 @@ func splitHostPort(raw string) (host, port string) {
 		return userPart + host, port
 	}
 	return raw, ""
+}
+
+func NewSSHTunnel(targetHost Host) (*SSHTunnelStart, *SSHTunnelStop) {
+	return &SSHTunnelStart{TargetHost: targetHost}, &SSHTunnelStop{TargetHost: targetHost}
 }
 
 type SSHTunnelStart struct {
@@ -124,37 +125,4 @@ func (s *SSHTunnelStop) Run(w io.Writer) error {
 func (s *SSHTunnelStop) DryRun(w io.Writer) error {
 	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
 	return nil
-}
-
-func CloseTunnel(targetHost Host, w io.Writer) {
-	if err := NewSSHTunnelStop(targetHost).Run(w); err != nil {
-		_, _ = fmt.Fprintf(w, "Warning: failed to close SSH tunnel to %s: %v\n", targetHost, err)
-	}
-}
-
-// Sets up signal handling to ensure the SSH tunnel is properly closed
-// on interrupt or termination. Returns a cancel function to stop signal handling and a
-// cleanup function to close the tunnel.
-func SetupTunnelCleanup(targetHost Host, w io.Writer) (cancel func(), cleanup func()) {
-	var closeOnce sync.Once
-	closeTunnelOnce := func() {
-		closeOnce.Do(func() {
-			CloseTunnel(targetHost, w)
-		})
-	}
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		sig, ok := <-sigChan
-		if !ok || sig == nil {
-			return
-		}
-		closeTunnelOnce()
-		os.Exit(1)
-	}()
-	cancel = func() {
-		signal.Stop(sigChan)
-		close(sigChan)
-	}
-	return cancel, closeTunnelOnce
 }
