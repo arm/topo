@@ -32,10 +32,10 @@ func RequireLinuxDockerEngine(t testing.TB) {
 	}
 }
 
-func RequirePosix(t testing.TB) {
+func RequireOS(t testing.TB, os string) {
 	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping test that requires POSIX OS")
+	if runtime.GOOS != os {
+		t.Skipf("skipping test that requires %s", os)
 	}
 }
 

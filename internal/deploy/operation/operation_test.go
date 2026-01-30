@@ -15,7 +15,7 @@ func osExit(code int) {}
 
 func TestSetupExitCleanup(t *testing.T) {
 	t.Run("calls cleanup operation on interrupt signal", func(t *testing.T) {
-		testutil.RequirePosix(t)
+		testutil.RequireOS(t, "linux")
 		cleanupOp := new(mockOperation)
 		var buf bytes.Buffer
 		cleanupOp.On("Run", &buf).Return(nil)
@@ -44,7 +44,7 @@ func TestSetupExitCleanup(t *testing.T) {
 	})
 
 	t.Run("still handles signal when operation is nil", func(t *testing.T) {
-		testutil.RequirePosix(t)
+		testutil.RequireOS(t, "linux")
 		var buf bytes.Buffer
 		operation.SetupExitCleanup(nil, &buf, osExit)
 		p, err := os.FindProcess(os.Getpid())

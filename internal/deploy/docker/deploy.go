@@ -7,15 +7,20 @@ import (
 )
 
 type DeployOptions struct {
-	ForceRecreate bool
-	WithRegistry  bool
-	TargetHost    ssh.Host
-	NoRecreate    bool
-	Port          string
+	ForceRecreate        bool
+	WithRegistry         bool
+	TargetHost           ssh.Host
+	NoRecreate           bool
+	Port                 string
+	UseSSHControlSockets bool
 }
 
-func SupportsRegistry(noRegistry bool, targetHost ssh.Host, goos string) bool {
-	return !noRegistry && !targetHost.IsPlainLocalhost() && goos != "windows"
+func SupportsRegistry(noRegistry bool, targetHost ssh.Host) bool {
+	return !noRegistry && !targetHost.IsPlainLocalhost()
+}
+
+func SupportsSSHControlSockets(goos string) bool {
+	return goos != "windows"
 }
 
 func NewDeploymentStop(composeFile string, targetHost ssh.Host) goperation.Sequence {
@@ -35,7 +40,7 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 	var cleanup goperation.Operation
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.WithRegistry {
-			start, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.Port)
+			start, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.Port, opts.UseSSHControlSockets)
 			cleanup = stop
 			ops = append(ops, operation.NewRunRegistry(opts.Port)...)
 			ops = append(ops, start)

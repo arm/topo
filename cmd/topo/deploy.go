@@ -71,7 +71,8 @@ Use --dry-run to see what commands would be executed without actually running th
 		deployOpts.Port = resolvedPort
 
 		goos := runtime.GOOS
-		deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, targetHost, goos)
+		deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, targetHost)
+		deployOpts.UseSSHControlSockets = docker.SupportsSSHControlSockets(goos)
 
 		if !deployOpts.WithRegistry {
 			_, _ = fmt.Fprintln(os.Stderr, "WARN: Registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
