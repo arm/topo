@@ -67,10 +67,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
-          ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
           # Keep WSL running
           wsl --exec dbus-launch true
+          #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
+          ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
 
       - name: Checkout repository
         uses: actions/checkout@v6
