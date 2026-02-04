@@ -10,16 +10,18 @@ import (
 	"github.com/arm-debug/topo-cli/internal/deploy/docker"
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
 	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
+	checks "github.com/arm-debug/topo-cli/internal/deploy/project_checks"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	deployTarget string
-	deployDryRun bool
-	noRegistry   bool
-	port         string
+	deployTarget      string
+	deployDryRun      bool
+	noRegistry        bool
+	port              string
+	skipProjectChecks bool
 )
 
 var deployOpts docker.DeployOptions
@@ -69,6 +71,12 @@ Use --dry-run to see what commands would be executed without actually running th
 		targetHost := ssh.Host(resolvedTarget)
 		deployOpts.TargetHost = targetHost
 		deployOpts.Port = resolvedPort
+
+		if !skipProjectChecks {
+			if err := checks.EnsureProjectIsLinuxArm64Ready(composeFile); err != nil {
+				return err
+			}
+		}
 
 		goos := runtime.GOOS
 		deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, targetHost)
@@ -129,6 +137,7 @@ func init() {
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().BoolVar(&deployOpts.ForceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
 	deployCmd.Flags().BoolVar(&deployOpts.NoRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
+	deployCmd.Flags().BoolVar(&skipProjectChecks, "skip-project-checks", false, "Skip project compatibility checks for the target platform")
 	deployCmd.MarkFlagsMutuallyExclusive("force-recreate", "no-recreate")
 	rootCmd.AddCommand(deployCmd)
 }

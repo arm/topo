@@ -94,7 +94,7 @@ func requireExtend(t *testing.T, topo, projectDir, composeFile, customName strin
 }
 
 func requireDeploy(t *testing.T, topo, projectDir, sshTarget string, extraArgs ...string) {
-	args := []string{"deploy", "--target", sshTarget}
+	args := []string{"deploy", "--target", sshTarget, "--skip-project-checks"}
 	args = append(args, extraArgs...)
 
 	deployCmd := exec.Command(topo, args...)
