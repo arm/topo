@@ -4,7 +4,8 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/catalog"
-	"github.com/arm-debug/topo-cli/internal/output"
+	"github.com/arm-debug/topo-cli/internal/output/printable"
+	"github.com/arm-debug/topo-cli/internal/output/templates"
 	"github.com/spf13/cobra"
 )
 
@@ -37,8 +38,7 @@ var templatesCmd = &cobra.Command{
 		}
 
 		repos = catalog.FilterTemplateRepos(templateFilters, repos)
-		printer := output.NewPrinter(os.Stdout, outputFormat)
-		return output.PrintTemplateRepos(printer, repos)
+		return printable.Print(templates.RepoCollection(repos), os.Stdout, outputFormat)
 	},
 }
 

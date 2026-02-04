@@ -4,7 +4,8 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/install"
-	"github.com/arm-debug/topo-cli/internal/output"
+	"github.com/arm-debug/topo-cli/internal/output/printable"
+	"github.com/arm-debug/topo-cli/internal/output/templates"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/spf13/cobra"
 )
@@ -44,9 +45,11 @@ Falls back to ~/bin if no suitable locations are automatically found.
 		if err != nil {
 			return err
 		}
-		printer := output.NewPrinter(os.Stdout, outputFormat)
-
-		return installRemoteprocRuntime(ssh.Host(sshTarget), printer)
+		p, err := installRemoteprocRuntime(ssh.Host(sshTarget))
+		if err != nil {
+			return err
+		}
+		return printable.Print(p, os.Stdout, outputFormat)
 	},
 }
 
@@ -57,11 +60,10 @@ func init() {
 	addOutputFlag(installRemoteprocCmd, &installRemoteprocOutput)
 }
 
-func installRemoteprocRuntime(targetHost ssh.Host, printer *output.Printer) error {
+func installRemoteprocRuntime(targetHost ssh.Host) (printable.Printable, error) {
 	results, err := install.InstallBinariesFromGithubRelease(targetHost, remoteprocRepoURL, []string{"remoteproc-runtime", "containerd-shim-remoteproc-v1"})
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	return output.PrintInstallResults(printer, results)
+	return templates.InstallResults(results), nil
 }

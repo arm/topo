@@ -1,15 +1,13 @@
-package output
+package templates
 
 import (
 	"bytes"
 	"encoding/json"
 	"html/template"
-	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/install"
 )
 
-// InstallResults wraps multiple install results and implements printable.
 type InstallResults []install.InstallResult
 
 const installTemplate = `
@@ -30,37 +28,21 @@ No binaries installed
 {{- end -}}
 `
 
-func getInstallTemplate() *template.Template {
-	funcs := template.FuncMap{
-		"join": strings.Join,
-		"pathWarnings": func(results InstallResults) map[string][]string {
-			warnings := make(map[string][]string)
-			for _, res := range results {
-				if !res.Location.OnPath {
-					warnings[res.Location.Path] = append(warnings[res.Location.Path], res.Binary)
-				}
-			}
-			return warnings
-		},
-	}
-
-	return template.Must(
-		template.New("installTemplate").
-			Funcs(funcs).
-			Parse(installTemplate),
-	)
-}
-
-func PrintInstallResults(printer *Printer, results InstallResults) error {
-	currentTemplate = getInstallTemplate()
-	return printer.Print(results)
-}
-
-func (r InstallResults) AsPlain() (string, error) {
-	var buf bytes.Buffer
-	if err := currentTemplate.Execute(&buf, r); err != nil {
+func (r InstallResults) AsPlain(isTTY bool) (string, error) {
+	funcMap := getFuncMap(isTTY)
+	funcMap["pathWarnings"] = pathWarnings
+	tmpl, err := template.
+		New("InstallResults").
+		Funcs(funcMap).
+		Parse(installTemplate)
+	if err != nil {
 		return "", err
 	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, r); err != nil {
+		return "", err
+	}
+
 	return buf.String(), nil
 }
 
@@ -85,4 +67,17 @@ func (r InstallResults) AsJSON() (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func pathWarnings(results []install.InstallResult) map[string][]string {
+	out := make(map[string][]string)
+
+	for _, res := range results {
+		if res.Location.OnPath {
+			continue
+		}
+		out[res.Location.Path] = append(out[res.Location.Path], res.Binary)
+	}
+
+	return out
 }

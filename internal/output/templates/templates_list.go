@@ -1,8 +1,9 @@
-package output
+package templates
 
 import (
 	"bytes"
 	"encoding/json"
+	"text/template"
 
 	"github.com/arm-debug/topo-cli/internal/catalog"
 )
@@ -35,11 +36,6 @@ const repoTemplate = `
 {{ end }}
 {{- end }}`
 
-func PrintTemplateRepos(printer *Printer, repos []catalog.Repo) error {
-	currentTemplate = getTemplate(printer, "repoTemplate", repoTemplate)
-	return printer.Print(RepoCollection(repos))
-}
-
 func (r RepoCollection) AsJSON() (string, error) {
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
@@ -48,9 +44,17 @@ func (r RepoCollection) AsJSON() (string, error) {
 	return string(b), nil
 }
 
-func (r RepoCollection) AsPlain() (string, error) {
+func (r RepoCollection) AsPlain(isTTY bool) (string, error) {
+	funcMap := getFuncMap(isTTY)
+	tmpl, err := template.
+		New("templatesList").
+		Funcs(funcMap).
+		Parse(repoTemplate)
+	if err != nil {
+		return "", err
+	}
 	var buf bytes.Buffer
-	if err := currentTemplate.ExecuteTemplate(&buf, "repoList", r); err != nil {
+	if err := tmpl.ExecuteTemplate(&buf, "repoList", r); err != nil {
 		return "", err
 	}
 
