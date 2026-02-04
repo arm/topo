@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
-	"github.com/arm-debug/topo-cli/internal/output"
+	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/spf13/cobra"
@@ -65,7 +65,7 @@ or interactively when prompted:
 			}
 			providers = append(providers, cliProvider)
 		}
-		if output.IsTTY(os.Stdout) && output.IsTTY(os.Stdin) {
+		if term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
 			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
 		}
 

@@ -4,7 +4,8 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/health"
-	"github.com/arm-debug/topo-cli/internal/output"
+	"github.com/arm-debug/topo-cli/internal/output/printable"
+	"github.com/arm-debug/topo-cli/internal/output/templates"
 	"github.com/spf13/cobra"
 )
 
@@ -27,12 +28,11 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		printer := output.NewPrinter(os.Stdout, outputFormat)
 		report, err := health.Check(sshTarget)
 		if err != nil {
 			return err
 		}
-		return output.PrintHealthReport(printer, report)
+		return printable.Print(templates.PrintableHealthReport(report), os.Stdout, outputFormat)
 	},
 }
 

@@ -1,14 +1,15 @@
-package output
+package templates
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"text/template"
 
 	"github.com/arm-debug/topo-cli/internal/health"
 )
 
-type Report health.Report
+type PrintableHealthReport health.Report
 
 const healthCheckTemplate = `
 {{- define "checkRow" -}}
@@ -34,21 +35,24 @@ Features (Linux Host): {{ join .Target.Features ", " }}
 {{- end }}
 `
 
-func PrintHealthReport(printer *Printer, report health.Report) error {
-	currentTemplate = getTemplate(printer, "healthTemplate", healthCheckTemplate)
-	return printer.Print(Report(report))
-}
-
-func (r Report) AsPlain() (string, error) {
+func (r PrintableHealthReport) AsPlain(isTTY bool) (string, error) {
+	funcMap := getFuncMap(isTTY)
+	tmpl, err := template.
+		New("healthcheck").
+		Funcs(funcMap).
+		Parse(healthCheckTemplate)
+	if err != nil {
+		return "", err
+	}
 	var buf bytes.Buffer
-	if err := currentTemplate.Execute(&buf, r); err != nil {
+	if err := tmpl.Execute(&buf, r); err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
 }
 
-func (r Report) AsJSON() (string, error) {
+func (r PrintableHealthReport) AsJSON() (string, error) {
 	if r.Host.Dependencies == nil {
 		r.Host.Dependencies = []health.HealthCheck{}
 	}

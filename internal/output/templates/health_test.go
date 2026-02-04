@@ -1,0 +1,178 @@
+package templates_test
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm-debug/topo-cli/internal/output/printable"
+	"github.com/arm-debug/topo-cli/internal/output/templates"
+	"github.com/arm-debug/topo-cli/internal/output/term"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestPrintHealthReport(t *testing.T) {
+	t.Run("PlainFormat", func(t *testing.T) {
+		t.Run("it renders the host dependencies", func(t *testing.T) {
+			report := health.Report{
+				Host: health.HostReport{
+					Dependencies: []health.HealthCheck{
+						{
+							Name:    "Flux Capacitor",
+							Healthy: true,
+						},
+					},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.Plain,
+			)
+			require.NoError(t, err)
+
+			assert.Contains(t, out.String(), "Flux Capacitor")
+			assert.Contains(t, out.String(), "✅")
+		})
+
+		t.Run("it renders connection failures", func(t *testing.T) {
+			report := health.Report{
+				Target: health.TargetReport{
+					Connectivity: health.HealthCheck{
+						Name:    "Connected",
+						Healthy: false,
+					},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.Plain,
+			)
+			require.NoError(t, err)
+
+			assert.Contains(t, out.String(), "Connected")
+			assert.Contains(t, out.String(), "❌")
+		})
+
+		t.Run("when connected it renders cpu features", func(t *testing.T) {
+			report := health.Report{
+				Target: health.TargetReport{
+					Connectivity: health.HealthCheck{
+						Name:    "Connected",
+						Healthy: true,
+					},
+					Features: []string{"FOO", "BAR"},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.Plain,
+			)
+			require.NoError(t, err)
+
+			assert.Contains(t, out.String(), "FOO, BAR")
+		})
+
+		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
+			report := health.Report{
+				Target: health.TargetReport{
+					Connectivity: health.HealthCheck{
+						Name:    "Connected",
+						Healthy: false,
+					},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.Plain,
+			)
+			require.NoError(t, err)
+
+			assert.NotContains(t, out.String(), "Features (Linux Host)")
+		})
+
+		t.Run("when localhost, it skips connectivity check and shows features", func(t *testing.T) {
+			report := health.Report{
+				Target: health.TargetReport{
+					IsLocalhost: true,
+					Features:    []string{"FOO", "BAR"},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.Plain,
+			)
+			require.NoError(t, err)
+
+			assert.NotContains(t, out.String(), "Connected")
+			assert.Contains(t, out.String(), "FOO, BAR")
+		})
+	})
+
+	t.Run("JSONFormat", func(t *testing.T) {
+		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
+			report := health.Report{
+				Host: health.HostReport{
+					Dependencies: []health.HealthCheck{
+						{
+							Name:    "Flux Capacitor",
+							Healthy: true,
+						},
+					},
+				},
+				Target: health.TargetReport{
+					Connectivity: health.HealthCheck{
+						Name:    "Connected",
+						Healthy: true,
+					},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.JSON,
+			)
+			require.NoError(t, err)
+
+			want := `{
+				"Host": {
+					"Dependencies": [
+						{"Name":"Flux Capacitor","Healthy":true,"Value":""}
+					]
+				},
+				"Target": {
+					"IsLocalhost": false,
+					"Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
+					"Dependencies": [],
+					"Features": [],
+					"SubsystemDriver": {"Name":"","Healthy":false,"Value":""}
+				}
+			}`
+
+			assert.JSONEq(t, want, out.String())
+		})
+	})
+}
