@@ -3,7 +3,6 @@ package project_test
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -287,7 +286,7 @@ func TestResolveAndApplyArgs(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
 		argProvider := arguments.NewStrictProviderChain()
 
-		err := project.ResolveAndApplyArgs(invalidPath, argProvider, io.Discard)
+		_, err := project.ResolveAndApplyArgs(invalidPath, argProvider)
 
 		require.ErrorContains(t, err, "can't read compose file")
 	})
@@ -315,7 +314,7 @@ x-topo:
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
 		argProvider := arguments.NewStrictProviderChain(provider)
 
-		err := project.ResolveAndApplyArgs(composeFilePath, argProvider, io.Discard)
+		_, err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
 		require.NoError(t, err)
 
 		want := `

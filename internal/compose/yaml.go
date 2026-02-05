@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,17 +27,24 @@ func ReadNode(composeFile io.Reader) (*yaml.Node, error) {
 	return doc, nil
 }
 
-func ApplyArgs(root *yaml.Node, toApply map[string]string, w io.Writer) error {
+func ApplyArgs(root *yaml.Node, toApply map[string]string) ([]logger.Entry, error) {
 	if len(toApply) == 0 {
-		return nil
+		return []logger.Entry{{
+			Level:   logger.Info,
+			Message: "no args to apply",
+		}}, nil
 	}
 
 	services := find(root, "services")
 	if services == nil {
-		return nil
+		return []logger.Entry{{
+			Level:   logger.Info,
+			Message: "no services to apply args",
+		}}, nil
 	}
 
 	used := make(map[string]bool, len(toApply))
+	var entries []logger.Entry
 
 	for i := 0; i < len(services.Content); i += 2 {
 		svc := services.Content[i+1]
@@ -55,19 +63,19 @@ func ApplyArgs(root *yaml.Node, toApply map[string]string, w io.Writer) error {
 		case yaml.SequenceNode:
 			applyArgsSequenceNode(args, toApply, used)
 		default:
-			return fmt.Errorf("unsupported YAML node kind for build.args: %v", args.Kind)
+			return nil, fmt.Errorf("unsupported YAML node kind for build.args: %v", args.Kind)
 		}
 	}
 
 	for argName := range toApply {
-		if !used[argName] && w != nil {
-			_, err := fmt.Fprintf(w, "warning: arg %q was resolved but not found in any service build args\n", argName)
-			if err != nil {
-				return err
-			}
+		if !used[argName] {
+			entries = append(entries, logger.Entry{
+				Level:   logger.Warning,
+				Message: fmt.Sprintf("arg %q was resolved but not found in any service build args", argName),
+			})
 		}
 	}
-	return nil
+	return entries, nil
 }
 
 func RemoveService(project *yaml.Node, serviceName string) error {
