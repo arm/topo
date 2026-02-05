@@ -104,7 +104,8 @@ x-topo:
 `, sourceName)
 		argProvider := arguments.NewStrictProviderChain()
 
-		require.NoError(t, project.Extend(targetProjectFile, mockSource, argProvider))
+		_, err := project.Extend(targetProjectFile, mockSource, argProvider)
+		require.NoError(t, err)
 
 		data, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err, "failed to read compose file")
@@ -132,7 +133,7 @@ services:
 		mockSource := mockTemplateSourceWithErrorOnCopy(t, template.DestDirExistsError{Dir: destDir}, sourceName)
 		provider := arguments.NewStrictProviderChain()
 
-		err := project.Extend(targetProjectFile, mockSource, provider)
+		_, err := project.Extend(targetProjectFile, mockSource, provider)
 
 		require.ErrorContains(t, err, "already exists", "expected error when directory exists")
 	})
@@ -153,7 +154,8 @@ x-topo:
 `, sourceName)
 		argProvider := arguments.NewStrictProviderChain()
 
-		require.NoError(t, project.Extend(targetProjectFile, mockSource, argProvider))
+		_, err := project.Extend(targetProjectFile, mockSource, argProvider)
+		require.NoError(t, err)
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
@@ -190,7 +192,8 @@ x-topo:
 `, sourceName)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
 
-		require.NoError(t, project.Extend(targetProjectFile, mockSource, provider))
+		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		require.NoError(t, err)
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
@@ -231,7 +234,8 @@ x-topo:
 `, sourceName)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
 
-		require.NoError(t, project.Extend(targetProjectFile, mockSource, provider))
+		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		require.NoError(t, err)
 
 		got, err := os.ReadFile(targetProjectFile)
 		require.NoError(t, err)
@@ -269,9 +273,8 @@ x-topo:
 `, sourceName)
 		provider := arguments.NewErrorProvider(errors.New("user cancelled"))
 
-		err := project.Extend(targetProjectFile, mockSource, provider)
+		_, err := project.Extend(targetProjectFile, mockSource, provider)
 
-		require.Error(t, err)
 		assert.EqualError(t, err, "user cancelled")
 		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), sourceName)
 		_, err = os.Stat(copiedTemplateDir)

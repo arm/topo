@@ -23,16 +23,18 @@ func NewLogger(stderr io.Writer, lf term.Format) *Logger {
 	}
 }
 
-func (c *Logger) Log(e logger.Entry) {
-	var output string
-	if c.logFormat == term.JSON {
-		b, _ := json.Marshal(e)
-		output = string(b)
-	} else {
-		output = fmt.Sprintf("%s: %s", e.Level, e.Message)
-		if c.enableColor {
-			output = term.Color(e.Level.Color(), output)
+func (c *Logger) Log(entries ...logger.Entry) {
+	for _, e := range entries {
+		var output string
+		if c.logFormat == term.JSON {
+			b, _ := json.Marshal(e)
+			output = string(b)
+		} else {
+			output = fmt.Sprintf("%s: %s", e.Level, e.Message)
+			if c.enableColor {
+				output = term.Color(e.Level.Color(), output)
+			}
 		}
+		_, _ = fmt.Fprintln(c.err, output)
 	}
-	_, _ = fmt.Fprintln(c.err, output)
 }

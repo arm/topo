@@ -9,6 +9,7 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
 	"github.com/arm-debug/topo-cli/internal/compose"
+	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/arm-debug/topo-cli/internal/template"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
@@ -47,21 +48,26 @@ func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider,
 	return applyArgs(composeFilePath, resolvedArgs, logOutput)
 }
 
-func Extend(targetComposeFile string, src template.Source, argProvider arguments.Provider) error {
+func Extend(targetComposeFile string, src template.Source, argProvider arguments.Provider) ([]logger.Entry, error) {
 	project, err := compose.ReadProject(targetComposeFile)
+	logs := []logger.Entry{}
+	logs = append(logs, logger.Entry{
+		Level:   logger.Warning,
+		Message: "reading project compose file",
+	})
 	if err != nil {
-		return fmt.Errorf("failed to read project: %w", err)
+		return logs, fmt.Errorf("failed to read project: %w", err)
 	}
 
 	absoluteTargetComposeFile, err := filepath.Abs(targetComposeFile)
 	if err != nil {
-		return fmt.Errorf("failed to get absolute path of target compose file: %w", err)
+		return logs, fmt.Errorf("failed to get absolute path of target compose file: %w", err)
 	}
 	currentDir := filepath.Dir(absoluteTargetComposeFile)
 
 	originalDirName, err := src.GetName()
 	if err != nil {
-		return fmt.Errorf("failed to get repo name from source: %w", err)
+		return logs, fmt.Errorf("failed to get repo name from source: %w", err)
 	}
 
 	copiedDirName := originalDirName
@@ -72,7 +78,7 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 			if os.IsNotExist(err) {
 				break
 			} else {
-				return fmt.Errorf("failed to check if directory exists: %w", err)
+				return logs, fmt.Errorf("failed to check if directory exists: %w", err)
 			}
 		}
 		copiedDirName = fmt.Sprintf("%s_%d", originalDirName, i)
@@ -87,33 +93,41 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		}
 	}()
 
+	logs = append(logs, logger.Entry{
+		Level:   logger.Info,
+		Message: fmt.Sprintf("copying service template to %q", destDir),
+	})
+
 	if err := src.CopyTo(destDir); err != nil {
-		return fmt.Errorf("failed to copy Service Template: %w", err)
+		return logs, fmt.Errorf("failed to copy Service Template: %w", err)
 	}
 
 	if info, err := os.Stat(destDir); err != nil || !info.IsDir() {
-		return fmt.Errorf("failed to find copied template directory: %w", err)
+		return logs, fmt.Errorf("failed to find copied template directory: %w", err)
 	}
 
 	tpl, err := template.FromDir(destDir)
 	if err != nil {
-		return fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
+		return logs, fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
 	}
 	if len(tpl.Services) == 0 {
-		return fmt.Errorf("template found in directory %s, has no services", destDir)
+		return logs, fmt.Errorf("template found in directory %s, has no services", destDir)
 	}
 
 	resolvedTemplate, err := template.Resolve(tpl, argProvider)
 	if err != nil {
-		return err
+		return logs, err
 	}
 
 	extendedComposeFilePath := filepath.Join(copiedDirName, template.ComposeFilename)
 	for _, service := range resolvedTemplate.Services {
 		newSvc := compose.CreateServiceByExtension(extendedComposeFilePath, service.Name, argsToMap(resolvedTemplate.Args))
-
+		logs = append(logs, logger.Entry{
+			Level:   logger.Info,
+			Message: fmt.Sprintf("adding service %q to project", newSvc.Name),
+		})
 		if err := compose.InsertService(project, newSvc); err != nil {
-			return err
+			return logs, err
 		}
 	}
 
@@ -121,7 +135,7 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 	for _, service := range resolvedTemplate.Services {
 		volumes, err := compose.ExtractNamedServiceVolumes(service.Data)
 		if err != nil {
-			return err
+			return logs, err
 		}
 		allServicesVolumes = append(allServicesVolumes, volumes...)
 	}
@@ -129,11 +143,15 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 
 	err = compose.WriteProject(project, targetComposeFile)
 	if err != nil {
-		return err
+		return logs, err
 	}
 
 	success = true
-	return nil
+	logs = append(logs, logger.Entry{
+		Level:   logger.Info,
+		Message: "successfully extended project",
+	})
+	return logs, nil
 }
 
 func RemoveService(composeFilePath, serviceName string) error {
