@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/arm-debug/topo-cli/internal/compose"
+	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -66,7 +67,7 @@ services:
 `)
 		args := map[string]string{"FOO": "baz"}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -103,7 +104,7 @@ services:
 `)
 		args := map[string]string{"FOO": "baz"}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -135,7 +136,7 @@ services:
 `
 		project := yamlToNode(t, yamlContents)
 
-		err := compose.ApplyArgs(project, nil, nil)
+		_, err := compose.ApplyArgs(project, nil)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -158,7 +159,7 @@ services:
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -185,12 +186,14 @@ services:
         FOO: foo
 `)
 		args := map[string]string{"BAR": "baz"}
-		buf := &bytes.Buffer{}
 
-		err := compose.ApplyArgs(project, args, buf)
+		logs, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
-		assert.Equal(t, "warning: arg \"BAR\" was resolved but not found in any service build args\n", buf.String())
+		assert.Contains(t, logs, logger.Entry{
+			Level:   logger.Warning,
+			Message: "arg \"BAR\" was resolved but not found in any service build args",
+		})
 	})
 
 	t.Run("when build args are a YAML sequence applies all resolved values", func(t *testing.T) {
@@ -206,7 +209,7 @@ services:
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)

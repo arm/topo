@@ -3,7 +3,6 @@ package project
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -15,37 +14,39 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Clone(path string, src template.Source, argProvider arguments.Provider, logOutput io.Writer) error {
+func Clone(path string, src template.Source, argProvider arguments.Provider) ([]logger.Entry, error) {
 	if err := src.CopyTo(path); err != nil {
 		var errDestDirExists template.DestDirExistsError
 		if errors.As(err, &errDestDirExists) {
-			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
+			return nil, fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
 		}
-		return fmt.Errorf("failed to copy Service Template: %w", err)
+		return nil, fmt.Errorf("failed to copy Service Template: %w", err)
 	}
 
 	composeFile := filepath.Join(path, template.ComposeFilename)
-	if err := ResolveAndApplyArgs(composeFile, argProvider, logOutput); err != nil {
+
+	logs, err := ResolveAndApplyArgs(composeFile, argProvider)
+	if err != nil {
 		if rmErr := os.RemoveAll(path); rmErr != nil {
-			return errors.Join(err, rmErr)
+			return logs, errors.Join(err, rmErr)
 		}
-		return fmt.Errorf("init failed: %w", err)
+		return logs, fmt.Errorf("init failed: %w", err)
 	}
 
-	return nil
+	return logs, nil
 }
 
-func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider, logOutput io.Writer) error {
+func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider) ([]logger.Entry, error) {
 	resolvedArgs, err := resolveArgs(composeFilePath, argProvider)
 	if err != nil {
-		return fmt.Errorf("failed to resolve args: %w", err)
+		return nil, fmt.Errorf("failed to resolve args: %w", err)
 	}
 
 	if len(resolvedArgs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return applyArgs(composeFilePath, resolvedArgs, logOutput)
+	return applyArgs(composeFilePath, resolvedArgs)
 }
 
 func Extend(targetComposeFile string, src template.Source, argProvider arguments.Provider) ([]logger.Entry, error) {
@@ -202,32 +203,33 @@ func Init(projectDir string) error {
 	return nil
 }
 
-func applyArgs(composeFilePath string, args []arguments.ResolvedArg, logOutput io.Writer) error {
+func applyArgs(composeFilePath string, args []arguments.ResolvedArg) ([]logger.Entry, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() { _ = f.Close() }()
 
 	yamlNodes, err := compose.ReadNode(f)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := compose.ApplyArgs(yamlNodes, argsToMap(args), logOutput); err != nil {
-		return fmt.Errorf("error applying args to project file: %w", err)
+	logs, err := compose.ApplyArgs(yamlNodes, argsToMap(args))
+	if err != nil {
+		return logs, fmt.Errorf("error applying args to project file: %w", err)
 	}
 
 	outFile, err := os.Create(composeFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to open compose file for writing: %w", err)
+		return logs, fmt.Errorf("failed to open compose file for writing: %w", err)
 	}
 	defer func() { _ = outFile.Close() }()
 
 	if err := compose.WriteNode(yamlNodes, outFile); err != nil {
-		return fmt.Errorf("failed to write compose file after applying args: %w", err)
+		return logs, fmt.Errorf("failed to write compose file after applying args: %w", err)
 	}
-	return nil
+	return logs, nil
 }
 
 func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]arguments.ResolvedArg, error) {

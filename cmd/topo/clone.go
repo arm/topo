@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
+	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/template"
@@ -69,7 +70,11 @@ Some projects require build arguments. Supply them on the command line or answer
 			return err
 		}
 
-		return project.Clone(path, projectSource, argProvider, os.Stdout)
+		logs, err := project.Clone(path, projectSource, argProvider)
+
+		c := console.NewLogger(os.Stderr, term.Plain)
+		c.Log(logs...)
+		return err
 	},
 }
 
