@@ -196,6 +196,138 @@ services:
 		})
 	})
 
+	t.Run("when service has extends and no build injects build args", func(t *testing.T) {
+		project := yamlToNode(t, `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+`)
+		args := map[string]string{
+			"PLATFORM":   "stm32mp257",
+			"REMOTEPROC": "m33",
+		}
+
+		err := compose.ApplyArgs(project, args, nil)
+
+		require.NoError(t, err)
+		got, err := yaml.Marshal(project)
+		require.NoError(t, err)
+		want := `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+    build:
+      args:
+        PLATFORM: stm32mp257
+        REMOTEPROC: m33
+`
+		assert.YAMLEq(t, want, string(got))
+	})
+
+	t.Run("when service has extends and build but no args injects args", func(t *testing.T) {
+		project := yamlToNode(t, `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+    build:
+      context: .
+`)
+		args := map[string]string{"PLATFORM": "stm32mp257"}
+
+		err := compose.ApplyArgs(project, args, nil)
+
+		require.NoError(t, err)
+		got, err := yaml.Marshal(project)
+		require.NoError(t, err)
+		want := `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+    build:
+      context: .
+      args:
+        PLATFORM: stm32mp257
+`
+		assert.YAMLEq(t, want, string(got))
+	})
+
+	t.Run("when service has extends and existing build args updates in place", func(t *testing.T) {
+		project := yamlToNode(t, `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+    build:
+      args:
+        PLATFORM: old-value
+`)
+		args := map[string]string{"PLATFORM": "stm32mp257"}
+
+		err := compose.ApplyArgs(project, args, nil)
+
+		require.NoError(t, err)
+		got, err := yaml.Marshal(project)
+		require.NoError(t, err)
+		want := `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+    build:
+      args:
+        PLATFORM: stm32mp257
+`
+		assert.YAMLEq(t, want, string(got))
+	})
+
+	t.Run("mixed services with extends and inline build args both get args applied", func(t *testing.T) {
+		project := yamlToNode(t, `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+  inline-svc:
+    build:
+      context: .
+      args:
+        PLATFORM: old-value
+`)
+		args := map[string]string{"PLATFORM": "stm32mp257"}
+
+		err := compose.ApplyArgs(project, args, nil)
+
+		require.NoError(t, err)
+		got, err := yaml.Marshal(project)
+		require.NoError(t, err)
+		want := `
+services:
+  zephyr:
+    extends:
+      file: zephyr-application/compose.yaml
+      service: zephyr
+    build:
+      args:
+        PLATFORM: stm32mp257
+  inline-svc:
+    build:
+      context: .
+      args:
+        PLATFORM: stm32mp257
+`
+		assert.YAMLEq(t, want, string(got))
+	})
+
 	t.Run("when build args are a YAML sequence applies all resolved values", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
