@@ -26,7 +26,7 @@ func (l Level) Color() string {
 }
 
 type Logger interface {
-	Log(e Entry)
+	Log(e ...Entry)
 }
 
 type Entry struct {
