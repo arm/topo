@@ -209,7 +209,7 @@ services:
 			"REMOTEPROC": "m33",
 		}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -240,7 +240,7 @@ services:
 `)
 		args := map[string]string{"PLATFORM": "stm32mp257"}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -272,7 +272,7 @@ services:
 `)
 		args := map[string]string{"PLATFORM": "stm32mp257"}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -305,7 +305,7 @@ services:
 `)
 		args := map[string]string{"PLATFORM": "stm32mp257"}
 
-		err := compose.ApplyArgs(project, args, nil)
+		_, err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
