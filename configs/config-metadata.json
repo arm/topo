@@ -1,0 +1,16 @@
+{
+    "boards": [
+        {
+            "id": "NXP i.MX 93",
+            "subsystems": [
+                {
+                    "id": "Ambient",
+                    "runtime": "io.containerd.remoteproc.v1",
+                    "annotation": {
+                        "remoteproc.mcu": "imx-rproc"
+                    }
+                }
+            ]
+        }
+    ]
+}

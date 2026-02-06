@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: One of 'Major', 'Minor', 'Patch', or 'Pre-release'.
+        required: true
+        type: choice
+        default: Pre-release
+        options:
+          - Major
+          - Minor
+          - Patch
+          - Pre-release
+
+permissions:
+  contents: write
+
+env:
+  linux-arch64-enabled: 'true'
+  linux-x64-enabled: 'true'
+  macos-arch64-enabled: 'true'
+  macos-x64-enabled: 'false'
+  windows-arch64-enabled: 'false'
+  windows-x64-enabled: 'true'
+
+jobs:
+  configure:
+    name: Configure CI
+    runs-on: [ubuntu-latest]
+    outputs:
+      version: ${{ steps.calculate-version.outputs.version }}
+      is_prerelease: ${{ steps.set-prerelease.outputs.prerelease }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Calculate Version
+        id: calculate-version
+        run: |
+          VERSION_FILE="version.txt"
+          current=$(cat $VERSION_FILE)
+          case "${{ inputs.release-type }}" in
+            Major)
+              IFS='.' read -r major minor patch <<< "$current"; new="$((major+1)).0.0";;
+            Minor)
+              IFS='.' read -r major minor patch <<< "$current"; new="$major.$((minor+1)).0";;
+            Patch)
+              IFS='.' read -r major minor patch <<< "$current"; new="$major.$minor.$((patch+1))";;
+            Pre-release)
+              new="${current}-$(date +%Y%m%d%H%M%S)";;
+            *)
+              echo "Error: invalid release-type '${{ inputs.release-type }}'" >&2; exit 1;;
+          esac
+          echo "$new" > $VERSION_FILE
+          echo "version=$new" >> $GITHUB_OUTPUT
+
+      - name: Set prerelease flag
+        id: set-prerelease
+        run: |
+          if [ "${{ inputs.release-type }}" = "Pre-release" ]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+  publish-new-version:
+    name: "Push Version Bump"
+    needs: configure
+    runs-on: ubuntu-latest
+    outputs:
+      branch-name: ${{ steps.get-branch-name.outputs.branch-name }}
+    steps:
+      - id: get-app-token
+        uses: getsentry/action-github-app-token@v3
+        with:
+          app_id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
+          private_key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
+
+      - name: Get branch name
+        id: get-branch-name
+        run: |
+          if [ "${{ inputs.release-type }}" = "Pre-release" ]; then
+            echo "branch-name=pre-release-${{ needs.configure.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch-name=main" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.get-app-token.outputs.token }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create branch
+        run: |
+          git checkout -B ${{ steps.get-branch-name.outputs.branch-name }}
+
+      - name: Update VERSION file
+        run: |
+          echo "${{ needs.configure.outputs.version }}" > version.txt
+
+      - name: Update changelog version
+        run: |
+          sed -i -r "s/## \\[?Unreleased\\]?/## [Unreleased]\\n\\n## ${{ needs.configure.outputs.version }}/g" CHANGELOG.md
+
+      - name: Commit changes
+        run: |
+          git add version.txt CHANGELOG.md
+          git commit -m "Bump version to v${{ needs.configure.outputs.version }}"
+          git push -u origin ${{ steps.get-branch-name.outputs.branch-name }}
+
+  build:
+    name: Build and Test
+    strategy:
+      matrix:
+        os: [linux, windows, darwin]
+        arch: [arm64, amd64]
+        exclude:
+          - os: darwin
+            arch: amd64
+          - os: windows
+            arch: arm64
+    needs: [configure, publish-new-version]
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.publish-new-version.outputs.branch-name }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Build
+        run: |
+          mkdir -p dist
+          export GOOS=${{ matrix.os }}
+          export GOARCH=${{ matrix.arch }}
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            go build -o dist/topo-${{ matrix.os }}-${{ matrix.arch }}.exe
+          else
+            go build -o dist/topo-${{ matrix.os }}-${{ matrix.arch }}
+          fi
+
+      - name: Test
+        run: |
+          go test
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os == 'windows' && format('topo-{0}-{1}.exe', matrix.os, matrix.arch) || format('topo-{0}-{1}', matrix.os, matrix.arch) }}
+          path: ${{ matrix.os == 'windows' && format('dist/topo-{0}-{1}.exe', matrix.os, matrix.arch) || format('dist/topo-{0}-{1}', matrix.os, matrix.arch) }}
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: [configure, publish-new-version, build]
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.configure.outputs.version }}
+          name: v${{ needs.configure.outputs.version }}
+          draft: false
+          prerelease: ${{ needs.configure.outputs.is_prerelease }}
+          target_commitish: ${{ needs.publish-new-version.outputs.branch-name }}
+          files: artifacts/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: Cleanup
+    if: needs.configure.outputs.is_prerelease == 'true'
+    runs-on: [ubuntu-latest]
+    needs: [configure, publish-new-version, release]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete branch
+        run: |
+          git push origin --delete ${{ needs.publish-new-version.outputs.branch-name }}

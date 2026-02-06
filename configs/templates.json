@@ -1,0 +1,27 @@
+[
+  {
+    "id": "ambient-zephyr",
+    "url": "https://github.com/Arm-Debug/topo-ambient-zephyr",
+    "subsystem": "Ambient"
+  },
+  {
+    "id": "ambient-freertos",
+    "url": "https://github.com/Arm-Debug/topo-ambient-freertos",
+    "subsystem": "Ambient"
+  },
+  {
+    "id": "cortexa-node",
+    "url": "https://github.com/Arm-Debug/topo-cortexa-node",
+    "subsystem": "Host",
+    "platform": "linux/arm64"
+  },
+  {
+    "id": "cortexa-welcome",
+    "url": "https://github.com/Arm-Debug/topo-cortexa-welcome",
+    "subsystem": "Host",
+    "ports": [
+      "8081:80"
+    ],
+    "platform": "linux/arm64"
+  }
+]

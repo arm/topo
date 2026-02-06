@@ -1,0 +1,31 @@
+config_version = "0"
+
+exclude_patterns = [
+  "**/vendor/**",
+  "**/generated/**",
+  "**/mocks/**",
+  "**/*.pb.go"
+]
+
+test_patterns = [
+  "**/*_test.go"
+]
+
+[checks]
+mode = "comment"
+
+[[source]]
+name = "default"
+default = true
+
+[[plugin]]
+name = "golangci-lint"
+mode = "block"
+
+[[plugin]]
+name = "osv-scanner"
+mode = "monitor"
+
+[language.go.smells]
+function_parameters.threshold = 5
+function_complexity.threshold = 10

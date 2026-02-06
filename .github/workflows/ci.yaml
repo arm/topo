@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
+      - name: Go Format check
+        run: |
+          gofmt -l .
+          test -z "$(gofmt -l .)" || (echo 'Run gofmt!' && exit 1)
+
+      - name: Build
+        run: |
+          go build -v ./cmd/topo
+
+      - name: Run tests with coverage
+        run: |
+          go test ./... -covermode=atomic -coverprofile=coverage.out
+
+      - name: Install Qlty Cloud
+        uses: qltysh/qlty-action/install@v2.2.0
+
+      - name: Upload coverage to Qlty Cloud
+        uses: qltysh/qlty-action/coverage@v2.2.0
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: coverage.out
+          strip-prefix: github.com/arm-debug/topo-cli/
