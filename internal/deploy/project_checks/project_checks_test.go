@@ -22,14 +22,27 @@ services:
 }
 
 func TestEnsureProjectIsLinuxArm64Ready_SucceedsWithValidPlatforms(t *testing.T) {
-	composeFile := writeComposeFile(t, `
+	t.Run("without variant", func(t *testing.T) {
+		composeFile := writeComposeFile(t, `
 services:
   app:
     image: alpine
     platform: linux/arm64
 `)
 
-	require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
+	})
+
+	t.Run("with variant", func(t *testing.T) {
+		composeFile := writeComposeFile(t, `
+services:
+  app:
+    image: alpine
+    platform: linux/arm64/v8
+`)
+
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
+	})
 }
 
 func TestEnsureProjectIsLinuxArm64Ready_FailsWhenPlatformMissing(t *testing.T) {

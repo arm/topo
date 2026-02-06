@@ -15,7 +15,7 @@ func isPlatformMissing(platform string) bool {
 }
 
 func isPlatformMismatch(platform string) bool {
-	return !strings.EqualFold(platform, linuxArm64Platform)
+	return !strings.HasPrefix(platform, linuxArm64Platform)
 }
 
 func EnsureProjectIsLinuxArm64Ready(composePath string) error {
