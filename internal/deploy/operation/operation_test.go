@@ -21,7 +21,8 @@ func TestSetupExitCleanup(t *testing.T) {
 		cleanupOp.On("Run", &buf).Return(nil)
 		p, err := os.FindProcess(os.Getpid())
 		require.NoError(t, err)
-		operation.SetupExitCleanup(cleanupOp, &buf, osExit)
+		var stderr bytes.Buffer
+		operation.SetupExitCleanup(&stderr, cleanupOp, osExit)
 
 		err = p.Signal(os.Interrupt)
 		require.NoError(t, err)
@@ -32,9 +33,9 @@ func TestSetupExitCleanup(t *testing.T) {
 
 	t.Run("calls cleanup operation only once when called multiple times", func(t *testing.T) {
 		cleanupOp := new(mockOperation)
-		var buf bytes.Buffer
-		cleanupOp.On("Run", &buf).Return(nil).Once()
-		cleanup := operation.SetupExitCleanup(cleanupOp, &buf, osExit)
+		var stderr bytes.Buffer
+		cleanupOp.On("Run", &stderr).Return(nil).Once()
+		cleanup := operation.SetupExitCleanup(&stderr, cleanupOp, osExit)
 
 		cleanup()
 		cleanup()
@@ -45,8 +46,8 @@ func TestSetupExitCleanup(t *testing.T) {
 
 	t.Run("still handles signal when operation is nil", func(t *testing.T) {
 		testutil.RequireOS(t, "linux")
-		var buf bytes.Buffer
-		operation.SetupExitCleanup(nil, &buf, osExit)
+		var stderr bytes.Buffer
+		operation.SetupExitCleanup(&stderr, nil, osExit)
 		p, err := os.FindProcess(os.Getpid())
 		require.NoError(t, err)
 

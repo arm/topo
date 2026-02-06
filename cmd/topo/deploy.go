@@ -11,6 +11,9 @@ import (
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
 	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
 	checks "github.com/arm-debug/topo-cli/internal/deploy/project_checks"
+	"github.com/arm-debug/topo-cli/internal/output/console"
+	"github.com/arm-debug/topo-cli/internal/output/logger"
+	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 
 	"github.com/spf13/cobra"
@@ -43,10 +46,14 @@ Use --dry-run to see what commands would be executed without actually running th
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
+		c := console.NewLogger(os.Stderr, term.Plain)
 
 		portChanged := cmd.Flags().Changed("port")
 		if portChanged && noRegistry {
-			_, _ = fmt.Fprintln(os.Stderr, "WARN: --port has no effect when --no-registry is set. Define SSH port in your SSH config instead.")
+			c.Log(logger.Entry{
+				Level:   logger.Warning,
+				Message: "--port has no effect when --no-registry is set. Define SSH port in your SSH config instead.",
+			})
 		}
 
 		resolvedTarget, err := resolveTarget(deployTarget)
@@ -83,17 +90,24 @@ Use --dry-run to see what commands would be executed without actually running th
 		deployOpts.UseSSHControlSockets = docker.SupportsSSHControlSockets(goos)
 
 		if !deployOpts.WithRegistry {
-			_, _ = fmt.Fprintln(os.Stderr, "WARN: Registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
+			c.Log(logger.Entry{
+				Level:   logger.Warning,
+				Message: "registry transfer is not yet supported with this configuration. Falling back to direct transfer.",
+			})
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
-		stop := goperation.SetupExitCleanup(cleanup, os.Stderr, os.Exit)
-		defer stop()
+		stop := goperation.SetupExitCleanup(os.Stderr, cleanup, os.Exit)
+
+		defer func() {
+			entries := stop()
+			c.Log(entries...)
+		}()
 
 		if deployDryRun {
-			return deployment.DryRun(os.Stdout)
+			return deployment.DryRun(os.Stderr)
 		}
-		return deployment.Run(os.Stdout)
+		return deployment.Run(os.Stderr)
 	},
 }
 
