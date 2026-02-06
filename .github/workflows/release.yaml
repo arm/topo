@@ -20,7 +20,6 @@ permissions:
 
 jobs:
   release:
-    environment: release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
