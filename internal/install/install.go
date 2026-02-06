@@ -38,7 +38,7 @@ type PathCandidate struct {
 func getPathDirs(targetHost ssh.Host) ([]string, error) {
 	output, err := ssh.ExecWithShell(targetHost, "echo $PATH")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get PATH from target: %w", err)
+		return nil, err
 	}
 
 	pathStr := strings.TrimSpace(output)
@@ -50,7 +50,7 @@ func getPathDirs(targetHost ssh.Host) ([]string, error) {
 func getHomeDir(targetHost ssh.Host) (string, error) {
 	output, err := ssh.ExecWithShell(targetHost, "echo $HOME")
 	if err != nil {
-		return "", fmt.Errorf("failed to get HOME from target: %w", err)
+		return "", err
 	}
 	return strings.TrimSpace(output), nil
 }
@@ -77,12 +77,12 @@ func getExistingBinaryDir(targetHost ssh.Host, binaryName string) (string, error
 func FindPathDirs(targetHost ssh.Host) ([]PathCandidate, error) {
 	pathDirs, err := getPathDirs(targetHost)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get PATH directories: %w", err)
+		return nil, err
 	}
 
 	homeDir, err := getHomeDir(targetHost)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get home directory: %w", err)
+		return nil, err
 	}
 
 	var validPaths []PathCandidate
@@ -129,25 +129,28 @@ func getLatestReleaseTarAddress(repoURL string) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", err
 	}
 
 	addGitHubAuthHeader(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch latest release: %w", err)
+		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("GitHub API returned status %d for %s: %s", resp.StatusCode, apiURL, string(body))
+		msg := strings.TrimSpace(string(body))
+		if msg != "" {
+			return "", fmt.Errorf("GitHub API rejected request (status %d): %s", resp.StatusCode, msg)
+		}
 	}
 
 	var release githubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return "", fmt.Errorf("failed to parse release: %w", err)
+		return "", err
 	}
 
 	for _, asset := range release.Assets {
@@ -164,7 +167,7 @@ func extractFilesFromTarGz(tarGzData []byte, targetFiles []string) (map[string][
 
 	format, stream, err := archives.Identify(context.Background(), "", reader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to identify archive format: %w", err)
+		return nil, err
 	}
 
 	extractor, ok := format.(archives.Extractor)
@@ -196,7 +199,7 @@ func extractFilesFromTarGz(tarGzData []byte, targetFiles []string) (map[string][
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("extraction failed: %w", err)
+		return nil, err
 	}
 	if len(extractedFiles) == 0 {
 		return nil, fmt.Errorf("files not found in archive")
@@ -211,7 +214,7 @@ func fetchFile(url string) ([]byte, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
 
 	addGitHubAuthHeader(req)
@@ -236,16 +239,17 @@ func fetchFile(url string) ([]byte, error) {
 func FetchLatestReleaseBinaries(githubRepoSlug string, binaries []string) (map[string][]byte, error) {
 	url, err := getLatestReleaseTarAddress(githubRepoSlug)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get release URL: %w", err)
+		return nil, fmt.Errorf("failed to resolve latest release download URL: %w", err)
 	}
 
 	tarball, err := fetchFile(url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch file: %w", err)
+		return nil, fmt.Errorf("failed to download latest release: %w", err)
 	}
+
 	files, err := extractFilesFromTarGz(tarball, binaries)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract binaries: %w", err)
+		return nil, fmt.Errorf("failed to extract files from tar.gz: %w", err)
 	}
 	return files, err
 }
@@ -272,7 +276,7 @@ func install(installPath string, targetHost ssh.Host, binaries map[string][]byte
 				strings.Contains(stderrStr, "read-only") {
 				return fmt.Errorf("%w: %s", ErrPermissionDenied, stderr)
 			}
-			return fmt.Errorf("install failed: %s", stderr)
+			return errors.New(stderr)
 		}
 	}
 	return nil
@@ -293,7 +297,7 @@ func installToFirstWriteableDir(paths []PathCandidate, targetHost ssh.Host, bina
 			return paths[i], binaryNames, nil
 		}
 		if !errors.Is(err, ErrPermissionDenied) {
-			return PathCandidate{}, nil, fmt.Errorf("install to %s failed: %w", dir.Path, err)
+			return PathCandidate{}, nil, err
 		}
 	}
 	candidatePaths := make([]string, len(paths))
@@ -317,7 +321,7 @@ func InstallBinariesFromGithubRelease(targetHost ssh.Host, repoURL string, binar
 
 	binaries, err := FetchLatestReleaseBinaries(repoURL, binaryNames)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch latest release: %w", err)
+		return nil, fmt.Errorf("failed to fetch latest release binaries: %w", err)
 	}
 
 	existingBinaryPaths := make(map[string]string)

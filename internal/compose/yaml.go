@@ -116,7 +116,7 @@ func WriteNode(project *yaml.Node, target io.Writer) error {
 	}
 	_ = enc.Close()
 	if _, err := target.Write(buf.Bytes()); err != nil {
-		return fmt.Errorf("failed to write compose file: %w", err)
+		return err
 	}
 	return nil
 }
