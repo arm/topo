@@ -13,9 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	describeTarget string
-)
+var describeTarget string
 
 const targetDescriptionFilename = "target-description.yaml"
 
