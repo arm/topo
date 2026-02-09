@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/arm-debug/topo-cli/internal/describe"
 	"github.com/spf13/cobra"
 )
@@ -30,6 +32,8 @@ var describeCmd = &cobra.Command{
 		// TODO print report into yaml file
 
 		// TODO print completion message to stdout or err
+		fmt.Println(report)
+		return nil
 	},
 }
 
