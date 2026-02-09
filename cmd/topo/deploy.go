@@ -51,7 +51,7 @@ Use --dry-run to see what commands would be executed without actually running th
 		cmd.SilenceUsage = true
 		logFmt, err := resolveOutput(deployLogOutFmt)
 		if err != nil {
-			logFmt = term.Plain
+			return err
 		}
 		c := console.NewLogger(os.Stderr, logFmt)
 

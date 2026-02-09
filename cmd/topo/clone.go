@@ -76,7 +76,7 @@ Some projects require build arguments. Supply them on the command line or answer
 
 		logFmt, err := resolveOutput(cloneLogOutFmt)
 		if err != nil {
-			logFmt = term.Plain
+			return err
 		}
 		c := console.NewLogger(os.Stderr, logFmt)
 		c.Log(logs...)

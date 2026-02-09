@@ -78,7 +78,7 @@ or interactively when prompted:
 
 		logFmt, err := resolveOutput(extendLogOutFmt)
 		if err != nil {
-			logFmt = term.Plain
+			return err
 		}
 		c := console.NewLogger(os.Stderr, logFmt)
 		c.Log(logs...)
