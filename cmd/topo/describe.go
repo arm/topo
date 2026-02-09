@@ -10,7 +10,7 @@ import (
 	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 var describeTarget string
@@ -33,7 +33,18 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		err = writeYamlFile(targetDescriptionFilename, report)
+		reportBytes, err := yaml.Marshal(report)
+		if err != nil {
+			return err
+		}
+
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+
+		outputFile := filepath.Join(wd, targetDescriptionFilename)
+		err = os.WriteFile(outputFile, reportBytes, 0o0644)
 		if err != nil {
 			return err
 		}
@@ -41,7 +52,7 @@ var describeCmd = &cobra.Command{
 		c := console.NewLogger(os.Stderr, term.Plain)
 		c.Log(logger.Entry{
 			Level:   logger.Info,
-			Message: fmt.Sprintf("Target description written to %s", targetDescriptionFilename),
+			Message: fmt.Sprintf("Target description written to %s", outputFile),
 		})
 
 		return nil
@@ -51,18 +62,4 @@ var describeCmd = &cobra.Command{
 func init() {
 	addTargetFlag(describeCmd, &describeTarget)
 	rootCmd.AddCommand(describeCmd)
-}
-
-func writeYamlFile(filename string, data any) error {
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	bytes, err := yaml.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath.Join(wd, filename), bytes, 0644)
 }
