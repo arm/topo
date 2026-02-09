@@ -17,7 +17,7 @@ var searchFlags = map[string]string{
 func ExtractArmFeatures(targetStatus Status) []string {
 	res := make([]string, 0)
 
-	for _, field := range targetStatus.Hardware.Features {
+	for _, field := range targetStatus.Hardware.HostCPU.Features {
 		if name, ok := searchFlags[field]; ok {
 			res = append(res, name)
 		}
@@ -84,8 +84,12 @@ func generateTargetReport(targetStatus Status) TargetReport {
 	report.SubsystemDriver = HealthCheck{
 		Name:    "Subsystem Driver (remoteproc)",
 		Healthy: len(targetStatus.Hardware.RemoteCPU) > 0,
-		Value:   strings.Join(targetStatus.Hardware.RemoteCPU, ", "),
 	}
+	var remoteProcNames []string
+	for _, remoteProc := range targetStatus.Hardware.RemoteCPU {
+		remoteProcNames = append(remoteProcNames, remoteProc.Name)
+	}
+	report.SubsystemDriver.Value = strings.Join(remoteProcNames, ", ")
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 
 	return report

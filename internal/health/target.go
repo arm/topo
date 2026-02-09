@@ -1,6 +1,7 @@
 package health
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,9 +10,29 @@ import (
 
 type execSSH func(target ssh.Host, command string) (string, error)
 
-type HardwareProfile struct {
+type HostCPUProfile struct {
+	ModelName string
 	Features  []string
-	RemoteCPU []string
+	Cores     int
+}
+
+type RemoteProcCPU struct {
+	Name string
+}
+
+type HardwareProfile struct {
+	HostCPU   HostCPUProfile
+	RemoteCPU []RemoteProcCPU
+}
+
+type lscpuOutputField struct {
+	Field    string             `json:"field"`
+	Data     string             `json:"data"`
+	Children []lscpuOutputField `json:"children,omitempty"`
+}
+
+type lscpuOutput struct {
+	Lscpu []lscpuOutputField `json:"lscpu"`
 }
 
 func (hw HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
@@ -81,8 +102,8 @@ func (c *Connection) CheckDependencies(hardware map[HardwareCapability]struct{})
 func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	var hp HardwareProfile
 
-	if feats, err := c.collectFeatures(); err == nil {
-		hp.Features = feats
+	if cpuProfile, err := c.collectCPUInfo(); err == nil {
+		hp.HostCPU = cpuProfile
 	}
 	if cpus, err := c.collectRemoteCPU(); err == nil {
 		hp.RemoteCPU = cpus
@@ -91,20 +112,50 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	return hp, nil
 }
 
-func (c *Connection) collectFeatures() ([]string, error) {
-	out, err := c.Run("grep -m1 Features /proc/cpuinfo")
+func (c *Connection) collectCPUInfo() (HostCPUProfile, error) {
+	out, err := c.Run("lscpu --json")
 	if err != nil {
-		return nil, err
+		return HostCPUProfile{}, err
 	}
-	features := strings.Fields(out)
 
-	if len(features) > 0 && features[0] == "Features:" {
-		features = features[1:]
+	var lscpu lscpuOutput
+	err = json.Unmarshal([]byte(out), &lscpu)
+	if err != nil {
+		return HostCPUProfile{}, err
 	}
-	return features, nil
+
+	return createCPUProfile(flatFields(lscpu.Lscpu)), nil
 }
 
-func (c *Connection) collectRemoteCPU() ([]string, error) {
+func flatFields(fields []lscpuOutputField) []lscpuOutputField {
+	var res []lscpuOutputField
+	for _, field := range fields {
+		res = append(res, field)
+		if len(field.Children) > 0 {
+			res = append(res, flatFields(field.Children)...)
+		}
+	}
+	return res
+}
+
+func createCPUProfile(fields []lscpuOutputField) HostCPUProfile {
+	var cpuProfile HostCPUProfile
+
+	for _, field := range fields {
+		switch field.Field {
+		case "Model name:":
+			cpuProfile.ModelName = field.Data
+		case "CPU(s):":
+			fmt.Sscanf(field.Data, "%d", &cpuProfile.Cores)
+		case "Flags:":
+			cpuProfile.Features = strings.Fields(field.Data)
+		}
+	}
+
+	return cpuProfile
+}
+
+func (c *Connection) collectRemoteCPU() ([]RemoteProcCPU, error) {
 	out, err := c.Run("ls /sys/class/remoteproc")
 	if err != nil {
 		return nil, err
@@ -120,5 +171,9 @@ func (c *Connection) collectRemoteCPU() ([]string, error) {
 	}
 
 	remoteCPU := strings.Fields(out)
-	return remoteCPU, nil
+	var remoteProcs []RemoteProcCPU
+	for _, cpu := range remoteCPU {
+		remoteProcs = append(remoteProcs, RemoteProcCPU{Name: cpu})
+	}
+	return remoteProcs, nil
 }

@@ -50,7 +50,7 @@ func TestProbe(t *testing.T) {
 		ts := conn.Probe()
 
 		assert.NoError(t, ts.ConnectionError)
-		assert.Equal(t, []string{"fpu", "asimd"}, ts.Hardware.Features)
+		assert.Equal(t, []string{"fpu", "asimd"}, ts.Hardware.HostCPU.Features)
 	})
 
 	t.Run("probe succeeds but features collection returns empty", func(t *testing.T) {
@@ -65,7 +65,7 @@ func TestProbe(t *testing.T) {
 		ts := conn.Probe()
 
 		assert.NoError(t, ts.ConnectionError)
-		assert.Empty(t, ts.Hardware.Features)
+		assert.Empty(t, ts.Hardware.HostCPU.Features)
 	})
 
 	t.Run("probe fails connection", func(t *testing.T) {
