@@ -6,30 +6,12 @@ import (
 	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
-var searchFlags = map[string]string{
-	"asimd": "NEON",
-	"sve":   "SVE",
-	"sve2":  "SVE2",
-	"sme":   "SME",
-	"sme2":  "SME2",
-}
-
-func ExtractArmFeatures(targetStatus Status) []string {
-	res := make([]string, 0)
-
-	for _, field := range targetStatus.Hardware.Features {
-		if name, ok := searchFlags[field]; ok {
-			res = append(res, name)
-		}
-	}
-	return res
-}
-
 type HealthCheck struct {
 	Name    string
 	Healthy bool
 	Value   string
 }
+
 type HostReport struct {
 	Dependencies []HealthCheck
 }
@@ -80,7 +62,7 @@ func generateTargetReport(targetStatus Status) TargetReport {
 		Healthy: targetStatus.ConnectionError == nil,
 		Value:   "",
 	}
-	report.Features = ExtractArmFeatures(targetStatus)
+	report.Features = targetStatus.Hardware.ExtractArmFeatures()
 	report.SubsystemDriver = HealthCheck{
 		Name:    "Subsystem Driver (remoteproc)",
 		Healthy: len(targetStatus.Hardware.RemoteCPU) > 0,

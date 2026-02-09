@@ -2,10 +2,19 @@ package health
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/ssh"
 )
+
+var armFeatures = map[string]string{
+	"asimd": "NEON",
+	"sve":   "SVE",
+	"sve2":  "SVE2",
+	"sme":   "SME",
+	"sme2":  "SME2",
+}
 
 type execSSH func(target ssh.Host, command string) (string, error)
 
@@ -20,6 +29,17 @@ func (hw HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
 		capabilities[Remoteproc] = struct{}{}
 	}
 	return capabilities
+}
+
+func (hw HardwareProfile) ExtractArmFeatures() []string {
+	res := make([]string, 0)
+
+	for _, field := range hw.Features {
+		if name, ok := armFeatures[field]; ok {
+			res = append(res, name)
+		}
+	}
+	return res
 }
 
 type Status struct {
@@ -96,11 +116,9 @@ func (c *Connection) collectFeatures() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	features := strings.Fields(out)
-
-	if len(features) > 0 && features[0] == "Features:" {
-		features = features[1:]
-	}
+	features := slices.DeleteFunc(strings.Fields(out), func(v string) bool {
+		return v == "" || v == "Features:" || v == "Features" || v == ":"
+	})
 	return features, nil
 }
 

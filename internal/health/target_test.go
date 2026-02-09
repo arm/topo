@@ -43,7 +43,7 @@ func TestProbe(t *testing.T) {
 			if command == "" {
 				return "", nil // simulate successful initial connection
 			}
-			return "Features: fpu asimd", nil
+			return "Features        : fpu asimd", nil
 		}
 
 		conn := health.NewConnection("hostname", mockExec)

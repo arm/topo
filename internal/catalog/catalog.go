@@ -38,7 +38,7 @@ func FilterTemplateRepos(flags TemplateFilters, repos []Repo) []Repo {
 	if flags.Target != "" {
 		conn := health.NewConnection(flags.Target, ssh.ExecSSH)
 		targetStatus := conn.Probe()
-		flags.Features = health.ExtractArmFeatures(targetStatus)
+		flags.Features = targetStatus.Hardware.ExtractArmFeatures()
 		targetMode = true
 	}
 

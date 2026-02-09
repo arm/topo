@@ -9,26 +9,22 @@ import (
 
 func TestExtractArmFeatures(t *testing.T) {
 	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
-		ts := health.Status{
-			Hardware: health.HardwareProfile{
-				Features: []string{"fp", "asimd", "sve2", "sme"},
-			},
+		ts := health.HardwareProfile{
+			Features: []string{"fp", "asimd", "sve2", "sme"},
 		}
 
-		res := health.ExtractArmFeatures(ts)
+		res := ts.ExtractArmFeatures()
 
 		want := []string{"NEON", "SVE2", "SME"}
 		assert.Equal(t, want, res)
 	})
 
 	t.Run("returns empty slice if no matching features", func(t *testing.T) {
-		ts := health.Status{
-			Hardware: health.HardwareProfile{
-				Features: []string{"fp", "crc32"},
-			},
+		ts := health.HardwareProfile{
+			Features: []string{"fp", "crc32"},
 		}
 
-		res := health.ExtractArmFeatures(ts)
+		res := ts.ExtractArmFeatures()
 
 		assert.Empty(t, res)
 	})
