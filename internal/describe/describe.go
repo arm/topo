@@ -6,10 +6,8 @@ import (
 )
 
 type HostCPU struct {
-	Name     string
 	Features []string
-	Memory   string
-	Cores    int
+	// TODO enrich with more details like CPU model and accessible memory
 }
 
 type RemoteProcCPU struct {
@@ -42,10 +40,7 @@ func generateRemoteProcReport(remoteCPUs []string) []RemoteProcCPU {
 func generateReport(hwProfile health.HardwareProfile) TargetHardwareReport {
 	return TargetHardwareReport{
 		Host: HostCPU{
-			Name:     "Unknown",
 			Features: hwProfile.Features,
-			Memory:   "Unknown",
-			Cores:    len(hwProfile.RemoteCPU),
 		},
 		RemoteProcs: generateRemoteProcReport(hwProfile.RemoteCPU),
 	}
