@@ -2,14 +2,22 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/arm-debug/topo-cli/internal/describe"
+	"github.com/arm-debug/topo-cli/internal/output/console"
+	"github.com/arm-debug/topo-cli/internal/output/logger"
+	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var (
 	describeTarget string
 )
+
+const targetDescriptionFilename = "target-description.yaml"
 
 var describeCmd = &cobra.Command{
 	Use:   "describe",
@@ -27,12 +35,17 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		// TODO create printable health report
+		err = writeYamlFile(targetDescriptionFilename, report)
+		if err != nil {
+			return err
+		}
 
-		// TODO print report into yaml file
+		c := console.NewLogger(os.Stderr, term.Plain)
+		c.Log(logger.Entry{
+			Level:   logger.Info,
+			Message: fmt.Sprintf("Target description written to %s", targetDescriptionFilename),
+		})
 
-		// TODO print completion message to stdout or err
-		fmt.Println(report)
 		return nil
 	},
 }
@@ -40,4 +53,18 @@ var describeCmd = &cobra.Command{
 func init() {
 	addTargetFlag(describeCmd, &describeTarget)
 	rootCmd.AddCommand(describeCmd)
+}
+
+func writeYamlFile(filename string, data any) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	bytes, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(wd, filename), bytes, 0644)
 }
