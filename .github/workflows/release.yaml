@@ -127,8 +127,8 @@ jobs:
             -f "run-id=$UPSTREAM_RUN_ID" \
             -f "artifact=topo-cli-v${{ steps.version.outputs.version }}-macos-unsigned" \
             -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "repo-name=topo-cli" \
-            -f "org-name=Arm-Debug" \
+            -f "repo-name=topo" \
+            -f "org-name=arm" \
             -f "binary-name=topo" \
 
       - name: Trigger Windows signer workflow
@@ -146,8 +146,8 @@ jobs:
             -f "run-id=$UPSTREAM_RUN_ID" \
             -f "artifact=topo-cli-v${{ steps.version.outputs.version }}-windows-unsigned" \
             -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "repo-name=topo-cli" \
-            -f "org-name=Arm-Debug" \
+            -f "repo-name=topo" \
+            -f "org-name=arm" \
             -f "binary-name=topo.exe" \
             -f "signing-artifactory-repo=edge-ai-tooling.topo-cli-signing" \
 
@@ -166,5 +166,5 @@ jobs:
             -f "run-id=$UPSTREAM_RUN_ID" \
             -f "release-version=${{ steps.version.outputs.version }}" \
             -f "archive-name=topo-cli-v${{ steps.version.outputs.version }}-archives" \
-            -f "repo-name=topo-cli" \
-            -f "org-name=Arm-Debug" \
+            -f "repo-name=topo" \
+            -f "org-name=arm" \
