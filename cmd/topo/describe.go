@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/arm-debug/topo-cli/internal/describe"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,10 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		// TODO gather report
+		report, err := describe.Generate(sshTarget)
+		if err != nil {
+			return err
+		}
 
 		// TODO create printable health report
 
