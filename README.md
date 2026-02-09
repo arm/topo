@@ -1,5 +1,3 @@
-[![Maintainability](https://qlty.sh/badges/50b07af7-90e1-41a9-88c4-2533beb04d2b/maintainability.svg)](https://qlty.sh/gh/Arm-Debug/projects/topo-cli) [![Code Coverage](https://qlty.sh/badges/50b07af7-90e1-41a9-88c4-2533beb04d2b/test_coverage.svg)](https://qlty.sh/gh/Arm-Debug/projects/topo-cli)
-
 # Topo CLI
 
 Compose, parameterize, and deploy containerized examples for Arm hardware.
@@ -7,6 +5,7 @@ Compose, parameterize, and deploy containerized examples for Arm hardware.
 ## Installation
 
 ### Prerequisites
+
 - Go (1.25)
 
 Build from source:
