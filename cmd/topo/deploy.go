@@ -97,7 +97,7 @@ Use --dry-run to see what commands would be executed without actually running th
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
-		stop := goperation.SetupExitCleanup(os.Stderr, cleanup, os.Exit)
+		stop := goperation.SetupExitCleanup(os.Stdout, cleanup, os.Exit)
 
 		defer func() {
 			entries := stop()
@@ -105,9 +105,9 @@ Use --dry-run to see what commands would be executed without actually running th
 		}()
 
 		if deployDryRun {
-			return deployment.DryRun(os.Stderr)
+			return deployment.DryRun(os.Stdout)
 		}
-		return deployment.Run(os.Stderr)
+		return deployment.Run(os.Stdout)
 	},
 }
 
