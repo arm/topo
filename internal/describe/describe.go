@@ -5,20 +5,20 @@ import (
 	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
-type HostCPUReport struct {
+type HostCPU struct {
 	Name     string
 	Features []string
 	Memory   string
 	Cores    int
 }
 
-type RemoteProcReport struct {
+type RemoteProcCPU struct {
 	Name string
 }
 
 type TargetHardwareReport struct {
-	Host        HostCPUReport
-	RemoteProcs []RemoteProcReport
+	Host        HostCPU
+	RemoteProcs []RemoteProcCPU
 }
 
 func Generate(sshTarget string) (TargetHardwareReport, error) {
@@ -31,17 +31,17 @@ func Generate(sshTarget string) (TargetHardwareReport, error) {
 	return generateReport(hwProfile), nil
 }
 
-func generateRemoteProcReport(remoteCPUs []string) []RemoteProcReport {
-	res := make([]RemoteProcReport, len(remoteCPUs))
+func generateRemoteProcReport(remoteCPUs []string) []RemoteProcCPU {
+	res := make([]RemoteProcCPU, len(remoteCPUs))
 	for i, cpu := range remoteCPUs {
-		res[i] = RemoteProcReport{Name: cpu}
+		res[i] = RemoteProcCPU{Name: cpu}
 	}
 	return res
 }
 
 func generateReport(hwProfile health.HardwareProfile) TargetHardwareReport {
 	return TargetHardwareReport{
-		Host: HostCPUReport{
+		Host: HostCPU{
 			Name:     "Unknown",
 			Features: hwProfile.Features,
 			Memory:   "Unknown",
