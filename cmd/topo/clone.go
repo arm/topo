@@ -73,6 +73,9 @@ Some projects require build arguments. Supply them on the command line or answer
 		}
 
 		logs, err := project.Clone(path, projectSource, argProvider)
+		if err != nil {
+			return err
+		}
 
 		logFmt, err := resolveOutput(cloneLogOutFmt)
 		if err != nil {

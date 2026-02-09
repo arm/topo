@@ -75,6 +75,9 @@ or interactively when prompted:
 		argProvider := arguments.NewStrictProviderChain(providers...)
 
 		logs, err := project.Extend(composeFilePath, src, argProvider)
+		if err != nil {
+			return err
+		}
 
 		logFmt, err := resolveOutput(extendLogOutFmt)
 		if err != nil {
