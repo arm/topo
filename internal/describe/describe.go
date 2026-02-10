@@ -20,6 +20,10 @@ type TargetHardwareReport struct {
 
 func Generate(sshTarget string) (TargetHardwareReport, error) {
 	conn := health.NewConnection(sshTarget, ssh.ExecSSH)
+	if err := conn.ProbeConnection(); err != nil {
+		return TargetHardwareReport{}, err
+	}
+
 	hwProfile, err := conn.ProbeHardware()
 	if err != nil {
 		return TargetHardwareReport{}, err
