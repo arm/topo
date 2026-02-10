@@ -69,11 +69,11 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 
 		outputFile, err := describe.WriteTargetDescriptionToFile(dir, report)
 		require.NoError(t, err)
+
 		content, err := os.ReadFile(outputFile)
 		require.NoError(t, err)
 		err = yaml.Unmarshal(content, &reportOut)
 		require.NoError(t, err)
-
 		require.FileExists(t, outputFile)
 		assert.Equal(t, report, reportOut)
 	})
@@ -95,9 +95,9 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 		require.NoError(t, err)
 		outputFile2, err := describe.WriteTargetDescriptionToFile(dir, report2)
 		require.NoError(t, err)
+
 		content, err := os.ReadFile(outputFile2)
 		require.NoError(t, err)
-
 		require.Equal(t, outputFile1, outputFile2)
 		assert.Contains(t, string(content), "feature1")
 	})
