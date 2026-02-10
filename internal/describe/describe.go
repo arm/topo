@@ -8,7 +8,7 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-const targetDescriptionFilename = "target-description.yaml"
+const TargetDescriptionFilename = "target-description.yaml"
 
 type HostCPU struct {
 	Features []string
@@ -37,7 +37,7 @@ func Generate(conn health.Connection) (TargetHardwareReport, error) {
 }
 
 func WriteTargetDescriptionFile(dir string, report TargetHardwareReport) (string, error) {
-	outputFile := filepath.Join(dir, targetDescriptionFilename)
+	outputFile := filepath.Join(dir, TargetDescriptionFilename)
 	f, err := os.Create(outputFile)
 	if err != nil {
 		return "", err

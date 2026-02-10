@@ -17,7 +17,8 @@ var describeTarget string
 
 var describeCmd = &cobra.Command{
 	Use:   "describe",
-	Short: "Describe the hardware characteristics of the target host including CPU ISA features and remoteproc capabilities",
+	Short: "Describe the hardware characteristics of the target host",
+	Long:  fmt.Sprintf(`Generates a %s file that describes the hardware characteristics of the target host including CPU ISA features and remoteproc capabilities`, describe.TargetDescriptionFilename),
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
