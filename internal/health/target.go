@@ -146,7 +146,7 @@ func createCPUProfile(fields []lscpuOutputField) HostCPUProfile {
 		case "Model name:":
 			cpuProfile.ModelName = field.Data
 		case "CPU(s):":
-			fmt.Sscanf(field.Data, "%d", &cpuProfile.Cores)
+			_, _ = fmt.Sscanf(field.Data, "%d", &cpuProfile.Cores)
 		case "Flags:":
 			cpuProfile.Features = strings.Fields(field.Data)
 		}
