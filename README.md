@@ -16,6 +16,22 @@ go build ./cmd/topo
 
 ## Getting Started
 
+### Check the status of the host and target systems
+
+```sh
+./topo health --target my-board
+```
+
+The `--target` flag accepts SSH config host aliases or `user@host` destinations. You can also set the `TOPO_TARGET` environment variable to avoid repeating this flag.
+
+### Generate a description of your target hardware
+
+```sh
+./topo describe --target my-board
+```
+
+This creates a `target-description.yaml` in the current directory. This can be used to parameterize topo templates based on the hardware characteristics of your target.
+
 ### Create a new project
 
 ```sh
@@ -38,27 +54,11 @@ Extend the compose file using a built-in template:
 ./topo extend compose.yaml template:Topo-Welcome
 ```
 
-### Check the status of the host and target systems
-
-```sh
-./topo health --target my-board
-```
-
-The `--target` flag accepts SSH config host aliases or `user@host` destinations. You can also set the `TOPO_TARGET` environment variable to avoid repeating this flag.
-
 ### Deploy to your target
 
 ```sh
 ./topo deploy --target my-board
 ```
-
-### Generate a description of your target hardware
-
-```sh
-./topo describe --target my-board
-```
-
-This creates a `target-description.yaml` in the current directory.
 
 ## Usage
 
