@@ -27,7 +27,6 @@ Target
 {{ template "checkRow" .Target.Connectivity }}
 {{- end }}
 {{- if or .Target.IsLocalhost .Target.Connectivity.Healthy }}
-Features (Linux Host): {{ join .Target.Features ", " }}
 {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
 {{- end }}
@@ -58,9 +57,6 @@ func (r PrintableHealthReport) AsJSON() (string, error) {
 	}
 	if r.Target.Dependencies == nil {
 		r.Target.Dependencies = []health.HealthCheck{}
-	}
-	if r.Target.Features == nil {
-		r.Target.Features = []string{}
 	}
 
 	b, err := json.MarshalIndent(r, "", "  ")

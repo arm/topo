@@ -2,7 +2,9 @@ package health
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/ssh"
@@ -10,7 +12,7 @@ import (
 
 type execSSH func(target ssh.Host, command string) (string, error)
 
-type HostCPUProfile struct {
+type HostProcessor struct {
 	ModelName string   `yaml:"model"`
 	Cores     int      `yaml:"cores"`
 	Features  []string `yaml:"features"`
@@ -21,7 +23,7 @@ type RemoteProcCPU struct {
 }
 
 type HardwareProfile struct {
-	HostCPU   HostCPUProfile  `yaml:"host"`
+	HostProcessor []HostProcessor  `yaml:"host"`
 	RemoteCPU []RemoteProcCPU `yaml:"remoteprocs"`
 }
 
@@ -103,7 +105,7 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	var hp HardwareProfile
 
 	if cpuProfile, err := c.collectCPUInfo(); err == nil {
-		hp.HostCPU = cpuProfile
+		hp.HostProcessor = cpuProfile
 	}
 	if cpus, err := c.collectRemoteCPU(); err == nil {
 		hp.RemoteCPU = cpus
@@ -112,51 +114,69 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	return hp, nil
 }
 
-func (c *Connection) collectCPUInfo() (HostCPUProfile, error) {
-	if ok, err := c.BinaryExists("lscpu"); !ok || err != nil {
-		return HostCPUProfile{}, fmt.Errorf("lscpu not found or not accessible")
+func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
+	ok, err := c.BinaryExists("lscpu")
+	if err != nil{
+		return nil, fmt.Errorf("checking for lscpu: %w", err)
+	}
+	if !ok {
+		return nil, errors.New("lscpu not found.")
 	}
 
 	out, err := c.Run("lscpu --json")
 	if err != nil {
-		return HostCPUProfile{}, err
+		return nil, err
 	}
 
 	var lscpu LscpuOutput
 	err = json.Unmarshal([]byte(out), &lscpu)
 	if err != nil {
-		return HostCPUProfile{}, err
+		return nil, err
 	}
-
-	return createCPUProfile(flattenLscpuFields(lscpu.Lscpu)), nil
+	
+	return createCPUProfile(lscpu.Lscpu)
 }
 
-func flattenLscpuFields(fields []LscpuOutputField) []LscpuOutputField {
-	var res []LscpuOutputField
-	for _, field := range fields {
-		res = append(res, field)
-		if len(field.Children) > 0 {
-			res = append(res, flattenLscpuFields(field.Children)...)
-		}
-	}
-	return res
-}
-
-func createCPUProfile(fields []LscpuOutputField) HostCPUProfile {
-	var cpuProfile HostCPUProfile
-
-	for _, field := range fields {
-		switch field.Field {
-		case "Model name:":
-			cpuProfile.ModelName = field.Data
-		case "CPU(s):":
-			_, _ = fmt.Sscanf(field.Data, "%d", &cpuProfile.Cores)
+func newHostProcessor(fields LscpuOutputField) (HostProcessor, error){
+	coresPerSocket := 0
+	sockets := 0
+	var err error
+	proc := HostProcessor{}
+	proc.ModelName = fields.Data	
+	for _, f := range fields.Children {
+		switch f.Field {
+		case "Core(s) per socket:":
+			coresPerSocket, err = strconv.Atoi(f.Data)
+			if err != nil {
+				return HostProcessor{}, err
+			}
+		case "Socket(s):":
+			sockets, err = strconv.Atoi(f.Data)
+			if err != nil {
+				return HostProcessor{}, err
+			}
 		case "Flags:":
-			cpuProfile.Features = strings.Fields(field.Data)
+			proc.Features = strings.Split(f.Data, " ")
 		}
 	}
+	proc.Cores = coresPerSocket * sockets
+	return proc, nil
+}
 
-	return cpuProfile
+func createCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
+	var profiles []HostProcessor
+	for _, f := range fields {
+		if f.Field == "Vendor ID:"{
+			for _, proc := range f.Children{
+				hostCPUProfile, err := newHostProcessor(proc)
+				if err != nil{
+					return nil, err
+				}
+				profiles = append(profiles,hostCPUProfile)
+			}
+		}
+	}
+	return profiles, nil
 }
 
 func (c *Connection) collectRemoteCPU() ([]RemoteProcCPU, error) {
