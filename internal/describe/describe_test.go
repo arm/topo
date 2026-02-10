@@ -25,7 +25,7 @@ func TestGenerate(t *testing.T) {
 			return "", nil
 		}
 		expected := describe.TargetHardwareReport{
-			Host: describe.HostCPU{
+			Host: describe.TargetHostCPU{
 				Features: []string{"feature1", "feature2"},
 			},
 			RemoteProcs: []describe.RemoteprocCPU{
@@ -35,7 +35,7 @@ func TestGenerate(t *testing.T) {
 		}
 
 		conn := health.NewConnection("test", mockExecSSH)
-		report, err := describe.Generate(conn)
+		report, err := describe.GenerateTargetDescription(conn)
 
 		require.NoError(t, err)
 		assert.Equal(t, expected, report)
@@ -47,7 +47,7 @@ func TestGenerate(t *testing.T) {
 		}
 
 		conn := health.NewConnection("test", mockExecSSH)
-		_, err := describe.Generate(conn)
+		_, err := describe.GenerateTargetDescription(conn)
 
 		assert.Error(t, err)
 	})
@@ -57,7 +57,7 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 	t.Run("writes full target to description to given directory", func(t *testing.T) {
 		dir := t.TempDir()
 		report := describe.TargetHardwareReport{
-			Host: describe.HostCPU{
+			Host: describe.TargetHostCPU{
 				Features: []string{"feature1", "feature2"},
 			},
 			RemoteProcs: []describe.RemoteprocCPU{
@@ -67,7 +67,7 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 		}
 		var reportOut describe.TargetHardwareReport
 
-		outputFile, err := describe.WriteTargetDescriptionFile(dir, report)
+		outputFile, err := describe.WriteTargetDescriptionToFile(dir, report)
 		require.NoError(t, err)
 		content, err := os.ReadFile(outputFile)
 		require.NoError(t, err)
@@ -82,14 +82,14 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 		dir := t.TempDir()
 		report1 := describe.TargetHardwareReport{}
 		report2 := describe.TargetHardwareReport{
-			Host: describe.HostCPU{
+			Host: describe.TargetHostCPU{
 				Features: []string{"feature1"},
 			},
 		}
 
-		outputFile1, err := describe.WriteTargetDescriptionFile(dir, report1)
+		outputFile1, err := describe.WriteTargetDescriptionToFile(dir, report1)
 		require.NoError(t, err)
-		outputFile2, err := describe.WriteTargetDescriptionFile(dir, report2)
+		outputFile2, err := describe.WriteTargetDescriptionToFile(dir, report2)
 		require.NoError(t, err)
 		content, err := os.ReadFile(outputFile2)
 		require.NoError(t, err)
