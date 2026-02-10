@@ -23,7 +23,7 @@ type TargetHardwareReport struct {
 	RemoteProcs []RemoteprocCPU
 }
 
-func Generate(conn health.Connection) (TargetHardwareReport, error) {
+func GenerateTargetDescription(conn health.Connection) (TargetHardwareReport, error) {
 	if err := conn.ProbeConnection(); err != nil {
 		return TargetHardwareReport{}, err
 	}
@@ -36,7 +36,7 @@ func Generate(conn health.Connection) (TargetHardwareReport, error) {
 	return generateReport(hwProfile), nil
 }
 
-func WriteTargetDescriptionFile(dir string, report TargetHardwareReport) (string, error) {
+func WriteTargetDescriptionToFile(dir string, report TargetHardwareReport) (string, error) {
 	outputFile := filepath.Join(dir, TargetDescriptionFilename)
 	f, err := os.Create(outputFile)
 	if err != nil {

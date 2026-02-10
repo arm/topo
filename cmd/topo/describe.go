@@ -28,7 +28,7 @@ var describeCmd = &cobra.Command{
 		}
 
 		conn := health.NewConnection(sshTarget, ssh.ExecSSH)
-		report, err := describe.Generate(conn)
+		report, err := describe.GenerateTargetDescription(conn)
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		outputPath, err := describe.WriteTargetDescriptionFile(workDir, report)
+		outputPath, err := describe.WriteTargetDescriptionToFile(workDir, report)
 		if err != nil {
 			return err
 		}
