@@ -80,7 +80,11 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 
 	t.Run("overwrites existing file", func(t *testing.T) {
 		dir := t.TempDir()
-		report1 := describe.TargetHardwareReport{}
+		report1 := describe.TargetHardwareReport{
+			Host: describe.TargetHostCPU{
+				Features: []string{"feature1", "feature2"},
+			},
+		}
 		report2 := describe.TargetHardwareReport{
 			Host: describe.TargetHostCPU{
 				Features: []string{"feature1"},
