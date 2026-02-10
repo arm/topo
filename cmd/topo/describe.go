@@ -3,19 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/arm-debug/topo-cli/internal/describe"
 	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/spf13/cobra"
-	"go.yaml.in/yaml/v4"
 )
 
 var describeTarget string
-
-const targetDescriptionFilename = "target-description.yaml"
 
 var describeCmd = &cobra.Command{
 	Use:   "describe",
@@ -33,18 +29,12 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		reportBytes, err := yaml.Marshal(report)
+		workDir, err := os.Getwd()
 		if err != nil {
 			return err
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-
-		outputFile := filepath.Join(wd, targetDescriptionFilename)
-		err = os.WriteFile(outputFile, reportBytes, 0o0644)
+		outputPath, err := describe.WriteTargetDescriptionFile(workDir, report)
 		if err != nil {
 			return err
 		}
@@ -52,7 +42,7 @@ var describeCmd = &cobra.Command{
 		c := console.NewLogger(os.Stderr, term.Plain)
 		c.Log(logger.Entry{
 			Level:   logger.Info,
-			Message: fmt.Sprintf("Target description written to %s", outputFile),
+			Message: fmt.Sprintf("Target description written to %s", outputPath),
 		})
 
 		return nil

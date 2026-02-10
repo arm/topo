@@ -1,9 +1,15 @@
 package describe
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/arm-debug/topo-cli/internal/ssh"
+	"go.yaml.in/yaml/v4"
 )
+
+const targetDescriptionFilename = "target-description.yaml"
 
 type HostCPU struct {
 	Features []string
@@ -30,6 +36,20 @@ func Generate(sshTarget string) (TargetHardwareReport, error) {
 	}
 
 	return generateReport(hwProfile), nil
+}
+
+func WriteTargetDescriptionFile(dir string, report TargetHardwareReport) (string, error) {
+	outputFile := filepath.Join(dir, targetDescriptionFilename)
+	f, err := os.Create(outputFile)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	encoder := yaml.NewEncoder(f)
+	return outputFile, encoder.Encode(report)
 }
 
 func generateRemoteprocReport(remoteCPUs []string) []RemoteprocCPU {
