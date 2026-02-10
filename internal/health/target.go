@@ -25,14 +25,14 @@ type HardwareProfile struct {
 	RemoteCPU []RemoteProcCPU
 }
 
-type lscpuOutputField struct {
+type LscpuOutputField struct {
 	Field    string             `json:"field"`
 	Data     string             `json:"data"`
-	Children []lscpuOutputField `json:"children,omitempty"`
+	Children []LscpuOutputField `json:"children,omitempty"`
 }
 
-type lscpuOutput struct {
-	Lscpu []lscpuOutputField `json:"lscpu"`
+type LscpuOutput struct {
+	Lscpu []LscpuOutputField `json:"lscpu"`
 }
 
 func (hw HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
@@ -122,27 +122,27 @@ func (c *Connection) collectCPUInfo() (HostCPUProfile, error) {
 		return HostCPUProfile{}, err
 	}
 
-	var lscpu lscpuOutput
+	var lscpu LscpuOutput
 	err = json.Unmarshal([]byte(out), &lscpu)
 	if err != nil {
 		return HostCPUProfile{}, err
 	}
 
-	return createCPUProfile(flatFields(lscpu.Lscpu)), nil
+	return createCPUProfile(flattenLscpuFields(lscpu.Lscpu)), nil
 }
 
-func flatFields(fields []lscpuOutputField) []lscpuOutputField {
-	var res []lscpuOutputField
+func flattenLscpuFields(fields []LscpuOutputField) []LscpuOutputField {
+	var res []LscpuOutputField
 	for _, field := range fields {
 		res = append(res, field)
 		if len(field.Children) > 0 {
-			res = append(res, flatFields(field.Children)...)
+			res = append(res, flattenLscpuFields(field.Children)...)
 		}
 	}
 	return res
 }
 
-func createCPUProfile(fields []lscpuOutputField) HostCPUProfile {
+func createCPUProfile(fields []LscpuOutputField) HostCPUProfile {
 	var cpuProfile HostCPUProfile
 
 	for _, field := range fields {

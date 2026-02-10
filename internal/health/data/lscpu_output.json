@@ -1,0 +1,86 @@
+{
+  "lscpu": [
+    {
+      "field": "Architecture:",
+      "data": "aarch64",
+      "children": [
+        {
+          "field": "CPU op-mode(s):",
+          "data": "32-bit, 64-bit"
+        },
+        {
+          "field": "Byte Order:",
+          "data": "Little Endian"
+        }
+      ]
+    },
+    {
+      "field": "CPU(s):",
+      "data": "2",
+      "children": [
+        {
+          "field": "On-line CPU(s) list:",
+          "data": "0,1"
+        }
+      ]
+    },
+    {
+      "field": "Vendor ID:",
+      "data": "ARM",
+      "children": [
+        {
+          "field": "Model name:",
+          "data": "Cortex-A55",
+          "children": [
+            {
+              "field": "Model:",
+              "data": "0"
+            },
+            {
+              "field": "Thread(s) per core:",
+              "data": "1"
+            },
+            {
+              "field": "Core(s) per cluster:",
+              "data": "2"
+            },
+            {
+              "field": "Socket(s):",
+              "data": "-"
+            },
+            {
+              "field": "Cluster(s):",
+              "data": "1"
+            },
+            {
+              "field": "Stepping:",
+              "data": "r2p0"
+            },
+            {
+              "field": "BogoMIPS:",
+              "data": "48.00"
+            },
+            {
+              "field": "Flags:",
+              "data": "fpu asimd"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "field": "NUMA:",
+      "data": null,
+      "children": [
+        {
+          "field": "NUMA node(s):",
+          "data": "1"
+        },
+        {
+          "field": "NUMA node0 CPU(s):",
+          "data": "0,1"
+        }
+      ]
+    }
+  ]
+}

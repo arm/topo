@@ -1,6 +1,8 @@
 package health_test
 
 import (
+	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,6 +12,9 @@ import (
 	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
+
+//go:embed data/lscpu_output.json
+var lsCpuOutputRaw []byte
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
@@ -38,12 +43,16 @@ func TestRun(t *testing.T) {
 }
 
 func TestProbe(t *testing.T) {
+	var lsCpuOutput health.LscpuOutput
+	err := json.Unmarshal(lsCpuOutputRaw, &lsCpuOutput)
+	assert.NoError(t, err, "failed to unmarshal lscpu output")
+
 	t.Run("probe succeeds and collects features", func(t *testing.T) {
 		mockExec := func(_ ssh.Host, command string) (string, error) {
 			if command == "" {
 				return "", nil // simulate successful initial connection
 			}
-			return "Features: fpu asimd", nil
+			return string(lsCpuOutputRaw), nil
 		}
 
 		conn := health.NewConnection("hostname", mockExec)
@@ -91,8 +100,26 @@ func TestProbe(t *testing.T) {
 		conn := health.NewConnection("hostname", mockExec)
 		ts := conn.Probe()
 
-		want := []string{"foo", "bar"}
+		want := []health.RemoteProcCPU{{Name: "foo"}, {Name: "bar"}}
 		assert.Equal(t, want, ts.Hardware.RemoteCPU)
+	})
+}
+
+func TestProbeHardware(t *testing.T) {
+	t.Run("probe includes core count and model name", func(t *testing.T) {
+		mockExec := func(_ ssh.Host, command string) (string, error) {
+			if command == "" {
+				return "", nil // simulate successful initial connection
+			}
+			return string(lsCpuOutputRaw), nil
+		}
+
+		conn := health.NewConnection("hostname", mockExec)
+		ts, err := conn.ProbeHardware()
+
+		assert.NoError(t, err)
+		assert.Equal(t, 2, ts.HostCPU.Cores)
+		assert.Equal(t, "Cortex-A55", ts.HostCPU.ModelName)
 	})
 }
 
