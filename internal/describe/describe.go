@@ -10,7 +10,7 @@ import (
 
 const TargetDescriptionFilename = "target-description.yaml"
 
-type HostCPU struct {
+type TargetHostCPU struct {
 	Features []string
 }
 
@@ -19,7 +19,7 @@ type RemoteprocCPU struct {
 }
 
 type TargetHardwareReport struct {
-	Host        HostCPU
+	Host        TargetHostCPU
 	RemoteProcs []RemoteprocCPU
 }
 
@@ -60,7 +60,7 @@ func generateRemoteprocReport(remoteCPUs []string) []RemoteprocCPU {
 
 func generateReport(hwProfile health.HardwareProfile) TargetHardwareReport {
 	return TargetHardwareReport{
-		Host: HostCPU{
+		Host: TargetHostCPU{
 			Features: hwProfile.Features,
 		},
 		RemoteProcs: generateRemoteprocReport(hwProfile.RemoteCPU),
