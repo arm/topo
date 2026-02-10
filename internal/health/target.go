@@ -104,12 +104,17 @@ func (c *Connection) CheckDependencies(hardware map[HardwareCapability]struct{})
 func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	var hp HardwareProfile
 
-	if cpuProfile, err := c.collectCPUInfo(); err == nil {
-		hp.HostProcessor = cpuProfile
+	cpuProfile, err := c.collectCPUInfo()
+	if err != nil {
+		return hp, fmt.Errorf("collecting CPU info: %w", err)
 	}
-	if cpus, err := c.collectRemoteCPU(); err == nil {
-		hp.RemoteCPU = cpus
+	hp.HostProcessor = cpuProfile
+
+	cpus, err := c.collectRemoteCPU()
+	if err != nil {
+		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
 	}
+	hp.RemoteCPU = cpus
 
 	return hp, nil
 }
@@ -134,59 +139,79 @@ func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
 		return nil, err
 	}
 	
-	return createCPUProfile(lscpu.Lscpu)
+	return CreateCPUProfile(lscpu.Lscpu)
 }
 
-func newHostProcessor(fields LscpuOutputField) (HostProcessor, error){
-	coresPerSocket := 0
-	sockets := 0
-	var err error
-	proc := HostProcessor{}
-	proc.ModelName = fields.Data	
+func newHostProcessor(fields LscpuOutputField) (HostProcessor, error) {
+	var coresPerUnit, units int
+	var features []string
+
 	for _, f := range fields.Children {
+		if f.Field == "Model name:" {
+			break
+		}
 		switch f.Field {
 		case "Core(s) per socket:":
-			coresPerSocket, err = strconv.Atoi(f.Data)
+			v, err := strconv.Atoi(f.Data)
 			if err != nil {
 				return HostProcessor{}, err
 			}
+			coresPerUnit = v
 		case "Socket(s):":
-			sockets, err = strconv.Atoi(f.Data)
+			v, err := strconv.Atoi(f.Data)
+			if err != nil {
+				// Some platforms report "-" for sockets when using clusters
+				continue
+			}
+			units = v
+		case "Core(s) per cluster:":
+			v, err := strconv.Atoi(f.Data)
 			if err != nil {
 				return HostProcessor{}, err
 			}
+			coresPerUnit = v
+		case "Cluster(s):":
+			v, err := strconv.Atoi(f.Data)
+			if err != nil {
+				return HostProcessor{}, err
+			}
+			units = v
 		case "Flags:":
-			proc.Features = strings.Split(f.Data, " ")
+			features = strings.Split(f.Data, " ")
 		}
 	}
-	proc.Cores = coresPerSocket * sockets
-	return proc, nil
+
+	return HostProcessor{
+		ModelName: fields.Data,
+		Cores:     coresPerUnit * units,
+		Features:  features,
+	}, nil
 }
 
-func createCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
+func CreateCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
 	var profiles []HostProcessor
-	for _, f := range fields {
-		if f.Field == "Vendor ID:"{
-			for _, proc := range f.Children{
-				hostCPUProfile, err := newHostProcessor(proc)
-				if err != nil{
-					return nil, err
-				}
-				profiles = append(profiles,hostCPUProfile)
-			}
+	for i, f := range fields {
+		if f.Field != "Model name:" {
+			continue
 		}
+		proc := LscpuOutputField{
+			Field:    f.Field,
+			Data:     f.Data,
+			Children: fields[i+1:],
+		}
+		hp, err := newHostProcessor(proc)
+		if err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, hp)
 	}
 	return profiles, nil
 }
 
 func (c *Connection) collectRemoteCPU() ([]RemoteProcCPU, error) {
 	out, err := c.Run("ls /sys/class/remoteproc")
-	if err != nil {
-		return nil, err
-	}
-
-	if out == "" {
-		return nil, fmt.Errorf("target supports remoteproc, but no processors found")
+	if err != nil || out == "" {
+		return nil, nil
 	}
 
 	out, err = c.Run("cat /sys/class/remoteproc/*/name")

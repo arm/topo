@@ -15,8 +15,11 @@ var searchFlags = map[string]string{
 }
 
 func ExtractArmFeatures(targetStatus Status) []string {
-	res := make([]string, 0)
+	if len(targetStatus.Hardware.HostProcessor) == 0 {
+		return nil
+	}
 
+	var res []string
 	for _, field := range targetStatus.Hardware.HostProcessor[0].Features {
 		if name, ok := searchFlags[field]; ok {
 			res = append(res, name)
@@ -89,6 +92,7 @@ func generateTargetReport(targetStatus Status) TargetReport {
 		remoteProcNames = append(remoteProcNames, remoteProc.Name)
 	}
 	report.SubsystemDriver.Value = strings.Join(remoteProcNames, ", ")
+	report.Features = ExtractArmFeatures(targetStatus)
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 
 	return report

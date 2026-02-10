@@ -2,7 +2,6 @@ package health_test
 
 import (
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -11,10 +10,11 @@ import (
 	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //go:embed data/lscpu_output.json
-var lsCpuOutputRaw []byte
+var lsCpuOutputRaw string
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
@@ -43,38 +43,28 @@ func TestRun(t *testing.T) {
 }
 
 func TestProbe(t *testing.T) {
-	var lsCpuOutput health.LscpuOutput
-	err := json.Unmarshal(lsCpuOutputRaw, &lsCpuOutput)
-	assert.NoError(t, err, "failed to unmarshal lscpu output")
-
-	t.Run("probe succeeds and collects features", func(t *testing.T) {
+	t.Run("probe succeeds and collects CPU info", func(t *testing.T) {
 		mockExec := func(_ ssh.Host, command string) (string, error) {
-			if command == "" {
-				return "", nil // simulate successful initial connection
-			}
-			return string(lsCpuOutputRaw), nil
-		}
-
-		conn := health.NewConnection("hostname", mockExec)
-		ts := conn.Probe()
-
-		assert.NoError(t, ts.ConnectionError)
-		assert.Equal(t, []string{"fpu", "asimd"}, ts.Hardware.HostCPU.Features)
-	})
-
-	t.Run("probe succeeds but features collection returns empty", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string) (string, error) {
-			if command == "" {
+			switch {
+			case command == "true":
 				return "", nil
+			case strings.Contains(command, "command -v"):
+				return "/usr/bin/lscpu", nil
+			case command == "lscpu --json":
+				return lsCpuOutputRaw, nil
+			default:
+				return "", errors.New("no remoteproc")
 			}
-			return "", nil
 		}
 
 		conn := health.NewConnection("hostname", mockExec)
 		ts := conn.Probe()
 
 		assert.NoError(t, ts.ConnectionError)
-		assert.Empty(t, ts.Hardware.HostCPU.Features)
+		require.Len(t, ts.Hardware.HostProcessor, 1)
+		assert.Equal(t, "Cortex-A55", ts.Hardware.HostProcessor[0].ModelName)
+		assert.Equal(t, 2, ts.Hardware.HostProcessor[0].Cores)
+		assert.Contains(t, ts.Hardware.HostProcessor[0].Features, "asimd")
 	})
 
 	t.Run("probe fails connection", func(t *testing.T) {
@@ -89,12 +79,22 @@ func TestProbe(t *testing.T) {
 		assert.EqualError(t, ts.ConnectionError, "connection refused")
 	})
 
-	t.Run("probe finds remote cpu", func(t *testing.T) {
+	t.Run("probe finds remote CPUs", func(t *testing.T) {
 		mockExec := func(_ ssh.Host, command string) (string, error) {
-			if strings.Contains(command, "remoteproc") {
+			switch {
+			case command == "true":
+				return "", nil
+			case strings.Contains(command, "command -v"):
+				return "/usr/bin/lscpu", nil
+			case command == "lscpu --json":
+				return lsCpuOutputRaw, nil
+			case strings.Contains(command, "ls /sys/class/remoteproc"):
+				return "remoteproc0\nremoteproc1", nil
+			case strings.Contains(command, "cat /sys/class/remoteproc"):
 				return "foo\nbar", nil
+			default:
+				return "", errors.New("unexpected command: " + command)
 			}
-			return "", nil
 		}
 
 		conn := health.NewConnection("hostname", mockExec)
@@ -103,28 +103,183 @@ func TestProbe(t *testing.T) {
 		want := []health.RemoteProcCPU{{Name: "foo"}, {Name: "bar"}}
 		assert.Equal(t, want, ts.Hardware.RemoteCPU)
 	})
-}
 
-func TestProbeHardware(t *testing.T) {
-	t.Run("probe includes core count and model name", func(t *testing.T) {
+	t.Run("probe succeeds when no remoteproc support", func(t *testing.T) {
 		mockExec := func(_ ssh.Host, command string) (string, error) {
-			if command == "" {
-				return "", nil // simulate successful initial connection
+			switch {
+			case command == "true":
+				return "", nil
+			case strings.Contains(command, "command -v"):
+				return "/usr/bin/lscpu", nil
+			case command == "lscpu --json":
+				return lsCpuOutputRaw, nil
+			default:
+				return "", errors.New("no such directory")
 			}
-			return string(lsCpuOutputRaw), nil
 		}
 
 		conn := health.NewConnection("hostname", mockExec)
-		ts, err := conn.ProbeHardware()
+		ts := conn.Probe()
 
-		assert.NoError(t, err)
-		assert.Equal(t, 2, ts.HostCPU.Cores)
-		assert.Equal(t, "Cortex-A55", ts.HostCPU.ModelName)
+		assert.NoError(t, ts.ConnectionError)
+		assert.Nil(t, ts.Hardware.RemoteCPU)
+		require.Len(t, ts.Hardware.HostProcessor, 1)
+		assert.Equal(t, "Cortex-A55", ts.Hardware.HostProcessor[0].ModelName)
+		assert.Equal(t, 2, ts.Hardware.HostProcessor[0].Cores)
+	})
+}
+
+func TestProbeHardware(t *testing.T) {
+	t.Run("returns model name and features", func(t *testing.T) {
+		mockExec := func(_ ssh.Host, command string) (string, error) {
+			switch {
+			case strings.Contains(command, "command -v"):
+				return "/usr/bin/lscpu", nil
+			case command == "lscpu --json":
+				return lsCpuOutputRaw, nil
+			default:
+				return "", errors.New("not found")
+			}
+		}
+
+		conn := health.NewConnection("hostname", mockExec)
+		hw, err := conn.ProbeHardware()
+
+		require.NoError(t, err)
+		require.Len(t, hw.HostProcessor, 1)
+		assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].ModelName)
+		assert.Equal(t, 2, hw.HostProcessor[0].Cores)
+		assert.Contains(t, hw.HostProcessor[0].Features, "asimd")
+	})
+
+	t.Run("returns error when lscpu not found", func(t *testing.T) {
+		mockExec := func(_ ssh.Host, command string) (string, error) {
+			switch {
+			case strings.Contains(command, "command -v"):
+				return "", errors.New("not found")
+			default:
+				return "", errors.New("not found")
+			}
+		}
+
+		conn := health.NewConnection("hostname", mockExec)
+		_, err := conn.ProbeHardware()
+
+		assert.Error(t, err)
+	})
+
+	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
+		mockExec := func(_ ssh.Host, command string) (string, error) {
+			switch {
+			case strings.Contains(command, "command -v"):
+				return "/usr/bin/lscpu", nil
+			case command == "lscpu --json":
+				return "not json", nil
+			default:
+				return "", errors.New("not found")
+			}
+		}
+
+		conn := health.NewConnection("hostname", mockExec)
+		_, err := conn.ProbeHardware()
+
+		assert.Error(t, err)
+	})
+}
+
+func TestCreateCPUProfile(t *testing.T) {
+	t.Run("parses lscpu with sockets", func(t *testing.T) {
+		input := []health.LscpuOutputField{
+			{Field: "Vendor ID:", Data: "ARM"},
+			{Field: "Model name:", Data: "Cortex-A72"},
+			{Field: "Core(s) per socket:", Data: "4"},
+			{Field: "Socket(s):", Data: "2"},
+			{Field: "Flags:", Data: "fp asimd evtstrm"},
+		}
+
+		got, err := health.CreateCPUProfile(input)
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		want := health.HostProcessor{
+			ModelName: "Cortex-A72",
+			Cores:     8,
+			Features:  []string{"fp", "asimd", "evtstrm"},
+		}
+		assert.Equal(t, want, got[0])
+	})
+
+	t.Run("parses lscpu with clusters", func(t *testing.T) {
+		input := []health.LscpuOutputField{
+			{Field: "Vendor ID:", Data: "ARM"},
+			{Field: "Model name:", Data: "Cortex-A55"},
+			{Field: "Core(s) per cluster:", Data: "2"},
+			{Field: "Socket(s):", Data: "-"},
+			{Field: "Cluster(s):", Data: "1"},
+			{Field: "Flags:", Data: "fp asimd"},
+		}
+
+		got, err := health.CreateCPUProfile(input)
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		want := health.HostProcessor{
+			ModelName: "Cortex-A55",
+			Cores:     2,
+			Features:  []string{"fp", "asimd"},
+		}
+		assert.Equal(t, want, got[0])
+	})
+
+	t.Run("parses multiple processors", func(t *testing.T) {
+		input := []health.LscpuOutputField{
+			{Field: "Vendor ID:", Data: "ARM"},
+			{Field: "Model name:", Data: "Cortex-A55"},
+			{Field: "Core(s) per socket:", Data: "4"},
+			{Field: "Socket(s):", Data: "1"},
+			{Field: "Flags:", Data: "fp asimd"},
+			{Field: "Model name:", Data: "Cortex-A78"},
+			{Field: "Core(s) per socket:", Data: "2"},
+			{Field: "Socket(s):", Data: "1"},
+			{Field: "Flags:", Data: "fp asimd sve"},
+		}
+
+		got, err := health.CreateCPUProfile(input)
+
+		require.NoError(t, err)
+		require.Len(t, got, 2)
+		assert.Equal(t, "Cortex-A55", got[0].ModelName)
+		assert.Equal(t, 4, got[0].Cores)
+		assert.Equal(t, "Cortex-A78", got[1].ModelName)
+		assert.Equal(t, 2, got[1].Cores)
+	})
+
+	t.Run("returns empty when no model name field", func(t *testing.T) {
+		input := []health.LscpuOutputField{
+			{Field: "Architecture:", Data: "aarch64"},
+		}
+
+		got, err := health.CreateCPUProfile(input)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("returns error when cores per socket is not a number", func(t *testing.T) {
+		input := []health.LscpuOutputField{
+			{Field: "Model name:", Data: "Cortex-A55"},
+			{Field: "Core(s) per socket:", Data: "abc"},
+			{Field: "Socket(s):", Data: "1"},
+		}
+
+		_, err := health.CreateCPUProfile(input)
+
+		assert.Error(t, err)
 	})
 }
 
 func TestBinaryExists(t *testing.T) {
-	t.Run("when binary found, returns true", func(t *testing.T) {
+	t.Run("when binary found returns true", func(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "/foo/bar", nil
 		}

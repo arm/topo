@@ -11,8 +11,8 @@ func TestExtractArmFeatures(t *testing.T) {
 	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{
-				HostCPU: health.HostCPUProfile{
-					Features: []string{"fp", "asimd", "sve2", "sme"},
+				HostProcessor: []health.HostProcessor{
+					{Features: []string{"fp", "asimd", "sve2", "sme"}},
 				},
 			},
 		}
@@ -26,8 +26,8 @@ func TestExtractArmFeatures(t *testing.T) {
 	t.Run("returns empty slice if no matching features", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{
-				HostCPU: health.HostCPUProfile{
-					Features: []string{"fp", "crc32"},
+				HostProcessor: []health.HostProcessor{
+					{Features: []string{"fp", "crc32"}},
 				},
 			},
 		}
@@ -96,8 +96,8 @@ func TestGenerateReport(t *testing.T) {
 		ts := health.Status{
 			ConnectionError: nil,
 			Hardware: health.HardwareProfile{
-				HostCPU: health.HostCPUProfile{
-					Features: []string{"asimd", "sve"},
+				HostProcessor: []health.HostProcessor{
+					{Features: []string{"asimd", "sve"}},
 				},
 			},
 		}
