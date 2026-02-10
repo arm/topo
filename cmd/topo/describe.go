@@ -19,7 +19,7 @@ const targetDescriptionFilename = "target-description.yaml"
 
 var describeCmd = &cobra.Command{
 	Use:   "describe",
-	Short: "Describe the hardware characteristics of the target host (CPU architecture, ISA features, etc.)",
+	Short: "Describe the hardware characteristics of the target host including CPU ISA features and remoteproc capabilities",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true

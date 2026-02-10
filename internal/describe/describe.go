@@ -7,16 +7,15 @@ import (
 
 type HostCPU struct {
 	Features []string
-	// TODO enrich with more details like CPU model and accessible memory
 }
 
-type RemoteProcCPU struct {
+type RemoteprocCPU struct {
 	Name string
 }
 
 type TargetHardwareReport struct {
 	Host        HostCPU
-	RemoteProcs []RemoteProcCPU
+	RemoteProcs []RemoteprocCPU
 }
 
 func Generate(sshTarget string) (TargetHardwareReport, error) {
@@ -29,10 +28,10 @@ func Generate(sshTarget string) (TargetHardwareReport, error) {
 	return generateReport(hwProfile), nil
 }
 
-func generateRemoteProcReport(remoteCPUs []string) []RemoteProcCPU {
-	res := make([]RemoteProcCPU, len(remoteCPUs))
+func generateRemoteprocReport(remoteCPUs []string) []RemoteprocCPU {
+	res := make([]RemoteprocCPU, len(remoteCPUs))
 	for i, cpu := range remoteCPUs {
-		res[i] = RemoteProcCPU{Name: cpu}
+		res[i] = RemoteprocCPU{Name: cpu}
 	}
 	return res
 }
@@ -42,6 +41,6 @@ func generateReport(hwProfile health.HardwareProfile) TargetHardwareReport {
 		Host: HostCPU{
 			Features: hwProfile.Features,
 		},
-		RemoteProcs: generateRemoteProcReport(hwProfile.RemoteCPU),
+		RemoteProcs: generateRemoteprocReport(hwProfile.RemoteCPU),
 	}
 }
