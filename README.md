@@ -52,6 +52,14 @@ The `--target` flag accepts SSH config host aliases or `user@host` destinations.
 ./topo deploy --target my-board
 ```
 
+### Generate a description of your target hardware
+
+```sh
+./topo describe --target my-board
+```
+
+This creates a `target-description.yaml` in the current directory.
+
 ## Usage
 
 For detailed command information and all available options:

@@ -5,4 +5,4 @@
 ### Added
 
 - Initial release
-- Operations supported: `help`, `clone`, `completion`, `deploy`, `extend`, `health`, `init`, `service`, `stop`, and `templates`.
+- Operations supported: `help`, `clone`, `completion`, `deploy`, `extend`, `health`, `describe`, `init`, `service`, `stop`, and `templates`.
