@@ -23,8 +23,8 @@ type RemoteProcCPU struct {
 }
 
 type HardwareProfile struct {
-	HostProcessor []HostProcessor  `yaml:"host"`
-	RemoteCPU []RemoteProcCPU `yaml:"remoteprocs"`
+	HostProcessor []HostProcessor `yaml:"host"`
+	RemoteCPU     []RemoteProcCPU `yaml:"remoteprocs"`
 }
 
 type LscpuOutputField struct {
@@ -121,11 +121,11 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 
 func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
 	ok, err := c.BinaryExists("lscpu")
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("checking for lscpu: %w", err)
 	}
 	if !ok {
-		return nil, errors.New("lscpu not found.")
+		return nil, errors.New("lscpu not found")
 	}
 
 	out, err := c.Run("lscpu --json")
@@ -138,42 +138,28 @@ func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return CreateCPUProfile(lscpu.Lscpu)
 }
 
-func newHostProcessor(fields LscpuOutputField) (HostProcessor, error) {
-	var coresPerUnit, units int
+func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, error) {
+	coresPerUnit := 1
+	units := 1
 	var features []string
 
-	for _, f := range fields.Children {
-		if f.Field == "Model name:" {
-			break
-		}
+	for _, f := range fields {
 		switch f.Field {
-		case "Core(s) per socket:":
+		case "Core(s) per socket:", "Core(s) per cluster:":
 			v, err := strconv.Atoi(f.Data)
 			if err != nil {
 				return HostProcessor{}, err
 			}
 			coresPerUnit = v
-		case "Socket(s):":
+		case "Socket(s):", "Cluster(s):":
 			v, err := strconv.Atoi(f.Data)
 			if err != nil {
 				// Some platforms report "-" for sockets when using clusters
 				continue
-			}
-			units = v
-		case "Core(s) per cluster:":
-			v, err := strconv.Atoi(f.Data)
-			if err != nil {
-				return HostProcessor{}, err
-			}
-			coresPerUnit = v
-		case "Cluster(s):":
-			v, err := strconv.Atoi(f.Data)
-			if err != nil {
-				return HostProcessor{}, err
 			}
 			units = v
 		case "Flags:":
@@ -182,24 +168,32 @@ func newHostProcessor(fields LscpuOutputField) (HostProcessor, error) {
 	}
 
 	return HostProcessor{
-		ModelName: fields.Data,
+		ModelName: name,
 		Cores:     coresPerUnit * units,
 		Features:  features,
 	}, nil
 }
 
 func CreateCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
-	var profiles []HostProcessor
-	for i, f := range fields {
-		if f.Field != "Model name:" {
+	type group struct {
+		name   string
+		fields []LscpuOutputField
+	}
+	var groups []group
+
+	for _, f := range fields {
+		if f.Field == "Model name:" {
+			groups = append(groups, group{name: f.Data})
 			continue
 		}
-		proc := LscpuOutputField{
-			Field:    f.Field,
-			Data:     f.Data,
-			Children: fields[i+1:],
+		if len(groups) > 0 {
+			groups[len(groups)-1].fields = append(groups[len(groups)-1].fields, f)
 		}
-		hp, err := newHostProcessor(proc)
+	}
+
+	var profiles []HostProcessor
+	for _, g := range groups {
+		hp, err := newHostProcessor(g.name, g.fields)
 		if err != nil {
 			return nil, err
 		}
