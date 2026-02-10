@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/arm-debug/topo-cli/internal/health"
-	"github.com/arm-debug/topo-cli/internal/ssh"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -24,8 +23,7 @@ type TargetHardwareReport struct {
 	RemoteProcs []RemoteprocCPU
 }
 
-func Generate(sshTarget string) (TargetHardwareReport, error) {
-	conn := health.NewConnection(sshTarget, ssh.ExecSSH)
+func Generate(conn health.Connection) (TargetHardwareReport, error) {
 	if err := conn.ProbeConnection(); err != nil {
 		return TargetHardwareReport{}, err
 	}
