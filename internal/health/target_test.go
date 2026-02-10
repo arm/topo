@@ -1,7 +1,6 @@
 package health_test
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,8 +12,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//go:embed data/lscpu_output.json
-var lsCpuOutputRaw string
+const lsCpuOutputRaw = `{
+	"lscpu": [
+		{"field": "Vendor ID:", "data": "ARM"},
+		{"field": "Model name:", "data": "Cortex-A55"},
+		{"field": "Core(s) per cluster:", "data": "2"},
+		{"field": "Socket(s):", "data": "-"},
+		{"field": "Cluster(s):", "data": "1"},
+		{"field": "Flags:", "data": "fp asimd"}
+	]
+}`
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
@@ -64,7 +71,7 @@ func TestProbe(t *testing.T) {
 		require.Len(t, ts.Hardware.HostProcessor, 1)
 		assert.Equal(t, "Cortex-A55", ts.Hardware.HostProcessor[0].ModelName)
 		assert.Equal(t, 2, ts.Hardware.HostProcessor[0].Cores)
-		assert.Contains(t, ts.Hardware.HostProcessor[0].Features, "asimd")
+		assert.Equal(t, []string{"fp", "asimd"}, ts.Hardware.HostProcessor[0].Features)
 	})
 
 	t.Run("probe fails connection", func(t *testing.T) {
@@ -149,7 +156,7 @@ func TestProbeHardware(t *testing.T) {
 		require.Len(t, hw.HostProcessor, 1)
 		assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].ModelName)
 		assert.Equal(t, 2, hw.HostProcessor[0].Cores)
-		assert.Contains(t, hw.HostProcessor[0].Features, "asimd")
+		assert.Equal(t, []string{"fp", "asimd"}, hw.HostProcessor[0].Features)
 	})
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
