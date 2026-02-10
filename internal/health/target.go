@@ -11,18 +11,18 @@ import (
 type execSSH func(target ssh.Host, command string) (string, error)
 
 type HostCPUProfile struct {
-	ModelName string
-	Features  []string
-	Cores     int
+	ModelName string   `yaml:"model"`
+	Cores     int      `yaml:"cores"`
+	Features  []string `yaml:"features"`
 }
 
 type RemoteProcCPU struct {
-	Name string
+	Name string `yaml:"name"`
 }
 
 type HardwareProfile struct {
-	HostCPU   HostCPUProfile
-	RemoteCPU []RemoteProcCPU
+	HostCPU   HostCPUProfile  `yaml:"host"`
+	RemoteCPU []RemoteProcCPU `yaml:"remoteprocs"`
 }
 
 type LscpuOutputField struct {

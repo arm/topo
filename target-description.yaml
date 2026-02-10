@@ -1,0 +1,22 @@
+host:
+    model: Cortex-A55
+    cores: 2
+    features:
+        - fp
+        - asimd
+        - evtstrm
+        - aes
+        - pmull
+        - sha1
+        - sha2
+        - crc32
+        - atomics
+        - fphp
+        - asimdhp
+        - cpuid
+        - asimdrdm
+        - lrcpc
+        - dcpop
+        - asimddp
+remoteprocs:
+    - name: imx-rproc
