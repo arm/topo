@@ -113,6 +113,10 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 }
 
 func (c *Connection) collectCPUInfo() (HostCPUProfile, error) {
+	if ok, err := c.BinaryExists("lscpu"); !ok || err != nil {
+		return HostCPUProfile{}, fmt.Errorf("lscpu not found or not accessible")
+	}
+
 	out, err := c.Run("lscpu --json")
 	if err != nil {
 		return HostCPUProfile{}, err
