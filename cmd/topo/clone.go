@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cloneLogOutFmt string
-
 var topoCloneCmd = &cobra.Command{
 	Use:   "clone <path> <project-source>",
 	Short: "Clone an example project",
@@ -77,17 +75,16 @@ Some projects require build arguments. Supply them on the command line or answer
 			return err
 		}
 
-		logFmt, err := resolveOutput(cloneLogOutFmt)
+		logFmt, err := resolveOutput(logOutFmt)
 		if err != nil {
 			return err
 		}
 		c := console.NewLogger(os.Stderr, logFmt)
 		c.Log(logs...)
-		return err
+		return nil
 	},
 }
 
 func init() {
-	addLogOutputFlag(topoCloneCmd, &cloneLogOutFmt)
 	rootCmd.AddCommand(topoCloneCmd)
 }

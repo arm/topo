@@ -26,10 +26,7 @@ var (
 	skipProjectChecks bool
 )
 
-var (
-	deployOpts      docker.DeployOptions
-	deployLogOutFmt string
-)
+var deployOpts docker.DeployOptions
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
@@ -48,7 +45,7 @@ Use --dry-run to see what commands would be executed without actually running th
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		logFmt, err := resolveOutput(deployLogOutFmt)
+		logFmt, err := resolveOutput(logOutFmt)
 		if err != nil {
 			return err
 		}
@@ -152,7 +149,6 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 
 func init() {
 	addTargetFlag(deployCmd, &deployTarget)
-	addLogOutputFlag(deployCmd, &deployLogOutFmt)
 	deployCmd.Flags().StringVarP(&port, "port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
 	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")

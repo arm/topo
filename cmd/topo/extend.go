@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var extendLogOutFmt string
-
 var extendCmd = &cobra.Command{
 	Use:   "extend <compose-filepath> <source> [flags] [-- ARG=VALUE ...]",
 	Short: "Add all services of source to the compose file from a template ID, git URL, or local directory",
@@ -79,17 +77,16 @@ or interactively when prompted:
 			return err
 		}
 
-		logFmt, err := resolveOutput(extendLogOutFmt)
+		logFmt, err := resolveOutput(logOutFmt)
 		if err != nil {
 			return err
 		}
 		c := console.NewLogger(os.Stderr, logFmt)
 		c.Log(logs...)
-		return err
+		return nil
 	},
 }
 
 func init() {
-	addLogOutputFlag(extendCmd, &extendLogOutFmt)
 	rootCmd.AddCommand(extendCmd)
 }

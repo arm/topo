@@ -26,8 +26,10 @@ func addOutputFlag(cmd *cobra.Command, output *string) {
 	cmd.Flags().StringVarP(output, "output", "o", "plain", "Output format: plain or json")
 }
 
-func addLogOutputFlag(cmd *cobra.Command, output *string) {
-	cmd.Flags().StringVarP(output, "log-output", "l", "plain", "Output format: plain or json")
+var logOutFmt string
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&logOutFmt, "log-output", "l", "plain", "Log output format: plain or json")
 }
 
 func resolveTarget(flagValue string) (string, error) {
