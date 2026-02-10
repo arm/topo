@@ -17,10 +17,10 @@ func TestGenerate(t *testing.T) {
 	t.Run("returns hardware profile for given target", func(t *testing.T) {
 		mockExecSSH := func(target ssh.Host, command string) (string, error) {
 			if strings.Contains(command, "cpuinfo") {
-				return "Features: feature1 feature2\n", nil
+				return "Features: feature1 feature2", nil
 			}
 			if strings.Contains(command, "remoteproc") {
-				return "remoteproc1\nremoteproc2\n", nil
+				return "remoteproc1 remoteproc2", nil
 			}
 			return "", nil
 		}
