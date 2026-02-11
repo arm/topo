@@ -2,6 +2,8 @@ package setupkeys
 
 import (
 	"bytes"
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewSequenceDryRunOutputsCommands(t *testing.T) {
+func TestNewKeyCreationAndPlacementOnTarget(t *testing.T) {
 	testutil.RequireOS(t, "linux")
 
 	t.Run("default key path", func(t *testing.T) {
@@ -47,6 +49,34 @@ func TestNewSequenceDryRunOutputsCommands(t *testing.T) {
 	})
 }
 
+func TestKeyCreationAndPlacementOnTarget(t *testing.T) {
+	testutil.RequireOS(t, "linux")
+
+	keyPath := filepath.Join(t.TempDir(), "custom_keys", "id_ed25519_custom_run")
+	fakeBinDir := t.TempDir()
+	logFile := filepath.Join(t.TempDir(), "commands.log")
+
+	writeFakeSSHCommand(t, fakeBinDir, "ssh-keygen", logFile)
+	writeFakeSSHCommand(t, fakeBinDir, "ssh-copy-id", logFile)
+
+	originalPath := os.Getenv("PATH")
+	t.Setenv("PATH", fakeBinDir+string(os.PathListSeparator)+originalPath)
+
+	seq, err := NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	require.NoError(t, seq.Run(&buf))
+	require.Contains(t, buf.String(), "ssh-keygen invoked", "Run output should include fake ssh-keygen output")
+	require.Contains(t, buf.String(), "ssh-copy-id invoked", "Run output should include fake ssh-copy-id output")
+
+	logData, err := os.ReadFile(logFile)
+	require.NoError(t, err)
+	log := string(logData)
+	require.Contains(t, log, fmt.Sprintf("ssh-keygen -t ed25519 -f %s -C user@example.com", keyPath))
+	require.Contains(t, log, fmt.Sprintf("ssh-copy-id -i %s.pub user@example.com", keyPath))
+}
+
 func TestSanitizeTarget(t *testing.T) {
 	tests := []struct {
 		input string
@@ -64,4 +94,14 @@ func TestSanitizeTarget(t *testing.T) {
 			}
 		})
 	}
+}
+
+func writeFakeSSHCommand(t *testing.T, dir, name, logFile string) {
+	t.Helper()
+	script := fmt.Sprintf(`#!/bin/sh
+echo "%s invoked"
+echo "$0 $@" >> %s
+`, name, logFile)
+	path := filepath.Join(dir, name)
+	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
 }
