@@ -100,5 +100,6 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, outputFile1, outputFile2)
 		assert.Contains(t, string(content), "feature1")
+		assert.NotContains(t, string(content), "feature2")
 	})
 }
