@@ -12,9 +12,7 @@ import (
 
 const remoteprocRepoURL = "arm/remoteproc-runtime"
 
-var (
-	installRemoteprocTarget string
-)
+var installRemoteprocTarget string
 
 var installCmd = &cobra.Command{
 	Use:   "install",
