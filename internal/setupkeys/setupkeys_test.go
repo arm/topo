@@ -3,16 +3,14 @@ package setupkeys
 import (
 	"bytes"
 	"path/filepath"
-	"runtime"
 	"testing"
 
+	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewSequenceDryRunOutputsCommands(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("only runs on linux because it relies on linux-specific paths")
-	}
+	testutil.RequireOS(t, "linux")
 
 	t.Run("default key path", func(t *testing.T) {
 		tmp := t.TempDir()
