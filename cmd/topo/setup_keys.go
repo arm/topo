@@ -50,5 +50,5 @@ func init() {
 	rootCmd.AddCommand(setupKeysCmd)
 	addTargetFlag(setupKeysCmd, &setupKeysTarget)
 	setupKeysCmd.Flags().BoolVar(&setupKeysDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
-	setupKeysCmd.Flags().StringVar(&setupKeysKeyPath, "key-path", "", "Specify the SSH key path where the generated keys will be stored (default is ~/.ssh/id_ed25519_topo_<target>)")
+	setupKeysCmd.Flags().StringVar(&setupKeysKeyPath, "key-path", "", "Specify the SSH path where the generated key pair will be stored. Default directory: ~/.ssh. Default public key file name: id_ed25519_topo_<target>.pub)")
 }
