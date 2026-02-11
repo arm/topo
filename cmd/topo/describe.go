@@ -3,23 +3,22 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/arm-debug/topo-cli/internal/describe"
+	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/arm-debug/topo-cli/internal/output/term"
+	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/spf13/cobra"
-	"go.yaml.in/yaml/v4"
 )
 
 var describeTarget string
 
-const targetDescriptionFilename = "target-description.yaml"
-
 var describeCmd = &cobra.Command{
 	Use:   "describe",
-	Short: "Describe the hardware characteristics of the target host (CPU architecture, ISA features, etc.)",
+	Short: "Describe the hardware characteristics of the target host",
+	Long:  fmt.Sprintf(`Generates a %s file that describes the hardware characteristics of the target host including CPU ISA features and remoteproc capabilities`, describe.TargetDescriptionFilename),
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -28,23 +27,18 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		report, err := describe.Generate(sshTarget)
+		conn := health.NewConnection(sshTarget, ssh.ExecSSH)
+		report, err := describe.GenerateTargetDescription(conn)
 		if err != nil {
 			return err
 		}
 
-		reportBytes, err := yaml.Marshal(report)
+		workDir, err := os.Getwd()
 		if err != nil {
 			return err
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-
-		outputFile := filepath.Join(wd, targetDescriptionFilename)
-		err = os.WriteFile(outputFile, reportBytes, 0o0644)
+		outputPath, err := describe.WriteTargetDescriptionToFile(workDir, report)
 		if err != nil {
 			return err
 		}
@@ -52,7 +46,7 @@ var describeCmd = &cobra.Command{
 		c := console.NewLogger(os.Stderr, term.Plain)
 		c.Log(logger.Entry{
 			Level:   logger.Info,
-			Message: fmt.Sprintf("Target description written to %s", outputFile),
+			Message: fmt.Sprintf("Target description written to %s", outputPath),
 		})
 
 		return nil
