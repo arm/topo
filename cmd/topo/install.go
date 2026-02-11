@@ -14,7 +14,6 @@ const remoteprocRepoURL = "arm/remoteproc-runtime"
 
 var (
 	installRemoteprocTarget string
-	installRemoteprocOutput string
 )
 
 var installCmd = &cobra.Command{
@@ -41,7 +40,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 			return err
 		}
 
-		outputFormat, err := resolveOutput(installRemoteprocOutput)
+		outputFormat, err := resolveOutput(output)
 		if err != nil {
 			return err
 		}
