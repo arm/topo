@@ -11,10 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ctxKey string
-
-const loggerKey ctxKey = "logger"
-
 var output string
 
 var rootCmd = &cobra.Command{

@@ -9,9 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	templateFilters catalog.TemplateFilters
-)
+var templateFilters catalog.TemplateFilters
 
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
