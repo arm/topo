@@ -18,13 +18,13 @@ type HostProcessor struct {
 	Features  []string `yaml:"features"`
 }
 
-type RemoteProcCPU struct {
+type RemoteprocCPU struct {
 	Name string `yaml:"name"`
 }
 
 type HardwareProfile struct {
 	HostProcessor []HostProcessor `yaml:"host"`
-	RemoteCPU     []RemoteProcCPU `yaml:"remoteprocs"`
+	RemoteCPU     []RemoteprocCPU `yaml:"remoteprocs"`
 }
 
 type LscpuOutputField struct {
@@ -202,7 +202,7 @@ func CreateCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
 	return profiles, nil
 }
 
-func (c *Connection) collectRemoteCPU() ([]RemoteProcCPU, error) {
+func (c *Connection) collectRemoteCPU() ([]RemoteprocCPU, error) {
 	out, err := c.Run("ls /sys/class/remoteproc")
 	if err != nil || out == "" {
 		return nil, nil
@@ -214,9 +214,9 @@ func (c *Connection) collectRemoteCPU() ([]RemoteProcCPU, error) {
 	}
 
 	remoteCPU := strings.Fields(out)
-	var remoteProcs []RemoteProcCPU
+	var remoteProcs []RemoteprocCPU
 	for _, cpu := range remoteCPU {
-		remoteProcs = append(remoteProcs, RemoteProcCPU{Name: cpu})
+		remoteProcs = append(remoteProcs, RemoteprocCPU{Name: cpu})
 	}
 	return remoteProcs, nil
 }

@@ -107,7 +107,7 @@ func TestProbe(t *testing.T) {
 		conn := health.NewConnection("hostname", mockExec)
 		ts := conn.Probe()
 
-		want := []health.RemoteProcCPU{{Name: "foo"}, {Name: "bar"}}
+		want := []health.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}
 		assert.Equal(t, want, ts.Hardware.RemoteCPU)
 	})
 

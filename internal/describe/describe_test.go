@@ -28,7 +28,7 @@ func TestGenerate(t *testing.T) {
 			HostProcessor: []health.HostProcessor{
 				{Features: []string{"feature1", "feature2"}},
 			},
-			RemoteCPU: []health.RemoteProcCPU{
+			RemoteCPU: []health.RemoteprocCPU{
 				{Name: "remoteproc1"},
 				{Name: "remoteproc2"},
 			},
@@ -60,7 +60,7 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 			HostProcessor: []health.HostProcessor{
 				{Features: []string{"feature1", "feature2"}},
 			},
-			RemoteCPU: []health.RemoteProcCPU{
+			RemoteCPU: []health.RemoteprocCPU{
 				{Name: "remoteproc1"},
 				{Name: "remoteproc2"},
 			},
