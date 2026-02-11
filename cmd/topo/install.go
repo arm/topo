@@ -40,7 +40,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 			return err
 		}
 
-		outputFormat, err := resolveOutput(output)
+		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
 		}

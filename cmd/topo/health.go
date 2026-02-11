@@ -21,7 +21,7 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		outputFormat, err := resolveOutput(output)
+		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
 		}

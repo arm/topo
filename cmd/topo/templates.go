@@ -16,7 +16,7 @@ var templatesCmd = &cobra.Command{
 	Short: "List available Service Templates",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
-		outputFormat, err := resolveOutput(output)
+		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
 		}

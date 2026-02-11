@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/version"
 	"github.com/spf13/cobra"
@@ -44,7 +43,12 @@ func resolveTarget(flagValue string) (string, error) {
 	return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
 }
 
-func resolveOutput(flagValue string) (term.Format, error) {
+func resolveOutput(cmd *cobra.Command) (term.Format, error) {
+	flagValue, err := cmd.Flags().GetString("output")
+	if err != nil {
+		return term.Plain, err
+	}
+
 	v := strings.TrimSpace(strings.ToLower(flagValue))
 	switch v {
 	case "plain":
@@ -55,19 +59,4 @@ func resolveOutput(flagValue string) (term.Format, error) {
 		err := fmt.Errorf("invalid output value %q: must be 'plain' or 'json'", flagValue)
 		return term.Plain, err
 	}
-}
-
-func GetLogger(cmd *cobra.Command) (*console.Logger, error) {
-	flagValue, err := cmd.Flags().GetString("output")
-	if err != nil {
-		return nil, err
-	}
-
-	format, err := resolveOutput(flagValue)
-	if err != nil {
-		return nil, err
-	}
-
-	log := console.NewLogger(os.Stderr, format)
-	return log, nil
 }

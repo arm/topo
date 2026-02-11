@@ -11,6 +11,7 @@ import (
 	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
 	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
 	checks "github.com/arm-debug/topo-cli/internal/deploy/project_checks"
+	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/arm-debug/topo-cli/internal/ssh"
 
@@ -44,7 +45,11 @@ Use --dry-run to see what commands would be executed without actually running th
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		c, err := GetLogger(cmd)
+		outputFormat, err := resolveOutput(cmd)
+		if err != nil {
+			return err
+		}
+		c := console.NewLogger(os.Stderr, outputFormat)
 		if err != nil {
 			return err
 		}

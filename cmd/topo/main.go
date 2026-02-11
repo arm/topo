@@ -10,14 +10,11 @@ import (
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		output, _ := rootCmd.Flags().GetString("output")
-
-		format, err := resolveOutput(output)
+		outputFormat, err := resolveOutput(rootCmd)
 		if err != nil {
-			format = term.Plain
+			outputFormat = term.Plain
 		}
-
-		c := console.NewLogger(os.Stderr, format)
+		c := console.NewLogger(os.Stderr, outputFormat)
 		c.Log(logger.Entry{
 			Level:   logger.Err,
 			Message: err.Error(),

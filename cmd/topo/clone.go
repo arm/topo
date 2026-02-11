@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
+	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/template"
@@ -42,10 +43,11 @@ Some projects require build arguments. Supply them on the command line or answer
 `,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := GetLogger(cmd)
+		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
 		}
+		c := console.NewLogger(os.Stderr, outputFormat)
 		cmd.SilenceUsage = true
 		path := args[0]
 		src := args[1]
