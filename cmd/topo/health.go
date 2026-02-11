@@ -9,15 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var healthTarget string
-
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Check the target host environment (container engines, SSH availability)",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := resolveTarget(healthTarget)
+		sshTarget, err := resolveTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -34,6 +32,6 @@ var healthCmd = &cobra.Command{
 }
 
 func init() {
-	addTargetFlag(healthCmd, &healthTarget)
+	addTargetFlag(healthCmd)
 	rootCmd.AddCommand(healthCmd)
 }

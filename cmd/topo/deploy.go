@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	deployTarget      string
 	deployDryRun      bool
 	noRegistry        bool
 	port              string
@@ -62,7 +61,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			})
 		}
 
-		resolvedTarget, err := resolveTarget(deployTarget)
+		resolvedTarget, err := resolveTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -151,7 +150,7 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 }
 
 func init() {
-	addTargetFlag(deployCmd, &deployTarget)
+	addTargetFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&port, "port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
 	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")

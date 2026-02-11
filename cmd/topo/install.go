@@ -12,8 +12,6 @@ import (
 
 const remoteprocRepoURL = "arm/remoteproc-runtime"
 
-var installRemoteprocTarget string
-
 var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install components to target",
@@ -33,7 +31,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := resolveTarget(installRemoteprocTarget)
+		sshTarget, err := resolveTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -53,7 +51,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.AddCommand(installRemoteprocCmd)
-	addTargetFlag(installRemoteprocCmd, &installRemoteprocTarget)
+	addTargetFlag(installRemoteprocCmd)
 }
 
 func installRemoteprocRuntime(targetHost ssh.Host) (printable.Printable, error) {

@@ -27,16 +27,22 @@ func init() {
 	)
 }
 
-func addTargetFlag(cmd *cobra.Command, target *string) {
-	cmd.Flags().StringVar(target, "target", "", "The SSH destination.")
+func addTargetFlag(cmd *cobra.Command) {
+	cmd.Flags().StringP("target", "t", "", "The SSH destination.")
 }
 
-func resolveTarget(flagValue string) (string, error) {
+func resolveTarget(cmd *cobra.Command) (string, error) {
+	flagValue, err := cmd.Flags().GetString("output")
+	if err != nil {
+		return "", nil
+	}
+
 	const targetEnvVar = "TOPO_TARGET"
 
 	if strings.TrimSpace(flagValue) != "" {
 		return flagValue, nil
 	}
+
 	if env := strings.TrimSpace(os.Getenv(targetEnvVar)); env != "" {
 		return env, nil
 	}

@@ -28,7 +28,7 @@ Use --dry-run to see what commands would be executed without actually running th
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
 
-		resolvedTarget, err := resolveTarget(stopTarget)
+		resolvedTarget, err := resolveTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ Use --dry-run to see what commands would be executed without actually running th
 }
 
 func init() {
-	addTargetFlag(topoStopCmd, &stopTarget)
+	addTargetFlag(topoStopCmd)
 	topoStopCmd.Flags().BoolVar(&stopDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
 	rootCmd.AddCommand(topoStopCmd)
 }
