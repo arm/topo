@@ -186,7 +186,7 @@ func CreateCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
 			coreTypes = append(coreTypes, coreType{name: f.Data})
 			continue
 		}
-		if len(coreTypes) > 0 { // Belongs to the last modelName
+		if len(coreTypes) > 0 {
 			coreTypes[len(coreTypes)-1].fields = append(coreTypes[len(coreTypes)-1].fields, f)
 		}
 	}

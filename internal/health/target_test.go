@@ -161,12 +161,7 @@ func TestProbeHardware(t *testing.T) {
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
 		mockExec := func(_ ssh.Host, command string) (string, error) {
-			switch {
-			case strings.Contains(command, "command -v"):
-				return "", errors.New("not found")
-			default:
-				return "", errors.New("not found")
-			}
+			return "", errors.New("not found")
 		}
 
 		conn := health.NewConnection("hostname", mockExec)
