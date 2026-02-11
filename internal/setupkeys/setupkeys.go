@@ -45,14 +45,12 @@ func ensureSSHDir(keyPath string) error {
 func sanitizeTarget(target string) string {
 	var b strings.Builder
 	for _, r := range target {
-		switch {
-		case unicode.IsLetter(r) || unicode.IsDigit(r):
-			b.WriteRune(r)
-		case r == '-' || r == '_' || r == '.':
-			b.WriteRune(r)
-		default:
-			b.WriteRune('_')
+		toWrite := '_'
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' {
+			toWrite = r
 		}
+
+		b.WriteRune(toWrite)
 	}
 
 	sanitized := b.String()
