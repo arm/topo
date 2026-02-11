@@ -57,7 +57,6 @@ func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.AddCommand(installRemoteprocCmd)
 	addTargetFlag(installRemoteprocCmd, &installRemoteprocTarget)
-	addOutputFlag(installRemoteprocCmd, &installRemoteprocOutput)
 }
 
 func installRemoteprocRuntime(targetHost ssh.Host) (printable.Printable, error) {

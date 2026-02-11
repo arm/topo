@@ -1,14 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/version"
 	"github.com/spf13/cobra"
 )
+
+type ctxKey string
+
+const loggerKey ctxKey = "logger"
+
+var output string
 
 var rootCmd = &cobra.Command{
 	Use:           "topo",
@@ -18,12 +26,18 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 }
 
-func addTargetFlag(cmd *cobra.Command, target *string) {
-	cmd.Flags().StringVar(target, "target", "", "The SSH destination.")
+func init() {
+	rootCmd.PersistentFlags().StringVarP(
+		&output,
+		"output",
+		"o",
+		"plain",
+		"Output format: plain or json",
+	)
 }
 
-func addOutputFlag(cmd *cobra.Command, output *string) {
-	cmd.Flags().StringVarP(output, "output", "o", "plain", "Output format: plain or json")
+func addTargetFlag(cmd *cobra.Command, target *string) {
+	cmd.Flags().StringVar(target, "target", "", "The SSH destination.")
 }
 
 func resolveTarget(flagValue string) (string, error) {
@@ -49,4 +63,23 @@ func resolveOutput(flagValue string) (term.Format, error) {
 		err := fmt.Errorf("invalid output value %q: must be 'plain' or 'json'", flagValue)
 		return term.Plain, err
 	}
+}
+
+func GetLogger(cmd *cobra.Command) (*console.Logger, error) {
+	flagValue, err := cmd.Flags().GetString("output")
+	if err != nil {
+		return nil, err
+	}
+
+	format, err := resolveOutput(flagValue)
+	if err != nil {
+		return nil, err
+	}
+
+	log := console.NewLogger(os.Stderr, format)
+
+	ctx := context.WithValue(cmd.Context(), loggerKey, log)
+	cmd.SetContext(ctx)
+
+	return log, nil
 }
