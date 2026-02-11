@@ -24,7 +24,6 @@ var healthCmd = &cobra.Command{
 			Level:   logger.Info,
 			Message: "woop",
 		})
-		return fmt.Errorf("noooo")
 		sshTarget, err := resolveTarget(healthTarget)
 		if err != nil {
 			return err

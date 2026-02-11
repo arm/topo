@@ -46,7 +46,10 @@ Use --dry-run to see what commands would be executed without actually running th
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		c := console.NewLogger(os.Stderr, term.Plain)
+		c, err := GetLogger(cmd)
+		if err != nil {
+			return err
+		}
 
 		portChanged := cmd.Flags().Changed("port")
 		if portChanged && noRegistry {
