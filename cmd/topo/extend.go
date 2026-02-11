@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/arguments"
-	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/project"
 	"github.com/arm-debug/topo-cli/internal/template"
@@ -50,6 +49,9 @@ or interactively when prompted:
 		sourceArg := args[1]
 
 		c, err := GetLogger(cmd)
+		if err != nil {
+			return err
+		}
 
 		src, err := template.NewSource(sourceArg)
 		if err != nil {

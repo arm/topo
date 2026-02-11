@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/health"
-	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/arm-debug/topo-cli/internal/output/printable"
 	"github.com/arm-debug/topo-cli/internal/output/templates"
 	"github.com/spf13/cobra"
@@ -19,11 +17,6 @@ var healthCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		c, err := GetLogger(cmd)
-		c.Log(logger.Entry{
-			Level:   logger.Info,
-			Message: "woop",
-		})
 		sshTarget, err := resolveTarget(healthTarget)
 		if err != nil {
 			return err

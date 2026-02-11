@@ -77,9 +77,5 @@ func GetLogger(cmd *cobra.Command) (*console.Logger, error) {
 	}
 
 	log := console.NewLogger(os.Stderr, format)
-
-	ctx := context.WithValue(cmd.Context(), loggerKey, log)
-	cmd.SetContext(ctx)
-
 	return log, nil
 }
