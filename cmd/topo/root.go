@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var output string
-
 var rootCmd = &cobra.Command{
 	Use:           "topo",
 	Short:         "Topo CLI",
@@ -22,8 +20,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(
-		&output,
+	rootCmd.PersistentFlags().StringP(
 		"output",
 		"o",
 		"plain",
