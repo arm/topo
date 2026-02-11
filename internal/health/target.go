@@ -175,24 +175,24 @@ func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, er
 }
 
 func CreateCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
-	type group struct {
+	type coreType struct {
 		name   string
 		fields []LscpuOutputField
 	}
-	var groups []group
+	var coreTypes []coreType
 
 	for _, f := range fields {
 		if f.Field == "Model name:" {
-			groups = append(groups, group{name: f.Data})
+			coreTypes = append(coreTypes, coreType{name: f.Data})
 			continue
 		}
-		if len(groups) > 0 {
-			groups[len(groups)-1].fields = append(groups[len(groups)-1].fields, f)
+		if len(coreTypes) > 0 { // Belongs to the last modelName
+			coreTypes[len(coreTypes)-1].fields = append(coreTypes[len(coreTypes)-1].fields, f)
 		}
 	}
 
 	var profiles []HostProcessor
-	for _, g := range groups {
+	for _, g := range coreTypes {
 		hp, err := newHostProcessor(g.name, g.fields)
 		if err != nil {
 			return nil, err
