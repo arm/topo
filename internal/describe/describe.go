@@ -1,6 +1,7 @@
 package describe
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -42,12 +43,12 @@ func WriteTargetDescriptionToFile(dir string, report TargetHardwareReport) (stri
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
-
 	encoder := yaml.NewEncoder(f)
-	return outputFile, encoder.Encode(report)
+	if err := encoder.Encode(report); err != nil {
+		closeErr := f.Close()
+		return "", errors.Join(err, closeErr)
+	}
+	return outputFile, f.Close()
 }
 
 func generateRemoteprocReport(remoteCPUs []string) []RemoteprocCPU {
