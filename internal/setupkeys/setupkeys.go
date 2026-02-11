@@ -23,7 +23,7 @@ func NewKeyCreationAndPlacementOnTarget(target string, keyPath string) (goperati
 		keyPath = filepath.Join(home, ".ssh", keyName)
 	}
 
-	if err := ensureSSHDir(keyPath); err != nil {
+	if err := ensureDir(keyPath); err != nil {
 		return nil, err
 	}
 
@@ -34,7 +34,7 @@ func NewKeyCreationAndPlacementOnTarget(target string, keyPath string) (goperati
 	return goperation.NewSequence(ops...), nil
 }
 
-func ensureSSHDir(keyPath string) error {
+func ensureDir(keyPath string) error {
 	dir := filepath.Dir(keyPath)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("failed to create %s: %w", dir, err)
