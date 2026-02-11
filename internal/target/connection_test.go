@@ -14,7 +14,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "success", nil
 		}
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 
 		out, err := conn.Run("ls")
 
@@ -26,7 +26,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "", errors.New("ssh failed")
 		}
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 
 		out, err := conn.Run("ls")
 
@@ -40,7 +40,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 
 		got, err := conn.BinaryExists("bar")
 
@@ -52,7 +52,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string) (string, error) {
 			return "/foo/bar", nil
 		}
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 
 		got, err := conn.BinaryExists("b a r")
 

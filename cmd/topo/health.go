@@ -9,7 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var healthTarget string
+var (
+	healthTarget           string
+	healthAcceptNewHostKey bool
+)
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
@@ -25,7 +28,7 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		report, err := health.Check(sshTarget)
+		report, err := health.Check(sshTarget, healthAcceptNewHostKey)
 		if err != nil {
 			return err
 		}
@@ -35,5 +38,6 @@ var healthCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(healthCmd, &healthTarget)
+	healthCmd.Flags().BoolVar(&healthAcceptNewHostKey, "accept-new-host-keys", false, "Automatically trust and add new SSH host keys for the target")
 	rootCmd.AddCommand(healthCmd)
 }
