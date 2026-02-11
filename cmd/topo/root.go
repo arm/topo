@@ -46,7 +46,7 @@ func resolveTarget(flagValue string) (string, error) {
 func resolveOutput(cmd *cobra.Command) (term.Format, error) {
 	flagValue, err := cmd.Flags().GetString("output")
 	if err != nil {
-		return term.Plain, err
+		return term.Plain, nil
 	}
 
 	v := strings.TrimSpace(strings.ToLower(flagValue))
