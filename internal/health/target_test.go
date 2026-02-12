@@ -268,6 +268,17 @@ func TestCreateCPUProfile(t *testing.T) {
 
 		assert.Error(t, err)
 	})
+
+	t.Run("returns error when Socket(s)/Cluster(s) is not found", func(t *testing.T) {
+		input := []health.LscpuOutputField{
+			{Field: "Model name:", Data: "Cortex-A55"},
+			{Field: "Core(s) per socket:", Data: "1"},
+		}
+
+		_, err := health.CreateCPUProfile(input)
+
+		assert.ErrorContains(t, err, "could not determine CPU units")
+	})
 }
 
 func TestBinaryExists(t *testing.T) {

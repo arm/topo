@@ -33,7 +33,7 @@ type LscpuOutputField struct {
 	Children []LscpuOutputField `json:"children,omitempty"`
 }
 
-type LscpuOutput struct {
+type lscpuOutput struct {
 	Lscpu []LscpuOutputField `json:"lscpu"`
 }
 
@@ -133,18 +133,19 @@ func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
 		return nil, err
 	}
 
-	var lscpu LscpuOutput
-	err = json.Unmarshal([]byte(out), &lscpu)
+	var lscpuOutput lscpuOutput
+	err = json.Unmarshal([]byte(out), &lscpuOutput)
 	if err != nil {
 		return nil, err
 	}
 
-	return CreateCPUProfile(lscpu.Lscpu)
+	return CreateCPUProfile(lscpuOutput.Lscpu)
 }
 
 func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, error) {
 	coresPerUnit := 1
 	units := 1
+	foundUnits := false
 	var features []string
 
 	for _, f := range fields {
@@ -162,9 +163,14 @@ func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, er
 				continue
 			}
 			units = v
+			foundUnits = true
 		case "Flags:":
 			features = strings.Split(f.Data, " ")
 		}
+	}
+
+	if !foundUnits {
+		return HostProcessor{}, errors.New("could not determine CPU units")
 	}
 
 	return HostProcessor{
