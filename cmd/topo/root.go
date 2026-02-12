@@ -32,7 +32,7 @@ func addTargetFlag(cmd *cobra.Command) {
 }
 
 func resolveTarget(cmd *cobra.Command) (string, error) {
-	flagValue, err := cmd.Flags().GetString("output")
+	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
 		return "", nil
 	}
