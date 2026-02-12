@@ -50,7 +50,7 @@ func TestProbe(t *testing.T) {
 			case command == "lscpu --json":
 				return testutil.LsCpuOutputRaw, nil
 			default:
-				return "", errors.New("no remoteproc")
+				return "", errors.New("unexpected command: " + command)
 			}
 		}
 
@@ -157,7 +157,7 @@ func TestProbeHardware(t *testing.T) {
 		conn := health.NewConnection("hostname", mockExec)
 		_, err := conn.ProbeHardware()
 
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "lscpu not found")
 	})
 
 	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
@@ -175,7 +175,7 @@ func TestProbeHardware(t *testing.T) {
 		conn := health.NewConnection("hostname", mockExec)
 		_, err := conn.ProbeHardware()
 
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "collecting CPU info")
 	})
 }
 
