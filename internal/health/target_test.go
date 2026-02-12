@@ -8,20 +8,10 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm-debug/topo-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-const lsCpuOutputRaw = `{
-	"lscpu": [
-		{"field": "Vendor ID:", "data": "ARM"},
-		{"field": "Model name:", "data": "Cortex-A55"},
-		{"field": "Core(s) per cluster:", "data": "2"},
-		{"field": "Socket(s):", "data": "-"},
-		{"field": "Cluster(s):", "data": "1"},
-		{"field": "Flags:", "data": "fp asimd"}
-	]
-}`
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
@@ -58,7 +48,7 @@ func TestProbe(t *testing.T) {
 			case strings.Contains(command, "command -v"):
 				return "/usr/bin/lscpu", nil
 			case command == "lscpu --json":
-				return lsCpuOutputRaw, nil
+				return testutil.LsCpuOutputRaw, nil
 			default:
 				return "", errors.New("no remoteproc")
 			}
@@ -94,7 +84,7 @@ func TestProbe(t *testing.T) {
 			case strings.Contains(command, "command -v"):
 				return "/usr/bin/lscpu", nil
 			case command == "lscpu --json":
-				return lsCpuOutputRaw, nil
+				return testutil.LsCpuOutputRaw, nil
 			case strings.Contains(command, "ls /sys/class/remoteproc"):
 				return "remoteproc0\nremoteproc1", nil
 			case strings.Contains(command, "cat /sys/class/remoteproc"):
@@ -119,7 +109,7 @@ func TestProbe(t *testing.T) {
 			case strings.Contains(command, "command -v"):
 				return "/usr/bin/lscpu", nil
 			case command == "lscpu --json":
-				return lsCpuOutputRaw, nil
+				return testutil.LsCpuOutputRaw, nil
 			default:
 				return "", errors.New("no such directory")
 			}
@@ -143,7 +133,7 @@ func TestProbeHardware(t *testing.T) {
 			case strings.Contains(command, "command -v"):
 				return "/usr/bin/lscpu", nil
 			case command == "lscpu --json":
-				return lsCpuOutputRaw, nil
+				return testutil.LsCpuOutputRaw, nil
 			default:
 				return "", errors.New("not found")
 			}

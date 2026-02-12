@@ -92,21 +92,6 @@ func TestGenerateReport(t *testing.T) {
 		assert.True(t, got.Target.Connectivity.Healthy)
 	})
 
-	t.Run("target features are listed", func(t *testing.T) {
-		ts := health.Status{
-			ConnectionError: nil,
-			Hardware: health.HardwareProfile{
-				HostProcessor: []health.HostProcessor{
-					{Features: []string{"asimd", "sve"}},
-				},
-			},
-		}
-
-		got := health.GenerateReport(nil, ts)
-
-		assert.Equal(t, []string{"NEON", "SVE"}, got.Target.Features)
-	})
-
 	t.Run("target dependencies are listed", func(t *testing.T) {
 		foo := health.Dependency{
 			Name:     "foo",

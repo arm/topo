@@ -7,6 +7,8 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/describe"
 	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm-debug/topo-cli/internal/testutil"
+
 	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/assert/yaml"
@@ -16,8 +18,8 @@ import (
 func TestGenerate(t *testing.T) {
 	t.Run("returns hardware profile for given target", func(t *testing.T) {
 		mockExecSSH := func(target ssh.Host, command string) (string, error) {
-			if strings.Contains(command, "cpuinfo") {
-				return "Features: feature1 feature2", nil
+			if command == "lscpu --json" {
+				return testutil.LsCpuOutputRaw, nil
 			}
 			if strings.Contains(command, "remoteproc") {
 				return "remoteproc1 remoteproc2", nil
@@ -26,7 +28,11 @@ func TestGenerate(t *testing.T) {
 		}
 		expected := health.HardwareProfile{
 			HostProcessor: []health.HostProcessor{
-				{Features: []string{"feature1", "feature2"}},
+				{
+					ModelName: "Cortex-A55",
+					Features:  []string{"fp", "asimd"},
+					Cores:     2,
+				},
 			},
 			RemoteCPU: []health.RemoteprocCPU{
 				{Name: "remoteproc1"},

@@ -40,7 +40,6 @@ type HostReport struct {
 type TargetReport struct {
 	IsLocalhost     bool
 	Connectivity    HealthCheck
-	Features        []string
 	Dependencies    []HealthCheck
 	SubsystemDriver HealthCheck
 }
@@ -92,7 +91,6 @@ func generateTargetReport(targetStatus Status) TargetReport {
 		remoteProcNames = append(remoteProcNames, remoteProc.Name)
 	}
 	report.SubsystemDriver.Value = strings.Join(remoteProcNames, ", ")
-	report.Features = ExtractArmFeatures(targetStatus)
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 
 	return report
