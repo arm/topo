@@ -5,26 +5,26 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm-debug/topo-cli/internal/target"
 	"go.yaml.in/yaml/v4"
 )
 
 const TargetDescriptionFilename = "target-description.yaml"
 
-func GenerateTargetDescription(conn health.Connection) (health.HardwareProfile, error) {
+func GenerateTargetDescription(conn target.Connection) (target.HardwareProfile, error) {
 	if err := conn.ProbeConnection(); err != nil {
-		return health.HardwareProfile{}, err
+		return target.HardwareProfile{}, err
 	}
 
 	hwProfile, err := conn.ProbeHardware()
 	if err != nil {
-		return health.HardwareProfile{}, err
+		return target.HardwareProfile{}, err
 	}
 
 	return hwProfile, nil
 }
 
-func WriteTargetDescriptionToFile(dir string, report health.HardwareProfile) (string, error) {
+func WriteTargetDescriptionToFile(dir string, report target.HardwareProfile) (string, error) {
 	outputFile := filepath.Join(dir, TargetDescriptionFilename)
 	f, err := os.Create(outputFile)
 	if err != nil {

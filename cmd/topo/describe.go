@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/describe"
-	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/arm-debug/topo-cli/internal/output/console"
 	"github.com/arm-debug/topo-cli/internal/output/logger"
 	"github.com/arm-debug/topo-cli/internal/output/term"
 	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm-debug/topo-cli/internal/target"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		conn := health.NewConnection(sshTarget, ssh.ExecSSH)
+		conn := target.NewConnection(sshTarget, ssh.ExecSSH)
 		report, err := describe.GenerateTargetDescription(conn)
 		if err != nil {
 			return err
