@@ -3,7 +3,7 @@
     "id": "Topo-Welcome",
     "description": "A Hello World web app to test Topo setup\n",
     "features": [],
-    "url": "git@github.com:Arm-Debug/topo-cortexa-welcome.git",
+    "url": "git@github.com:Arm-Examples/topo-template-welcome.git",
     "ref": "main"
   },
   {
@@ -20,7 +20,7 @@
     "id": "Lightbulb-moment",
     "description": "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state.",
     "features": null,
-    "url": "git@github.com:Arm-Debug/STM32-Heteogenous-Communications-example.git",
+    "url": "git@github.com:Arm-Examples/topo-template-lightbulb-moment.git",
     "ref": "main"
   },
   {
@@ -30,7 +30,7 @@
       "SVE",
       "NEON"
     ],
-    "url": "git@github.com:Arm-Debug/topo-armv9-cpu-llm-chat.git",
+    "url": "git@github.com:Arm-Examples/topo-template-v9-cpu-chat.git",
     "ref": "master"
   },
   {
@@ -40,7 +40,7 @@
       "NEON",
       "SVE"
     ],
-    "url": "git@github.com:Arm-Debug/topo-simd-visual-benchmark.git",
+    "url": "git@github.com:Arm-Examples/topo-template-simd-visual-benchmark.git",
     "ref": "master"
   }
 ]
