@@ -34,7 +34,7 @@ func addTargetFlag(cmd *cobra.Command) {
 func resolveTarget(cmd *cobra.Command) (string, error) {
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
-		return "", nil
+		panic(fmt.Sprintf("resolveTarget: flag not registered: %v", err))
 	}
 
 	const targetEnvVar = "TOPO_TARGET"
