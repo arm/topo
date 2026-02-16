@@ -18,8 +18,11 @@
   },
   {
     "id": "Lightbulb-moment",
-    "description": "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state.",
-    "features": null,
+    "description": "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state. The lightbulb state is described by an LLM in any user-specified style.",
+    "features": [
+      "SVE",
+      "NEON"
+    ],
     "url": "git@github.com:Arm-Examples/topo-template-lightbulb-moment.git",
     "ref": "main"
   },
@@ -31,7 +34,7 @@
       "NEON"
     ],
     "url": "git@github.com:Arm-Examples/topo-template-v9-cpu-chat.git",
-    "ref": "master"
+    "ref": "main"
   },
   {
     "id": "simd-visual-benchmark",
@@ -41,6 +44,6 @@
       "SVE"
     ],
     "url": "git@github.com:Arm-Examples/topo-template-simd-visual-benchmark.git",
-    "ref": "master"
+    "ref": "main"
   }
 ]
