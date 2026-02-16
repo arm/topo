@@ -9,10 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	healthTarget string
-	healthOutput string
-)
+var healthTarget string
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
@@ -24,7 +21,7 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		outputFormat, err := resolveOutput(healthOutput)
+		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
 		}
@@ -38,6 +35,5 @@ var healthCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(healthCmd, &healthTarget)
-	addOutputFlag(healthCmd, &healthOutput)
 	rootCmd.AddCommand(healthCmd)
 }

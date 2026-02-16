@@ -49,6 +49,16 @@ or interactively when prompted:
 		composeFilePath := args[0]
 		sourceArg := args[1]
 
+		outputFormat, err := resolveOutput(cmd)
+		if err != nil {
+			return err
+		}
+		c := console.NewLogger(os.Stderr, outputFormat)
+
+		if err != nil {
+			return err
+		}
+
 		src, err := template.NewSource(sourceArg)
 		if err != nil {
 			return err
@@ -74,7 +84,6 @@ or interactively when prompted:
 
 		logs, err := project.Extend(composeFilePath, src, argProvider)
 
-		c := console.NewLogger(os.Stderr, term.Plain)
 		c.Log(logs...)
 		return err
 	},

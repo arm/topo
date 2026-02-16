@@ -43,6 +43,11 @@ Some projects require build arguments. Supply them on the command line or answer
 `,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		outputFormat, err := resolveOutput(cmd)
+		if err != nil {
+			return err
+		}
+		c := console.NewLogger(os.Stderr, outputFormat)
 		cmd.SilenceUsage = true
 		path := args[0]
 		src := args[1]
@@ -72,7 +77,6 @@ Some projects require build arguments. Supply them on the command line or answer
 
 		logs, err := project.Clone(path, projectSource, argProvider)
 
-		c := console.NewLogger(os.Stderr, term.Plain)
 		c.Log(logs...)
 		return err
 	},

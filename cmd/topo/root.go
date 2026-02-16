@@ -18,12 +18,17 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 }
 
-func addTargetFlag(cmd *cobra.Command, target *string) {
-	cmd.Flags().StringVar(target, "target", "", "The SSH destination.")
+func init() {
+	rootCmd.PersistentFlags().StringP(
+		"output",
+		"o",
+		"plain",
+		"Output format: plain or json",
+	)
 }
 
-func addOutputFlag(cmd *cobra.Command, output *string) {
-	cmd.Flags().StringVarP(output, "output", "o", "plain", "Output format: plain or json")
+func addTargetFlag(cmd *cobra.Command, target *string) {
+	cmd.Flags().StringVar(target, "target", "", "The SSH destination.")
 }
 
 func resolveTarget(flagValue string) (string, error) {
@@ -38,7 +43,12 @@ func resolveTarget(flagValue string) (string, error) {
 	return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
 }
 
-func resolveOutput(flagValue string) (term.Format, error) {
+func resolveOutput(cmd *cobra.Command) (term.Format, error) {
+	flagValue, err := cmd.Flags().GetString("output")
+	if err != nil {
+		panic(fmt.Sprintf("bug: output flag not registered: %v", err))
+	}
+
 	v := strings.TrimSpace(strings.ToLower(flagValue))
 	switch v {
 	case "plain":

@@ -9,17 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	templateFilters catalog.TemplateFilters
-	templatesOutput string
-)
+var templateFilters catalog.TemplateFilters
 
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
 	Short: "List available Service Templates",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
-		outputFormat, err := resolveOutput(templatesOutput)
+		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
 		}
@@ -44,7 +41,6 @@ var templatesCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(templatesCmd, &templateFilters.Target)
-	addOutputFlag(templatesCmd, &templatesOutput)
 	templatesCmd.Flags().StringSliceVar(
 		&templateFilters.Features,
 		"feature",

@@ -10,8 +10,16 @@ import (
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		c := console.NewLogger(os.Stderr, term.Plain)
-		c.Log(logger.Entry{Level: logger.Err, Message: err.Error()})
+		outputFormat, outputFormatError := resolveOutput(rootCmd)
+		if outputFormatError != nil {
+			outputFormat = term.Plain
+		}
+		c := console.NewLogger(os.Stderr, outputFormat)
+		c.Log(logger.Entry{
+			Level:   logger.Err,
+			Message: err.Error(),
+		})
+
 		os.Exit(1)
 	}
 }
