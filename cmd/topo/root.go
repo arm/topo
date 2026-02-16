@@ -31,6 +31,10 @@ func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP("target", "t", "", "The SSH destination.")
 }
 
+func addDryRunFlag(cmd *cobra.Command) {
+	cmd.Flags().Bool("dry-run", false, "Show what commands would be executed without actually running them")
+}
+
 func lookupTarget(cmd *cobra.Command) (string, bool) {
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {

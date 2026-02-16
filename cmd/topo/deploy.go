@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	deployDryRun      bool
 	noRegistry        bool
 	port              string
 	skipProjectChecks bool
@@ -44,6 +43,12 @@ Use --dry-run to see what commands would be executed without actually running th
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
+
+		dryRun, err := cmd.Flags().GetBool("dry-run")
+		if err != nil {
+			panic(fmt.Sprintf("bug: dry-run flag not registered: %v", err))
+		}
+
 		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
@@ -109,7 +114,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			c.Log(entries...)
 		}()
 
-		if deployDryRun {
+		if dryRun {
 			return deployment.DryRun(os.Stdout)
 		}
 		return deployment.Run(os.Stdout)
@@ -151,8 +156,8 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 
 func init() {
 	addTargetFlag(deployCmd)
+	addDryRunFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&port, "port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
-	deployCmd.Flags().BoolVar(&deployDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().BoolVar(&deployOpts.ForceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
 	deployCmd.Flags().BoolVar(&deployOpts.NoRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
