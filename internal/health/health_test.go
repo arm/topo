@@ -11,7 +11,9 @@ func TestExtractArmFeatures(t *testing.T) {
 	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{
-				Features: []string{"fp", "asimd", "sve2", "sme"},
+				HostProcessor: []health.HostProcessor{
+					{Features: []string{"fp", "asimd", "sve2", "sme"}},
+				},
 			},
 		}
 
@@ -24,7 +26,9 @@ func TestExtractArmFeatures(t *testing.T) {
 	t.Run("returns empty slice if no matching features", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{
-				Features: []string{"fp", "crc32"},
+				HostProcessor: []health.HostProcessor{
+					{Features: []string{"fp", "crc32"}},
+				},
 			},
 		}
 
@@ -86,19 +90,6 @@ func TestGenerateReport(t *testing.T) {
 		got := health.GenerateReport(nil, ts)
 
 		assert.True(t, got.Target.Connectivity.Healthy)
-	})
-
-	t.Run("target features are listed", func(t *testing.T) {
-		ts := health.Status{
-			ConnectionError: nil,
-			Hardware: health.HardwareProfile{
-				Features: []string{"asimd", "sve"},
-			},
-		}
-
-		got := health.GenerateReport(nil, ts)
-
-		assert.Equal(t, []string{"NEON", "SVE"}, got.Target.Features)
 	})
 
 	t.Run("target dependencies are listed", func(t *testing.T) {

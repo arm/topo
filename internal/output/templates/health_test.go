@@ -62,29 +62,6 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "❌")
 		})
 
-		t.Run("when connected it renders cpu features", func(t *testing.T) {
-			report := health.Report{
-				Target: health.TargetReport{
-					Connectivity: health.HealthCheck{
-						Name:    "Connected",
-						Healthy: true,
-					},
-					Features: []string{"FOO", "BAR"},
-				},
-			}
-
-			var out bytes.Buffer
-
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.Plain,
-			)
-			require.NoError(t, err)
-
-			assert.Contains(t, out.String(), "FOO, BAR")
-		})
-
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
 			report := health.Report{
 				Target: health.TargetReport{
@@ -105,27 +82,6 @@ func TestPrintHealthReport(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.NotContains(t, out.String(), "Features (Linux Host)")
-		})
-
-		t.Run("when localhost, it skips connectivity check and shows features", func(t *testing.T) {
-			report := health.Report{
-				Target: health.TargetReport{
-					IsLocalhost: true,
-					Features:    []string{"FOO", "BAR"},
-				},
-			}
-
-			var out bytes.Buffer
-
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.Plain,
-			)
-			require.NoError(t, err)
-
-			assert.NotContains(t, out.String(), "Connected")
-			assert.Contains(t, out.String(), "FOO, BAR")
 		})
 	})
 
@@ -167,7 +123,6 @@ func TestPrintHealthReport(t *testing.T) {
 					"IsLocalhost": false,
 					"Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
 					"Dependencies": [],
-					"Features": [],
 					"SubsystemDriver": {"Name":"","Healthy":false,"Value":""}
 				}
 			}`

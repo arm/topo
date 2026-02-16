@@ -15,6 +15,8 @@ const TargetContainerHost = "root@localhost"
 
 const TargetContainerImage = "topo-e2e-target:latest"
 
+var knownHostsLockPath = filepath.Join(os.TempDir(), "topo-e2e-known_hosts.lock")
+
 type TargetContainer struct {
 	SSHConnectionString string
 	ContainerName       string
@@ -42,7 +44,7 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
-	if err := ensureHostKeyKnown("localhost", port); err != nil {
+	if err := ensureHostKeyKnown(t, "localhost", port); err != nil {
 		t.Fatalf("failed to add host key: %v", err)
 	}
 
@@ -104,7 +106,10 @@ func GetContainerPublicPort(containerName string, privatePort string) (string, e
 	return port, nil
 }
 
-func ensureHostKeyKnown(host string, port string) error {
+func ensureHostKeyKnown(t *testing.T, host string, port string) error {
+	releaseLock := AcquireFlock(t, knownHostsLockPath)
+	defer releaseLock()
+
 	_ = exec.Command("ssh-keygen", "-R", fmt.Sprintf("[%s]:%s", host, port)).Run()
 
 	cmd := exec.Command("ssh-keyscan", "-p", port, host)
