@@ -22,7 +22,7 @@ var templatesCmd = &cobra.Command{
 		}
 
 		resolvedTarget, targetIncl := lookupTarget(cmd)
-		if targetIncl  {
+		if targetIncl {
 			templateFilters.Target = resolvedTarget
 		}
 
