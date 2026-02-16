@@ -9,10 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	stopTarget string
-	stopDryRun bool
-)
+var stopDryRun bool
 
 var topoStopCmd = &cobra.Command{
 	Use:   "stop",
@@ -28,7 +25,7 @@ Use --dry-run to see what commands would be executed without actually running th
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
 
-		resolvedTarget, err := resolveTarget(cmd)
+		resolvedTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}

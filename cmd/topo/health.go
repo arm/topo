@@ -15,7 +15,7 @@ var healthCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := resolveTarget(cmd)
+		sshTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}

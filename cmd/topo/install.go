@@ -31,7 +31,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := resolveTarget(cmd)
+		sshTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}

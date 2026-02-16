@@ -61,7 +61,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			})
 		}
 
-		resolvedTarget, err := resolveTarget(cmd)
+		resolvedTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}

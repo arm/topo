@@ -31,22 +31,30 @@ func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP("target", "t", "", "The SSH destination.")
 }
 
-func resolveTarget(cmd *cobra.Command) (string, error) {
+func lookupTarget(cmd *cobra.Command) (string, bool) {
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
-		panic(fmt.Sprintf("resolveTarget: flag not registered: %v", err))
+		panic(fmt.Sprintf("failed getting command flag, try again: %v", err))
+	}
+
+	if v := strings.TrimSpace(flagValue); v != "" {
+		return v, true
 	}
 
 	const targetEnvVar = "TOPO_TARGET"
-
-	if strings.TrimSpace(flagValue) != "" {
-		return flagValue, nil
+	if v := strings.TrimSpace(os.Getenv(targetEnvVar)); v != "" {
+		return v, true
 	}
 
-	if env := strings.TrimSpace(os.Getenv(targetEnvVar)); env != "" {
-		return env, nil
+	return "", false
+}
+
+func requireTarget(cmd *cobra.Command) (string, error) {
+	t, exists := lookupTarget(cmd)
+	if !exists {
+		return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
 	}
-	return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
+	return t, nil
 }
 
 func resolveOutput(cmd *cobra.Command) (term.Format, error) {
