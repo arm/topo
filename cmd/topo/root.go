@@ -34,7 +34,7 @@ func addTargetFlag(cmd *cobra.Command) {
 func lookupTarget(cmd *cobra.Command) (string, bool) {
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
-		panic(fmt.Sprintf("failed getting command flag, try again: %v", err))
+		panic(fmt.Sprintf("bug: output flag not registered: %v", err))
 	}
 
 	if v := strings.TrimSpace(flagValue); v != "" {
