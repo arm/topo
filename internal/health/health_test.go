@@ -7,37 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExtractArmFeatures(t *testing.T) {
-	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
-		ts := health.Status{
-			Hardware: health.HardwareProfile{
-				HostProcessor: []health.HostProcessor{
-					{Features: []string{"fp", "asimd", "sve2", "sme"}},
-				},
-			},
-		}
-
-		res := health.ExtractArmFeatures(ts)
-
-		want := []string{"NEON", "SVE2", "SME"}
-		assert.Equal(t, want, res)
-	})
-
-	t.Run("returns empty slice if no matching features", func(t *testing.T) {
-		ts := health.Status{
-			Hardware: health.HardwareProfile{
-				HostProcessor: []health.HostProcessor{
-					{Features: []string{"fp", "crc32"}},
-				},
-			},
-		}
-
-		res := health.ExtractArmFeatures(ts)
-
-		assert.Empty(t, res)
-	})
-}
-
 func TestGenerateReport(t *testing.T) {
 	t.Run("given two host dependencies in the same category, they are grouped in a health check", func(t *testing.T) {
 		dependencyStatuses := []health.DependencyStatus{

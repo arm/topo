@@ -1,4 +1,4 @@
-package health
+package target
 
 import (
 	"encoding/json"
@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/arm-debug/topo-cli/internal/ssh"
 )
 
-type execSSH func(target ssh.Host, command string) (string, error)
+var armCpuFeatures = map[string]string{
+	"asimd": "NEON",
+	"sve":   "SVE",
+	"sve2":  "SVE2",
+	"sme":   "SME",
+	"sme2":  "SME2",
+}
 
 type HostProcessor struct {
 	ModelName string   `yaml:"model"`
@@ -37,68 +41,23 @@ type lscpuOutput struct {
 	Lscpu []LscpuOutputField `json:"lscpu"`
 }
 
-func (hw HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
-	capabilities := make(map[HardwareCapability]struct{})
-	if len(hw.RemoteCPU) > 0 {
-		capabilities[Remoteproc] = struct{}{}
-	}
-	return capabilities
-}
-
-type Status struct {
-	SSHTarget       ssh.Host
-	ConnectionError error
-	Dependencies    []DependencyStatus
-	Hardware        HardwareProfile
-}
-
-type Connection struct {
-	sshTarget ssh.Host
-	exec      execSSH
-}
-
-func NewConnection(sshTarget string, exec execSSH) Connection {
-	return Connection{
-		sshTarget: ssh.Host(sshTarget),
-		exec:      exec,
-	}
-}
-
-func (c *Connection) Run(command string) (string, error) {
-	return c.exec(c.sshTarget, command)
-}
-
-func (c *Connection) BinaryExists(bin string) (bool, error) {
-	if err := ssh.ValidateBinaryName(bin); err != nil {
-		return false, err
-	}
-	_, err := c.exec(c.sshTarget, ssh.ShellCommand(fmt.Sprintf("command -v %s", bin)))
-	return err == nil, nil
-}
-
-func (c *Connection) Probe() Status {
-	var targetStatus Status
-	targetStatus.SSHTarget = c.sshTarget
-
-	if err := c.ProbeConnection(); err != nil {
-		targetStatus.ConnectionError = err
-		return targetStatus
+func (proc *HostProcessor) ExtractArmFeatures() []string {
+	if len(proc.Features) == 0 {
+		return nil
 	}
 
-	targetStatus.Hardware, _ = c.ProbeHardware()
-	targetStatus.Dependencies = c.CheckDependencies(targetStatus.Hardware.Capabilities())
-
-	return targetStatus
+	var res []string
+	for _, field := range proc.Features {
+		if name, ok := armCpuFeatures[field]; ok {
+			res = append(res, name)
+		}
+	}
+	return res
 }
 
 func (c *Connection) ProbeConnection() error {
 	_, err := c.Run("true")
 	return err
-}
-
-func (c *Connection) CheckDependencies(hardware map[HardwareCapability]struct{}) []DependencyStatus {
-	deps := FilterByHardware(TargetRequiredDependencies, hardware)
-	return CheckInstalled(deps, c.BinaryExists)
 }
 
 func (c *Connection) ProbeHardware() (HardwareProfile, error) {
@@ -110,13 +69,32 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	}
 	hp.HostProcessor = cpuProfile
 
-	cpus, err := c.collectRemoteCPU()
+	cpus, err := c.ProbeRemoteproc()
 	if err != nil {
 		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
 	}
 	hp.RemoteCPU = cpus
 
 	return hp, nil
+}
+
+func (c *Connection) ProbeRemoteproc() ([]RemoteprocCPU, error) {
+	var remoteProcs []RemoteprocCPU
+	out, err := c.Run("ls /sys/class/remoteproc")
+	if err != nil || out == "" {
+		return remoteProcs, nil
+	}
+
+	out, err = c.Run("cat /sys/class/remoteproc/*/name")
+	if err != nil {
+		return remoteProcs, err
+	}
+
+	remoteCPU := strings.FieldsSeq(out)
+	for cpu := range remoteCPU {
+		remoteProcs = append(remoteProcs, RemoteprocCPU{Name: cpu})
+	}
+	return remoteProcs, nil
 }
 
 func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
@@ -206,23 +184,4 @@ func CreateCPUProfile(fields []LscpuOutputField) ([]HostProcessor, error) {
 		profiles = append(profiles, hp)
 	}
 	return profiles, nil
-}
-
-func (c *Connection) collectRemoteCPU() ([]RemoteprocCPU, error) {
-	out, err := c.Run("ls /sys/class/remoteproc")
-	if err != nil || out == "" {
-		return nil, nil
-	}
-
-	out, err = c.Run("cat /sys/class/remoteproc/*/name")
-	if err != nil {
-		return nil, err
-	}
-
-	remoteCPU := strings.Fields(out)
-	var remoteProcs []RemoteprocCPU
-	for _, cpu := range remoteCPU {
-		remoteProcs = append(remoteProcs, RemoteprocCPU{Name: cpu})
-	}
-	return remoteProcs, nil
 }
