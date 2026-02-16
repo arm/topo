@@ -15,9 +15,12 @@ var searchFlags = map[string]string{
 }
 
 func ExtractArmFeatures(targetStatus Status) []string {
-	res := make([]string, 0)
+	if len(targetStatus.Hardware.HostProcessor) == 0 {
+		return nil
+	}
 
-	for _, field := range targetStatus.Hardware.Features {
+	var res []string
+	for _, field := range targetStatus.Hardware.HostProcessor[0].Features {
 		if name, ok := searchFlags[field]; ok {
 			res = append(res, name)
 		}
@@ -37,7 +40,6 @@ type HostReport struct {
 type TargetReport struct {
 	IsLocalhost     bool
 	Connectivity    HealthCheck
-	Features        []string
 	Dependencies    []HealthCheck
 	SubsystemDriver HealthCheck
 }
@@ -80,12 +82,15 @@ func generateTargetReport(targetStatus Status) TargetReport {
 		Healthy: targetStatus.ConnectionError == nil,
 		Value:   "",
 	}
-	report.Features = ExtractArmFeatures(targetStatus)
 	report.SubsystemDriver = HealthCheck{
 		Name:    "Subsystem Driver (remoteproc)",
 		Healthy: len(targetStatus.Hardware.RemoteCPU) > 0,
-		Value:   strings.Join(targetStatus.Hardware.RemoteCPU, ", "),
 	}
+	var remoteProcNames []string
+	for _, remoteProc := range targetStatus.Hardware.RemoteCPU {
+		remoteProcNames = append(remoteProcNames, remoteProc.Name)
+	}
+	report.SubsystemDriver.Value = strings.Join(remoteProcNames, ", ")
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 
 	return report

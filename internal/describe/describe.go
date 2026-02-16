@@ -11,33 +11,20 @@ import (
 
 const TargetDescriptionFilename = "target-description.yaml"
 
-type TargetHostCPU struct {
-	Features []string
-}
-
-type RemoteprocCPU struct {
-	Name string
-}
-
-type TargetHardwareReport struct {
-	Host        TargetHostCPU
-	RemoteProcs []RemoteprocCPU
-}
-
-func GenerateTargetDescription(conn health.Connection) (TargetHardwareReport, error) {
+func GenerateTargetDescription(conn health.Connection) (health.HardwareProfile, error) {
 	if err := conn.ProbeConnection(); err != nil {
-		return TargetHardwareReport{}, err
+		return health.HardwareProfile{}, err
 	}
 
 	hwProfile, err := conn.ProbeHardware()
 	if err != nil {
-		return TargetHardwareReport{}, err
+		return health.HardwareProfile{}, err
 	}
 
-	return generateReport(hwProfile), nil
+	return hwProfile, nil
 }
 
-func WriteTargetDescriptionToFile(dir string, report TargetHardwareReport) (string, error) {
+func WriteTargetDescriptionToFile(dir string, report health.HardwareProfile) (string, error) {
 	outputFile := filepath.Join(dir, TargetDescriptionFilename)
 	f, err := os.Create(outputFile)
 	if err != nil {
@@ -49,21 +36,4 @@ func WriteTargetDescriptionToFile(dir string, report TargetHardwareReport) (stri
 		return "", errors.Join(err, closeErr)
 	}
 	return outputFile, f.Close()
-}
-
-func generateRemoteprocReport(remoteCPUs []string) []RemoteprocCPU {
-	res := make([]RemoteprocCPU, len(remoteCPUs))
-	for i, cpu := range remoteCPUs {
-		res[i] = RemoteprocCPU{Name: cpu}
-	}
-	return res
-}
-
-func generateReport(hwProfile health.HardwareProfile) TargetHardwareReport {
-	return TargetHardwareReport{
-		Host: TargetHostCPU{
-			Features: hwProfile.Features,
-		},
-		RemoteProcs: generateRemoteprocReport(hwProfile.RemoteCPU),
-	}
 }

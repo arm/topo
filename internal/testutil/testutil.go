@@ -14,6 +14,17 @@ import (
 
 const TestSshTarget = "test-target"
 
+const LsCpuOutputRaw = `{
+	"lscpu": [
+		{"field": "Vendor ID:", "data": "ARM"},
+		{"field": "Model name:", "data": "Cortex-A55"},
+		{"field": "Core(s) per cluster:", "data": "2"},
+		{"field": "Socket(s):", "data": "-"},
+		{"field": "Cluster(s):", "data": "1"},
+		{"field": "Flags:", "data": "fp asimd"}
+	]
+}`
+
 func RequireDocker(t testing.TB) {
 	t.Helper()
 	if _, err := exec.LookPath("docker"); err != nil {

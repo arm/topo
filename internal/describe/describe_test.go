@@ -7,6 +7,8 @@ import (
 
 	"github.com/arm-debug/topo-cli/internal/describe"
 	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm-debug/topo-cli/internal/testutil"
+
 	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/assert/yaml"
@@ -16,19 +18,23 @@ import (
 func TestGenerate(t *testing.T) {
 	t.Run("returns hardware profile for given target", func(t *testing.T) {
 		mockExecSSH := func(target ssh.Host, command string) (string, error) {
-			if strings.Contains(command, "cpuinfo") {
-				return "Features: feature1 feature2", nil
+			if command == "lscpu --json" {
+				return testutil.LsCpuOutputRaw, nil
 			}
 			if strings.Contains(command, "remoteproc") {
 				return "remoteproc1 remoteproc2", nil
 			}
 			return "", nil
 		}
-		expected := describe.TargetHardwareReport{
-			Host: describe.TargetHostCPU{
-				Features: []string{"feature1", "feature2"},
+		expected := health.HardwareProfile{
+			HostProcessor: []health.HostProcessor{
+				{
+					ModelName: "Cortex-A55",
+					Features:  []string{"fp", "asimd"},
+					Cores:     2,
+				},
 			},
-			RemoteProcs: []describe.RemoteprocCPU{
+			RemoteCPU: []health.RemoteprocCPU{
 				{Name: "remoteproc1"},
 				{Name: "remoteproc2"},
 			},
@@ -56,16 +62,16 @@ func TestGenerate(t *testing.T) {
 func TestWriteTargetDescriptionFile(t *testing.T) {
 	t.Run("writes full target to description to given directory", func(t *testing.T) {
 		dir := t.TempDir()
-		report := describe.TargetHardwareReport{
-			Host: describe.TargetHostCPU{
-				Features: []string{"feature1", "feature2"},
+		report := health.HardwareProfile{
+			HostProcessor: []health.HostProcessor{
+				{Features: []string{"feature1", "feature2"}},
 			},
-			RemoteProcs: []describe.RemoteprocCPU{
+			RemoteCPU: []health.RemoteprocCPU{
 				{Name: "remoteproc1"},
 				{Name: "remoteproc2"},
 			},
 		}
-		var reportOut describe.TargetHardwareReport
+		var reportOut health.HardwareProfile
 
 		outputFile, err := describe.WriteTargetDescriptionToFile(dir, report)
 		require.NoError(t, err)
@@ -80,14 +86,14 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 
 	t.Run("overwrites existing file", func(t *testing.T) {
 		dir := t.TempDir()
-		report1 := describe.TargetHardwareReport{
-			Host: describe.TargetHostCPU{
-				Features: []string{"feature1", "feature2"},
+		report1 := health.HardwareProfile{
+			HostProcessor: []health.HostProcessor{
+				{Features: []string{"feature1", "feature2"}},
 			},
 		}
-		report2 := describe.TargetHardwareReport{
-			Host: describe.TargetHostCPU{
-				Features: []string{"feature1"},
+		report2 := health.HardwareProfile{
+			HostProcessor: []health.HostProcessor{
+				{Features: []string{"feature1"}},
 			},
 		}
 
