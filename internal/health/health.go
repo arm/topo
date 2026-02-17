@@ -9,7 +9,9 @@ import (
 	"github.com/arm-debug/topo-cli/internal/target"
 )
 
-var passwordAuthErrorMessage = "SSH password-based authentication is not supported by topo. Please either:\n- create your own SSH keys for the target or\n- run `topo setup-keys --target <target>` to have topo generate keys for you and set up passwordless authentication"
+const passwordAuthErrorMessage = `Topo does not support SSH password-based authentication. To connect, either:
+- create your own SSH keys for the target, or
+- run 'topo setup-keys --target <target>' to let Topo generate keys and configure passwordless authentication`
 
 type HealthCheck struct {
 	Name    string
