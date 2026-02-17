@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/ssh"
@@ -92,9 +93,9 @@ func (c *Connection) ProbeAuthentication() error {
 var ErrHostKeyVerification = errors.New("ssh host key verification failed")
 
 func (c *Connection) isPasswordAuthenticated() (bool, error) {
-	publicArgs := append([]string{}, publicKeyProbeArgs...)
+	publicArgs := slices.Clone(publicKeyProbeArgs)
 	if c.opts.AcceptNewHostKeys {
-		publicArgs = append(publicArgs, acceptNewHostKeyArgs...)
+		publicArgs = slices.Concat(publicArgs, acceptNewHostKeyArgs)
 	}
 	publicOut, publicErr := c.runSSHProbe(publicArgs)
 	if publicErr == nil {
@@ -104,9 +105,9 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 		return false, ErrHostKeyVerification
 	}
 
-	passwordArgs := append([]string{}, passwordProbeArgs...)
+	passwordArgs := slices.Clone(passwordProbeArgs)
 	if c.opts.AcceptNewHostKeys {
-		passwordArgs = append(passwordArgs, acceptNewHostKeyArgs...)
+		passwordArgs = slices.Concat(passwordArgs, acceptNewHostKeyArgs)
 	}
 	passwordOut, passwordErr := c.runSSHProbe(passwordArgs)
 	if passwordErr == nil {
@@ -124,8 +125,7 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 }
 
 func (c *Connection) ensureKnownHost(in io.Reader, out io.Writer) error {
-	args := append([]string{}, knownHostProbeArgs...)
-	args = append(args, string(c.SSHTarget), "true")
+	args := slices.Concat(knownHostProbeArgs, []string{string(c.SSHTarget), "true"})
 	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = in
 	var buf bytes.Buffer
