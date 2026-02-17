@@ -10,7 +10,6 @@ const outputJSONPath = "internal/catalog/data/templates.json"
 
 var repoList = []string{
 	"Arm-Examples/topo-template-welcome#main",
-	"Arm-Debug/topo-kleidi-service#main",
 	"Arm-Examples/topo-template-lightbulb-moment#main",
 	"Arm-Examples/topo-template-v9-cpu-chat#main",
 	"Arm-Examples/topo-template-simd-visual-benchmark#main",
