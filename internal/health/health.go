@@ -90,12 +90,13 @@ func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Re
 func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 
-	sshExists, err := BinaryExistsLocally("ssh")
-	if err != nil {
-		return GenerateReport(dependencyStatuses, Status{}), err
+	authProbeEnabled := false
+	for _, s := range dependencyStatuses {
+		if s.Dependency.Name == "ssh" {
+			authProbeEnabled = s.Installed
+			break
+		}
 	}
-
-	authProbeEnabled := sshExists
 	opts := target.ConnectionOptions{
 		AuthProbeEnabled:  authProbeEnabled,
 		AcceptNewHostKeys: acceptNewHostKeys,
