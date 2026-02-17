@@ -31,7 +31,6 @@ func ProbeHealthStatus(c target.Connection) Status {
 
 	if err := c.ProbeAuthentication(); err != nil {
 		status.AuthError = err
-		status.ConnectionError = err
 		return status
 	}
 
