@@ -1,11 +1,9 @@
 package target
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"os/exec"
 	"slices"
 	"strings"
 
@@ -75,7 +73,7 @@ func (c *Connection) ProbeAuthentication() error {
 	}
 
 	if !c.opts.AcceptNewHostKeys {
-		if err := c.ensureKnownHost(c.opts.AuthProbeInput, c.opts.AuthProbeOutput); err != nil {
+		if err := c.ensureKnownHost(); err != nil {
 			return err
 		}
 	}
@@ -91,56 +89,40 @@ func (c *Connection) ProbeAuthentication() error {
 }
 
 var ErrHostKeyVerification = errors.New("ssh host key verification failed")
+var ErrAuthenticationFailure = errors.New("ssh authentication failed")
 
 func (c *Connection) isPasswordAuthenticated() (bool, error) {
+	// If public key auth succeeds, the target doesn't require password auth.
 	publicArgs := slices.Clone(publicKeyProbeArgs)
 	if c.opts.AcceptNewHostKeys {
 		publicArgs = slices.Concat(publicArgs, acceptNewHostKeyArgs)
 	}
-	publicOut, publicErr := c.runSSHProbe(publicArgs)
-	if publicErr == nil {
+	if err := c.runSSHProbe(publicArgs); err == nil {
 		return false, nil
-	}
-	if isHostKeyVerificationFailure(publicOut) {
-		return false, ErrHostKeyVerification
+	} else if !errors.Is(err, ErrAuthenticationFailure) {
+		return false, err
 	}
 
+	// Public key was rejected. Check if the target accepts password auth.
 	passwordArgs := slices.Clone(passwordProbeArgs)
 	if c.opts.AcceptNewHostKeys {
 		passwordArgs = slices.Concat(passwordArgs, acceptNewHostKeyArgs)
 	}
-	passwordOut, passwordErr := c.runSSHProbe(passwordArgs)
-	if passwordErr == nil {
+	if err := c.runSSHProbe(passwordArgs); err == nil {
 		return false, nil
-	}
-	if isHostKeyVerificationFailure(passwordOut) {
-		return false, ErrHostKeyVerification
-	}
-
-	if isAuthenticationFailure(passwordOut) {
+	} else if errors.Is(err, ErrAuthenticationFailure) {
 		return true, nil
+	} else {
+		return false, err
 	}
-
-	return false, fmt.Errorf("ssh probe failed: %w", passwordErr)
 }
 
-func (c *Connection) ensureKnownHost(in io.Reader, out io.Writer) error {
-	args := slices.Concat(knownHostProbeArgs, []string{string(c.SSHTarget), "true"})
-	cmd := exec.Command("ssh", args...)
-	cmd.Stdin = in
-	var buf bytes.Buffer
-	writer := io.Writer(&buf)
-	if out != nil {
-		writer = io.MultiWriter(out, &buf)
-	}
-	cmd.Stdout = writer
-	cmd.Stderr = writer
-	if err := cmd.Run(); err != nil {
-		output := buf.String()
+func (c *Connection) ensureKnownHost() error {
+	if err := c.runSSHProbe(knownHostProbeArgs); err != nil {
 		switch {
-		case isHostKeyVerificationFailure(output):
+		case errors.Is(err, ErrHostKeyVerification):
 			return ErrHostKeyVerification
-		case isAuthenticationFailure(output):
+		case errors.Is(err, ErrAuthenticationFailure):
 			return nil
 		default:
 			return err
@@ -149,9 +131,19 @@ func (c *Connection) ensureKnownHost(in io.Reader, out io.Writer) error {
 	return nil
 }
 
-func (c *Connection) runSSHProbe(sshArgs []string) (string, error) {
+func (c *Connection) runSSHProbe(sshArgs []string) error {
 	stdout, stderr, err := ssh.Exec(c.SSHTarget, "true", nil, sshArgs...)
-	return stdout + stderr, err
+	if err == nil {
+		return nil
+	}
+	output := stdout + stderr
+	if isHostKeyVerificationFailure(output) {
+		return ErrHostKeyVerification
+	}
+	if isAuthenticationFailure(output) {
+		return ErrAuthenticationFailure
+	}
+	return fmt.Errorf("ssh probe failed: %w", err)
 }
 
 func isHostKeyVerificationFailure(output string) bool {
