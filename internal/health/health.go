@@ -109,7 +109,7 @@ func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 	targetStatus := ProbeHealthStatus(conn)
 	report := GenerateReport(dependencyStatuses, targetStatus)
 	if err := targetStatus.AuthError; err != nil {
-		if errors.Is(err, target.ErrPasswordAuthenticationRequired) {
+		if errors.Is(err, target.ErrPasswordAuthentication) {
 			return report, errors.New(passwordAuthErrorMessage)
 		}
 		return report, err

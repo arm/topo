@@ -73,7 +73,7 @@ func TestProbeAuthentication(t *testing.T) {
 		}, func(argsFile string) {
 			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
 			err := conn.ProbeAuthentication()
-			require.ErrorIs(t, err, target.ErrPasswordAuthenticationRequired)
+			require.ErrorIs(t, err, target.ErrPasswordAuthentication)
 		})
 	})
 
