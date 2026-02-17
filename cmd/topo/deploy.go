@@ -18,12 +18,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	noRegistry        bool
-	port              string
-	skipProjectChecks bool
-)
-
 var deployOpts docker.DeployOptions
 
 var deployCmd = &cobra.Command{
@@ -47,6 +41,16 @@ Use --dry-run to see what commands would be executed without actually running th
 		dryRun, err := cmd.Flags().GetBool("dry-run")
 		if err != nil {
 			panic(fmt.Sprintf("bug: dry-run flag not registered: %v", err))
+		}
+
+		noRegistry, err := cmd.Flags().GetBool("no-registry")
+		if err != nil {
+			panic(fmt.Sprintf("internal error: no-registry flag not registered: %v", err))
+		}
+
+		skipProjectChecks, err := cmd.Flags().GetBool("skip-project-checks")
+		if err != nil {
+			panic(fmt.Sprintf("internal error: no-registry flag not registered: %v", err))
 		}
 
 		outputFormat, err := resolveOutput(cmd)
@@ -76,10 +80,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		resolvedPort, err := resolvePort(cmd, port)
-		if err != nil {
-			return err
-		}
+		resolvedPort := lookupPort(cmd)
 
 		if err := validatePort(resolvedPort); err != nil {
 			return err
@@ -142,26 +143,27 @@ func validatePort(port string) error {
 	return nil
 }
 
-func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
-	const portEnvVar = "TOPO_PORT"
+func lookupPort(cmd *cobra.Command) string {
+	port, err := cmd.Flags().GetString("port")
+	if err != nil {
+		panic(fmt.Sprintf("internal error: port flag not registered: %v", err))
+	}
 
-	if cmd.Flags().Changed("port") {
-		return flagValue, nil
+	if env, ok := os.LookupEnv("TOPO_PORT"); ok && strings.TrimSpace(env) != "" {
+		port = strings.TrimSpace(env)
 	}
-	if env := strings.TrimSpace(os.Getenv(portEnvVar)); env != "" {
-		return env, nil
-	}
-	return flagValue, nil
+
+	return port
 }
 
 func init() {
 	addTargetFlag(deployCmd)
 	addDryRunFlag(deployCmd)
-	deployCmd.Flags().StringVarP(&port, "port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
-	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
+	deployCmd.Flags().StringP("port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
+	deployCmd.Flags().Bool("no-registry", false, "Disable private registry flow; use direct save/load transfer")
+	deployCmd.Flags().Bool("skip-project-checks", false, "Skip project compatibility checks for the target platform")
 	deployCmd.Flags().BoolVar(&deployOpts.ForceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
 	deployCmd.Flags().BoolVar(&deployOpts.NoRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
-	deployCmd.Flags().BoolVar(&skipProjectChecks, "skip-project-checks", false, "Skip project compatibility checks for the target platform")
 	deployCmd.MarkFlagsMutuallyExclusive("force-recreate", "no-recreate")
 	rootCmd.AddCommand(deployCmd)
 }
