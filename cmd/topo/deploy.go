@@ -40,7 +40,7 @@ Use --dry-run to see what commands would be executed without actually running th
 
 		dryRun, err := cmd.Flags().GetBool("dry-run")
 		if err != nil {
-			panic(fmt.Sprintf("bug: dry-run flag not registered: %v", err))
+			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
 		}
 
 		noRegistry, err := cmd.Flags().GetBool("no-registry")
