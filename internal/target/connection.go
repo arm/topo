@@ -88,8 +88,10 @@ func (c *Connection) ProbeAuthentication() error {
 	return nil
 }
 
-var ErrHostKeyVerification = errors.New("ssh host key verification failed")
-var ErrAuthenticationFailure = errors.New("ssh authentication failed")
+var (
+	ErrHostKeyVerification   = errors.New("ssh host key verification failed")
+	ErrAuthenticationFailure = errors.New("ssh authentication failed")
+)
 
 func (c *Connection) isPasswordAuthenticated() (bool, error) {
 	// If public key auth succeeds, the target doesn't require password auth.
