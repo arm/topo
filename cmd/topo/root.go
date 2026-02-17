@@ -38,7 +38,7 @@ func addDryRunFlag(cmd *cobra.Command) {
 func lookupTarget(cmd *cobra.Command) (string, bool) {
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
-		panic(fmt.Sprintf("bug: output flag not registered: %v", err))
+		panic(fmt.Sprintf("bug: target flag not registered: %v", err))
 	}
 
 	if v := strings.TrimSpace(flagValue); v != "" {
@@ -64,7 +64,7 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 func resolveOutput(cmd *cobra.Command) (term.Format, error) {
 	flagValue, err := cmd.Flags().GetString("output")
 	if err != nil {
-		return term.Plain, nil
+		panic(fmt.Sprintf("bug: output flag not registered: %v", err))
 	}
 
 	v := strings.TrimSpace(strings.ToLower(flagValue))

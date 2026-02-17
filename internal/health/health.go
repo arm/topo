@@ -4,29 +4,8 @@ import (
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm-debug/topo-cli/internal/target"
 )
-
-var searchFlags = map[string]string{
-	"asimd": "NEON",
-	"sve":   "SVE",
-	"sve2":  "SVE2",
-	"sme":   "SME",
-	"sme2":  "SME2",
-}
-
-func ExtractArmFeatures(targetStatus Status) []string {
-	if len(targetStatus.Hardware.HostProcessor) == 0 {
-		return nil
-	}
-
-	var res []string
-	for _, field := range targetStatus.Hardware.HostProcessor[0].Features {
-		if name, ok := searchFlags[field]; ok {
-			res = append(res, name)
-		}
-	}
-	return res
-}
 
 type HealthCheck struct {
 	Name    string
@@ -107,8 +86,8 @@ func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Re
 func Check(sshTarget string) (Report, error) {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 
-	conn := NewConnection(sshTarget, ssh.ExecSSH)
-	targetStatus := conn.Probe()
+	conn := target.NewConnection(sshTarget, ssh.ExecSSH)
+	targetStatus := ProbeHealthStatus(conn)
 	report := GenerateReport(dependencyStatuses, targetStatus)
 	return report, nil
 }

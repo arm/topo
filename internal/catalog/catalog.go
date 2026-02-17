@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/health"
 	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm-debug/topo-cli/internal/target"
 )
 
 //go:embed data/templates.json
@@ -36,9 +36,11 @@ func FilterTemplateRepos(flags TemplateFilters, repos []Repo) []Repo {
 	targetMode := false
 
 	if flags.Target != "" {
-		conn := health.NewConnection(flags.Target, ssh.ExecSSH)
-		targetStatus := conn.Probe()
-		flags.Features = health.ExtractArmFeatures(targetStatus)
+		conn := target.NewConnection(flags.Target, ssh.ExecSSH)
+		hw, err := conn.ProbeHardware()
+		if err == nil && len(hw.HostProcessor) > 0 {
+			flags.Features = hw.HostProcessor[0].ExtractArmFeatures()
+		}
 		targetMode = true
 	}
 
