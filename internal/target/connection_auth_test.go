@@ -17,17 +17,16 @@ func newConnectionWithOpts(opts target.ConnectionOptions) target.Connection {
 	return target.NewConnection("user@host", mockExec, opts)
 }
 
-func TestIsPasswordAuthenticated(t *testing.T) {
+func TestProbeAuthentication(t *testing.T) {
 	testutil.RequireOS(t, "linux")
 
-	t.Run("returns false when public key succeeds", func(t *testing.T) {
+	t.Run("does not require password when public key succeeds", func(t *testing.T) {
 		testutil.WithFakeSSH(t, map[string]string{
 			"SSH_TEST_PUBLIC_EXIT": "0",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: true})
-			got, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
+			err := conn.ProbeAuthentication()
 			require.NoError(t, err)
-			assert.False(t, got)
 
 			lines := testutil.ReadArgsLines(t, argsFile)
 			require.Len(t, lines, 1)
@@ -41,8 +40,8 @@ func TestIsPasswordAuthenticated(t *testing.T) {
 			"SSH_TEST_PUBLIC_STDERR": "Host key verification failed",
 			"SSH_TEST_PUBLIC_EXIT":   "1",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: true})
-			_, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
+			err := conn.ProbeAuthentication()
 			require.ErrorIs(t, err, target.ErrHostKeyVerification)
 			lines := testutil.ReadArgsLines(t, argsFile)
 			require.Len(t, lines, 1)
@@ -56,8 +55,8 @@ func TestIsPasswordAuthenticated(t *testing.T) {
 			"SSH_TEST_PASSWORD_STDERR": "Host key verification failed",
 			"SSH_TEST_PASSWORD_EXIT":   "1",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: true})
-			_, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
+			err := conn.ProbeAuthentication()
 			require.ErrorIs(t, err, target.ErrHostKeyVerification)
 			lines := testutil.ReadArgsLines(t, argsFile)
 			require.Len(t, lines, 2)
@@ -65,31 +64,32 @@ func TestIsPasswordAuthenticated(t *testing.T) {
 		})
 	})
 
-	t.Run("detects password-based authentication", func(t *testing.T) {
+	t.Run("returns password authentication required when password auth fails", func(t *testing.T) {
 		testutil.WithFakeSSH(t, map[string]string{
 			"SSH_TEST_PUBLIC_STDERR":   "Permission denied",
 			"SSH_TEST_PUBLIC_EXIT":     "1",
 			"SSH_TEST_PASSWORD_STDERR": "Authentication failed",
 			"SSH_TEST_PASSWORD_EXIT":   "1",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: true})
-			got, err := conn.IsPasswordAuthenticated()
-			require.NoError(t, err)
-			assert.True(t, got)
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
+			err := conn.ProbeAuthentication()
+			require.ErrorIs(t, err, target.ErrPasswordAuthenticationRequired)
 		})
 	})
 
-	t.Run("returns false when password probe succeeds", func(t *testing.T) {
+	t.Run("does not require password when password probe succeeds", func(t *testing.T) {
 		testutil.WithFakeSSH(t, map[string]string{
 			"SSH_TEST_PUBLIC_STDERR":   "Permission denied",
 			"SSH_TEST_PUBLIC_EXIT":     "1",
 			"SSH_TEST_PASSWORD_STDOUT": "ok",
 			"SSH_TEST_PASSWORD_EXIT":   "0",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: true})
-			got, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
+			err := conn.ProbeAuthentication()
 			require.NoError(t, err)
-			assert.False(t, got)
+			lines := testutil.ReadArgsLines(t, argsFile)
+			require.Len(t, lines, 2)
+			assert.Contains(t, lines[1], "PreferredAuthentications=password")
 		})
 	})
 
@@ -100,8 +100,8 @@ func TestIsPasswordAuthenticated(t *testing.T) {
 			"SSH_TEST_PASSWORD_STDERR": "Some other error",
 			"SSH_TEST_PASSWORD_EXIT":   "1",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: true})
-			_, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
+			err := conn.ProbeAuthentication()
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "ssh probe failed")
 		})
@@ -113,10 +113,9 @@ func TestIsPasswordAuthenticated(t *testing.T) {
 			"SSH_TEST_KNOWNHOST_EXIT":   "1",
 			"SSH_TEST_PUBLIC_EXIT":      "0",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: false})
-			got, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false})
+			err := conn.ProbeAuthentication()
 			require.NoError(t, err)
-			assert.False(t, got)
 
 			lines := testutil.ReadArgsLines(t, argsFile)
 			require.Len(t, lines, 2)
@@ -129,8 +128,8 @@ func TestIsPasswordAuthenticated(t *testing.T) {
 			"SSH_TEST_KNOWNHOST_STDERR": "HOST KEY VERIFICATION FAILED",
 			"SSH_TEST_KNOWNHOST_EXIT":   "1",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: false})
-			_, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false})
+			err := conn.ProbeAuthentication()
 			require.ErrorIs(t, err, target.ErrHostKeyVerification)
 			lines := testutil.ReadArgsLines(t, argsFile)
 			require.Len(t, lines, 1)
@@ -142,8 +141,8 @@ func TestIsPasswordAuthenticated(t *testing.T) {
 			"SSH_TEST_KNOWNHOST_STDERR": "dial tcp: lookup host: no such host",
 			"SSH_TEST_KNOWNHOST_EXIT":   "1",
 		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AcceptNewHostKeys: false})
-			_, err := conn.IsPasswordAuthenticated()
+			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false})
+			err := conn.ProbeAuthentication()
 			require.Error(t, err)
 			lines := testutil.ReadArgsLines(t, argsFile)
 			require.Len(t, lines, 1)

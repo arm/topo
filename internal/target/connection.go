@@ -73,7 +73,13 @@ func (c *Connection) ProbeAuthentication() error {
 		return nil
 	}
 
-	needsSetup, err := c.IsPasswordAuthenticated()
+	if !c.opts.AcceptNewHostKeys {
+		if err := c.ensureKnownHost(c.opts.AuthProbeInput, c.opts.AuthProbeOutput); err != nil {
+			return err
+		}
+	}
+
+	needsSetup, err := c.isPasswordAuthenticated()
 	if err != nil {
 		return err
 	}
@@ -85,22 +91,11 @@ func (c *Connection) ProbeAuthentication() error {
 
 var ErrHostKeyVerification = errors.New("ssh host key verification failed")
 
-func (c *Connection) IsPasswordAuthenticated() (bool, error) {
-	args := []string{}
-	if !c.opts.AcceptNewHostKeys {
-		if err := c.ensureKnownHost(c.opts.AuthProbeInput, c.opts.AuthProbeOutput); err != nil {
-			return false, err
-		}
-	} else {
-		args = append(args, acceptNewHostKeyArgs...)
-	}
-
-	return c.detectPasswordAuthentication(args)
-}
-
-func (c *Connection) detectPasswordAuthentication(extraArgs []string) (bool, error) {
+func (c *Connection) isPasswordAuthenticated() (bool, error) {
 	publicArgs := append([]string{}, publicKeyProbeArgs...)
-	publicArgs = append(publicArgs, extraArgs...)
+	if c.opts.AcceptNewHostKeys {
+		publicArgs = append(publicArgs, acceptNewHostKeyArgs...)
+	}
 	publicOut, publicErr := c.runSSHProbe(publicArgs)
 	if publicErr == nil {
 		return false, nil
@@ -110,7 +105,9 @@ func (c *Connection) detectPasswordAuthentication(extraArgs []string) (bool, err
 	}
 
 	passwordArgs := append([]string{}, passwordProbeArgs...)
-	passwordArgs = append(passwordArgs, extraArgs...)
+	if c.opts.AcceptNewHostKeys {
+		passwordArgs = append(passwordArgs, acceptNewHostKeyArgs...)
+	}
 	passwordOut, passwordErr := c.runSSHProbe(passwordArgs)
 	if passwordErr == nil {
 		return false, nil
