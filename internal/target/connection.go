@@ -125,21 +125,12 @@ func (c *Connection) runSSHProbe(sshArgs []string) error {
 		return nil
 	}
 	output := stdout + stderr
-	if isHostKeyVerificationFailure(output) {
+	output = strings.ToLower(output)
+	if strings.Contains(output, "host key verification failed") {
 		return ErrHostKeyVerification
 	}
-	if isAuthenticationFailure(output) {
+	if strings.Contains(output, "permission denied") || strings.Contains(output, "authentication failed") || strings.Contains(output, "password") {
 		return ErrAuthenticationFailure
 	}
 	return fmt.Errorf("ssh probe failed: %w", err)
-}
-
-func isHostKeyVerificationFailure(output string) bool {
-	lower := strings.ToLower(output)
-	return strings.Contains(lower, "host key verification failed")
-}
-
-func isAuthenticationFailure(output string) bool {
-	lower := strings.ToLower(output)
-	return strings.Contains(lower, "permission denied") || strings.Contains(lower, "authentication failed") || strings.Contains(lower, "password")
 }
