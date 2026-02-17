@@ -94,12 +94,15 @@ var (
 )
 
 func (c *Connection) isPasswordAuthenticated() (bool, error) {
+
+	var extraArgs []string
+	if c.opts.AcceptNewHostKeys {
+		extraArgs = acceptNewHostKeyArgs
+	}
+
 	// If public key auth succeeds, the target doesn't require password auth.
 	publicArgs := slices.Clone(publicKeyProbeArgs)
-	if c.opts.AcceptNewHostKeys {
-		publicArgs = slices.Concat(publicArgs, acceptNewHostKeyArgs)
-	}
-	if err := c.runSSHProbe(publicArgs); err == nil {
+	if err := c.runSSHProbe(slices.Concat(publicArgs, extraArgs)); err == nil {
 		return false, nil
 	} else if !errors.Is(err, ErrAuthenticationFailure) {
 		return false, err
@@ -107,10 +110,7 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 
 	// Public key was rejected. Check if the target accepts password auth.
 	passwordArgs := slices.Clone(passwordProbeArgs)
-	if c.opts.AcceptNewHostKeys {
-		passwordArgs = slices.Concat(passwordArgs, acceptNewHostKeyArgs)
-	}
-	if err := c.runSSHProbe(passwordArgs); err == nil {
+	if err := c.runSSHProbe(slices.Concat(passwordArgs, extraArgs)); err == nil {
 		return false, nil
 	} else if errors.Is(err, ErrAuthenticationFailure) {
 		return true, nil
