@@ -73,7 +73,8 @@ func (c *Connection) ProbeAuthentication() error {
 	}
 
 	if !c.opts.AcceptNewHostKeys {
-		if err := c.ensureKnownHost(); err != nil {
+		err := c.runSSHProbe(knownHostProbeArgs)
+		if err != nil && !errors.Is(err, ErrAuthenticationFailure) {
 			return err
 		}
 	}
@@ -94,7 +95,6 @@ var (
 )
 
 func (c *Connection) isPasswordAuthenticated() (bool, error) {
-
 	var extraArgs []string
 	if c.opts.AcceptNewHostKeys {
 		extraArgs = acceptNewHostKeyArgs
@@ -117,20 +117,6 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 	} else {
 		return false, err
 	}
-}
-
-func (c *Connection) ensureKnownHost() error {
-	if err := c.runSSHProbe(knownHostProbeArgs); err != nil {
-		switch {
-		case errors.Is(err, ErrHostKeyVerification):
-			return ErrHostKeyVerification
-		case errors.Is(err, ErrAuthenticationFailure):
-			return nil
-		default:
-			return err
-		}
-	}
-	return nil
 }
 
 func (c *Connection) runSSHProbe(sshArgs []string) error {
