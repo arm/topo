@@ -21,8 +21,8 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
-		resolvedTarget := lookupTarget(cmd)
-		if resolvedTarget != "" {
+		resolvedTarget, exists := lookupTarget(cmd)
+		if exists {
 			templateFilters.Target = resolvedTarget
 		}
 
