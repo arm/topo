@@ -45,7 +45,7 @@ type ConnectionOptions struct {
 	AuthProbeOutput   io.Writer
 }
 
-var ErrPasswordAuthentication = errors.New("password authentication required")
+var ErrPasswordAuthentication = errors.New("only password authentication is configured; key-based ssh is required")
 
 func NewConnection(sshTarget string, exec execSSH, opts ConnectionOptions) Connection {
 	return Connection{
@@ -79,11 +79,11 @@ func (c *Connection) ProbeAuthentication() error {
 		}
 	}
 
-	needsSetup, err := c.isPasswordAuthenticated()
+	isPwdAuth, err := c.isPasswordAuthenticated()
 	if err != nil {
 		return err
 	}
-	if needsSetup {
+	if isPwdAuth {
 		return ErrPasswordAuthentication
 	}
 	return nil

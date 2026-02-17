@@ -64,7 +64,7 @@ func TestProbeAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("returns password authentication required when password auth fails", func(t *testing.T) {
+	t.Run("returns password-only auth error when auth fails", func(t *testing.T) {
 		testutil.WithFakeSSH(t, map[string]string{
 			"SSH_TEST_PUBLIC_STDERR":   "Permission denied",
 			"SSH_TEST_PUBLIC_EXIT":     "1",
