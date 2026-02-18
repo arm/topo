@@ -21,12 +21,12 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
-		if templateFilters.Target != "" {
-			target, err := resolveTarget(templateFilters.Target)
-			if err != nil {
-				return err
-			}
-			templateFilters.Target = target
+		resolvedTarget, exists := lookupTarget(cmd)
+		if err != nil {
+			return err
+		}
+		if exists {
+			templateFilters.Target = resolvedTarget
 		}
 
 		repos, err := catalog.ParseRepos(catalog.TemplatesJSON)
@@ -40,7 +40,7 @@ var templatesCmd = &cobra.Command{
 }
 
 func init() {
-	addTargetFlag(templatesCmd, &templateFilters.Target)
+	addTargetFlag(templatesCmd)
 	templatesCmd.Flags().StringSliceVar(
 		&templateFilters.Features,
 		"feature",

@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	setupKeysTarget  string
 	setupKeysDryRun  bool
 	setupKeysKeyPath string
 )
@@ -29,7 +28,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return fmt.Errorf("topo setup-keys currently supports Linux hosts only")
 		}
 
-		resolvedTarget, err := resolveTarget(setupKeysTarget)
+		resolvedTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -48,7 +47,7 @@ Use --dry-run to see what commands would be executed without actually running th
 
 func init() {
 	rootCmd.AddCommand(setupKeysCmd)
-	addTargetFlag(setupKeysCmd, &setupKeysTarget)
+	addTargetFlag(setupKeysCmd)
 	setupKeysCmd.Flags().BoolVar(&setupKeysDryRun, "dry-run", false, "Show what commands would be executed without actually running them")
 	setupKeysCmd.Flags().StringVar(&setupKeysKeyPath, "key-path", "", "Specify the SSH path where the generated key pair will be stored. Default directory: ~/.ssh. Default public key file name: id_ed25519_topo_<target>.pub)")
 }

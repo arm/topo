@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var describeTarget string
-
 var describeCmd = &cobra.Command{
 	Use:   "describe",
 	Short: "Describe the hardware characteristics of the target host",
@@ -22,7 +20,7 @@ var describeCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := resolveTarget(describeTarget)
+		sshTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -54,6 +52,6 @@ var describeCmd = &cobra.Command{
 }
 
 func init() {
-	addTargetFlag(describeCmd, &describeTarget)
+	addTargetFlag(describeCmd)
 	rootCmd.AddCommand(describeCmd)
 }

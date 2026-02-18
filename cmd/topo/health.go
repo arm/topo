@@ -10,8 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var healthTarget string
-
 const acceptNewHostFlag = "accept-new-host-keys"
 
 var healthCmd = &cobra.Command{
@@ -20,7 +18,7 @@ var healthCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := resolveTarget(healthTarget)
+		sshTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -43,7 +41,7 @@ var healthCmd = &cobra.Command{
 }
 
 func init() {
-	addTargetFlag(healthCmd, &healthTarget)
+	addTargetFlag(healthCmd)
 	healthCmd.Flags().Bool(acceptNewHostFlag, false, "Automatically trust and add new SSH host keys for the target")
 	rootCmd.AddCommand(healthCmd)
 }

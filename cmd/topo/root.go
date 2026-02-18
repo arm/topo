@@ -27,26 +27,42 @@ func init() {
 	)
 }
 
-func addTargetFlag(cmd *cobra.Command, target *string) {
-	cmd.Flags().StringVar(target, "target", "", "The SSH destination.")
+func addTargetFlag(cmd *cobra.Command) {
+	cmd.Flags().StringP("target", "t", "", "The SSH destination.")
 }
 
-func resolveTarget(flagValue string) (string, error) {
+func lookupTarget(cmd *cobra.Command) (string, bool) {
 	const targetEnvVar = "TOPO_TARGET"
 
-	if strings.TrimSpace(flagValue) != "" {
-		return flagValue, nil
+	flagValue, err := cmd.Flags().GetString("target")
+	if err != nil {
+		panic(fmt.Sprintf("internal error: target flag not registered: %v", err))
 	}
-	if env := strings.TrimSpace(os.Getenv(targetEnvVar)); env != "" {
-		return env, nil
+
+	if strings.TrimSpace(flagValue) == "" {
+		flagValue = os.Getenv(targetEnvVar)
 	}
-	return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
+
+	v := strings.TrimSpace(flagValue)
+	if v == "" {
+		return "", false
+	}
+
+	return v, true
+}
+
+func requireTarget(cmd *cobra.Command) (string, error) {
+	t, exists := lookupTarget(cmd)
+	if !exists {
+		return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
+	}
+	return t, nil
 }
 
 func resolveOutput(cmd *cobra.Command) (term.Format, error) {
 	flagValue, err := cmd.Flags().GetString("output")
 	if err != nil {
-		panic(fmt.Sprintf("bug: output flag not registered: %v", err))
+		panic(fmt.Sprintf("internal error: output flag not registered: %v", err))
 	}
 
 	v := strings.TrimSpace(strings.ToLower(flagValue))

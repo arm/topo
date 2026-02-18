@@ -10,8 +10,8 @@ import (
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		outputFormat, outputFormatError := resolveOutput(rootCmd)
-		if outputFormatError != nil {
+		outputFormat, outputError := resolveOutput(rootCmd)
+		if outputError != nil {
 			outputFormat = term.Plain
 		}
 		c := console.NewLogger(os.Stderr, outputFormat)
