@@ -1,151 +1,174 @@
 package target_test
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
-	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func newConnectionWithOpts(opts target.ConnectionOptions) target.Connection {
-	mockExec := func(_ ssh.Host, _ string, _ ...string) (string, error) {
-		return "", nil
+type sshTestCall struct {
+	target  ssh.Host
+	command string
+	args    []string
+}
+
+type mockResponse struct {
+	stdout string
+	err    error
+}
+
+func newMockExec(responses map[string]mockResponse, calls *[]sshTestCall) func(ssh.Host, string, ...string) (string, error) {
+	return func(target ssh.Host, command string, sshArgs ...string) (string, error) {
+		*calls = append(*calls, sshTestCall{
+			target:  target,
+			command: command,
+			args:    sshArgs,
+		})
+
+		mode := "default"
+		for _, arg := range sshArgs {
+			switch arg {
+			case "PreferredAuthentications=publickey":
+				mode = "public"
+			case "PreferredAuthentications=password":
+				mode = "password"
+			case "PasswordAuthentication=no":
+				mode = "knownhost"
+			}
+		}
+
+		resp, ok := responses[mode]
+		if !ok {
+			return "", fmt.Errorf("unexpected ssh mode: %s", mode)
+		}
+		return resp.stdout, resp.err
 	}
-	return target.NewConnection("user@host", mockExec, opts)
 }
 
 func TestProbeAuthentication(t *testing.T) {
-	testutil.RequireOS(t, "linux")
+	errSSH := errors.New("ssh failed")
 
 	t.Run("does not require password when public key succeeds", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_PUBLIC_EXIT": "0",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
-			err := conn.ProbeAuthentication()
-			require.NoError(t, err)
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"public": {stdout: "", err: nil},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.NoError(t, err)
 
-			lines := testutil.ReadArgsLines(t, argsFile)
-			require.Len(t, lines, 1)
-			assert.Contains(t, lines[0], "PreferredAuthentications=publickey")
-			assert.Contains(t, lines[0], "StrictHostKeyChecking=accept-new")
-		})
+		require.Len(t, calls, 1)
+		assert.Contains(t, calls[0].args, "PreferredAuthentications=publickey")
+		assert.Contains(t, calls[0].args, "StrictHostKeyChecking=accept-new")
 	})
 
 	t.Run("returns host key verification error for public key probe", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_PUBLIC_STDERR": "Host key verification failed",
-			"SSH_TEST_PUBLIC_EXIT":   "1",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
-			err := conn.ProbeAuthentication()
-			require.ErrorIs(t, err, target.ErrHostKeyVerification)
-			lines := testutil.ReadArgsLines(t, argsFile)
-			require.Len(t, lines, 1)
-		})
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"public": {stdout: "Host key verification failed", err: errSSH},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.ErrorIs(t, err, target.ErrHostKeyVerification)
+		require.Len(t, calls, 1)
 	})
 
 	t.Run("returns host key verification error for password probe", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_PUBLIC_STDERR":   "Permission denied",
-			"SSH_TEST_PUBLIC_EXIT":     "1",
-			"SSH_TEST_PASSWORD_STDERR": "Host key verification failed",
-			"SSH_TEST_PASSWORD_EXIT":   "1",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
-			err := conn.ProbeAuthentication()
-			require.ErrorIs(t, err, target.ErrHostKeyVerification)
-			lines := testutil.ReadArgsLines(t, argsFile)
-			require.Len(t, lines, 2)
-			assert.Contains(t, lines[1], "PreferredAuthentications=password")
-		})
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"public":   {stdout: "Permission denied", err: errSSH},
+			"password": {stdout: "Host key verification failed", err: errSSH},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.ErrorIs(t, err, target.ErrHostKeyVerification)
+		require.Len(t, calls, 2)
+		assert.Contains(t, calls[1].args, "PreferredAuthentications=password")
 	})
 
 	t.Run("returns password-only auth error when auth fails", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_PUBLIC_STDERR":   "Permission denied",
-			"SSH_TEST_PUBLIC_EXIT":     "1",
-			"SSH_TEST_PASSWORD_STDERR": "Authentication failed",
-			"SSH_TEST_PASSWORD_EXIT":   "1",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
-			err := conn.ProbeAuthentication()
-			require.ErrorIs(t, err, target.ErrPasswordAuthentication)
-		})
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"public":   {stdout: "Permission denied", err: errSSH},
+			"password": {stdout: "Authentication failed", err: errSSH},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.ErrorIs(t, err, target.ErrPasswordAuthentication)
 	})
 
 	t.Run("does not require password when password probe succeeds", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_PUBLIC_STDERR":   "Permission denied",
-			"SSH_TEST_PUBLIC_EXIT":     "1",
-			"SSH_TEST_PASSWORD_STDOUT": "ok",
-			"SSH_TEST_PASSWORD_EXIT":   "0",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
-			err := conn.ProbeAuthentication()
-			require.NoError(t, err)
-			lines := testutil.ReadArgsLines(t, argsFile)
-			require.Len(t, lines, 2)
-			assert.Contains(t, lines[1], "PreferredAuthentications=password")
-		})
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"public":   {stdout: "Permission denied", err: errSSH},
+			"password": {stdout: "ok", err: nil},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.NoError(t, err)
+		require.Len(t, calls, 2)
+		assert.Contains(t, calls[1].args, "PreferredAuthentications=password")
 	})
 
 	t.Run("returns error on non-auth failure for password probe", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_PUBLIC_STDERR":   "Permission denied",
-			"SSH_TEST_PUBLIC_EXIT":     "1",
-			"SSH_TEST_PASSWORD_STDERR": "Some other error",
-			"SSH_TEST_PASSWORD_EXIT":   "1",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true})
-			err := conn.ProbeAuthentication()
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "ssh probe failed")
-		})
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"public":   {stdout: "Permission denied", err: errSSH},
+			"password": {stdout: "Some other error", err: errSSH},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ssh probe failed")
 	})
 
 	t.Run("ensures known host when not accepting new host keys", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_KNOWNHOST_STDERR": "Permission denied",
-			"SSH_TEST_KNOWNHOST_EXIT":   "1",
-			"SSH_TEST_PUBLIC_EXIT":      "0",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false})
-			err := conn.ProbeAuthentication()
-			require.NoError(t, err)
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"knownhost": {stdout: "Permission denied", err: errSSH},
+			"public":    {stdout: "", err: nil},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.NoError(t, err)
 
-			lines := testutil.ReadArgsLines(t, argsFile)
-			require.Len(t, lines, 2)
-			assert.Contains(t, lines[0], "PasswordAuthentication=no")
-		})
+		require.Len(t, calls, 2)
+		assert.Contains(t, calls[0].args, "PasswordAuthentication=no")
 	})
 
 	t.Run("returns host key verification error when known host fails", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_KNOWNHOST_STDERR": "HOST KEY VERIFICATION FAILED",
-			"SSH_TEST_KNOWNHOST_EXIT":   "1",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false})
-			err := conn.ProbeAuthentication()
-			require.ErrorIs(t, err, target.ErrHostKeyVerification)
-			lines := testutil.ReadArgsLines(t, argsFile)
-			require.Len(t, lines, 1)
-		})
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"knownhost": {stdout: "HOST KEY VERIFICATION FAILED", err: errSSH},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.ErrorIs(t, err, target.ErrHostKeyVerification)
+		require.Len(t, calls, 1)
 	})
 
 	t.Run("returns error when known host fails with other error", func(t *testing.T) {
-		testutil.WithFakeSSH(t, map[string]string{
-			"SSH_TEST_KNOWNHOST_STDERR": "dial tcp: lookup host: no such host",
-			"SSH_TEST_KNOWNHOST_EXIT":   "1",
-		}, func(argsFile string) {
-			conn := newConnectionWithOpts(target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false})
-			err := conn.ProbeAuthentication()
-			require.Error(t, err)
-			lines := testutil.ReadArgsLines(t, argsFile)
-			require.Len(t, lines, 1)
-		})
+		var calls []sshTestCall
+		mockExec := newMockExec(map[string]mockResponse{
+			"knownhost": {stdout: "dial tcp: lookup host: no such host", err: errSSH},
+		}, &calls)
+		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false}
+		conn := target.NewConnection("user@host", mockExec, opts)
+		err := conn.ProbeAuthentication()
+		require.Error(t, err)
+		require.Len(t, calls, 1)
 	})
 }
