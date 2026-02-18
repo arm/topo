@@ -27,7 +27,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		conn := target.NewConnection(sshTarget, ssh.ExecSSH)
+		conn := target.NewConnection(sshTarget, ssh.ExecSSH, target.ConnectionOptions{})
 		report, err := describe.GenerateTargetDescription(conn)
 		if err != nil {
 			return err

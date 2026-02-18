@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/health"
@@ -10,6 +11,8 @@ import (
 )
 
 var healthTarget string
+
+const acceptNewHostFlag = "accept-new-host-keys"
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
@@ -25,7 +28,13 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		report, err := health.Check(sshTarget)
+
+		acceptNewHostKeys, err := cmd.Flags().GetBool(acceptNewHostFlag)
+		if err != nil {
+			panic(fmt.Sprintf("internal error: %s flag not registered: %v", acceptNewHostFlag, err))
+		}
+
+		report, err := health.Check(sshTarget, acceptNewHostKeys)
 		if err != nil {
 			return err
 		}
@@ -35,5 +44,6 @@ var healthCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(healthCmd, &healthTarget)
+	healthCmd.Flags().Bool(acceptNewHostFlag, false, "Automatically trust and add new SSH host keys for the target")
 	rootCmd.AddCommand(healthCmd)
 }

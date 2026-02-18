@@ -53,12 +53,14 @@ func ExecSSHWithShell(target Host, command string) (string, error) {
 
 // Exec runs a command on the target host. If the target is localhost, it runs locally.
 // Pass stdin data as optional parameter, or nil for no stdin.
-func Exec(target Host, command string, stdin []byte) (stdout, stderr string, err error) {
+func Exec(target Host, command string, stdin []byte, sshArgs ...string) (stdout, stderr string, err error) {
 	var cmd *exec.Cmd
 	if target.IsPlainLocalhost() {
 		cmd = exec.Command("/bin/sh", "-c", command)
 	} else {
-		cmd = exec.Command("ssh", string(target), command)
+		args := append([]string{}, sshArgs...)
+		args = append(args, string(target), command)
+		cmd = exec.Command("ssh", args...)
 	}
 
 	if stdin != nil {

@@ -40,7 +40,7 @@ func TestGenerate(t *testing.T) {
 			},
 		}
 
-		conn := target.NewConnection("test", mockExecSSH)
+		conn := target.NewConnection("test", mockExecSSH, target.ConnectionOptions{})
 		report, err := describe.GenerateTargetDescription(conn)
 
 		require.NoError(t, err)
@@ -52,7 +52,7 @@ func TestGenerate(t *testing.T) {
 			return "", assert.AnError
 		}
 
-		conn := target.NewConnection("test", mockExecSSH)
+		conn := target.NewConnection("test", mockExecSSH, target.ConnectionOptions{})
 		_, err := describe.GenerateTargetDescription(conn)
 
 		assert.Error(t, err)
