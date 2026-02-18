@@ -18,7 +18,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			return "", fmt.Errorf("connection refused")
 		}
 
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 		ts := health.ProbeHealthStatus(conn)
 
 		assert.Error(t, ts.ConnectionError)
@@ -39,7 +39,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 		ts := health.ProbeHealthStatus(conn)
 
 		want := health.HardwareProfile{RemoteCPU: []target.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}}
@@ -57,7 +57,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 		ts := health.ProbeHealthStatus(conn)
 
 		assert.NoError(t, ts.ConnectionError)

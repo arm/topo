@@ -1,11 +1,17 @@
 package health
 
 import (
+	"errors"
+	"os"
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/ssh"
 	"github.com/arm-debug/topo-cli/internal/target"
 )
+
+const passwordAuthErrorMessage = `note: Topo does not support SSH password-based authentication. To connect, either:
+- create your own SSH keys for the target, or
+- run 'topo setup-keys --target <target>' to let Topo generate keys and configure passwordless authentication`
 
 type HealthCheck struct {
 	Name    string
@@ -83,11 +89,30 @@ func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Re
 	return report
 }
 
-func Check(sshTarget string) (Report, error) {
+func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 
-	conn := target.NewConnection(sshTarget, ssh.ExecSSH)
+	authProbeEnabled := false
+	for _, s := range dependencyStatuses {
+		if s.Dependency.Name == "ssh" {
+			authProbeEnabled = s.Installed
+			break
+		}
+	}
+	opts := target.ConnectionOptions{
+		AuthProbeEnabled:  authProbeEnabled,
+		AcceptNewHostKeys: acceptNewHostKeys,
+		AuthProbeInput:    os.Stdin,
+		AuthProbeOutput:   os.Stdout,
+	}
+	conn := target.NewConnection(sshTarget, ssh.ExecSSH, opts)
 	targetStatus := ProbeHealthStatus(conn)
 	report := GenerateReport(dependencyStatuses, targetStatus)
+	if err := targetStatus.AuthError; err != nil {
+		if errors.Is(err, target.ErrPasswordAuthentication) {
+			return report, errors.New(passwordAuthErrorMessage)
+		}
+		return report, err
+	}
 	return report, nil
 }
