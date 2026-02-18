@@ -49,10 +49,6 @@ func ExecSSH(target Host, command string, sshArgs ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-func ExecSSHWithShell(target Host, command string, sshArgs ...string) (string, error) {
-	return ExecSSH(target, ShellCommand(command), sshArgs...)
-}
-
 // Exec runs a command on the target host. If the target is localhost, it runs locally.
 // Pass stdin data as optional parameter, or nil for no stdin.
 func Exec(target Host, command string, stdin []byte, sshArgs ...string) (stdout, stderr string, err error) {
