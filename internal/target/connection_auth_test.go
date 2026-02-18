@@ -11,7 +11,7 @@ import (
 )
 
 func newConnectionWithOpts(opts target.ConnectionOptions) target.Connection {
-	mockExec := func(_ ssh.Host, _ string) (string, error) {
+	mockExec := func(_ ssh.Host, _ string, _ ...string) (string, error) {
 		return "", nil
 	}
 	return target.NewConnection("user@host", mockExec, opts)

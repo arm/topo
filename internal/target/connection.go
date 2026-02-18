@@ -30,7 +30,7 @@ var (
 	}
 )
 
-type execSSH func(target ssh.Host, command string) (string, error)
+type execSSH func(target ssh.Host, command string, sshArgs ...string) (string, error)
 
 type Connection struct {
 	SSHTarget ssh.Host
@@ -73,7 +73,7 @@ func (c *Connection) ProbeAuthentication() error {
 	}
 
 	if !c.opts.AcceptNewHostKeys {
-		err := c.runSSHProbe(knownHostProbeArgs)
+		err := c.runSSHAuthenticationProbe(knownHostProbeArgs)
 		if err != nil && !errors.Is(err, ErrAuthenticationFailure) {
 			return err
 		}
@@ -102,7 +102,7 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 
 	// If public key auth succeeds, the target doesn't require password auth.
 	publicArgs := slices.Clone(publicKeyProbeArgs)
-	if err := c.runSSHProbe(slices.Concat(publicArgs, extraArgs)); err == nil {
+	if err := c.runSSHAuthenticationProbe(slices.Concat(publicArgs, extraArgs)); err == nil {
 		return false, nil
 	} else if !errors.Is(err, ErrAuthenticationFailure) {
 		return false, err
@@ -110,7 +110,7 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 
 	// Public key was rejected. Check if the target accepts password auth.
 	passwordArgs := slices.Clone(passwordProbeArgs)
-	if err := c.runSSHProbe(slices.Concat(passwordArgs, extraArgs)); err == nil {
+	if err := c.runSSHAuthenticationProbe(slices.Concat(passwordArgs, extraArgs)); err == nil {
 		return false, nil
 	} else if errors.Is(err, ErrAuthenticationFailure) {
 		return true, nil
@@ -119,17 +119,18 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 	}
 }
 
-func (c *Connection) runSSHProbe(sshArgs []string) error {
-	stdout, stderr, err := ssh.Exec(c.SSHTarget, "true", nil, sshArgs...)
+// All SSH authentication probes run the command "true" to check if the authentication method works.
+// All sshArgs should be hardcoded SSH options, not user-provided arguments.
+func (c *Connection) runSSHAuthenticationProbe(sshArgs []string) error {
+	stdout, err := c.exec(c.SSHTarget, "true", sshArgs...)
 	if err == nil {
 		return nil
 	}
-	output := stdout + stderr
-	output = strings.ToLower(output)
-	if strings.Contains(output, "host key verification failed") {
+	stdout = strings.ToLower(stdout)
+	if strings.Contains(stdout, "host key verification failed") {
 		return ErrHostKeyVerification
 	}
-	if strings.Contains(output, "permission denied") || strings.Contains(output, "authentication failed") || strings.Contains(output, "password") {
+	if strings.Contains(stdout, "permission denied") || strings.Contains(stdout, "authentication failed") || strings.Contains(stdout, "password") {
 		return ErrAuthenticationFailure
 	}
 	return fmt.Errorf("ssh probe failed: %w", err)

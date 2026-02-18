@@ -14,7 +14,7 @@ import (
 
 func TestProbeHealthStatus(t *testing.T) {
 	t.Run("probe fails connection", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string, _ ...string) (string, error) {
 			return "", fmt.Errorf("connection refused")
 		}
 
@@ -26,7 +26,7 @@ func TestProbeHealthStatus(t *testing.T) {
 	})
 
 	t.Run("probe finds remote CPUs", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ ...string) (string, error) {
 			switch {
 			case command == "true":
 				return "", nil
@@ -48,7 +48,7 @@ func TestProbeHealthStatus(t *testing.T) {
 	})
 
 	t.Run("probe succeeds when no remoteproc support", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ ...string) (string, error) {
 			switch command {
 			case "true":
 				return "", nil

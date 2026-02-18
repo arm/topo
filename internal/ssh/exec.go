@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -34,21 +35,22 @@ func ShellCommand(command string) string {
 	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
 }
 
-func ExecSSH(target Host, command string) (string, error) {
-	cmd := exec.Command("ssh", string(target), command)
+func ExecSSH(target Host, command string, sshArgs ...string) (string, error) {
+	cmd := exec.Command("ssh", slices.Concat(sshArgs, []string{string(target), command})...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("ssh command to %s failed: %w | stderr: %s", target, err, stderr.String())
+		combined := stdout.String() + stderr.String()
+		return combined, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", target, err, stderr.String())
 	}
 
 	return stdout.String(), nil
 }
 
-func ExecSSHWithShell(target Host, command string) (string, error) {
-	return ExecSSH(target, ShellCommand(command))
+func ExecSSHWithShell(target Host, command string, sshArgs ...string) (string, error) {
+	return ExecSSH(target, ShellCommand(command), sshArgs...)
 }
 
 // Exec runs a command on the target host. If the target is localhost, it runs locally.
