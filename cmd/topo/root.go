@@ -33,7 +33,7 @@ func addTargetFlag(cmd *cobra.Command) {
 }
 
 var sshTargetRgx = regexp.MustCompile(
-	`^(?:[a-zA-Z0-9._-]+@)?[a-zA-Z0-9._-]+$`,
+	`^(?:[a-zA-Z0-9._-]+@)?[a-zA-Z0-9._-]+(?::\d+)?$`,
 )
 
 func lookupTarget(cmd *cobra.Command) (string, bool, error) {
