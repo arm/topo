@@ -36,7 +36,7 @@ func FilterTemplateRepos(flags TemplateFilters, repos []Repo) ([]Repo, error) {
 	targetMode := false
 
 	if flags.Target != "" {
-		conn := target.NewConnection(flags.Target, ssh.ExecSSH, target.ConnectionOptions{})
+		conn := target.NewConnection(flags.Target, ssh.Exec, target.ConnectionOptions{})
 		hw, err := conn.ProbeHardware()
 		if err != nil {
 			return nil, err

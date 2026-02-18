@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 	"github.com/mholt/archives"
 )
 
@@ -36,7 +37,8 @@ type PathCandidate struct {
 }
 
 func getPathDirs(targetHost ssh.Host) ([]string, error) {
-	output, err := ssh.ExecWithShell(targetHost, "echo $PATH")
+	conn := target.NewConnection(string(targetHost), ssh.Exec, target.ConnectionOptions{WithLoginShell: true})
+	output, err := conn.Run("echo $PATH")
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +50,8 @@ func getPathDirs(targetHost ssh.Host) ([]string, error) {
 }
 
 func getHomeDir(targetHost ssh.Host) (string, error) {
-	output, err := ssh.ExecWithShell(targetHost, "echo $HOME")
+	conn := target.NewConnection(string(targetHost), ssh.Exec, target.ConnectionOptions{WithLoginShell: true})
+	output, err := conn.Run("echo $HOME")
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +59,8 @@ func getHomeDir(targetHost ssh.Host) (string, error) {
 }
 
 func getExistingBinaryDir(targetHost ssh.Host, binaryName string) (string, error) {
-	output, err := ssh.ExecWithShell(targetHost, fmt.Sprintf("command -v %s", binaryName))
+	conn := target.NewConnection(string(targetHost), ssh.Exec, target.ConnectionOptions{WithLoginShell: true})
+	output, err := conn.Run(fmt.Sprintf("command -v %s", binaryName))
 	if err != nil {
 		return "", nil
 	}
@@ -263,7 +267,8 @@ func install(installPath string, targetHost ssh.Host, binaries map[string][]byte
 		}
 
 		installCmd := fmt.Sprintf("install -D -m %s /dev/stdin %s/%s", mode, installPath, binaryName)
-		_, stderr, err := ssh.Exec(targetHost, installCmd, binaryData)
+		conn := target.NewConnection(string(targetHost), ssh.Exec, target.ConnectionOptions{WithLoginShell: true, WithStdin: binaryData})
+		stderr, err := conn.Run(installCmd)
 		if err != nil {
 			stderrStr := strings.ToLower(stderr)
 			if strings.Contains(stderrStr, "publickey") ||

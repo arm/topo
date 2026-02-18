@@ -11,7 +11,7 @@ import (
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
 			return "success", nil
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
@@ -23,7 +23,7 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run returns error", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
 			return "", errors.New("ssh failed")
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
@@ -37,7 +37,7 @@ func TestRun(t *testing.T) {
 
 func TestBinaryExists(t *testing.T) {
 	t.Run("when binary found returns true", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
 			return "/foo/bar", nil
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
@@ -49,7 +49,7 @@ func TestBinaryExists(t *testing.T) {
 	})
 
 	t.Run("invalid format returns an error", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
 			return "/foo/bar", nil
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})

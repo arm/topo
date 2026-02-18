@@ -37,7 +37,7 @@ func TestExtractArmFeatures(t *testing.T) {
 
 func TestProbeHardware(t *testing.T) {
 	t.Run("returns model name and features", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
 			switch {
 			case strings.Contains(command, "command -v"):
 				return "/usr/bin/lscpu", nil
@@ -59,7 +59,7 @@ func TestProbeHardware(t *testing.T) {
 	})
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
 			return "", errors.New("not found")
 		}
 
@@ -70,7 +70,7 @@ func TestProbeHardware(t *testing.T) {
 	})
 
 	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
 			switch {
 			case strings.Contains(command, "command -v"):
 				return "/usr/bin/lscpu", nil
