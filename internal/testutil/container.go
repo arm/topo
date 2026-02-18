@@ -153,7 +153,7 @@ func waitForDockerReady(t *testing.T, host string, port string) {
 	var lastErr error
 
 	for time.Now().Before(deadline) {
-		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", host, "docker", "info")
+		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", host, "docker", "info")
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			return
