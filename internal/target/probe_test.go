@@ -48,7 +48,7 @@ func TestProbeHardware(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 		hw, err := conn.ProbeHardware()
 
 		require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestProbeHardware(t *testing.T) {
 			return "", errors.New("not found")
 		}
 
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 		_, err := conn.ProbeHardware()
 
 		assert.ErrorContains(t, err, "lscpu not found")
@@ -81,7 +81,7 @@ func TestProbeHardware(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", mockExec)
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 		_, err := conn.ProbeHardware()
 
 		assert.ErrorContains(t, err, "collecting CPU info")

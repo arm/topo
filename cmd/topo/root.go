@@ -36,21 +36,23 @@ func addDryRunFlag(cmd *cobra.Command) {
 }
 
 func lookupTarget(cmd *cobra.Command) (string, bool) {
+	const targetEnvVar = "TOPO_TARGET"
+
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
 		panic(fmt.Sprintf("internal error: target flag not registered: %v", err))
 	}
 
-	if v := strings.TrimSpace(flagValue); v != "" {
-		return v, true
+	if strings.TrimSpace(flagValue) == "" {
+		flagValue = os.Getenv(targetEnvVar)
 	}
 
-	const targetEnvVar = "TOPO_TARGET"
-	if v := strings.TrimSpace(os.Getenv(targetEnvVar)); v != "" {
-		return v, true
+	v := strings.TrimSpace(flagValue)
+	if v == "" {
+		return "", false
 	}
 
-	return "", false
+	return v, true
 }
 
 func requireTarget(cmd *cobra.Command) (string, error) {
