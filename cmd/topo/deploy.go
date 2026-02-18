@@ -18,14 +18,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	noRegistry        bool
-	port              string
-	skipProjectChecks bool
-)
-
-var deployOpts docker.DeployOptions
-
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy services using the compose file",
@@ -49,11 +41,6 @@ Use --dry-run to see what commands would be executed without actually running th
 			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
 		}
 
-		noRegistry, err := cmd.Flags().GetBool("no-registry")
-		if err != nil {
-			panic(fmt.Sprintf("internal error: no-registry flag not registered: %v", err))
-		}
-
 		skipProjectChecks, err := cmd.Flags().GetBool("skip-project-checks")
 		if err != nil {
 			panic(fmt.Sprintf("internal error: no-registry flag not registered: %v", err))
@@ -68,17 +55,17 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
+		deployOpts, err := lookupDeployOpts(cmd)
+		if err != nil {
+			return err
+		}
+
 		portChanged := cmd.Flags().Changed("port")
-		if portChanged && noRegistry {
+		if portChanged && !deployOpts.WithRegistry {
 			c.Log(logger.Entry{
 				Level:   logger.Warning,
 				Message: "--port has no effect when --no-registry is set. Define SSH port in your SSH config instead.",
 			})
-		}
-
-		resolvedTarget, err := requireTarget(cmd)
-		if err != nil {
-			return err
 		}
 
 		composeFile, err := getComposeFileName()
@@ -86,25 +73,15 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		resolvedPort := lookupPort(cmd)
-
-		if err := validatePort(resolvedPort); err != nil {
+		if err := validatePort(deployOpts.Port); err != nil {
 			return err
 		}
-
-		targetHost := ssh.Host(resolvedTarget)
-		deployOpts.TargetHost = targetHost
-		deployOpts.Port = resolvedPort
 
 		if !skipProjectChecks {
 			if err := checks.EnsureProjectIsLinuxArm64Ready(composeFile); err != nil {
 				return err
 			}
 		}
-
-		goos := runtime.GOOS
-		deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, targetHost)
-		deployOpts.UseSSHControlSockets = docker.SupportsSSHControlSockets(goos)
 
 		if !deployOpts.WithRegistry {
 			c.Log(logger.Entry{
@@ -162,14 +139,46 @@ func lookupPort(cmd *cobra.Command) string {
 	return port
 }
 
+func lookupDeployOpts(cmd *cobra.Command) (docker.DeployOptions, error) {
+	var deployOpts docker.DeployOptions
+
+	targetHost, err := requireTarget(cmd)
+	if err != nil {
+		return deployOpts, err
+	}
+	deployOpts.TargetHost = ssh.Host(targetHost)
+
+	noRegistry, err := cmd.Flags().GetBool("no-registry")
+	if err != nil {
+		panic(fmt.Sprintf("internal error: no-registry flag not registered: %v", err))
+	}
+	deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, deployOpts.TargetHost)
+
+	deployOpts.Port = lookupPort(cmd)
+
+	deployOpts.ForceRecreate, err = cmd.Flags().GetBool("force-recreate")
+	if err != nil {
+		panic(fmt.Sprintf("internal error: force-recreate flag not registered: %v", err))
+	}
+	deployOpts.NoRecreate, err = cmd.Flags().GetBool("no-recreate")
+	if err != nil {
+		panic(fmt.Sprintf("internal error: force-recreate flag not registered: %v", err))
+	}
+
+	goos := runtime.GOOS
+	deployOpts.UseSSHControlSockets = docker.SupportsSSHControlSockets(goos)
+
+	return deployOpts, nil
+}
+
 func init() {
 	addTargetFlag(deployCmd)
 	addDryRunFlag(deployCmd)
 	deployCmd.Flags().StringP("port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
 	deployCmd.Flags().Bool("no-registry", false, "Disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().Bool("skip-project-checks", false, "Skip project compatibility checks for the target platform")
-	deployCmd.Flags().BoolVar(&deployOpts.ForceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
-	deployCmd.Flags().BoolVar(&deployOpts.NoRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
+	deployCmd.Flags().Bool("force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
+	deployCmd.Flags().Bool("no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
 	deployCmd.MarkFlagsMutuallyExclusive("force-recreate", "no-recreate")
 	rootCmd.AddCommand(deployCmd)
 }
