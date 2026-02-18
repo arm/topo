@@ -44,11 +44,11 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
+	waitForDockerReady(t, TargetContainerHost, port)
+
 	if err := ensureHostKeyKnown(t, "localhost", port); err != nil {
 		t.Fatalf("failed to add host key: %v", err)
 	}
-
-	waitForDockerReady(t, TargetContainerHost, port)
 
 	return &TargetContainer{SSHConnectionString: fmt.Sprintf("%s:%s", TargetContainerHost, port), ContainerName: containerName}
 }
