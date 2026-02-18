@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/arm-debug/topo-cli/internal/catalog"
@@ -31,7 +32,10 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
-		repos = catalog.FilterTemplateRepos(templateFilters, repos)
+		repos, err = catalog.FilterTemplateRepos(templateFilters, repos)
+		if err != nil {
+			return fmt.Errorf("could not filter templates: %w", err)
+		}
 		return printable.Print(templates.RepoCollection(repos), os.Stdout, outputFormat)
 	},
 }

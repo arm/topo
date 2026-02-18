@@ -32,13 +32,16 @@ func GetTemplateRepo(id string) (*Repo, error) {
 	return GetRepo(id, TemplatesJSON)
 }
 
-func FilterTemplateRepos(flags TemplateFilters, repos []Repo) []Repo {
+func FilterTemplateRepos(flags TemplateFilters, repos []Repo) ([]Repo, error) {
 	targetMode := false
 
 	if flags.Target != "" {
 		conn := target.NewConnection(flags.Target, ssh.ExecSSH, target.ConnectionOptions{})
 		hw, err := conn.ProbeHardware()
-		if err == nil && len(hw.HostProcessor) > 0 {
+		if err != nil {
+			return nil, err
+		}
+		if len(hw.HostProcessor) > 0 {
 			flags.Features = hw.HostProcessor[0].ExtractArmFeatures()
 		}
 		targetMode = true
@@ -50,7 +53,7 @@ func FilterTemplateRepos(flags TemplateFilters, repos []Repo) []Repo {
 			filtered = append(filtered, repo)
 		}
 	}
-	return filtered
+	return filtered, nil
 }
 
 func supportsFeatures(features []string, repo Repo, targetMode bool) bool {
