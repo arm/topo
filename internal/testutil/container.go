@@ -115,6 +115,9 @@ func ensureHostKeyKnown(t *testing.T, host string, port string) error {
 	cmd := exec.Command("ssh-keyscan", "-p", port, host)
 	output, err := cmd.Output()
 	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("ssh-keyscan failed with exit code %d: %s", exitErr.ExitCode(), strings.TrimSpace(string(exitErr.Stderr)))
+		}
 		return fmt.Errorf("ssh-keyscan failed: %w", err)
 	}
 
