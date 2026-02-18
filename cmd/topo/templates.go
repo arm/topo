@@ -21,7 +21,7 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
-		resolvedTarget, exists, err := lookupTarget(cmd)
+		resolvedTarget, exists := lookupTarget(cmd)
 		if err != nil {
 			return err
 		}

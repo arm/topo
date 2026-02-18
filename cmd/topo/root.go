@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/arm-debug/topo-cli/internal/output/term"
@@ -32,11 +31,7 @@ func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP("target", "t", "", "The SSH destination.")
 }
 
-var sshTargetRgx = regexp.MustCompile(
-	`^(?:[a-zA-Z0-9._-]+@)?[a-zA-Z0-9._-]+(?::\d+)?$`,
-)
-
-func lookupTarget(cmd *cobra.Command) (string, bool, error) {
+func lookupTarget(cmd *cobra.Command) (string, bool) {
 	const targetEnvVar = "TOPO_TARGET"
 
 	flagValue, err := cmd.Flags().GetString("target")
@@ -50,21 +45,14 @@ func lookupTarget(cmd *cobra.Command) (string, bool, error) {
 
 	v := strings.TrimSpace(flagValue)
 	if v == "" {
-		return "", false, nil
+		return "", false
 	}
 
-	if !sshTargetRgx.MatchString(v) {
-		return "", false, fmt.Errorf("invalid SSH target: %q", v)
-	}
-
-	return v, true, nil
+	return v, true
 }
 
 func requireTarget(cmd *cobra.Command) (string, error) {
-	t, exists, err := lookupTarget(cmd)
-	if err != nil {
-		return "", err
-	}
+	t, exists := lookupTarget(cmd)
 	if !exists {
 		return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
 	}
