@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -14,8 +13,6 @@ import (
 const TargetContainerHost = "root@localhost"
 
 const TargetContainerImage = "topo-e2e-target:latest"
-
-var knownHostsLockPath = filepath.Join(os.TempDir(), "topo-e2e-known_hosts.lock")
 
 type TargetContainer struct {
 	SSHConnectionString string
