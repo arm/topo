@@ -56,8 +56,7 @@ func Exec(target Host, command string, stdin []byte, sshArgs ...string) (stdout,
 	if target.IsPlainLocalhost() {
 		cmd = exec.Command("/bin/sh", "-c", command)
 	} else {
-		args := append([]string{}, sshArgs...)
-		args = append(args, string(target), command)
+		args := slices.Concat(sshArgs, []string{string(target), command})
 		cmd = exec.Command("ssh", args...)
 	}
 
