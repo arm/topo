@@ -18,6 +18,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	noRegistry        bool
+	port              string
+	skipProjectChecks bool
+)
+
 var deployOpts docker.DeployOptions
 
 var deployCmd = &cobra.Command{

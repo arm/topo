@@ -10,8 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var stopDryRun bool
-
 var topoStopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Stop a currently running deployment",

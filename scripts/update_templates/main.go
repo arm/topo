@@ -9,11 +9,10 @@ import (
 const outputJSONPath = "internal/catalog/data/templates.json"
 
 var repoList = []string{
-	"Arm-Debug/topo-cortexa-welcome#main",
-	"Arm-Debug/topo-kleidi-service#main",
-	"Arm-Debug/STM32-Heteogenous-Communications-example#main",
-	"Arm-Debug/topo-armv9-cpu-llm-chat#master",
-	"Arm-Debug/topo-simd-visual-benchmark#master",
+	"Arm-Examples/topo-template-welcome#main",
+	"Arm-Examples/topo-template-lightbulb-moment#main",
+	"Arm-Examples/topo-template-v9-cpu-chat#main",
+	"Arm-Examples/topo-template-simd-visual-benchmark#main",
 }
 
 type Template struct {
