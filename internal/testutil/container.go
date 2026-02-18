@@ -46,10 +46,6 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 
 	waitForDockerReady(t, TargetContainerHost, port)
 
-	if err := ensureHostKeyKnown(t, "localhost", port); err != nil {
-		t.Fatalf("failed to add host key: %v", err)
-	}
-
 	return &TargetContainer{SSHConnectionString: fmt.Sprintf("%s:%s", TargetContainerHost, port), ContainerName: containerName}
 }
 
@@ -104,47 +100,6 @@ func GetContainerPublicPort(containerName string, privatePort string) (string, e
 		return "", fmt.Errorf("failed to parse port mapping: %w", err)
 	}
 	return port, nil
-}
-
-func ensureHostKeyKnown(t *testing.T, host string, port string) error {
-	releaseLock := AcquireFlock(t, knownHostsLockPath)
-	defer releaseLock()
-
-	_ = exec.Command("ssh-keygen", "-R", fmt.Sprintf("[%s]:%s", host, port)).Run()
-
-	cmd := exec.Command("ssh-keyscan", "-p", port, host)
-	output, err := cmd.Output()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("ssh-keyscan failed with exit code %d: %s", exitErr.ExitCode(), strings.TrimSpace(string(exitErr.Stderr)))
-		}
-		return fmt.Errorf("ssh-keyscan failed: %w", err)
-	}
-
-	if len(output) == 0 {
-		return fmt.Errorf("ssh-keyscan returned no host keys")
-	}
-
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user home directory: %w", err)
-	}
-	knownHostsPath := filepath.Join(homeDir, ".ssh", "known_hosts")
-	if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0o700); err != nil {
-		return fmt.Errorf("failed to create .ssh directory: %w", err)
-	}
-
-	f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to open known_hosts: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	if _, err := f.Write(output); err != nil {
-		return fmt.Errorf("failed to write to known_hosts: %w", err)
-	}
-
-	return nil
 }
 
 func waitForDockerReady(t *testing.T, host string, port string) {
