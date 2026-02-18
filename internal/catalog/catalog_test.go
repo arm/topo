@@ -53,7 +53,8 @@ func TestFilterTemplateRepos(t *testing.T) {
 			},
 		}
 
-		got := catalog.FilterTemplateRepos(flags, collection)
+		got, err := catalog.FilterTemplateRepos(flags, collection)
+		require.NoError(t, err)
 
 		want := []catalog.Repo{
 			{
@@ -90,7 +91,8 @@ func TestFilterTemplateRepos(t *testing.T) {
 			},
 		}
 
-		got := catalog.FilterTemplateRepos(flags, collection)
+		got, err := catalog.FilterTemplateRepos(flags, collection)
+		require.NoError(t, err)
 
 		want := []catalog.Repo{
 			{
