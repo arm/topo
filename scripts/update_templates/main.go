@@ -24,9 +24,9 @@ type Template struct {
 }
 
 func main() {
-	token := os.Getenv("GH_PAT")
+	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		fmt.Fprintln(os.Stderr, "GH_PAT is not set: create a personal access token and set the envvar")
+		fmt.Fprintln(os.Stderr, "GITHUB_TOKEN is not set: create a personal access token and set the envvar")
 		os.Exit(1)
 	}
 
