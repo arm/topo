@@ -29,11 +29,11 @@ builds:
 
 archives:
   - id: archive
-    builds:
+    ids:
       - topo
     format_overrides:
       - goos: windows
-        format: zip
+        formats: zip
     files:
       - README.md
       - CHANGELOG.md
