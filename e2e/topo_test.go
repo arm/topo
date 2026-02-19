@@ -17,7 +17,7 @@ func TestListTemplates(t *testing.T) {
 
 	output := string(out)
 
-	assert.Contains(t, output, "Topo-Welcome")
+	assert.Contains(t, output, "Hello-World")
 	assert.Contains(t, output, "git@github.com:")
 	assert.Contains(t, output, "Features:")
 }
