@@ -9,29 +9,77 @@ import (
 	"strings"
 	"unicode"
 
-	goperation "github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 )
 
-func NewKeyCreationAndPlacementOnTarget(target string, keyPath string) (goperation.Sequence, error) {
-	if keyPath == "" {
+const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+var execCommand = exec.Command
+
+func NewKeyPairCreation(targetHost string, privKeyPath string) (*exec.Cmd, string, error) {
+	if privKeyPath == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return nil, fmt.Errorf("failed to determine home directory: %w", err)
+			return nil, "", fmt.Errorf("failed to determine home directory: %w", err)
 		}
 
-		keyName := fmt.Sprintf("id_ed25519_topo_%s", sanitizeTarget(target))
-		keyPath = filepath.Join(home, ".ssh", keyName)
+		keyName := fmt.Sprintf("id_ed25519_topo_%s", sanitizeTarget(targetHost))
+		privKeyPath = filepath.Join(home, ".ssh", keyName)
 	}
 
-	if err := ensureDir(keyPath); err != nil {
-		return nil, err
+	if err := ensureDir(privKeyPath); err != nil {
+		return nil, "", err
 	}
 
-	ops := []goperation.Operation{
-		newSetupKeysOperation("Generate SSH key pair for target", []string{"ssh-keygen", "-t", "ed25519", "-f", keyPath, "-C", target}),
-		newSetupKeysOperation("Copy SSH public key to target", []string{"ssh-copy-id", "-i", keyPath + ".pub", target}),
+	return execCommand("ssh-keygen", "-t", "ed25519", "-f", privKeyPath, "-C", targetHost), privKeyPath, nil
+}
+
+func RunKeyPairCreation(keyPairCreationCmd *exec.Cmd, cmdOutput io.Writer, dryRun bool) error {
+	if dryRun && cmdOutput != nil {
+		_, err := fmt.Fprintln(cmdOutput, keyPairCreationCmd.String())
+		if err != nil {
+			return err
+		}
+	} else if !dryRun {
+		if cmdOutput != nil {
+			keyPairCreationCmd.Stdout = cmdOutput
+			keyPairCreationCmd.Stderr = cmdOutput
+		}
+
+		if err := keyPairCreationCmd.Run(); err != nil {
+			return fmt.Errorf("command %q failed: %w", keyPairCreationCmd.String(), err)
+		}
 	}
-	return goperation.NewSequence(ops...), nil
+
+	return nil
+}
+
+func NewPubKeyTransfer(targetHost string, privKeyPath string, dryRun bool) (*target.Connection, error) {
+	pubKeyPath := privKeyPath + ".pub"
+	opts := target.ConnectionOptions{WithLoginShell: true}
+	if !dryRun {
+		pubKey, err := os.ReadFile(pubKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read public key %s: %w", pubKeyPath, err)
+		}
+		opts.WithStdin = pubKey
+	}
+
+	pubKeyTransfer := target.NewConnection(targetHost, ssh.Exec, opts)
+	return &pubKeyTransfer, nil
+}
+
+func RunPubKeyTransfer(pubKeyTransfer *target.Connection, privKeyPath string, output io.Writer, dryRun bool) error {
+	if dryRun {
+		_, err := fmt.Fprintf(output, "ssh %s %q < %s.pub\n", pubKeyTransfer.SSHTarget, remoteAuthorizedKeysCommand, privKeyPath)
+		return err
+	} else {
+		if _, err := pubKeyTransfer.Run(remoteAuthorizedKeysCommand); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ensureDir(keyPath string) error {
@@ -55,40 +103,4 @@ func sanitizeTarget(target string) string {
 
 	sanitized := b.String()
 	return sanitized
-}
-
-type setupKeysOperation struct {
-	description string
-	command     []string
-}
-
-func newSetupKeysOperation(description string, command []string) *setupKeysOperation {
-	return &setupKeysOperation{description: description, command: command}
-}
-
-func (c *setupKeysOperation) Description() string {
-	return c.description
-}
-
-func (c *setupKeysOperation) Run(cmdOutput io.Writer) error {
-	if len(c.command) == 0 {
-		return fmt.Errorf("no command configured")
-	}
-	cmd := exec.Command(c.command[0], c.command[1:]...)
-	if cmdOutput != nil {
-		cmd.Stdout = cmdOutput
-		cmd.Stderr = cmdOutput
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command %q failed: %w", strings.Join(c.command, " "), err)
-	}
-	return nil
-}
-
-func (c *setupKeysOperation) DryRun(output io.Writer) error {
-	if output == nil {
-		return nil
-	}
-	_, err := fmt.Fprintln(output, strings.Join(c.command, " "))
-	return err
 }

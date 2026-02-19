@@ -4,77 +4,119 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"slices"
+	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewKeyCreationAndPlacementOnTarget(t *testing.T) {
-	testutil.RequireOS(t, "linux")
+func TestNewKeyCreationAndPlacementOnTargetDryRun(t *testing.T) {
+	tests := []struct {
+		name         string
+		inputKeyPath string
+		wantKeyPath  string
+	}{
+		{
+			name:         "default key path",
+			inputKeyPath: "",
+			wantKeyPath:  filepath.Join(".ssh", "id_ed25519_topo_user_example.com"),
+		},
+		{
+			name:         "custom key path",
+			inputKeyPath: filepath.Join("custom_keys", "id_ed25519_custom"),
+			wantKeyPath:  filepath.Join("custom_keys", "id_ed25519_custom"),
+		},
+	}
 
-	t.Run("default key path", func(t *testing.T) {
-		tmp := t.TempDir()
-		t.Setenv("HOME", tmp)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			t.Setenv("HOME", tmp)
+			if runtime.GOOS == "windows" {
+				t.Setenv("USERPROFILE", tmp)
+				if vol := filepath.VolumeName(tmp); vol != "" {
+					t.Setenv("HOMEDRIVE", vol)
+					t.Setenv("HOMEPATH", strings.TrimPrefix(tmp, vol))
+				}
+			}
 
-		seq, err := NewKeyCreationAndPlacementOnTarget("user@example.com", "")
-		require.NoError(t, err)
+			inputKeyPath := tt.inputKeyPath
+			if inputKeyPath != "" {
+				inputKeyPath = filepath.Join(tmp, inputKeyPath)
+			}
 
-		var buf bytes.Buffer
-		require.NoError(t, seq.DryRun(&buf))
+			keygenCmd, keyPath, err := NewKeyPairCreation("user@example.com", inputKeyPath)
+			require.NoError(t, err)
 
-		keyPath := filepath.Join(tmp, ".ssh", "id_ed25519_topo_user_example.com")
-		wantKeygen := "ssh-keygen -t ed25519 -f " + keyPath + " -C user@example.com"
-		wantCopy := "ssh-copy-id -i " + keyPath + ".pub user@example.com"
-		got := buf.String()
-		require.Contains(t, got, wantKeygen, "DryRun output should include keygen command")
-		require.Contains(t, got, wantCopy, "DryRun output should include ssh-copy-id command")
-	})
+			wantKeyPath := filepath.Join(tmp, tt.wantKeyPath)
+			require.Equal(t, wantKeyPath, keyPath, "NewKeyPairCreation should return expected key path")
 
-	t.Run("custom key path", func(t *testing.T) {
-		keyPath := filepath.Join(t.TempDir(), "custom_keys", "id_ed25519_custom")
+			var buf bytes.Buffer
+			require.NoError(t, RunKeyPairCreation(keygenCmd, &buf, true))
 
-		seq, err := NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
-		require.NoError(t, err)
+			wantKeygen := "-t ed25519 -f " + keyPath + " -C user@example.com"
+			got := buf.String()
+			require.Contains(t, got, "ssh-keygen", "DryRun output should include keygen command")
+			require.Contains(t, got, wantKeygen, "DryRun output should include keygen arguments")
 
-		var buf bytes.Buffer
-		require.NoError(t, seq.DryRun(&buf))
-
-		wantKeygen := "ssh-keygen -t ed25519 -f " + keyPath + " -C user@example.com"
-		wantCopy := "ssh-copy-id -i " + keyPath + ".pub user@example.com"
-		got := buf.String()
-		require.Contains(t, got, wantKeygen, "DryRun output should include keygen command")
-		require.Contains(t, got, wantCopy, "DryRun output should include ssh-copy-id command")
-	})
+			conn, err := NewPubKeyTransfer("user@example.com", keyPath, true)
+			require.NoError(t, err)
+			require.NoError(t, RunPubKeyTransfer(conn, keyPath, &buf, true))
+			got = buf.String()
+			require.Contains(t, got, "ssh user@example.com", "DryRun output should include ssh command")
+			require.Contains(t, got, keyPath+".pub", "DryRun output should include public key path")
+		})
+	}
 }
 
 func TestKeyCreationAndPlacementOnTarget(t *testing.T) {
-	testutil.RequireOS(t, "linux")
-
 	keyPath := filepath.Join(t.TempDir(), "custom_keys", "id_ed25519_custom_run")
-	fakeBinDir := t.TempDir()
 	logFile := filepath.Join(t.TempDir(), "commands.log")
 
-	writeFakeSSHCommand(t, fakeBinDir, "ssh-keygen", logFile)
-	writeFakeSSHCommand(t, fakeBinDir, "ssh-copy-id", logFile)
+	testLogFile := logFile
+	origExec := execCommand
+	execCommand = func(command string, args ...string) *exec.Cmd {
+		return fakeExecCommand(testLogFile, command, args...)
+	}
+	t.Cleanup(func() { execCommand = origExec })
 
-	originalPath := os.Getenv("PATH")
-	t.Setenv("PATH", fakeBinDir+string(os.PathListSeparator)+originalPath)
-
-	seq, err := NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
+	keygenCmd, keyPath, err := NewKeyPairCreation("user@example.com", keyPath)
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
-	require.NoError(t, seq.Run(&buf))
+	require.NoError(t, RunKeyPairCreation(keygenCmd, &buf, false))
 	require.Contains(t, buf.String(), "ssh-keygen invoked", "Run output should include fake ssh-keygen output")
-	require.Contains(t, buf.String(), "ssh-copy-id invoked", "Run output should include fake ssh-copy-id output")
 
 	logData, err := os.ReadFile(logFile)
 	require.NoError(t, err)
 	log := string(logData)
 	require.Contains(t, log, fmt.Sprintf("ssh-keygen -t ed25519 -f %s -C user@example.com", keyPath))
-	require.Contains(t, log, fmt.Sprintf("ssh-copy-id -i %s.pub user@example.com", keyPath))
+
+	_, err = NewPubKeyTransfer("user@example.com", keyPath, false)
+	require.NoError(t, err)
+
+	var gotCommand string
+	var gotStdin []byte
+	fakeExec := func(_ ssh.Host, command string, stdin []byte, _ ...string) (string, error) {
+		gotCommand = command
+		gotStdin = stdin
+		return "", nil
+	}
+	pubKey, err := os.ReadFile(keyPath + ".pub")
+	require.NoError(t, err)
+	fakeConn := target.NewConnection("user@example.com", fakeExec, target.ConnectionOptions{
+		WithLoginShell: true,
+		WithStdin:      pubKey,
+	})
+	require.NoError(t, RunPubKeyTransfer(&fakeConn, keyPath, &buf, false))
+	require.Equal(t, ssh.ShellCommand(remoteAuthorizedKeysCommand), gotCommand)
+	require.Equal(t, pubKey, gotStdin)
 }
 
 func TestSanitizeTarget(t *testing.T) {
@@ -96,12 +138,64 @@ func TestSanitizeTarget(t *testing.T) {
 	}
 }
 
-func writeFakeSSHCommand(t *testing.T, dir, name, logFile string) {
-	t.Helper()
-	script := fmt.Sprintf(`#!/bin/sh
-echo "%s invoked"
-echo "$0 $@" >> %s
-`, name, logFile)
-	path := filepath.Join(dir, name)
-	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
+func fakeExecCommand(logFile, command string, args ...string) *exec.Cmd {
+	cs := slices.Concat([]string{"-test.run=TestHelperProcess", "--", command}, args)
+	cmd := exec.Command(os.Args[0], cs...)
+	cmd.Env = append(os.Environ(),
+		"GO_WANT_HELPER_PROCESS=1",
+		"TOPO_TEST_LOG="+logFile,
+	)
+	return cmd
+}
+
+func TestHelperProcess(t *testing.T) {
+	// Only run if invoked as a from another test. This is not a standalone test, so exit otherwise!
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+
+	args := os.Args
+	sep := slices.Index(args, "--")
+	if sep == -1 || sep+1 >= len(args) {
+		os.Exit(2)
+	}
+
+	command := args[sep+1]
+	cmdArgs := args[sep+2:]
+	fmt.Printf("%s invoked\n", command)
+
+	logFile := os.Getenv("TOPO_TEST_LOG")
+	if logFile == "" || appendLine(logFile, strings.Join(append([]string{command}, cmdArgs...), " ")) != nil {
+		os.Exit(2)
+	}
+
+	if command == "ssh-keygen" {
+		key := ""
+		for i := 0; i < len(cmdArgs); i++ {
+			if cmdArgs[i] == "-f" && i+1 < len(cmdArgs) {
+				key = cmdArgs[i+1]
+				break
+			}
+		}
+		if key != "" {
+			if err := os.WriteFile(key, []byte("FAKEKEY"), 0o600); err != nil {
+				os.Exit(2)
+			}
+			if err := os.WriteFile(key+".pub", []byte("FAKEPUB"), 0o600); err != nil {
+				os.Exit(2)
+			}
+		}
+	}
+
+	os.Exit(0)
+}
+
+func appendLine(path, line string) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	_, err = fmt.Fprintln(f, line)
+	return err
 }
