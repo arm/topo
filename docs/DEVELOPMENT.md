@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers the development workflow, tools, and conventions for contributing to topo-cli.
+This guide covers the development workflow, tools, and conventions for contributing to `topo`.
 
 ## Linting
 

@@ -24,7 +24,7 @@ func fetchComposeFile(client *http.Client, githubToken string, repoSpec string) 
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "topo-cli-template-update")
+	req.Header.Set("User-Agent", "topo-template-update")
 	req.Header.Set("Authorization", "token "+githubToken)
 	req.Header.Set("Accept", "application/vnd.github.v3.raw")
 
