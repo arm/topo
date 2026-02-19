@@ -1,8 +1,8 @@
 [
   {
-    "id": "Topo-Welcome",
-    "description": "A Hello World web app to test Topo setup\n",
-    "features": [],
+    "id": "Hello-World",
+    "description": "A minimal \"Hello, World\" web app for validating a Topo setup and deployment.\nIt runs a single service that exposes a web page on the target,\nwith the greeting text customizable via the GREETING_NAME parameter.\n",
+    "features": null,
     "url": "git@github.com:Arm-Examples/topo-template-welcome.git",
     "ref": "main"
   },
@@ -18,7 +18,7 @@
   },
   {
     "id": "armv9-cpu-llm-chat",
-    "description": "Complete LLM chat application optimized for Arm CPU inference.\n\nThis project demonstrates running large language models on CPU\nusing llama.cpp compiled with Arm baseline optimizations and \naccelerated using NEON SIMD and SVE (when supported and enabled).\n\nThe stack includes:\n- llama.cpp server with Arm NEON optimizations (SVE optional)\n- Qwen2.5-1.5B-Instruct model bundled in the image (~1.12 GB)\n- Simple web-based chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The bundled Qwen2.5-1.5B model allows the\nproject to run immediately without downloading additional models.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies,\nshowcasing how far you can push NEON acceleration. Rebuild with SVE enabled\nwhen wider vectors are available.\n",
+    "description": "Complete LLM chat application optimized for Arm CPU inference.\n\nThis project demonstrates running large language models on CPU\nusing llama.cpp compiled with Arm baseline optimizations and \naccelerated using NEON SIMD and SVE (when supported and enabled).\n\nThe stack includes:\n- llama.cpp server with Arm NEON optimizations (SVE optional)\n- Quantized Qwen2.5-1.5B-Instruct model bundled in the image (~1.12 GB)\n- Simple web-based chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The bundled Qwen2.5-1.5B model allows the\nproject to run immediately without downloading additional models.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies,\nshowcasing how far you can push NEON acceleration. Rebuild with SVE enabled\nwhen wider vectors are available.\n",
     "features": [
       "SVE",
       "NEON"
