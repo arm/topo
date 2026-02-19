@@ -115,10 +115,10 @@ jobs:
             --repo "$OWNER/$REPO" \
             --ref "$REF" \
             -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "artifact=topo-cli-v${{ steps.version.outputs.version }}-macos-unsigned" \
+            -f "artifact=topo-v${{ steps.version.outputs.version }}-macos-unsigned" \
             -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "repo-name=topo-cli" \
-            -f "org-name=Arm-Debug" \
+            -f "repo-name=topo" \
+            -f "org-name=Arm" \
             -f "binary-name=topo" \
 
       - name: Trigger upload archives to artifactory workflow
@@ -135,6 +135,6 @@ jobs:
             --ref "$REF" \
             -f "run-id=$UPSTREAM_RUN_ID" \
             -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "archive-name=topo-cli-v${{ steps.version.outputs.version }}-archives" \
-            -f "repo-name=topo-cli" \
-            -f "org-name=Arm-Debug" \
+            -f "archive-name=topo-v${{ steps.version.outputs.version }}-archives" \
+            -f "repo-name=topo" \
+            -f "org-name=Arm" \
