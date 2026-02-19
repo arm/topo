@@ -118,7 +118,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: upload_archives_to_artifactory.yml
-          REF: link-topo
+          REF: main
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
@@ -136,7 +136,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: sign-and-post-macos.yml
-          REF: link-topo
+          REF: main
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
@@ -155,7 +155,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: sign-and-post-windows.yml
-          REF: link-topo
+          REF: main
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
