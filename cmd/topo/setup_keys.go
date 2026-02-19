@@ -5,7 +5,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/arm-debug/topo-cli/internal/setupkeys"
+	"github.com/arm/topo/internal/setupkeys"
 	"github.com/spf13/cobra"
 )
 

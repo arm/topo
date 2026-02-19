@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/arm-debug/topo-cli/internal/output/logger"
-	"github.com/arm-debug/topo-cli/internal/output/term"
+	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/output/term"
 )
 
 type Logger struct {

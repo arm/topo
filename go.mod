@@ -1,4 +1,4 @@
-module github.com/arm-debug/topo-cli
+module github.com/arm/topo
 
 go 1.25.0
 

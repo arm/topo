@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm/topo/internal/template"
 	"github.com/stretchr/testify/require"
 )
 

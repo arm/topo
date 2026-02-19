@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/arm-debug/topo-cli/internal/project"
+	"github.com/arm/topo/internal/project"
 	"github.com/spf13/cobra"
 )
 

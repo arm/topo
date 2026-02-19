@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/describe"
-	"github.com/arm-debug/topo-cli/internal/output/console"
-	"github.com/arm-debug/topo-cli/internal/output/logger"
-	"github.com/arm-debug/topo-cli/internal/output/term"
-	"github.com/arm-debug/topo-cli/internal/ssh"
-	"github.com/arm-debug/topo-cli/internal/target"
+	"github.com/arm/topo/internal/describe"
+	"github.com/arm/topo/internal/output/console"
+	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
 )
 

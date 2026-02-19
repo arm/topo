@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/template"
-	"github.com/arm-debug/topo-cli/internal/vscode"
+	"github.com/arm/topo/internal/template"
+	"github.com/arm/topo/internal/vscode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

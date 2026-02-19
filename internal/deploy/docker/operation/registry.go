@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/operation"
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/deploy/docker/command"
+	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/ssh"
 )
 
 const (

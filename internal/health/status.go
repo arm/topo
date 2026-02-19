@@ -1,8 +1,8 @@
 package health
 
 import (
-	"github.com/arm-debug/topo-cli/internal/ssh"
-	"github.com/arm-debug/topo-cli/internal/target"
+	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 )
 
 type HardwareProfile struct {

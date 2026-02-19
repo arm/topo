@@ -8,7 +8,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/arm-debug/topo-cli/internal/output/logger"
+	"github.com/arm/topo/internal/output/logger"
 )
 
 type Operation interface {

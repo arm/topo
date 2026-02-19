@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/output/term"
-	"github.com/arm-debug/topo-cli/internal/version"
+	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/version"
 	"github.com/spf13/cobra"
 )
 

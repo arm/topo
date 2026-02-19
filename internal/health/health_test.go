@@ -3,7 +3,7 @@ package health_test
 import (
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm/topo/internal/health"
 	"github.com/stretchr/testify/assert"
 )
 

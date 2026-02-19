@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/docker"
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/ssh"
 
 	"github.com/spf13/cobra"
 )

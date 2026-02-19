@@ -3,7 +3,7 @@ package health
 import (
 	"os/exec"
 
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/ssh"
 )
 
 type HardwareCapability int

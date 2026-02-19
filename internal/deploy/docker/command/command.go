@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/ssh"
 )
 
 func Docker(h ssh.Host, args ...string) *exec.Cmd {

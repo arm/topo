@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/ssh"
-	"github.com/arm-debug/topo-cli/internal/target"
+	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 )
 
 const passwordAuthErrorMessage = `note: Topo does not support SSH password-based authentication. To connect, either:

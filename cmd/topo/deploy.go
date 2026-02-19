@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/docker"
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
-	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
-	checks "github.com/arm-debug/topo-cli/internal/deploy/project_checks"
-	"github.com/arm-debug/topo-cli/internal/output/console"
-	"github.com/arm-debug/topo-cli/internal/output/logger"
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy/docker/operation"
+	goperation "github.com/arm/topo/internal/deploy/operation"
+	checks "github.com/arm/topo/internal/deploy/project_checks"
+	"github.com/arm/topo/internal/output/console"
+	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/ssh"
 
 	"github.com/spf13/cobra"
 )

@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/operation"
+	"github.com/arm/topo/internal/deploy/operation"
 )
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"

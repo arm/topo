@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/arm-debug/topo-cli/internal/health"
+	"github.com/arm/topo/internal/health"
 )
 
 type PrintableHealthReport health.Report

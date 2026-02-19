@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/catalog"
-	"github.com/arm-debug/topo-cli/internal/output/printable"
-	"github.com/arm-debug/topo-cli/internal/output/templates"
-	"github.com/arm-debug/topo-cli/internal/output/term"
+	"github.com/arm/topo/internal/catalog"
+	"github.com/arm/topo/internal/output/printable"
+	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/output/term"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

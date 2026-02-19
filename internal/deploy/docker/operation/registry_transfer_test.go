@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/command"
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/testutil"
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/deploy/docker/command"
+	"github.com/arm/topo/internal/deploy/docker/operation"
+	"github.com/arm/topo/internal/deploy/docker/testutil"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

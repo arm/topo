@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/arm-debug/topo-cli/internal/target"
+	"github.com/arm/topo/internal/target"
 	"go.yaml.in/yaml/v4"
 )
 

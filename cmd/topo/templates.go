@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/catalog"
-	"github.com/arm-debug/topo-cli/internal/output/printable"
-	"github.com/arm-debug/topo-cli/internal/output/templates"
+	"github.com/arm/topo/internal/catalog"
+	"github.com/arm/topo/internal/output/printable"
+	"github.com/arm/topo/internal/output/templates"
 	"github.com/spf13/cobra"
 )
 

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/mholt/archives"
 )
 

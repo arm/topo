@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
+	goperation "github.com/arm/topo/internal/deploy/operation"
 )
 
 func NewKeyCreationAndPlacementOnTarget(target string, keyPath string) (goperation.Sequence, error) {

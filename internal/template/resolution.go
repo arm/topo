@@ -1,7 +1,7 @@
 package template
 
 import (
-	"github.com/arm-debug/topo-cli/internal/arguments"
+	"github.com/arm/topo/internal/arguments"
 )
 
 type ResolvedTemplate struct {

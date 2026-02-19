@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/arm-debug/topo-cli/internal/output/term"
+	"github.com/arm/topo/internal/output/term"
 )
 
 type Printable interface {

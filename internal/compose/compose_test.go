@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/compose"
-	"github.com/arm-debug/topo-cli/internal/testutil"
+	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

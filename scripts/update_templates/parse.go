@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/template"
+	"github.com/arm/topo/internal/template"
 )
 
 func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {

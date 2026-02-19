@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/arguments"
+	"github.com/arm/topo/internal/arguments"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

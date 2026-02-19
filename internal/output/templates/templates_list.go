@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"text/template"
 
-	"github.com/arm-debug/topo-cli/internal/catalog"
+	"github.com/arm/topo/internal/catalog"
 )
 
 type RepoCollection []catalog.Repo

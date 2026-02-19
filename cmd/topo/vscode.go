@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/vscode"
+	"github.com/arm/topo/internal/vscode"
 	"github.com/spf13/cobra"
 )
 

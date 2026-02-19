@@ -1,9 +1,9 @@
 package docker
 
 import (
-	"github.com/arm-debug/topo-cli/internal/deploy/docker/operation"
-	goperation "github.com/arm-debug/topo-cli/internal/deploy/operation"
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/deploy/docker/operation"
+	goperation "github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/ssh"
 )
 
 type DeployOptions struct {

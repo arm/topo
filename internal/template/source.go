@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/catalog"
+	"github.com/arm/topo/internal/catalog"
 )
 
 type DestDirExistsError struct {

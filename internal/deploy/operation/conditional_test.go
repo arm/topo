@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/arm-debug/topo-cli/internal/deploy/operation"
+	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

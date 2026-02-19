@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	checks "github.com/arm-debug/topo-cli/internal/deploy/project_checks"
+	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/stretchr/testify/require"
 )
 

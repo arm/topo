@@ -3,10 +3,10 @@ package main
 import (
 	"os"
 
-	"github.com/arm-debug/topo-cli/internal/install"
-	"github.com/arm-debug/topo-cli/internal/output/printable"
-	"github.com/arm-debug/topo-cli/internal/output/templates"
-	"github.com/arm-debug/topo-cli/internal/ssh"
+	"github.com/arm/topo/internal/install"
+	"github.com/arm/topo/internal/output/printable"
+	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 

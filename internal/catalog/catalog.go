@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/arm-debug/topo-cli/internal/ssh"
-	"github.com/arm-debug/topo-cli/internal/target"
+	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 )
 
 //go:embed data/templates.json
