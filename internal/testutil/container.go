@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -14,8 +13,6 @@ import (
 const TargetContainerHost = "root@localhost"
 
 const TargetContainerImage = "topo-e2e-target:latest"
-
-var knownHostsLockPath = filepath.Join(os.TempDir(), "topo-e2e-known_hosts.lock")
 
 type TargetContainer struct {
 	SSHConnectionString string
@@ -42,10 +39,6 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 	port, err := GetContainerPublicPort(containerName, "22")
 	if err != nil {
 		t.Fatalf("failed to get container port: %v", err)
-	}
-
-	if err := ensureHostKeyKnown(t, "localhost", port); err != nil {
-		t.Fatalf("failed to add host key: %v", err)
 	}
 
 	waitForDockerReady(t, TargetContainerHost, port)
@@ -106,51 +99,13 @@ func GetContainerPublicPort(containerName string, privatePort string) (string, e
 	return port, nil
 }
 
-func ensureHostKeyKnown(t *testing.T, host string, port string) error {
-	releaseLock := AcquireFlock(t, knownHostsLockPath)
-	defer releaseLock()
-
-	_ = exec.Command("ssh-keygen", "-R", fmt.Sprintf("[%s]:%s", host, port)).Run()
-
-	cmd := exec.Command("ssh-keyscan", "-p", port, host)
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("ssh-keyscan failed: %w", err)
-	}
-
-	if len(output) == 0 {
-		return fmt.Errorf("ssh-keyscan returned no host keys")
-	}
-
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user home directory: %w", err)
-	}
-	knownHostsPath := filepath.Join(homeDir, ".ssh", "known_hosts")
-	if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0o700); err != nil {
-		return fmt.Errorf("failed to create .ssh directory: %w", err)
-	}
-
-	f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to open known_hosts: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	if _, err := f.Write(output); err != nil {
-		return fmt.Errorf("failed to write to known_hosts: %w", err)
-	}
-
-	return nil
-}
-
 func waitForDockerReady(t *testing.T, host string, port string) {
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	var lastErr error
 
 	for time.Now().Before(deadline) {
-		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", host, "docker", "info")
+		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", host, "docker", "info")
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			return
