@@ -81,7 +81,7 @@ jobs:
       - name: Upload all archive artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: topo-cli-v${{ steps.version.outputs.version }}-archives
+          name: topo-v${{ steps.version.outputs.version }}-archives
           path: |
             dist/*.tar.gz
             dist/*.zip
@@ -90,14 +90,14 @@ jobs:
       - name: Upload unsigned macOS artifact
         uses: actions/upload-artifact@v6
         with:
-          name: topo-cli-v${{ steps.version.outputs.version }}-macos-unsigned
+          name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
           path: dist/topo_darwin_arm64_*/topo
           if-no-files-found: error
 
       - name: Upload unsigned Windows artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: topo-cli-v${{ steps.version.outputs.version }}-windows-unsigned
+          name: topo-v${{ steps.version.outputs.version }}-windows-unsigned
           path: |
             dist/topo_windows_amd64_*/topo.exe
             dist/topo_windows_arm64_*/topo.exe
@@ -126,7 +126,7 @@ jobs:
             --ref "$REF" \
             -f "run-id=$UPSTREAM_RUN_ID" \
             -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "archive-name=topo-cli-v${{ steps.version.outputs.version }}-archives" \
+            -f "archive-name=topo-v${{ steps.version.outputs.version }}-archives" \
             -f "repo-name=topo" \
             -f "org-name=arm" \
 
@@ -143,7 +143,7 @@ jobs:
             --repo "$OWNER/$REPO" \
             --ref "$REF" \
             -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "artifact=topo-cli-v${{ steps.version.outputs.version }}-macos-unsigned" \
+            -f "artifact=topo-v${{ steps.version.outputs.version }}-macos-unsigned" \
             -f "release-version=${{ steps.version.outputs.version }}" \
             -f "repo-name=topo" \
             -f "org-name=arm" \
@@ -162,7 +162,7 @@ jobs:
             --repo "$OWNER/$REPO" \
             --ref "$REF" \
             -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "artifact=topo-cli-v${{ steps.version.outputs.version }}-windows-unsigned" \
+            -f "artifact=topo-v${{ steps.version.outputs.version }}-windows-unsigned" \
             -f "release-version=${{ steps.version.outputs.version }}" \
             -f "repo-name=topo" \
             -f "org-name=arm" \
