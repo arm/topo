@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/arm/topo/internal/setupkeys"
 	"github.com/spf13/cobra"
@@ -24,10 +23,6 @@ Use --dry-run to see what commands would be executed without actually running th
 		dryRun, err := cmd.Flags().GetBool("dry-run")
 		if err != nil {
 			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
-		}
-
-		if runtime.GOOS != "linux" {
-			return fmt.Errorf("topo setup-keys currently supports Linux hosts only")
 		}
 
 		resolvedTarget, err := requireTarget(cmd)
