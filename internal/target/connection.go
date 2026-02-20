@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -64,7 +65,7 @@ func (c *Connection) Run(command string) (string, error) {
 	}
 
 	sshArgs := []string{}
-	if c.opts.Multiplex {
+	if c.opts.Multiplex && runtime.GOOS != "windows" {
 		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
 	}
 
