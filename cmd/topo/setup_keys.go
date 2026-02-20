@@ -29,20 +29,12 @@ Use --dry-run to see what commands would be executed without actually running th
 		if err != nil {
 			return err
 		}
-		keyPairGenCmd, privKeyPath, err := setupkeys.NewKeyPairCreation(resolvedTarget, setupKeysKeyPath)
+		privKeyPath, err := setupkeys.CreateKeyPair(resolvedTarget, setupKeysKeyPath, os.Stdout, dryRun)
 		if err != nil {
-			return err
-		}
-		if err := setupkeys.RunKeyPairCreation(keyPairGenCmd, os.Stdout, dryRun); err != nil {
 			return err
 		}
 
-		pubKeyTransfer, err := setupkeys.NewPubKeyTransfer(resolvedTarget, privKeyPath, dryRun)
-		if err != nil {
-			return err
-		}
-		err = setupkeys.RunPubKeyTransfer(pubKeyTransfer, privKeyPath, os.Stdout, dryRun)
-		return err
+		return setupkeys.TransferPubKey(resolvedTarget, privKeyPath, os.Stdout, dryRun)
 	},
 }
 

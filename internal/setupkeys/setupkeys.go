@@ -15,13 +15,16 @@ import (
 
 const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
-var execCommand = exec.Command
+var (
+	execCommand = exec.Command
+	sshExec     = ssh.Exec
+)
 
-func NewKeyPairCreation(targetHost string, privKeyPath string) (*exec.Cmd, string, error) {
+func CreateKeyPair(targetHost string, privKeyPath string, cmdOutput io.Writer, dryRun bool) (string, error) {
 	if privKeyPath == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to determine home directory: %w", err)
+			return "", fmt.Errorf("failed to determine home directory: %w", err)
 		}
 
 		keyName := fmt.Sprintf("id_ed25519_topo_%s", sanitizeTarget(targetHost))
@@ -29,17 +32,15 @@ func NewKeyPairCreation(targetHost string, privKeyPath string) (*exec.Cmd, strin
 	}
 
 	if err := ensureDir(privKeyPath); err != nil {
-		return nil, "", err
+		return "", err
 	}
 
-	return execCommand("ssh-keygen", "-t", "ed25519", "-f", privKeyPath, "-C", targetHost), privKeyPath, nil
-}
+	keyPairCreationCmd := execCommand("ssh-keygen", "-t", "ed25519", "-f", privKeyPath, "-C", targetHost)
 
-func RunKeyPairCreation(keyPairCreationCmd *exec.Cmd, cmdOutput io.Writer, dryRun bool) error {
 	if dryRun && cmdOutput != nil {
 		_, err := fmt.Fprintln(cmdOutput, keyPairCreationCmd.String())
 		if err != nil {
-			return err
+			return "", err
 		}
 	} else if !dryRun {
 		if cmdOutput != nil {
@@ -48,37 +49,31 @@ func RunKeyPairCreation(keyPairCreationCmd *exec.Cmd, cmdOutput io.Writer, dryRu
 		}
 
 		if err := keyPairCreationCmd.Run(); err != nil {
-			return fmt.Errorf("command %q failed: %w", keyPairCreationCmd.String(), err)
+			return "", fmt.Errorf("command %q failed: %w", keyPairCreationCmd.String(), err)
 		}
 	}
-
-	return nil
+	return privKeyPath, nil
 }
 
-func NewPubKeyTransfer(targetHost string, privKeyPath string, dryRun bool) (*target.Connection, error) {
+func TransferPubKey(targetHost string, privKeyPath string, output io.Writer, dryRun bool) error {
 	pubKeyPath := privKeyPath + ".pub"
-	opts := target.ConnectionOptions{WithLoginShell: true}
-	if !dryRun {
-		pubKey, err := os.ReadFile(pubKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read public key %s: %w", pubKeyPath, err)
-		}
-		opts.WithStdin = pubKey
-	}
 
-	pubKeyTransfer := target.NewConnection(targetHost, ssh.Exec, opts)
-	return &pubKeyTransfer, nil
-}
-
-func RunPubKeyTransfer(pubKeyTransfer *target.Connection, privKeyPath string, output io.Writer, dryRun bool) error {
 	if dryRun {
-		_, err := fmt.Fprintf(output, "ssh %s %q < %s.pub\n", pubKeyTransfer.SSHTarget, remoteAuthorizedKeysCommand, privKeyPath)
+		_, err := fmt.Fprintf(output, "ssh %s %q < %s.pub\n", targetHost, remoteAuthorizedKeysCommand, privKeyPath)
 		return err
-	} else {
-		if _, err := pubKeyTransfer.Run(remoteAuthorizedKeysCommand); err != nil {
-			return err
-		}
 	}
+
+	pubKey, err := os.ReadFile(pubKeyPath)
+	if err != nil {
+		return fmt.Errorf("failed to read public key %s: %w", pubKeyPath, err)
+	}
+
+	opts := target.ConnectionOptions{WithLoginShell: true, WithStdin: pubKey}
+	pubKeyTransfer := target.NewConnection(targetHost, sshExec, opts)
+	if _, err := pubKeyTransfer.Run(remoteAuthorizedKeysCommand); err != nil {
+		return err
+	}
+
 	return nil
 }
 
