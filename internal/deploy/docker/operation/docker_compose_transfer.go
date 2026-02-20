@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 	"golang.org/x/sync/errgroup"
 )

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
