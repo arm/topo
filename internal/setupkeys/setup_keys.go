@@ -19,7 +19,7 @@ func NewKeyCreationAndPlacementOnTarget(target string, keyPath string) (goperati
 			return nil, fmt.Errorf("failed to determine home directory: %w", err)
 		}
 
-		keyName := fmt.Sprintf("id_ed25519_topo_%s", sanitizeTarget(target))
+		keyName := fmt.Sprintf("id_ed25519_topo_%s", SanitizeTarget(target))
 		keyPath = filepath.Join(home, ".ssh", keyName)
 	}
 
@@ -42,7 +42,7 @@ func ensureDir(keyPath string) error {
 	return nil
 }
 
-func sanitizeTarget(target string) string {
+func SanitizeTarget(target string) string {
 	var b strings.Builder
 	for _, r := range target {
 		toWrite := '_'

@@ -1,4 +1,4 @@
-package setupkeys
+package setupkeys_test
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/setupkeys"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +19,7 @@ func TestNewKeyCreationAndPlacementOnTarget(t *testing.T) {
 		tmp := t.TempDir()
 		t.Setenv("HOME", tmp)
 
-		seq, err := NewKeyCreationAndPlacementOnTarget("user@example.com", "")
+		seq, err := setupkeys.NewKeyCreationAndPlacementOnTarget("user@example.com", "")
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
@@ -35,7 +36,7 @@ func TestNewKeyCreationAndPlacementOnTarget(t *testing.T) {
 	t.Run("custom key path", func(t *testing.T) {
 		keyPath := filepath.Join(t.TempDir(), "custom_keys", "id_ed25519_custom")
 
-		seq, err := NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
+		seq, err := setupkeys.NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
@@ -62,7 +63,7 @@ func TestKeyCreationAndPlacementOnTarget(t *testing.T) {
 	originalPath := os.Getenv("PATH")
 	t.Setenv("PATH", fakeBinDir+string(os.PathListSeparator)+originalPath)
 
-	seq, err := NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
+	seq, err := setupkeys.NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
@@ -89,7 +90,7 @@ func TestSanitizeTarget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			if got := sanitizeTarget(tt.input); got != tt.want {
+			if got := setupkeys.SanitizeTarget(tt.input); got != tt.want {
 				t.Fatalf("sanitizeTarget(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})

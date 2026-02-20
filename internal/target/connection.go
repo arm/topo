@@ -34,11 +34,11 @@ var (
 	}
 )
 
-type execSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
+type ExecSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
 
 type Connection struct {
 	SSHTarget ssh.Host
-	exec      execSSH
+	exec      ExecSSH
 	opts      ConnectionOptions
 }
 
@@ -50,7 +50,7 @@ type ConnectionOptions struct {
 	WithLoginShell    bool
 	WithStdin         []byte
 	Multiplex         bool
-	WithMockExec      execSSH
+	WithMockExec      ExecSSH
 }
 
 var ErrPasswordAuthentication = errors.New("only password authentication is configured; key-based ssh is required")
