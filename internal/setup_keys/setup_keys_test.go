@@ -1,4 +1,4 @@
-package setupkeys
+package setup_keys_test
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/arm/topo/internal/setup_keys"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/require"
 )
@@ -51,7 +52,8 @@ func TestNewKeyCreationAndPlacementOnTargetDryRun(t *testing.T) {
 			}
 
 			var buf bytes.Buffer
-			keyPath, err := CreateKeyPair("user@example.com", inputKeyPath, &buf, true)
+			targetFileName := setup_keys.SanitizeTarget("user@example.com")
+			keyPath, err := setup_keys.CreateKeyPair("user@example.com", targetFileName, inputKeyPath, &buf, true)
 			require.NoError(t, err)
 
 			wantKeyPath := filepath.Join(tmp, tt.wantKeyPath)
@@ -62,7 +64,7 @@ func TestNewKeyCreationAndPlacementOnTargetDryRun(t *testing.T) {
 			require.Contains(t, got, "ssh-keygen", "DryRun output should include keygen command")
 			require.Contains(t, got, wantKeygen, "DryRun output should include keygen arguments")
 
-			transferErr := TransferPubKey("user@example.com", keyPath, &buf, true)
+			transferErr := setup_keys.TransferPubKey("user@example.com", keyPath, &buf, true)
 			require.NoError(t, transferErr)
 			got = buf.String()
 			require.Contains(t, got, "ssh user@example.com", "DryRun output should include ssh command")
@@ -76,14 +78,15 @@ func TestKeyCreationAndPlacementOnTarget(t *testing.T) {
 	logFile := filepath.Join(t.TempDir(), "commands.log")
 
 	testLogFile := logFile
-	origExec := execCommand
-	execCommand = func(command string, args ...string) *exec.Cmd {
+	origExec := setup_keys.ExecCommand
+	setup_keys.ExecCommand = func(command string, args ...string) *exec.Cmd {
 		return mockExecCommand(testLogFile, command, args...)
 	}
-	t.Cleanup(func() { execCommand = origExec })
+	t.Cleanup(func() { setup_keys.ExecCommand = origExec })
 
 	var buf bytes.Buffer
-	keyPath, keyPairErr := CreateKeyPair("user@example.com", keyPath, &buf, false)
+	targetFileName := setup_keys.SanitizeTarget("user@example.com")
+	keyPath, keyPairErr := setup_keys.CreateKeyPair("user@example.com", targetFileName, keyPath, &buf, false)
 	require.NoError(t, keyPairErr)
 	require.Contains(t, buf.String(), "ssh-keygen invoked", "Run output should include fake ssh-keygen output")
 
@@ -92,21 +95,22 @@ func TestKeyCreationAndPlacementOnTarget(t *testing.T) {
 	log := string(logData)
 	require.Contains(t, log, fmt.Sprintf("ssh-keygen -t ed25519 -f %s -C user@example.com", keyPath))
 
-	origSSHExec := sshExec
+	origSSHExec := setup_keys.SSHExec
 	var gotCommand string
 	var gotStdin []byte
-	sshExec = func(_ ssh.Host, command string, stdin []byte, _ ...string) (string, error) {
+	setup_keys.SSHExec = func(_ ssh.Host, command string, stdin []byte, _ ...string) (string, error) {
 		gotCommand = command
 		gotStdin = stdin
 		return "", nil
 	}
-	t.Cleanup(func() { sshExec = origSSHExec })
+	t.Cleanup(func() { setup_keys.SSHExec = origSSHExec })
 
-	transferErr := TransferPubKey("user@example.com", keyPath, &buf, false)
+	transferErr := setup_keys.TransferPubKey("user@example.com", keyPath, &buf, false)
 	require.NoError(t, transferErr)
 	pubKey, err := os.ReadFile(keyPath + ".pub")
 	require.NoError(t, err)
-	require.Equal(t, ssh.ShellCommand(remoteAuthorizedKeysCommand), gotCommand)
+	wantCommand := ssh.ShellCommand("mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
+	require.Equal(t, wantCommand, gotCommand)
 	require.Equal(t, pubKey, gotStdin)
 }
 
@@ -122,7 +126,7 @@ func TestSanitizeTarget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			if got := sanitizeTarget(tt.input); got != tt.want {
+			if got := setup_keys.SanitizeTarget(tt.input); got != tt.want {
 				t.Fatalf("sanitizeTarget(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})

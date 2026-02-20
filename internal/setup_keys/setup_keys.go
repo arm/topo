@@ -1,4 +1,4 @@
-package setupkeys
+package setup_keys
 
 import (
 	"fmt"
@@ -15,19 +15,22 @@ import (
 
 const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
+// Exported only so blackbox tests can inject fakes.
+type ExecCommandFunc func(string, ...string) *exec.Cmd
+
 var (
-	execCommand = exec.Command
-	sshExec     = ssh.Exec
+	ExecCommand ExecCommandFunc = exec.Command
+	SSHExec                     = ssh.Exec
 )
 
-func CreateKeyPair(targetHost string, privKeyPath string, cmdOutput io.Writer, dryRun bool) (string, error) {
+func CreateKeyPair(targetHost string, targetFileName string, privKeyPath string, cmdOutput io.Writer, dryRun bool) (string, error) {
 	if privKeyPath == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("failed to determine home directory: %w", err)
 		}
 
-		keyName := fmt.Sprintf("id_ed25519_topo_%s", sanitizeTarget(targetHost))
+		keyName := fmt.Sprintf("id_ed25519_topo_%s", targetFileName)
 		privKeyPath = filepath.Join(home, ".ssh", keyName)
 	}
 
@@ -35,7 +38,7 @@ func CreateKeyPair(targetHost string, privKeyPath string, cmdOutput io.Writer, d
 		return "", err
 	}
 
-	keyPairCreationCmd := execCommand("ssh-keygen", "-t", "ed25519", "-f", privKeyPath, "-C", targetHost)
+	keyPairCreationCmd := ExecCommand("ssh-keygen", "-t", "ed25519", "-f", privKeyPath, "-C", targetHost)
 
 	if dryRun && cmdOutput != nil {
 		_, err := fmt.Fprintln(cmdOutput, keyPairCreationCmd.String())
@@ -69,7 +72,7 @@ func TransferPubKey(targetHost string, privKeyPath string, output io.Writer, dry
 	}
 
 	opts := target.ConnectionOptions{WithLoginShell: true, WithStdin: pubKey}
-	pubKeyTransfer := target.NewConnection(targetHost, sshExec, opts)
+	pubKeyTransfer := target.NewConnection(targetHost, SSHExec, opts)
 	if _, err := pubKeyTransfer.Run(remoteAuthorizedKeysCommand); err != nil {
 		return err
 	}
@@ -85,7 +88,7 @@ func ensureDir(keyPath string) error {
 	return nil
 }
 
-func sanitizeTarget(target string) string {
+func SanitizeTarget(target string) string {
 	var b strings.Builder
 	for _, r := range target {
 		toWrite := '_'

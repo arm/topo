@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arm/topo/internal/setupkeys"
+	"github.com/arm/topo/internal/setup_keys"
 	"github.com/spf13/cobra"
 )
 
@@ -29,12 +29,13 @@ Use --dry-run to see what commands would be executed without actually running th
 		if err != nil {
 			return err
 		}
-		privKeyPath, err := setupkeys.CreateKeyPair(resolvedTarget, setupKeysKeyPath, os.Stdout, dryRun)
+		targetFileName := setup_keys.SanitizeTarget(resolvedTarget)
+		privKeyPath, err := setup_keys.CreateKeyPair(resolvedTarget, targetFileName, setupKeysKeyPath, os.Stdout, dryRun)
 		if err != nil {
 			return err
 		}
 
-		return setupkeys.TransferPubKey(resolvedTarget, privKeyPath, os.Stdout, dryRun)
+		return setup_keys.TransferPubKey(resolvedTarget, privKeyPath, os.Stdout, dryRun)
 	},
 }
 
