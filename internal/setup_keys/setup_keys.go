@@ -15,14 +15,6 @@ import (
 
 const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
-// Exported only so blackbox tests can inject fakes.
-type ExecCommandFunc func(string, ...string) *exec.Cmd
-
-var (
-	ExecCommand ExecCommandFunc = exec.Command
-	SSHExec                     = ssh.Exec
-)
-
 func CreateKeyPair(targetHost string, targetFileName string, privKeyPath string, cmdOutput io.Writer, dryRun bool) (string, error) {
 	if privKeyPath == "" {
 		home, err := os.UserHomeDir()
@@ -38,7 +30,7 @@ func CreateKeyPair(targetHost string, targetFileName string, privKeyPath string,
 		return "", err
 	}
 
-	keyPairCreationCmd := ExecCommand("ssh-keygen", "-t", "ed25519", "-f", privKeyPath, "-C", targetHost)
+	keyPairCreationCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-f", privKeyPath, "-C", targetHost)
 
 	if dryRun && cmdOutput != nil {
 		_, err := fmt.Fprintln(cmdOutput, keyPairCreationCmd.String())
@@ -72,7 +64,7 @@ func TransferPubKey(targetHost string, privKeyPath string, output io.Writer, dry
 	}
 
 	opts := target.ConnectionOptions{WithLoginShell: true, WithStdin: pubKey}
-	pubKeyTransfer := target.NewConnection(targetHost, SSHExec, opts)
+	pubKeyTransfer := target.NewConnection(targetHost, ssh.Exec, opts)
 	if _, err := pubKeyTransfer.Run(remoteAuthorizedKeysCommand); err != nil {
 		return err
 	}
