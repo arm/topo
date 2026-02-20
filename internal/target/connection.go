@@ -45,6 +45,7 @@ type ConnectionOptions struct {
 	AuthProbeOutput   io.Writer
 	WithLoginShell    bool
 	WithStdin         []byte
+	Multiplex         bool
 }
 
 var ErrPasswordAuthentication = errors.New("only password authentication is configured; key-based ssh is required")
@@ -62,7 +63,12 @@ func (c *Connection) Run(command string) (string, error) {
 		command = ssh.ShellCommand(command)
 	}
 
-	stdout, err := c.exec(c.SSHTarget, command, c.opts.WithStdin)
+	sshArgs := []string{}
+	if c.opts.Multiplex {
+		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
+	}
+
+	stdout, err := c.exec(c.SSHTarget, command, c.opts.WithStdin, sshArgs...)
 	if err != nil {
 		return "", err
 	}

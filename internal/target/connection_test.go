@@ -2,6 +2,7 @@ package target_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/ssh"
@@ -32,6 +33,22 @@ func TestRun(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Empty(t, out)
+	})
+
+	t.Run("run with mutliplexing enabled includes correct ssh args", func(t *testing.T) {
+		var capturedArgs string
+		mockExec := func(_ ssh.Host, _ string, _ []byte, sshArgs ...string) (string, error) {
+			capturedArgs = strings.Join(sshArgs, " ")
+			return "success", nil
+		}
+		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{Multiplex: true})
+
+		_, err := conn.Run("ls")
+
+		assert.NoError(t, err)
+		assert.True(t, strings.Contains(capturedArgs, "-o ControlMaster"), "missing ControlMaster argument")
+		assert.True(t, strings.Contains(capturedArgs, "-o ControlPersist"), "missing ControlPersist argument")
+		assert.True(t, strings.Contains(capturedArgs, "-o ControlPath"), "missing ControlPath argument")
 	})
 }
 
