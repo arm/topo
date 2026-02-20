@@ -1,12 +1,15 @@
 package target
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"os/exec"
 	"slices"
 	"strings"
 
+	commandpkg "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -30,7 +33,7 @@ var (
 	}
 )
 
-type execSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) (string, error)
+type execSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
 
 type Connection struct {
 	SSHTarget ssh.Host
@@ -62,11 +65,27 @@ func (c *Connection) Run(command string) (string, error) {
 		command = ssh.ShellCommand(command)
 	}
 
-	stdout, err := c.exec(c.SSHTarget, command, c.opts.WithStdin)
+	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin)
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+
+	err := cmd.Run()
 	if err != nil {
-		return "", err
+		combined := stdoutBuf.String() + stderrBuf.String()
+		return combined, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", string(c.SSHTarget), err, stderrBuf.String())
 	}
-	return stdout, nil
+	return stdoutBuf.String(), nil
+}
+
+func (c *Connection) DryRun(command string, output io.Writer) error {
+	if c.opts.WithLoginShell {
+		command = ssh.ShellCommand(command)
+	}
+
+	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin)
+	_, err := fmt.Fprintln(output, commandpkg.String(cmd))
+	return err
 }
 
 func (c *Connection) BinaryExists(bin string) (bool, error) {
@@ -133,11 +152,12 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 // All SSH authentication probes run the command "true" to check if the authentication method works.
 // All sshArgs should be hardcoded SSH options, not user-provided arguments.
 func (c *Connection) runSSHAuthenticationProbe(sshArgs []string) error {
-	stdout, err := c.exec(c.SSHTarget, "true", nil, sshArgs...)
+	cmd := c.exec(c.SSHTarget, "true", nil, sshArgs...)
+	stdoutBytes, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil
 	}
-	output := strings.ToLower(stdout)
+	output := strings.ToLower(string(stdoutBytes))
 	if strings.Contains(output, "host key verification failed") {
 		return ErrHostKeyVerification
 	}

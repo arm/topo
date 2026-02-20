@@ -1,7 +1,7 @@
 package target_test
 
 import (
-	"errors"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -37,14 +37,14 @@ func TestExtractArmFeatures(t *testing.T) {
 
 func TestProbeHardware(t *testing.T) {
 	t.Run("returns model name and features", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
 			case strings.Contains(command, "command -v"):
-				return "/usr/bin/lscpu", nil
+				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
 			case command == "lscpu --json":
-				return testutil.LsCpuOutputRaw, nil
+				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
 			default:
-				return "", errors.New("not found")
+				return testutil.CmdWithOutput("not found", 1)
 			}
 		}
 
@@ -59,8 +59,8 @@ func TestProbeHardware(t *testing.T) {
 	})
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
-			return "", errors.New("not found")
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithOutput("not found", 1)
 		}
 
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
@@ -70,14 +70,14 @@ func TestProbeHardware(t *testing.T) {
 	})
 
 	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
 			case strings.Contains(command, "command -v"):
-				return "/usr/bin/lscpu", nil
+				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
 			case command == "lscpu --json":
-				return "not json", nil
+				return testutil.CmdWithOutput("not json", 0)
 			default:
-				return "", errors.New("not found")
+				return testutil.CmdWithOutput("not found", 1)
 			}
 		}
 

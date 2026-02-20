@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,4 +71,15 @@ func WriteComposeFile(t *testing.T, dir, content string) string {
 	composePath := filepath.Join(dir, template.ComposeFilename)
 	RequireWriteFile(t, composePath, content)
 	return composePath
+}
+
+func CmdWithOutput(output string, exitCode int) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		// PowerShell: emit exact bytes (no extra newline), UTF-8, and requested exit code.
+		script := "$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::Out.Write($env:TOPO_CMD_OUT); exit [int]$env:TOPO_CMD_CODE"
+		cmd := exec.Command("powershell", "-NoProfile", "-Command", script)
+		cmd.Env = append(os.Environ(), "TOPO_CMD_OUT="+output, fmt.Sprintf("TOPO_CMD_CODE=%d", exitCode))
+		return cmd
+	}
+	return exec.Command("sh", "-c", fmt.Sprintf("printf %%s \"$1\"; exit %d", exitCode), "sh", output)
 }

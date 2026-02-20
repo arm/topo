@@ -2,6 +2,7 @@ package describe_test
 
 import (
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -17,14 +18,14 @@ import (
 
 func TestGenerate(t *testing.T) {
 	t.Run("returns hardware profile for given target", func(t *testing.T) {
-		mockExecSSH := func(target ssh.Host, command string, _ []byte, sshArgs ...string) (string, error) {
+		mockExecSSH := func(target ssh.Host, command string, _ []byte, sshArgs ...string) *exec.Cmd {
 			if command == "lscpu --json" {
-				return testutil.LsCpuOutputRaw, nil
+				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
 			}
 			if strings.Contains(command, "remoteproc") {
-				return "remoteproc1 remoteproc2", nil
+				return testutil.CmdWithOutput("remoteproc1 remoteproc2", 0)
 			}
-			return "", nil
+			return testutil.CmdWithOutput("", 0)
 		}
 		expected := target.HardwareProfile{
 			HostProcessor: []target.HostProcessor{
@@ -48,8 +49,8 @@ func TestGenerate(t *testing.T) {
 	})
 
 	t.Run("fails if ssh commands cannot be executed", func(t *testing.T) {
-		mockExecSSH := func(target ssh.Host, command string, _ []byte, sshArgs ...string) (string, error) {
-			return "", assert.AnError
+		mockExecSSH := func(target ssh.Host, command string, _ []byte, sshArgs ...string) *exec.Cmd {
+			return testutil.CmdWithOutput(assert.AnError.Error(), 1)
 		}
 
 		conn := target.NewConnection("test", mockExecSSH, target.ConnectionOptions{})
