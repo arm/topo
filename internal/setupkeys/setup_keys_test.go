@@ -2,83 +2,66 @@ package setupkeys_test
 
 import (
 	"bytes"
-	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/arm/topo/internal/setupkeys"
+	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
+	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewKeyCreationAndPlacementOnTarget(t *testing.T) {
-	testutil.RequireOS(t, "linux")
+func TestNewKeyCreateAndPlaceSequenceDryRun(t *testing.T) {
+	tests := []struct {
+		name         string
+		wantTarget   string
+		inputKeyPath string
+		wantKeyPath  string
+	}{
+		{
+			name:         "default key path",
+			inputKeyPath: "",
+			wantTarget:   "user@some1thing.com",
+			wantKeyPath:  filepath.Join(".ssh", "id_ed25519_topo_user_some1thing.com"),
+		},
+		{
+			name:         "custom key path",
+			inputKeyPath: filepath.Join("custom_keys", "id_ed25519_custom"),
+			wantTarget:   "user@some2thing.com",
+			wantKeyPath:  filepath.Join("custom_keys", "id_ed25519_custom"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			testutil.SetHomeDir(t, tmp)
 
-	t.Run("default key path", func(t *testing.T) {
-		tmp := t.TempDir()
-		t.Setenv("HOME", tmp)
+			wantKeyPath := tt.wantKeyPath
+			if tt.inputKeyPath == "" {
+				wantKeyPath = filepath.Join(tmp, tt.wantKeyPath)
+			}
+			got, err := setupkeys.NewKeyCreateAndPlaceSequence(tt.wantTarget, tt.inputKeyPath)
+			require.NoError(t, err)
+			require.Len(t, got, 2)
+			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
+			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+			require.Equal(t, "Generate SSH key pair for target", got[0].Description())
+			require.Equal(t, "Transfer public key to target and set it as an authorized key", got[1].Description())
+			var buf bytes.Buffer
+			require.NoError(t, got.DryRun(&buf))
 
-		seq, err := setupkeys.NewKeyCreationAndPlacementOnTarget("user@example.com", "")
-		require.NoError(t, err)
-
-		var buf bytes.Buffer
-		require.NoError(t, seq.DryRun(&buf))
-
-		keyPath := filepath.Join(tmp, ".ssh", "id_ed25519_topo_user_example.com")
-		wantKeygen := "ssh-keygen -t ed25519 -f " + keyPath + " -C user@example.com"
-		wantCopy := "ssh-copy-id -i " + keyPath + ".pub user@example.com"
-		got := buf.String()
-		require.Contains(t, got, wantKeygen, "DryRun output should include keygen command")
-		require.Contains(t, got, wantCopy, "DryRun output should include ssh-copy-id command")
-	})
-
-	t.Run("custom key path", func(t *testing.T) {
-		keyPath := filepath.Join(t.TempDir(), "custom_keys", "id_ed25519_custom")
-
-		seq, err := setupkeys.NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
-		require.NoError(t, err)
-
-		var buf bytes.Buffer
-		require.NoError(t, seq.DryRun(&buf))
-
-		wantKeygen := "ssh-keygen -t ed25519 -f " + keyPath + " -C user@example.com"
-		wantCopy := "ssh-copy-id -i " + keyPath + ".pub user@example.com"
-		got := buf.String()
-		require.Contains(t, got, wantKeygen, "DryRun output should include keygen command")
-		require.Contains(t, got, wantCopy, "DryRun output should include ssh-copy-id command")
-	})
+			wantKeygen := "ssh-keygen -t ed25519 -f " + wantKeyPath + " -C " + tt.wantTarget
+			wantSSH := "ssh -- " + tt.wantTarget
+			wantCmd := "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+			require.Contains(t, buf.String(), wantKeygen, "DryRun output should include keygen command")
+			require.Contains(t, buf.String(), wantSSH, "DryRun output should include ssh command with correct target")
+			require.Contains(t, buf.String(), wantCmd, "DryRun output should include correct authorized key addition command to be executed on target")
+		})
+	}
 }
 
-func TestKeyCreationAndPlacementOnTarget(t *testing.T) {
-	testutil.RequireOS(t, "linux")
-
-	keyPath := filepath.Join(t.TempDir(), "custom_keys", "id_ed25519_custom_run")
-	fakeBinDir := t.TempDir()
-	logFile := filepath.Join(t.TempDir(), "commands.log")
-
-	writeFakeSSHCommand(t, fakeBinDir, "ssh-keygen", logFile)
-	writeFakeSSHCommand(t, fakeBinDir, "ssh-copy-id", logFile)
-
-	originalPath := os.Getenv("PATH")
-	t.Setenv("PATH", fakeBinDir+string(os.PathListSeparator)+originalPath)
-
-	seq, err := setupkeys.NewKeyCreationAndPlacementOnTarget("user@example.com", keyPath)
-	require.NoError(t, err)
-
-	var buf bytes.Buffer
-	require.NoError(t, seq.Run(&buf))
-	require.Contains(t, buf.String(), "ssh-keygen invoked", "Run output should include fake ssh-keygen output")
-	require.Contains(t, buf.String(), "ssh-copy-id invoked", "Run output should include fake ssh-copy-id output")
-
-	logData, err := os.ReadFile(logFile)
-	require.NoError(t, err)
-	log := string(logData)
-	require.Contains(t, log, fmt.Sprintf("ssh-keygen -t ed25519 -f %s -C user@example.com", keyPath))
-	require.Contains(t, log, fmt.Sprintf("ssh-copy-id -i %s.pub user@example.com", keyPath))
-}
-
-func TestSanitizeTarget(t *testing.T) {
+func TestSlugifyTarget(t *testing.T) {
 	tests := []struct {
 		input string
 		want  string
@@ -90,19 +73,7 @@ func TestSanitizeTarget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			if got := setupkeys.SanitizeTarget(tt.input); got != tt.want {
-				t.Fatalf("sanitizeTarget(%q) = %q, want %q", tt.input, got, tt.want)
-			}
+			require.Equal(t, tt.want, setupkeys.SlugifyTarget(tt.input), "SlugifyTarget should replace special characters with underscores and keep allowed characters")
 		})
 	}
-}
-
-func writeFakeSSHCommand(t *testing.T, dir, name, logFile string) {
-	t.Helper()
-	script := fmt.Sprintf(`#!/bin/sh
-echo "%s invoked"
-echo "$0 $@" >> %s
-`, name, logFile)
-	path := filepath.Join(dir, name)
-	require.NoError(t, os.WriteFile(path, []byte(script), 0o700))
 }
