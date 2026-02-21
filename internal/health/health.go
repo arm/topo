@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
 
@@ -106,7 +105,7 @@ func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 		AuthProbeOutput:   os.Stdout,
 		Multiplex:         true,
 	}
-	conn := target.NewConnection(sshTarget, ssh.ExecCmd, opts)
+	conn := target.NewConnection(sshTarget, opts)
 	targetStatus := ProbeHealthStatus(conn)
 	report := GenerateReport(dependencyStatuses, targetStatus)
 	if err := targetStatus.AuthError; err != nil {

@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
 
@@ -36,7 +35,7 @@ func FilterTemplateRepos(flags TemplateFilters, repos []Repo) ([]Repo, error) {
 	targetMode := false
 
 	if flags.Target != "" {
-		conn := target.NewConnection(flags.Target, ssh.ExecCmd, target.ConnectionOptions{Multiplex: true})
+		conn := target.NewConnection(flags.Target, target.ConnectionOptions{Multiplex: true})
 		hw, err := conn.ProbeHardware()
 		if err != nil {
 			return nil, err
