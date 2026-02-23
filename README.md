@@ -59,48 +59,79 @@ go build ./cmd/topo
 
 ## Getting Started
 
-### Check the status of the host and target systems
+This walkthrough takes you from first connection to a running deployment. The examples use `my-board` as the SSH destination — replace it with your own `user@host` or SSH config alias, or set `TOPO_TARGET` once to skip repeating it:
+
+```sh
+export TOPO_TARGET=pi@my-board
+```
+
+### 1. Check that everything is ready
 
 ```sh
 ./topo health --target my-board
 ```
 
-The `--target` flag accepts SSH config host aliases or `user@host` destinations. You can also set the `TOPO_TARGET` environment variable to avoid repeating this flag.
+```
+Host
+----
+SSH: ✅ (ssh)
+Container Engine: ✅ (docker)
 
-### Generate a description of your target hardware
+Target
+------
+Connected: ✅
+Container Engine: ✅ (docker)
+Hardware Info: ✅ (lscpu)
+Subsystem Driver (remoteproc): ❌
+```
+
+Every check should show ✅ except Subsystem Driver, which is only needed for heterogeneous-CPU templates. If a required check fails, resolve it before continuing.
+
+### 2. Describe your target hardware
 
 ```sh
 ./topo describe --target my-board
 ```
 
-This creates a `target-description.yaml` in the current directory. This can be used to parameterize topo templates based on the hardware characteristics of your target.
+This SSHs into the target, probes CPU features, and writes a `target-description.yaml` in the current directory. Topo uses this file to match your board to compatible templates.
 
-### Create a new project
+### 3. Find a template
 
 ```sh
-./topo init
+./topo templates --target my-board
 ```
 
-This creates a `compose.yaml` in the current directory.
+This lists templates compatible with your target's hardware. Pass `--feature` to narrow it further (e.g. `--feature SVE`).
 
-### Add a service to your project
-
-List available templates:
+### 4. Clone a template into a new project
 
 ```sh
-./topo templates
+./topo clone my-project template:Topo-Welcome
 ```
 
-Extend the compose file using a built-in template:
+If the template requires build arguments, Topo will prompt you for them. You can also supply them on the command line:
 
 ```sh
-./topo extend compose.yaml template:Topo-Welcome
+./topo clone my-project template:Topo-Welcome NAME="World"
 ```
 
-### Deploy to your target
+This creates a `my-project/` directory containing a `compose.yaml`, a `Dockerfile`, and any source files from the template.
+
+### 5. Deploy to your target
 
 ```sh
+cd my-project/
 ./topo deploy --target my-board
+```
+
+Topo builds the container images on your host, transfers them to the target over SSH, and starts the services.
+
+### 6. Stop the deployment
+
+When you're done, stop the running services:
+
+```sh
+./topo stop --target my-board
 ```
 
 ## Usage
