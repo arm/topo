@@ -16,7 +16,7 @@ var repoList = []string{
 }
 
 type Template struct {
-	Name        string   `json:"Name"`
+	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Features    []string `json:"features"`
 	URL         string   `json:"url"`
@@ -34,7 +34,7 @@ func main() {
 
 	var templates []Template
 
-	seenNamess := make(map[string]struct{})
+	seenNames := make(map[string]struct{})
 
 	for _, spec := range repoList {
 		repo, ref := parseRepoSpec(spec)
@@ -54,12 +54,11 @@ func main() {
 		}
 		tmpl.Ref = ref
 
-		if _, exists := seenNamess[tmpl.Name]; exists {
-			fmt.Fprintf(os.Stderr, "duplicate template name %q from %s; skipping\n", tmpl.Name, spec)
-			continue
+		if _, exists := seenNames[tmpl.Name]; exists {
+			panic(fmt.Sprintf("duplicate template name %q from %s; skipping\n", tmpl.Name, spec))
 		}
 
-		seenNamess[tmpl.Name] = struct{}{}
+		seenNames[tmpl.Name] = struct{}{}
 		templates = append(templates, tmpl)
 	}
 
