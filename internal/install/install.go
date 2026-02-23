@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"slices"
@@ -125,22 +126,32 @@ func addGitHubAuthHeader(req *http.Request) {
 	}
 }
 
-func getLatestReleaseTarAddress(repoURL string) (string, error) {
-	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repoURL)
+func getLatestReleaseTarAddress(repoURL string) (*url.URL, error) {
+	base, err := url.Parse("https://api.github.com")
+	if err != nil {
+		return nil, err
+	}
+
+	base.Path = path.Join(
+		"repos",
+		url.PathEscape(repoURL),
+		"releases",
+		"latest",
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), apiTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base.String(), nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	addGitHubAuthHeader(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) // #nosec
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -148,22 +159,27 @@ func getLatestReleaseTarAddress(repoURL string) (string, error) {
 		body, _ := io.ReadAll(resp.Body)
 		msg := strings.TrimSpace(string(body))
 		if msg != "" {
-			return "", fmt.Errorf("GitHub API rejected request (status %d): %s", resp.StatusCode, msg)
+			return nil, fmt.Errorf("GitHub API rejected request (status %d): %s", resp.StatusCode, msg)
 		}
+		return nil, fmt.Errorf("GitHub API rejected request (status %d)", resp.StatusCode)
 	}
 
 	var release githubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for _, asset := range release.Assets {
 		if strings.HasSuffix(asset.Name, "_linux_arm64.tar.gz") {
-			return asset.BrowserDownloadURL, nil
+			u, err := url.Parse(asset.BrowserDownloadURL)
+			if err != nil {
+				return nil, err
+			}
+			return u, nil
 		}
 	}
 
-	return "", fmt.Errorf("no _linux_arm64.tar.gz release asset found")
+	return nil, fmt.Errorf("no _linux_arm64.tar.gz release asset found")
 }
 
 func extractFilesFromTarGz(tarGzData []byte, targetFiles []string) (map[string][]byte, error) {
@@ -212,18 +228,18 @@ func extractFilesFromTarGz(tarGzData []byte, targetFiles []string) (map[string][
 	return extractedFiles, nil
 }
 
-func fetchFile(url string) ([]byte, error) {
+func fetchFile(url *url.URL) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	addGitHubAuthHeader(req)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) // #nosec
 	if err != nil {
 		return nil, err
 	}

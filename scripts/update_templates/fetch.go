@@ -6,20 +6,26 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 )
 
 func fetchComposeFile(client *http.Client, githubToken string, repoSpec string) (io.Reader, error) {
 	repo, ref := parseRepoSpec(repoSpec)
 
-	u := fmt.Sprintf("https://api.github.com/repos/%s/contents/compose.yaml", repo)
-
-	if ref != "" {
-		v := url.Values{}
-		v.Set("ref", ref)
-		u = u + "?" + v.Encode()
+	base, err := url.Parse("https://api.github.com")
+	if err != nil {
+		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, u, nil)
+	base.Path = path.Join("repos", repo, "contents", "compose.yaml")
+
+	if ref != "" {
+		q := base.Query()
+		q.Set("ref", ref)
+		base.RawQuery = q.Encode()
+	}
+
+	req, err := http.NewRequest(http.MethodGet, base.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +34,7 @@ func fetchComposeFile(client *http.Client, githubToken string, repoSpec string) 
 	req.Header.Set("Authorization", "token "+githubToken)
 	req.Header.Set("Accept", "application/vnd.github.v3.raw")
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

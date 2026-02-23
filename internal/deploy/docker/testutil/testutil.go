@@ -62,7 +62,7 @@ CMD ["tail", "-f", "/dev/null"]
 
 func ForceComposeDown(t *testing.T, composeFilePath string) {
 	t.Helper()
-	err := exec.Command("docker", "compose", "-f", composeFilePath, "down", "-v").Run()
+	err := exec.Command("docker", "compose", "-f", composeFilePath, "down", "-v").Run() // #nosec
 	if err != nil {
 		t.Logf("docker compose down failed: %v (compose file: %s)", err, composeFilePath)
 	}

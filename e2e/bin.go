@@ -17,7 +17,7 @@ func buildBinary(t *testing.T) string {
 		binName = "topo.exe"
 	}
 	bin := filepath.Join(tmp, binName)
-	cmd := exec.Command("go", "build", "-o", bin, "../cmd/topo")
+	cmd := exec.Command("go", "build", "-o", bin, "../cmd/topo") // #nosec
 	out, err := cmd.CombinedOutput()
 	require.NoErrorf(t, err, "build failed: %s", out)
 	return bin

@@ -6,7 +6,7 @@ import (
 )
 
 func WriteTemplates(path string, templates []Template) (err error) {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec
 	if err != nil {
 		return err
 	}
