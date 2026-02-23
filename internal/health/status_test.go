@@ -1,41 +1,41 @@
 package health_test
 
 import (
-	"errors"
-	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestProbeHealthStatus(t *testing.T) {
 	t.Run("probe fails connection", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
-			return "", fmt.Errorf("connection refused")
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithOutput("connection refused", 1)
 		}
 
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 		ts := health.ProbeHealthStatus(conn)
 
 		assert.Error(t, ts.ConnectionError)
-		assert.EqualError(t, ts.ConnectionError, "connection refused")
+		assert.ErrorContains(t, ts.ConnectionError, "exit status")
 	})
 
 	t.Run("probe finds remote CPUs", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
 			case command == "true":
-				return "", nil
+				return testutil.CmdWithOutput("", 0)
 			case strings.Contains(command, "ls /sys/class/remoteproc"):
-				return "remoteproc0\nremoteproc1", nil
+				return testutil.CmdWithOutput("remoteproc0\nremoteproc1", 0)
 			case strings.Contains(command, "cat /sys/class/remoteproc"):
-				return "foo\nbar", nil
+				return testutil.CmdWithOutput("foo\nbar", 0)
 			default:
-				return "", errors.New("unexpected command: " + command)
+				return testutil.CmdWithOutput("unexpected command: "+command, 1)
 			}
 		}
 
@@ -48,12 +48,12 @@ func TestProbeHealthStatus(t *testing.T) {
 	})
 
 	t.Run("probe succeeds when no remoteproc support", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) (string, error) {
+		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
 			switch command {
 			case "true":
-				return "", nil
+				return testutil.CmdWithOutput("", 0)
 			default:
-				return "", errors.New("no such directory")
+				return testutil.CmdWithOutput("no such directory", 1)
 			}
 		}
 

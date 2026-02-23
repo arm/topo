@@ -1,18 +1,19 @@
 package target_test
 
 import (
-	"errors"
+	"os/exec"
 	"testing"
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
-			return "success", nil
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithOutput("success", 0)
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 
@@ -23,8 +24,8 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run returns error", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
-			return "", errors.New("ssh failed")
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithOutput("", 1)
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 
@@ -37,8 +38,8 @@ func TestRun(t *testing.T) {
 
 func TestBinaryExists(t *testing.T) {
 	t.Run("when binary found returns true", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
-			return "/foo/bar", nil
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 
@@ -49,8 +50,8 @@ func TestBinaryExists(t *testing.T) {
 	})
 
 	t.Run("invalid format returns an error", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) (string, error) {
-			return "/foo/bar", nil
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
 		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
 

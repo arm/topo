@@ -105,7 +105,7 @@ func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 		AuthProbeInput:    os.Stdin,
 		AuthProbeOutput:   os.Stdout,
 	}
-	conn := target.NewConnection(sshTarget, ssh.Exec, opts)
+	conn := target.NewConnection(sshTarget, ssh.ExecCmd, opts)
 	targetStatus := ProbeHealthStatus(conn)
 	report := GenerateReport(dependencyStatuses, targetStatus)
 	if err := targetStatus.AuthError; err != nil {
