@@ -13,7 +13,7 @@ Topo operates across two machines:
 - **Host machine** — your laptop, workstation, or CI runner where you run the `topo` CLI. It connects to the target over SSH and builds container images locally.
 - **Target machine** — a remote Arm Linux system (e.g. Raspberry Pi, custom SoC, cloud Graviton instance) reachable over SSH. Topo deploys and runs containerized workloads on this machine.
 
-Every command that touches the target accepts a `--target` flag with an SSH destination (`user@host` or an SSH config alias). Set `TOPO_TARGET` once in your environment to skip repeating it:
+Commands that connect to the target accept a `--target` flag with an SSH destination (`user@host` or an SSH config alias). Set `TOPO_TARGET` once in your environment to skip repeating it:
 
 ```sh
 export TOPO_TARGET=pi@my-board
