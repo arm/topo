@@ -19,7 +19,7 @@ Every command that touches the target accepts a `--target` flag with an SSH dest
 export TOPO_TARGET=pi@my-board
 ```
 
-If you are working directly on an Arm Linux board, you can set `--target localhost` to use the same machine as both host and target.
+If host and target are the same system, use `--target localhost`.
 
 ### Target Description
 
@@ -46,6 +46,8 @@ The full format specification is at [arm/topo-template-format](https://github.co
 - Docker
 - `lscpu` (typically pre-installed; used for hardware probing)
 - SSH server
+
+The host and target can be the same system. If you're working directly on an Arm Linux system, use `--target localhost`.
 
 **Build from source** (optional):
 
