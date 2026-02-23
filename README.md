@@ -21,15 +21,15 @@ export TOPO_TARGET=pi@my-board
 
 If host and target are the same system, use `--target localhost`.
 
-### Target Description
-
-Running `topo describe` SSHs into the target, probes the CPU model, core count, ISA features (NEON, SVE, SVE2, etc.), and any remoteproc heterogeneous processors, then writes the results to a `target-description.yaml` file. This file is used to match your system to compatible templates.
-
 ### Templates
 
-A Topo template is a `compose.yaml` extended with an `x-topo` block that declares which Arm CPU features it needs (NEON, SVE, SME, etc.) and what build arguments to prompt for. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
+A Topo template is a `compose.yaml` extended with an `x-topo` block that declares which Arm CPU features it needs and what build arguments to prompt for. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
 
 The full format specification is at [arm/topo-template-format](https://github.com/arm/topo-template-format).
+
+### Target Description
+
+To tailor templates for your target, the `topo describe` command probes your board and writes a `target-description.yaml` that captures CPU features, core topology, and any heterogeneous processors. Topo uses this file to match and configure templates for your system.
 
 ## Installation
 
