@@ -2,6 +2,8 @@
 
 Compose, parameterize, and deploy containerized examples for Arm hardware.
 
+Topo connects to a remote Arm board over SSH, discovers what it can do, and helps you make the most of it. It detects hardware capabilities, installs companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) to unlock features that aren't enabled out of the box, and deploys containerized workloads tailored to your specific board — all from a single CLI on your host machine.
+
 ## Installation
 
 ### Prerequisites
