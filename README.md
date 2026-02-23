@@ -2,7 +2,7 @@
 
 Compose, parameterize, and deploy containerized examples for Arm hardware.
 
-Topo connects to a remote Arm board over SSH, discovers what it can do, and helps you make the most of it. It detects hardware capabilities, can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) where compatible, and deploys containerized workloads tailored to your specific board — all from a single CLI on your host machine.
+Topo connects to a remote Arm system over SSH, discovers what it can do, and helps you make the most of it. It detects hardware capabilities, can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) where compatible, and deploys containerized workloads tailored to your specific system — all from a single CLI on your host machine.
 
 ## Core Concepts
 
@@ -11,7 +11,7 @@ Topo connects to a remote Arm board over SSH, discovers what it can do, and help
 Topo operates across two machines:
 
 - **Host machine** — your laptop, workstation, or CI runner where you run the `topo` CLI. It connects to the target over SSH and builds container images locally.
-- **Target machine** — a remote Arm Linux board (e.g. Raspberry Pi, custom SoC, cloud Graviton instance) reachable over SSH. Topo deploys and runs containerized workloads on this machine.
+- **Target machine** — a remote Arm Linux system (e.g. Raspberry Pi, custom SoC, cloud Graviton instance) reachable over SSH. Topo deploys and runs containerized workloads on this machine.
 
 Every command that touches the target accepts a `--target` flag with an SSH destination (`user@host` or an SSH config alias). Set `TOPO_TARGET` once in your environment to skip repeating it:
 
@@ -23,7 +23,7 @@ If host and target are the same system, use `--target localhost`.
 
 ### Target Description
 
-Running `topo describe` SSHs into the target, probes the CPU model, core count, ISA features (NEON, SVE, SVE2, etc.), and any remoteproc heterogeneous processors, then writes the results to a `target-description.yaml` file. This file is used to match your board to compatible templates.
+Running `topo describe` SSHs into the target, probes the CPU model, core count, ISA features (NEON, SVE, SVE2, etc.), and any remoteproc heterogeneous processors, then writes the results to a `target-description.yaml` file. This file is used to match your system to compatible templates.
 
 ### Templates
 
@@ -95,7 +95,7 @@ Every check should show ✅ except Subsystem Driver, which is only needed for he
 ./topo describe --target my-board
 ```
 
-This SSHs into the target, probes CPU features, and writes a `target-description.yaml` in the current directory. Topo uses this file to match your board to compatible templates.
+This SSHs into the target, probes CPU features, and writes a `target-description.yaml` in the current directory. Topo uses this file to match your system to compatible templates.
 
 ### 3. Find a template
 
