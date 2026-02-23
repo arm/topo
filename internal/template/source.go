@@ -41,7 +41,7 @@ func NewSource(source string) (Source, error) {
 
 		switch sourceType {
 		case "template":
-			return TemplateIdSource(sourceValue), nil
+			return TemplateNameSource(sourceValue), nil
 		case "git":
 			return NewGitSource(sourceValue), nil
 		case "dir":
@@ -71,9 +71,9 @@ func isGitURL(source string) bool {
 		strings.HasPrefix(source, "git://")
 }
 
-type TemplateIdSource string
+type TemplateNameSource string
 
-func (t TemplateIdSource) CopyTo(destDir string) error {
+func (t TemplateNameSource) CopyTo(destDir string) error {
 	templateRepo, err := catalog.GetTemplateRepo(string(t))
 	if err != nil {
 		return err
@@ -85,11 +85,11 @@ func (t TemplateIdSource) CopyTo(destDir string) error {
 	return gitSource.CopyTo(destDir)
 }
 
-func (t TemplateIdSource) String() string {
+func (t TemplateNameSource) String() string {
 	return fmt.Sprintf("template:%s", string(t))
 }
 
-func (t TemplateIdSource) GetName() (string, error) {
+func (t TemplateNameSource) GetName() (string, error) {
 	templateRepo, err := catalog.GetTemplateRepo(string(t))
 	if err != nil {
 		return "", err

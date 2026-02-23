@@ -17,7 +17,7 @@ func TestNewSource(t *testing.T) {
 		got, err := template.NewSource("template:hello")
 
 		require.NoError(t, err)
-		want := template.TemplateIdSource("hello")
+		want := template.TemplateNameSource("hello")
 		assert.Equal(t, want, got)
 	})
 
@@ -177,7 +177,7 @@ func TestNewSource(t *testing.T) {
 func TestTemplateIdSource(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		t.Run("returns template ID in correct format", func(t *testing.T) {
-			src := template.TemplateIdSource("hello-world")
+			src := template.TemplateNameSource("hello-world")
 			assert.Equal(t, "template:hello-world", src.String())
 		})
 	})

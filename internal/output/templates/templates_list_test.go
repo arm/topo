@@ -17,13 +17,13 @@ func TestPrintTemplateRepos(t *testing.T) {
 	t.Run("prints multiple items correctly", func(t *testing.T) {
 		repos := []catalog.Repo{
 			{
-				Name:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah",
 				URL:         "url.git",
 				Ref:         "main",
 			},
 			{
-				Name:          "name-of-other-project",
+				Name:        "name-of-other-project",
 				Description: "blah blah blah",
 				URL:         "url.git",
 				Ref:         "main",
@@ -52,7 +52,7 @@ name-of-other-project | url.git | main
 	t.Run("ignores features when none present", func(t *testing.T) {
 		repos := []catalog.Repo{
 			{
-				Name:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah",
 				URL:         "url.git",
 				Ref:         "main",
@@ -78,7 +78,7 @@ name-of-other-project | url.git | main
 	t.Run("includes features when present", func(t *testing.T) {
 		repos := []catalog.Repo{
 			{
-				Name:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah",
 				Features:    []string{"walnut", "almond"},
 				URL:         "url.git",
@@ -106,7 +106,7 @@ name-of-other-project | url.git | main
 	t.Run("correctly wraps long descriptions", func(t *testing.T) {
 		repos := []catalog.Repo{
 			{
-				Name:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "This sentence exists purely to verify that text wrapping behaves correctly when the content is long enough to span multiple lines.",
 				Features:    []string{"walnut", "almond"},
 				URL:         "url.git",
@@ -135,7 +135,7 @@ name-of-other-project | url.git | main
 	t.Run("correctly splits paragraphs in the description", func(t *testing.T) {
 		repos := []catalog.Repo{
 			{
-				Name:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah\n\nblah blah blah",
 				Features:    []string{"walnut", "almond"},
 				URL:         "url.git",
@@ -165,7 +165,7 @@ name-of-other-project | url.git | main
 	t.Run("correctly prints json", func(t *testing.T) {
 		repos := []catalog.Repo{
 			{
-				Name:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah\n\nblah blah blah",
 				Features:    []string{"walnut", "almond"},
 				URL:         "url.git",
@@ -187,7 +187,7 @@ name-of-other-project | url.git | main
 
 		want := []any{
 			map[string]any{
-				"id":          "name-of-project",
+				"name":        "name-of-project",
 				"description": "blah blah blah\n\nblah blah blah",
 				"features":    []any{"walnut", "almond"},
 				"url":         "url.git",
