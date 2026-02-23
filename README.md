@@ -2,7 +2,7 @@
 
 Discover what your Arm hardware can do and deploy workloads that use it to its full potential.
 
-Every Arm system has a different mix of architecture features, and many include heterogeneous subsystems alongside the main application cores. Topo connects to your target over SSH, probes its capabilities, and matches it to ready-made containerized workloads that fully leverage your specific hardware. On systems with heterogeneous processors, Topo can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) to extend container workloads beyond the application core.
+Every Arm system has a different mix of architecture features, and many include additional specialized processors alongside the main CPU. Topo connects to your target over SSH, probes its capabilities, and matches it to ready-made containerized workloads that fully leverage your specific hardware. Where a system has multiple processors, Topo can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) to extend container workloads across all of them.
 
 ## Core Concepts
 
