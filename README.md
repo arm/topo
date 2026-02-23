@@ -70,7 +70,7 @@ export TOPO_TARGET=pi@my-board
 ### 1. Check that everything is ready
 
 ```sh
-./topo health --target my-board
+topo health --target my-board
 ```
 
 ```
@@ -92,7 +92,7 @@ Every check should show ✅ except Subsystem Driver, which is only needed for he
 ### 2. Describe your target hardware
 
 ```sh
-./topo describe --target my-board
+topo describe --target my-board
 ```
 
 This SSHs into the target, probes CPU features, and writes a `target-description.yaml` in the current directory. Topo uses this file to match your system to compatible templates.
@@ -100,7 +100,7 @@ This SSHs into the target, probes CPU features, and writes a `target-description
 ### 3. Find a template
 
 ```sh
-./topo templates --target my-board
+topo templates --target my-board
 ```
 
 This lists templates compatible with your target's hardware. Pass `--feature` to narrow it further (e.g. `--feature SVE`).
@@ -108,13 +108,13 @@ This lists templates compatible with your target's hardware. Pass `--feature` to
 ### 4. Clone a template into a new project
 
 ```sh
-./topo clone my-project template:Hello-World
+topo clone my-project template:Hello-World
 ```
 
 If the template requires build arguments, Topo will prompt you for them. You can also supply them on the command line:
 
 ```sh
-./topo clone my-project template:Hello-World GREETING_NAME="World"
+topo clone my-project template:Hello-World GREETING_NAME="World"
 ```
 
 This creates a `my-project/` directory containing a `compose.yaml`, and any source files from the template.
@@ -123,7 +123,7 @@ This creates a `my-project/` directory containing a `compose.yaml`, and any sour
 
 ```sh
 cd my-project/
-./topo deploy --target my-board
+topo deploy --target my-board
 ```
 
 Topo builds the container images on your host, transfers them to the target over SSH, and starts the services.
@@ -133,7 +133,7 @@ Topo builds the container images on your host, transfers them to the target over
 When you're done, stop the running services:
 
 ```sh
-./topo stop --target my-board
+topo stop --target my-board
 ```
 
 ## Other Commands
