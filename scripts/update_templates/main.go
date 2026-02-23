@@ -9,14 +9,14 @@ import (
 const outputJSONPath = "internal/catalog/data/templates.json"
 
 var repoList = []string{
-	"Arm-Examples/topo-template-welcome#main",
-	"Arm-Examples/topo-template-lightbulb-moment#main",
-	"Arm-Examples/topo-template-v9-cpu-chat#main",
-	"Arm-Examples/topo-template-simd-visual-benchmark#main",
+	"Arm-Examples/topo-welcome#main",
+	"Arm-Examples/topo-lightbulb-moment#main",
+	"Arm-Examples/topo-v9-cpu-chat#main",
+	"Arm-Examples/topo-simd-visual-benchmark#main",
 }
 
 type Template struct {
-	ID          string   `json:"id"`
+	Name        string   `json:"Name"`
 	Description string   `json:"description"`
 	Features    []string `json:"features"`
 	URL         string   `json:"url"`
@@ -34,7 +34,7 @@ func main() {
 
 	var templates []Template
 
-	seenIDs := make(map[string]struct{})
+	seenNamess := make(map[string]struct{})
 
 	for _, spec := range repoList {
 		repo, ref := parseRepoSpec(spec)
@@ -54,12 +54,12 @@ func main() {
 		}
 		tmpl.Ref = ref
 
-		if _, exists := seenIDs[tmpl.ID]; exists {
-			fmt.Fprintf(os.Stderr, "duplicate template id %q from %s; skipping\n", tmpl.ID, spec)
+		if _, exists := seenNamess[tmpl.Name]; exists {
+			fmt.Fprintf(os.Stderr, "duplicate template name %q from %s; skipping\n", tmpl.Name, spec)
 			continue
 		}
 
-		seenIDs[tmpl.ID] = struct{}{}
+		seenNamess[tmpl.Name] = struct{}{}
 		templates = append(templates, tmpl)
 	}
 

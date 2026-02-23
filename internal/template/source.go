@@ -79,7 +79,7 @@ func (t TemplateIdSource) CopyTo(destDir string) error {
 		return err
 	}
 	gitSource := GitSource{
-		URL: templateRepo.Url,
+		URL: templateRepo.URL,
 		Ref: templateRepo.Ref,
 	}
 	return gitSource.CopyTo(destDir)
@@ -95,7 +95,7 @@ func (t TemplateIdSource) GetName() (string, error) {
 		return "", err
 	}
 	gitSource := GitSource{
-		URL: templateRepo.Url,
+		URL: templateRepo.URL,
 		Ref: templateRepo.Ref,
 	}
 	return gitSource.GetName()

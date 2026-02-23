@@ -15,7 +15,7 @@ func TestWriteTemplates(t *testing.T) {
 		tmp := t.TempDir()
 		path := filepath.Join(tmp, "templates.json")
 		input := []Template{{
-			ID:          "repo",
+			Name:          "repo",
 			Description: "Desc",
 			Features:    []string{"SME", "NEON"},
 			URL:         "ssh://example",

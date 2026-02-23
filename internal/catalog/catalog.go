@@ -21,15 +21,15 @@ type TemplateFilters struct {
 }
 
 type Repo struct {
-	Id          string   `json:"id"`
+	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Features    []string `json:"features"`
-	Url         string   `json:"url"`
+	URL         string   `json:"url"`
 	Ref         string   `json:"ref"`
 }
 
-func GetTemplateRepo(id string) (*Repo, error) {
-	return GetRepo(id, TemplatesJSON)
+func GetTemplateRepo(name string) (*Repo, error) {
+	return GetRepo(name, TemplatesJSON)
 }
 
 func FilterTemplateRepos(flags TemplateFilters, repos []Repo) ([]Repo, error) {
@@ -98,15 +98,15 @@ func ParseRepos(b []byte) ([]Repo, error) {
 	return templates, nil
 }
 
-func GetRepo(id string, b []byte) (*Repo, error) {
+func GetRepo(name string, b []byte) (*Repo, error) {
 	repos, err := ParseRepos(b)
 	if err != nil {
 		return nil, err
 	}
 	for i := range repos {
-		if repos[i].Id == id {
+		if repos[i].Name == name {
 			return &repos[i], nil
 		}
 	}
-	return nil, fmt.Errorf("repo with id %q not found", id)
+	return nil, fmt.Errorf("repo with name %q not found", name)
 }

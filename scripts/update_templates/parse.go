@@ -20,7 +20,7 @@ func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {
 	}
 
 	return Template{
-		ID:          makeTemplateID(metadata.Name),
+		Name:          makeTemplateID(metadata.Name),
 		Description: metadata.Description,
 		Features:    metadata.Features,
 		URL:         repoURL,
