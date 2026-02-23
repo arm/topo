@@ -108,13 +108,13 @@ This lists templates compatible with your target's hardware. Pass `--feature` to
 ### 4. Clone a template into a new project
 
 ```sh
-./topo clone my-project template:Topo-Welcome
+./topo clone my-project template:Hello-World
 ```
 
 If the template requires build arguments, Topo will prompt you for them. You can also supply them on the command line:
 
 ```sh
-./topo clone my-project template:Topo-Welcome NAME="World"
+./topo clone my-project template:Hello-World GREETING_NAME="World"
 ```
 
 This creates a `my-project/` directory containing a `compose.yaml`, a `Dockerfile`, and any source files from the template.
