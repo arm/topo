@@ -35,7 +35,21 @@ The template format is defined in [arm/topo-template-format](https://github.com/
 
 ### Prerequisites
 
-- Go (1.25)
+**Host machine** (where you run `topo`):
+
+- SSH client (`ssh`)
+- [Docker](https://docs.docker.com/get-docker/)
+
+**Target machine** (the remote Arm board):
+
+- Linux on ARM64
+- Docker
+- `lscpu` (typically pre-installed; used for hardware probing)
+- SSH server
+
+**Build from source** (optional):
+
+- Go 1.25+
 
 Build from source:
 
