@@ -116,6 +116,4 @@ jobs:
         run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Run gosec (fail on findings)
-        run: gosec ./... \
-              --severity=HIGH \
-              --confidence=medium
+        run: gosec ./... --severity=HIGH --confidence=medium
