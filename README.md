@@ -27,9 +27,9 @@ Running `topo describe` SSHs into the target, probes the CPU model, core count, 
 
 ### Templates
 
-A Topo template is a reusable Docker Compose service definition packaged with Arm-specific metadata — which CPU features it requires, what build arguments it accepts, and a short description. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
+A Topo template is a `compose.yaml` extended with an `x-topo` block that declares which Arm CPU features it needs (NEON, SVE, SME, etc.) and what build arguments to prompt for. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
 
-The template format is defined in [arm/topo-template-format](https://github.com/arm/topo-template-format).
+The full format specification is at [arm/topo-template-format](https://github.com/arm/topo-template-format).
 
 ## Installation
 
