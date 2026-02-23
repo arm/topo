@@ -1,8 +1,8 @@
 # Topo CLI
 
-Compose, parameterize, and deploy containerized examples for Arm hardware.
+Discover what your Arm hardware can do and deploy workloads that use it to its full potential.
 
-Topo connects to a remote Arm system over SSH, discovers what it can do, and helps you make the most of it. It detects hardware capabilities, can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) where compatible, and deploys containerized workloads tailored to your specific system — all from a single CLI on your host machine.
+Every Arm system has a different mix of architecture features, and many include heterogeneous subsystems alongside the main application cores. Topo connects to your target over SSH, probes its capabilities, and matches it to ready-made containerized workloads that fully leverage your specific hardware. On systems with heterogeneous processors, Topo can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) to extend container workloads beyond the application core.
 
 ## Core Concepts
 
