@@ -19,7 +19,7 @@ var extendCmd = &cobra.Command{
 The source argument uses scheme prefixes to specify the source type:
 
 Template ID (from built-in templates):
-  topo extend compose.yaml template:Topo-Welcome
+  topo extend compose.yaml template:Hello-World
 
 Git repository (git: prefix is optional for git@host and https:// URLs):
   topo extend compose.yaml git:https://github.com/user/repo.git
