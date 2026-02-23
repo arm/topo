@@ -35,9 +35,9 @@ func ShellCommand(command string) string {
 	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
 }
 
-// Exec runs a command on the target host. If the target is localhost, it runs locally.
+// ExecCmd builds a command to be executed on the target host. If the target is localhost, it will run locally when executed.
 // Pass stdin data as optional parameter, or nil for no stdin.
-func Exec(target Host, command string, stdin []byte, sshArgs ...string) (string, error) {
+func ExecCmd(target Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd {
 	var cmd *exec.Cmd
 	if target.IsPlainLocalhost() {
 		cmd = exec.Command("/bin/sh", "-c", command)
@@ -49,14 +49,5 @@ func Exec(target Host, command string, stdin []byte, sshArgs ...string) (string,
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
-	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
-
-	err := cmd.Run()
-	if err != nil {
-		combined := stdoutBuf.String() + stderrBuf.String()
-		return combined, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", string(target), err, stderrBuf.String())
-	}
-	return stdoutBuf.String(), nil
+	return cmd
 }

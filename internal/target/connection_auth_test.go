@@ -3,10 +3,12 @@ package target_test
 import (
 	"errors"
 	"fmt"
+	"os/exec"
 	"testing"
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,8 +24,8 @@ type mockResponse struct {
 	err    error
 }
 
-func newMockExec(responses map[string]mockResponse, calls *[]sshTestCall) func(ssh.Host, string, []byte, ...string) (string, error) {
-	return func(target ssh.Host, command string, _ []byte, sshArgs ...string) (string, error) {
+func newMockExec(responses map[string]mockResponse, calls *[]sshTestCall) func(ssh.Host, string, []byte, ...string) *exec.Cmd {
+	return func(target ssh.Host, command string, _ []byte, sshArgs ...string) *exec.Cmd {
 		*calls = append(*calls, sshTestCall{
 			target:  target,
 			command: command,
@@ -44,9 +46,12 @@ func newMockExec(responses map[string]mockResponse, calls *[]sshTestCall) func(s
 
 		resp, ok := responses[mode]
 		if !ok {
-			return "", fmt.Errorf("unexpected ssh mode: %s", mode)
+			return testutil.CmdWithOutput(fmt.Sprintf("unexpected ssh mode: %s", mode), 1)
 		}
-		return resp.stdout, resp.err
+		if resp.err != nil {
+			return testutil.CmdWithOutput(resp.stdout, 1)
+		}
+		return testutil.CmdWithOutput(resp.stdout, 0)
 	}
 }
 
