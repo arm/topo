@@ -117,7 +117,7 @@ If the template requires build arguments, Topo will prompt you for them. You can
 ./topo clone my-project template:Hello-World GREETING_NAME="World"
 ```
 
-This creates a `my-project/` directory containing a `compose.yaml`, a `Dockerfile`, and any source files from the template.
+This creates a `my-project/` directory containing a `compose.yaml`, and any source files from the template.
 
 ### 5. Deploy to your target
 
