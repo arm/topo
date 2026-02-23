@@ -12,10 +12,10 @@ jobs:
     runs-on: [ ubuntu-latest ]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Install WSL (Windows)
         if: runner.os == 'Windows'
-        uses: Vampire/setup-wsl@6a8db447be7ed35f2f499c02c6e60ff77ef11278 # v6
+        uses: Vampire/setup-wsl@6a8db447be7ed35f2f499c02c6e60ff77ef11278 # v6.0.0
         with:
           distribution: Ubuntu-24.04
           additional-packages: |
@@ -73,10 +73,10 @@ jobs:
           ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -93,3 +93,25 @@ jobs:
         run: |
           docker build -t topo-e2e-target:latest ./internal/testutil/test-container
           go test ./... -v -covermode=atomic -coverprofile=coverage.out
+
+  actionlint:
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run actionlint (require pinned actions)
+        uses: docker://rhysd/actionlint@sha256:5457037ba91acd225478edac3d4b32e45cf6c10291e0dabbfd2491c63129afe1
+
+  pinact:
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Verify action pinning
+        uses: suzuki-shunsuke/pinact-action@28aeb220eb3252ad0d4422dd5d9368e925acbd8d # v1.3.0
+        with:
+          skip_push: "true"
