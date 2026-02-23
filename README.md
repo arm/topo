@@ -134,11 +134,16 @@ When you're done, stop the running services:
 ./topo stop --target my-board
 ```
 
-## Usage
+## Other Commands
 
-For detailed command information and all available options:
+The Getting Started walkthrough above covers the core flow. These additional commands are available:
 
-```sh
-./topo --help
-./topo <command> --help
-```
+| Command | When to use it |
+|---------|----------------|
+| `init` | Scaffold a new empty project instead of cloning a template |
+| `extend` | Add services from a template into an existing project |
+| `service remove` | Remove a service from your compose file |
+| `setup-keys` | Set up SSH key authentication if your target doesn't have it |
+| `install remoteproc` | Install the remoteproc runtime on your target |
+
+Run `topo <command> --help` for full usage details.
