@@ -40,7 +40,7 @@ The full format specification is at [arm/topo-template-format](https://github.co
 - SSH client (`ssh`)
 - [Docker](https://docs.docker.com/get-docker/)
 
-**Target machine** (the remote Arm board):
+**Target machine** (the remote Arm system):
 
 - Linux on ARM64
 - Docker
