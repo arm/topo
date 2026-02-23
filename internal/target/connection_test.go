@@ -16,7 +16,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		out, err := conn.Run("ls")
 
@@ -28,7 +28,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("", 1)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		out, err := conn.Run("ls")
 
@@ -43,7 +43,7 @@ func TestRun(t *testing.T) {
 			capturedArgs = strings.Join(sshArgs, " ")
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{Multiplex: true})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
 
 		_, err := conn.Run("ls")
 
@@ -60,7 +60,7 @@ func TestRun(t *testing.T) {
 			capturedArgs = strings.Join(sshArgs, " ")
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{Multiplex: true})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
 
 		_, err := conn.Run("ls")
 
@@ -76,7 +76,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		got, err := conn.BinaryExists("bar")
 
@@ -88,7 +88,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		got, err := conn.BinaryExists("b a r")
 

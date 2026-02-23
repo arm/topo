@@ -50,14 +50,19 @@ type ConnectionOptions struct {
 	WithLoginShell    bool
 	WithStdin         []byte
 	Multiplex         bool
+	WithMockExec      execSSH
 }
 
 var ErrPasswordAuthentication = errors.New("only password authentication is configured; key-based ssh is required")
 
-func NewConnection(sshTarget string, exec execSSH, opts ConnectionOptions) Connection {
+func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
+	execFn := ssh.ExecCmd
+	if opts.WithMockExec != nil {
+		execFn = opts.WithMockExec
+	}
 	return Connection{
 		SSHTarget: ssh.Host(sshTarget),
-		exec:      exec,
+		exec:      execFn,
 		opts:      opts,
 	}
 }
