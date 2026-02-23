@@ -33,6 +33,14 @@ The full format specification is at [arm/topo-template-format](https://github.co
 
 ## Installation
 
+Download the latest binary for your platform from [GitHub Releases](https://github.com/arm/topo/releases/latest), extract it, and place it on your `PATH`.
+
+To build from source instead (requires Go 1.25+):
+
+```sh
+go build ./cmd/topo
+```
+
 ### Prerequisites
 
 **Host machine** (where you run `topo`):
@@ -48,16 +56,6 @@ The full format specification is at [arm/topo-template-format](https://github.co
 - SSH server
 
 The host and target can be the same system. If you're working directly on an Arm Linux system, use `--target localhost`.
-
-**Build from source** (optional):
-
-- Go 1.25+
-
-Build from source:
-
-```sh
-go build ./cmd/topo
-```
 
 ## Getting Started
 
