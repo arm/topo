@@ -21,15 +21,15 @@ export TOPO_TARGET=pi@my-board
 
 If host and target are the same system, use `--target localhost`.
 
-### Templates
-
-Topo templates extend the [Compose Specification](https://compose-spec.io/) popularised by Docker, adding `x-topo` metadata that lets Topo match and configure templates for your board's CPU features. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
-
-The full format specification is at [arm/topo-template-format](https://github.com/arm/topo-template-format).
-
 ### Target Description
 
-To tailor templates for your target, the `topo describe` command probes your board and writes a `target-description.yaml` that captures CPU features, core topology, and any heterogeneous processors.
+The `topo describe` command probes your board and writes a `target-description.yaml` that captures CPU features, core topology, and any heterogeneous processors.
+
+### Templates
+
+Topo templates extend the [Compose Specification](https://compose-spec.io/) popularised by Docker, adding `x-topo` metadata that declares CPU feature requirements and build arguments. Topo uses your target description to match and configure compatible templates for your board. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
+
+The full format specification is at [arm/topo-template-format](https://github.com/arm/topo-template-format).
 
 ## Installation
 
