@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var setupKeysKeyPath string
+var privateKeysKeyPath string
 
 var setupKeysCmd = &cobra.Command{
 	Use:   "setup-keys",
@@ -30,7 +30,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		seq, err := setupkeys.NewKeySetup(resolvedTarget, setupKeysKeyPath)
+		seq, err := setupkeys.NewKeySetup(resolvedTarget, privateKeysKeyPath)
 		if err != nil {
 			return err
 		}
@@ -45,6 +45,6 @@ Use --dry-run to see what commands would be executed without actually running th
 func init() {
 	addTargetFlag(setupKeysCmd)
 	addDryRunFlag(setupKeysCmd)
-	setupKeysCmd.Flags().StringVar(&setupKeysKeyPath, "key-path", "", "Specify the SSH path where the generated key pair will be stored. Default directory: ~/.ssh. Default public key file name: id_ed25519_topo_<target>.pub)")
+	setupKeysCmd.Flags().StringVar(&privateKeysKeyPath, "key-path", "", "Specify the SSH path where the generated key pair will be stored. Default directory: ~/.ssh. Default public key file name: id_ed25519_topo_<target>.pub)")
 	rootCmd.AddCommand(setupKeysCmd)
 }
