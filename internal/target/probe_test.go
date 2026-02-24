@@ -53,7 +53,7 @@ func TestProbeHardware(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, hw.HostProcessor, 1)
-		assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].ModelName)
+		assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].Model)
 		assert.Equal(t, 2, hw.HostProcessor[0].Cores)
 		assert.Equal(t, []string{"fp", "asimd"}, hw.HostProcessor[0].Features)
 	})
@@ -103,7 +103,7 @@ func TestCreateCPUProfile(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		want := target.HostProcessor{
-			ModelName: "Cortex-A72",
+			Model: "Cortex-A72",
 			Cores:     8,
 			Features:  []string{"fp", "asimd", "evtstrm"},
 		}
@@ -125,7 +125,7 @@ func TestCreateCPUProfile(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		want := target.HostProcessor{
-			ModelName: "Cortex-A55",
+			Model: "Cortex-A55",
 			Cores:     2,
 			Features:  []string{"fp", "asimd"},
 		}
@@ -149,9 +149,9 @@ func TestCreateCPUProfile(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, got, 2)
-		assert.Equal(t, "Cortex-A55", got[0].ModelName)
+		assert.Equal(t, "Cortex-A55", got[0].Model)
 		assert.Equal(t, 4, got[0].Cores)
-		assert.Equal(t, "Cortex-A78", got[1].ModelName)
+		assert.Equal(t, "Cortex-A78", got[1].Model)
 		assert.Equal(t, 2, got[1].Cores)
 	})
 

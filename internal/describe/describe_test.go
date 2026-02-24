@@ -30,7 +30,7 @@ func TestGenerate(t *testing.T) {
 		expected := target.HardwareProfile{
 			HostProcessor: []target.HostProcessor{
 				{
-					ModelName: "Cortex-A55",
+					Model: "Cortex-A55",
 					Features:  []string{"fp", "asimd"},
 					Cores:     2,
 				},

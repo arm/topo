@@ -17,7 +17,7 @@ var armCpuFeatures = map[string]string{
 }
 
 type HostProcessor struct {
-	ModelName string   `yaml:"model"`
+	Model     string   `yaml:"model"`
 	Cores     int      `yaml:"cores"`
 	Features  []string `yaml:"features"`
 }
@@ -152,7 +152,7 @@ func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, er
 	}
 
 	return HostProcessor{
-		ModelName: name,
+		Model: name,
 		Cores:     coresPerUnit * units,
 		Features:  features,
 	}, nil
