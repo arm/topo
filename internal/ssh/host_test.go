@@ -5,6 +5,7 @@ import (
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHost(t *testing.T) {
@@ -66,5 +67,47 @@ func TestHost(t *testing.T) {
 
 			assert.Equal(t, "ssh://user@host", h.AsURI())
 		})
+	})
+	t.Run("Slugify", func(t *testing.T) {
+		tests := []struct {
+			input string
+			want  string
+		}{
+			{"user@example.com", "user_example.com"},
+			{"Example-Host", "Example-Host"},
+			{"spaces and/tabs", "spaces_and_tabs"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.input, func(t *testing.T) {
+				require.Equal(t, tt.want, ssh.Host(tt.input).Slugify(), "Slugify should replace special characters with underscores and keep allowed characters")
+			})
+		}
+	})
+
+	t.Run("SplitUserHostPort", func(t *testing.T) {
+		cases := []struct {
+			raw      string
+			wantUser string
+			wantHost string
+			wantPort string
+		}{
+			{raw: "user@example.com:2222", wantUser: "user", wantHost: "example.com", wantPort: "2222"},
+			{raw: "example.com:2222", wantUser: "", wantHost: "example.com", wantPort: "2222"},
+			{raw: "example.com", wantUser: "", wantHost: "example.com", wantPort: ""},
+			{raw: "user@example.com", wantUser: "user", wantHost: "example.com", wantPort: ""},
+			{raw: "[2001:db8::1]", wantUser: "", wantHost: "2001:db8::1", wantPort: ""},
+			{raw: "user@[2001:db8::1]:2222", wantUser: "user", wantHost: "2001:db8::1", wantPort: "2222"},
+			{raw: "[2001:db8::1]:2222", wantUser: "", wantHost: "2001:db8::1", wantPort: "2222"},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.raw, func(t *testing.T) {
+				user, host, port := ssh.SplitUserHostPort(tc.raw)
+				require.Equal(t, tc.wantUser, user, "user for %q", tc.raw)
+				require.Equal(t, tc.wantHost, host, "host for %q", tc.raw)
+				require.Equal(t, tc.wantPort, port, "port for %q", tc.raw)
+			})
+		}
 	})
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/setupkeys"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +42,14 @@ func TestNewKeySetupDryRun(t *testing.T) {
 			if tt.inputKeyPath == "" {
 				wantKeyPath = filepath.Join(tmp, tt.wantKeyPath)
 			}
-			got, err := setupkeys.NewKeySetup(tt.wantTarget, tt.inputKeyPath)
+			targetSlug := ssh.Host(tt.wantTarget).Slugify()
+			inputKeyPath := tt.inputKeyPath
+			if inputKeyPath == "" {
+				var err error
+				inputKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
+				require.NoError(t, err)
+			}
+			got, err := setupkeys.NewKeySetup(tt.wantTarget, inputKeyPath)
 			require.NoError(t, err)
 			require.Len(t, got, 2)
 			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])

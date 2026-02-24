@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/setupkeys"
+	"github.com/arm/topo/internal/setupkeys/sshconfig"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -30,15 +32,30 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
+		targetSlug := ssh.Host(resolvedTarget).Slugify()
+		if privateKeyPath == "" {
+			privateKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
+			if err != nil {
+				return err
+			}
+		}
+
 		seq, err := setupkeys.NewKeySetup(resolvedTarget, privateKeyPath)
 		if err != nil {
 			return err
 		}
 
 		if dryRun {
-			return seq.DryRun(os.Stdout)
+			err = seq.DryRun(os.Stdout)
+		} else {
+			err = seq.Run(os.Stdout)
 		}
-		return seq.Run(os.Stdout)
+
+		if err != nil {
+			return err
+		}
+
+		return sshconfig.ModifySSHConfig(resolvedTarget, privateKeyPath, targetSlug, dryRun, os.Stdout)
 	},
 }
 
