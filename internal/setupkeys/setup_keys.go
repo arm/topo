@@ -12,7 +12,7 @@ import (
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 )
 
-func NewKeyCreateAndPlaceSequence(target string, privKeyPath string) (goperation.Sequence, error) {
+func NewKeySetup(target string, privKeyPath string) (goperation.Sequence, error) {
 	if privKeyPath == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {

@@ -30,7 +30,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		seq, err := setupkeys.NewKeyCreateAndPlaceSequence(resolvedTarget, setupKeysKeyPath)
+		seq, err := setupkeys.NewKeySetup(resolvedTarget, setupKeysKeyPath)
 		if err != nil {
 			return err
 		}

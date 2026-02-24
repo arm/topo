@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewKeyCreateAndPlaceSequenceDryRun(t *testing.T) {
+func TestNewKeySetupDryRun(t *testing.T) {
 	tests := []struct {
 		name         string
 		wantTarget   string
@@ -41,7 +41,7 @@ func TestNewKeyCreateAndPlaceSequenceDryRun(t *testing.T) {
 			if tt.inputKeyPath == "" {
 				wantKeyPath = filepath.Join(tmp, tt.wantKeyPath)
 			}
-			got, err := setupkeys.NewKeyCreateAndPlaceSequence(tt.wantTarget, tt.inputKeyPath)
+			got, err := setupkeys.NewKeySetup(tt.wantTarget, tt.inputKeyPath)
 			require.NoError(t, err)
 			require.Len(t, got, 2)
 			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
