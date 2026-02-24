@@ -65,16 +65,7 @@ func FromContent(reader io.Reader) (Template, error) {
 func FromDir(destDir string) (Template, error) {
 	composeServicePath := filepath.Join(destDir, ComposeFilename)
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return Template{}, err
-	}
-	root, err := os.OpenRoot(home)
-	if err != nil {
-		return Template{}, err
-	}
-
-	f, err := root.Open(composeServicePath)
+	f, err := os.Open(composeServicePath)
 	if err != nil {
 		return Template{}, err
 	}

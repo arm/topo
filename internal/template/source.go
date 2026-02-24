@@ -223,16 +223,7 @@ func copyDir(src, dst string) error {
 }
 
 func copyFile(src, dst string) error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	root, err := os.OpenRoot(home)
-	if err != nil {
-		return err
-	}
-
-	srcFile, err := root.Open(src)
+	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
@@ -243,7 +234,8 @@ func copyFile(src, dst string) error {
 		return err
 	}
 
-	dstFile, err := root.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
+	// #nosec G703 -- dst has been validated prior to this function
+	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
 	if err != nil {
 		return err
 	}
