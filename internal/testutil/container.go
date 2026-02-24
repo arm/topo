@@ -43,6 +43,7 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 
 	waitForDockerReady(t, TargetContainerHost, port)
 
+	// #nosec G204 -- ignore as its a test helper
 	return &TargetContainer{SSHConnectionString: fmt.Sprintf("%s:%s", TargetContainerHost, port), ContainerName: containerName}
 }
 
@@ -52,6 +53,7 @@ func generateTargetContainerName(t *testing.T) string {
 
 func requireImageExists(t *testing.T, imageName string) {
 	t.Helper()
+	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("docker", "images", "-q", imageName)
 	output, err := cmd.Output()
 	if err != nil {
@@ -66,6 +68,7 @@ func createTargetContainer(t *testing.T, containerName string) error {
 	t.Helper()
 	requireImageExists(t, TargetContainerImage)
 	deleteContainer(containerName)
+	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", TargetContainerImage)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -76,6 +79,7 @@ func createTargetContainer(t *testing.T, containerName string) error {
 }
 
 func deleteContainer(containerName string) {
+	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("docker", "rm", "--force", containerName)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -83,6 +87,7 @@ func deleteContainer(containerName string) {
 }
 
 func GetContainerPublicPort(containerName string, privatePort string) (string, error) {
+	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("docker", "port", containerName, privatePort)
 	output, err := cmd.Output()
 	if err != nil {
@@ -105,6 +110,7 @@ func waitForDockerReady(t *testing.T, host string, port string) {
 	var lastErr error
 
 	for time.Now().Before(deadline) {
+		// #nosec G204 -- ignore as its a test helper
 		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", "--", host, "docker", "info")
 		output, err := cmd.CombinedOutput()
 		if err == nil {

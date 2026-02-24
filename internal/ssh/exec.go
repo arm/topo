@@ -40,9 +40,11 @@ func ShellCommand(command string) string {
 func ExecCmd(target Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd {
 	var cmd *exec.Cmd
 	if target.IsPlainLocalhost() {
+		// #nosec G204 -- command should be validated by callers
 		cmd = exec.Command("/bin/sh", "-c", command)
 	} else {
 		args := slices.Concat(sshArgs, []string{"--", string(target), command})
+		// #nosec G204 -- command should be validated by callers
 		cmd = exec.Command("ssh", args...)
 	}
 

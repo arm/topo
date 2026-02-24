@@ -53,7 +53,7 @@ func RequireOS(t testing.TB, os string) {
 
 func RequireWriteFile(t testing.TB, path, content string) {
 	t.Helper()
-	err := os.WriteFile(path, []byte(content), 0o644)
+	err := os.WriteFile(path, []byte(content), 0o600)
 	require.NoError(t, err)
 }
 
@@ -81,5 +81,6 @@ func CmdWithOutput(output string, exitCode int) *exec.Cmd {
 		cmd.Env = append(os.Environ(), "TOPO_CMD_OUT="+output, fmt.Sprintf("TOPO_CMD_CODE=%d", exitCode))
 		return cmd
 	}
+	// #nosec G204 -- ignore as its a test helper
 	return exec.Command("sh", "-c", fmt.Sprintf("printf %%s \"$1\"; exit %d", exitCode), "sh", output)
 }

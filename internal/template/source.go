@@ -191,7 +191,7 @@ func (d DirSource) GetName() (string, error) {
 }
 
 func copyDir(src, dst string) error {
-	if err := os.MkdirAll(dst, 0o755); err != nil {
+	if err := os.MkdirAll(dst, 0o750); err != nil {
 		return err
 	}
 
@@ -222,8 +222,17 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
-func copyFile(src, dst string) (err error) {
-	srcFile, err := os.Open(src)
+func copyFile(src, dst string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(home)
+	if err != nil {
+		return err
+	}
+
+	srcFile, err := root.Open(src)
 	if err != nil {
 		return err
 	}
@@ -234,8 +243,7 @@ func copyFile(src, dst string) (err error) {
 		return err
 	}
 
-	// #nosec G703 -- dst is validated, this will always warn
-	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
+	dstFile, err := root.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
 	if err != nil {
 		return err
 	}

@@ -25,8 +25,17 @@ func GenerateTargetDescription(conn target.Connection) (target.HardwareProfile, 
 }
 
 func WriteTargetDescriptionToFile(dir string, report target.HardwareProfile) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	root, err := os.OpenRoot(home)
+	if err != nil {
+		return "", err
+	}
+
 	outputFile := filepath.Join(dir, TargetDescriptionFilename)
-	f, err := os.Create(outputFile)
+	f, err := root.Create(outputFile)
 	if err != nil {
 		return "", err
 	}

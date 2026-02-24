@@ -9,12 +9,14 @@ import (
 
 func Docker(h ssh.Host, args ...string) *exec.Cmd {
 	cmdArgs := append(hostToArgs(h), args...)
+	// #nosec G204 -- Callers validate the command args
 	return exec.Command("docker", cmdArgs...)
 }
 
 func DockerCompose(h ssh.Host, composeFile string, args ...string) *exec.Cmd {
 	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
 	cmdArgs := append(hostToArgs(h), composeArgs...)
+	// #nosec G204 -- Callers validate the command args
 	return exec.Command("docker", cmdArgs...)
 }
 

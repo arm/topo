@@ -156,7 +156,16 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 }
 
 func RemoveService(composeFilePath, serviceName string) error {
-	fileToRead, err := os.Open(composeFilePath)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(home)
+	if err != nil {
+		return err
+	}
+
+	fileToRead, err := root.Open(composeFilePath)
 	if err != nil {
 		return err
 	}
@@ -170,7 +179,7 @@ func RemoveService(composeFilePath, serviceName string) error {
 		return fmt.Errorf("failed to remove service %s: %w", serviceName, err)
 	}
 
-	fileToWrite, err := os.Create(composeFilePath)
+	fileToWrite, err := root.Create(composeFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open compose file for writing: %w", err)
 	}
@@ -197,14 +206,23 @@ func Init(projectDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal compose file: %w", err)
 	}
-	if err := os.WriteFile(composePath, data, 0o644); err != nil {
+	if err := os.WriteFile(composePath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write compose file: %w", err)
 	}
 	return nil
 }
 
 func applyArgs(composeFilePath string, args []arguments.ResolvedArg) ([]logger.Entry, error) {
-	f, err := os.Open(composeFilePath)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	root, err := os.OpenRoot(home)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := root.Open(composeFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +238,7 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) ([]logger.E
 		return logs, fmt.Errorf("error applying args to project file: %w", err)
 	}
 
-	outFile, err := os.Create(composeFilePath)
+	outFile, err := root.Create(composeFilePath)
 	if err != nil {
 		return logs, fmt.Errorf("failed to open compose file for writing: %w", err)
 	}
@@ -233,7 +251,16 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) ([]logger.E
 }
 
 func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]arguments.ResolvedArg, error) {
-	f, err := os.Open(composeFilePath)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	root, err := os.OpenRoot(home)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := root.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't read compose file: %w", err)
 	}

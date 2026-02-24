@@ -74,6 +74,7 @@ func (c *setupKeysOperation) Run(cmdOutput io.Writer) error {
 	if len(c.command) == 0 {
 		return fmt.Errorf("no command configured")
 	}
+	// #nosec G204 -- this is validated before creating setupKeysOperation
 	cmd := exec.Command(c.command[0], c.command[1:]...)
 	if cmdOutput != nil {
 		cmd.Stdout = cmdOutput

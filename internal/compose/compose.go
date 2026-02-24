@@ -119,7 +119,7 @@ func WriteProject(project *types.Project, targetComposeFile string) error {
 		return fmt.Errorf("failed to marshal project to YAML: %w", err)
 	}
 
-	if err := os.WriteFile(targetComposeFile, projectInYAML, 0o644); err != nil {
+	if err := os.WriteFile(targetComposeFile, projectInYAML, 0o600); err != nil {
 		return fmt.Errorf("failed to write compose file %s %w", targetComposeFile, err)
 	}
 	return nil
