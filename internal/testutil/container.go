@@ -52,7 +52,7 @@ func generateTargetContainerName(t *testing.T) string {
 
 func requireImageExists(t *testing.T, imageName string) {
 	t.Helper()
-	cmd := exec.Command("docker", "images", "-q", imageName) // #nosec
+	cmd := exec.Command("docker", "images", "-q", imageName)
 	output, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("failed to check for docker image %s: %v", imageName, err)
@@ -66,7 +66,7 @@ func createTargetContainer(t *testing.T, containerName string) error {
 	t.Helper()
 	requireImageExists(t, TargetContainerImage)
 	deleteContainer(containerName)
-	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", TargetContainerImage) // #nosec
+	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", TargetContainerImage)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -76,14 +76,14 @@ func createTargetContainer(t *testing.T, containerName string) error {
 }
 
 func deleteContainer(containerName string) {
-	cmd := exec.Command("docker", "rm", "--force", containerName) // #nosec
+	cmd := exec.Command("docker", "rm", "--force", containerName)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	_ = cmd.Run()
 }
 
 func GetContainerPublicPort(containerName string, privatePort string) (string, error) {
-	cmd := exec.Command("docker", "port", containerName, privatePort) // #nosec
+	cmd := exec.Command("docker", "port", containerName, privatePort)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get container port: %w", err)
@@ -105,7 +105,7 @@ func waitForDockerReady(t *testing.T, host string, port string) {
 	var lastErr error
 
 	for time.Now().Before(deadline) {
-		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", host, "docker", "info") // #nosec
+		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", "--", host, "docker", "info")
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			return

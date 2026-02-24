@@ -40,10 +40,10 @@ func ShellCommand(command string) string {
 func ExecCmd(target Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd {
 	var cmd *exec.Cmd
 	if target.IsPlainLocalhost() {
-		cmd = exec.Command("/bin/sh", "-c", command) // #nosec
+		cmd = exec.Command("/bin/sh", "-c", command)
 	} else {
 		args := slices.Concat(sshArgs, []string{"--", string(target), command})
-		cmd = exec.Command("ssh", args...) // #nosec
+		cmd = exec.Command("ssh", args...)
 	}
 
 	if stdin != nil {

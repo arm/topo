@@ -149,7 +149,8 @@ func getLatestReleaseTarAddress(repoURL string) (*url.URL, error) {
 
 	addGitHubAuthHeader(req)
 
-	resp, err := http.DefaultClient.Do(req) // #nosec
+	// #nosec G704 -- request is validated, false positive warning
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +240,8 @@ func fetchFile(url *url.URL) ([]byte, error) {
 
 	addGitHubAuthHeader(req)
 
-	resp, err := http.DefaultClient.Do(req) // #nosec
+	// #nosec G704 -- Request is previously validated
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

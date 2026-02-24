@@ -34,7 +34,8 @@ func fetchComposeFile(client *http.Client, githubToken string, repoSpec string) 
 	req.Header.Set("Authorization", "token "+githubToken)
 	req.Header.Set("Accept", "application/vnd.github.v3.raw")
 
-	resp, err := client.Do(req) // #nosec
+	// #nosec G704 -- request is validated, false positive warning
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

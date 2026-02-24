@@ -223,7 +223,7 @@ func copyDir(src, dst string) error {
 }
 
 func copyFile(src, dst string) (err error) {
-	srcFile, err := os.Open(src) // #nosec
+	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,8 @@ func copyFile(src, dst string) (err error) {
 		return err
 	}
 
-	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode()) // #nosec
+	// #nosec G703 -- dst is validated, this will always warn
+	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
 	if err != nil {
 		return err
 	}
