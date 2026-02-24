@@ -1,4 +1,3 @@
-// Only tests the SSH key generation operation
 package sshkeygen_test
 
 import (
