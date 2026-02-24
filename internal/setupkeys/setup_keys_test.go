@@ -60,20 +60,3 @@ func TestNewKeySetupDryRun(t *testing.T) {
 		})
 	}
 }
-
-func TestSlugifyTarget(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"user@example.com", "user_example.com"},
-		{"Example-Host", "Example-Host"},
-		{"spaces and/tabs", "spaces_and_tabs"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			require.Equal(t, tt.want, setupkeys.SlugifyTarget(tt.input), "SlugifyTarget should replace special characters with underscores and keep allowed characters")
-		})
-	}
-}

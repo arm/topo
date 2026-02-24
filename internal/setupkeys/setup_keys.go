@@ -16,10 +16,10 @@ func NewKeySetup(target string, privKeyPath string) (goperation.Sequence, error)
 	if privKeyPath == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get home directory: %w", err)
+			return nil, fmt.Errorf("failed to determine default key path: %w", err)
 		}
 
-		keyName := fmt.Sprintf("id_ed25519_topo_%s", SlugifyTarget(target))
+		keyName := fmt.Sprintf("id_ed25519_topo_%s", slugifyTarget(target))
 		privKeyPath = filepath.Join(home, ".ssh", keyName)
 	}
 
@@ -30,7 +30,7 @@ func NewKeySetup(target string, privKeyPath string) (goperation.Sequence, error)
 	return goperation.NewSequence(ops...), nil
 }
 
-func SlugifyTarget(target string) string {
+func slugifyTarget(target string) string {
 	var b strings.Builder
 	for _, r := range target {
 		toWrite := '_'
