@@ -176,7 +176,7 @@ func TestNewSource(t *testing.T) {
 
 func TestTemplateIdSource(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
-		t.Run("returns template ID in correct format", func(t *testing.T) {
+		t.Run("returns template name in correct format", func(t *testing.T) {
 			src := template.TemplateNameSource("hello-world")
 			assert.Equal(t, "template:hello-world", src.String())
 		})

@@ -19,7 +19,7 @@ var topoCloneCmd = &cobra.Command{
 The project-source argument uses scheme prefixes to specify the source type.
 The git: prefix is optional for git@host and https:// URLs.
 
-Template ID (from built-in catalog):
+Template Name (from built-in catalog):
   topo clone my-demo template:Topo-Welcome
 
 Git repository:
