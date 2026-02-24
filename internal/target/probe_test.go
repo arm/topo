@@ -103,9 +103,9 @@ func TestCreateCPUProfile(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		want := target.HostProcessor{
-			Model: "Cortex-A72",
-			Cores:     8,
-			Features:  []string{"fp", "asimd", "evtstrm"},
+			Model:    "Cortex-A72",
+			Cores:    8,
+			Features: []string{"fp", "asimd", "evtstrm"},
 		}
 		assert.Equal(t, want, got[0])
 	})
@@ -125,9 +125,9 @@ func TestCreateCPUProfile(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		want := target.HostProcessor{
-			Model: "Cortex-A55",
-			Cores:     2,
-			Features:  []string{"fp", "asimd"},
+			Model:    "Cortex-A55",
+			Cores:    2,
+			Features: []string{"fp", "asimd"},
 		}
 		assert.Equal(t, want, got[0])
 	})
