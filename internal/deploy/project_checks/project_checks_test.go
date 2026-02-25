@@ -64,7 +64,7 @@ services:
 
 		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
 	})
-	t.Run("suceeds with valid remoteproc runtime", func(t *testing.T) {
+	t.Run("succeeds with valid remoteproc runtime", func(t *testing.T) {
 		composeFile := writeComposeFile(t, `
 services:
   rtos-firmware:
