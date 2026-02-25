@@ -79,6 +79,7 @@ func (s *SSHTunnelStart) Command() *exec.Cmd {
 		"-R", fmt.Sprintf("%s:127.0.0.1:%s", s.Port, s.Port),
 		hostArg,
 	)
+	// #nosec -- arguments are validated
 	return exec.Command(args[0], args[1:]...)
 }
 
@@ -130,6 +131,7 @@ func (s *SSHTunnelStop) Command() *exec.Cmd {
 		"-O", "exit",
 		hostArg,
 	)
+	// #nosec -- arguments are validated
 	return exec.Command(args[0], args[1:]...)
 }
 
