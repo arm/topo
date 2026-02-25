@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/arm/topo/internal/setupkeys"
+	"github.com/arm/topo/internal/setupkeys/sshconfig"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
-var setupKeysKeyPath string
+var privateKeyPath string
 
 var setupKeysCmd = &cobra.Command{
 	Use:   "setup-keys",
@@ -26,30 +27,41 @@ Use --dry-run to see what commands would be executed without actually running th
 			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
 		}
 
-		if runtime.GOOS != "linux" {
-			return fmt.Errorf("topo setup-keys currently supports Linux hosts only")
-		}
-
 		resolvedTarget, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
 
-		seq, err := setupkeys.NewKeyCreationAndPlacementOnTarget(resolvedTarget, setupKeysKeyPath)
+		targetSlug := ssh.Host(resolvedTarget).Slugify()
+		if privateKeyPath == "" {
+			privateKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
+			if err != nil {
+				return err
+			}
+		}
+
+		seq, err := setupkeys.NewKeySetup(resolvedTarget, privateKeyPath)
 		if err != nil {
 			return err
 		}
 
 		if dryRun {
-			return seq.DryRun(os.Stdout)
+			err = seq.DryRun(os.Stdout)
+		} else {
+			err = seq.Run(os.Stdout)
 		}
-		return seq.Run(os.Stdout)
+
+		if err != nil {
+			return err
+		}
+
+		return sshconfig.ModifySSHConfig(resolvedTarget, privateKeyPath, targetSlug, dryRun, os.Stdout)
 	},
 }
 
 func init() {
 	addTargetFlag(setupKeysCmd)
 	addDryRunFlag(setupKeysCmd)
-	setupKeysCmd.Flags().StringVar(&setupKeysKeyPath, "key-path", "", "Specify the SSH path where the generated key pair will be stored. Default directory: ~/.ssh. Default public key file name: id_ed25519_topo_<target>.pub)")
+	setupKeysCmd.Flags().StringVar(&privateKeyPath, "key-path", "", "Specify the SSH path where the generated key pair will be stored. Default directory: ~/.ssh. Default public key file name: id_ed25519_topo_<target>.pub)")
 	rootCmd.AddCommand(setupKeysCmd)
 }

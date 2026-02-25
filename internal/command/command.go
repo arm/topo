@@ -20,6 +20,11 @@ func DockerCompose(h ssh.Host, composeFile string, args ...string) *exec.Cmd {
 	return exec.Command("docker", cmdArgs...)
 }
 
+func SSHKeyGen(keyType string, keyPath string, targetHost string) *exec.Cmd {
+	sshKeyGenArgs := []string{"-t", keyType, "-f", keyPath, "-C", targetHost}
+	return exec.Command("ssh-keygen", sshKeyGenArgs...)
+}
+
 func String(cmd *exec.Cmd) string {
 	return strings.Join(cmd.Args, " ")
 }

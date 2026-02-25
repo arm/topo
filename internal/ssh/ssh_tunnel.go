@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,22 +21,18 @@ func ControlSocketPath(targetHost string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
 }
 
-func splitHostPort(raw string) (host, port string) {
-	userPart := ""
-	hostPart := raw
-	if at := strings.LastIndex(raw, "@"); at != -1 {
-		userPart = raw[:at+1]
-		hostPart = raw[at+1:]
+func formatSSHHost(raw string, user string, host string) string {
+	if host == "" {
+		return raw
 	}
-
-	host, port, err := net.SplitHostPort(hostPart)
-	if err == nil {
-		if strings.HasPrefix(hostPart, "[") {
-			host = "[" + host + "]"
-		}
-		return userPart + host, port
+	hostPart := host
+	if strings.Contains(hostPart, ":") {
+		hostPart = "[" + hostPart + "]"
 	}
-	return raw, ""
+	if user == "" {
+		return hostPart
+	}
+	return user + "@" + hostPart
 }
 
 func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operation.Operation, operation.Operation) {
@@ -68,7 +63,9 @@ func NewSSHTunnelStart(targetHost Host, port string, useControlSockets bool) *SS
 }
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
-	host, port := splitHostPort(string(s.TargetHost))
+	rawHost := string(s.TargetHost)
+	user, host, port := SplitUserHostPort(rawHost)
+	hostArg := formatSSHHost(rawHost, user, host)
 	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
 	if port != "" {
 		args = append(args, "-p", port)
@@ -80,7 +77,7 @@ func (s *SSHTunnelStart) Command() *exec.Cmd {
 	}
 	args = append(args,
 		"-R", fmt.Sprintf("%s:127.0.0.1:%s", s.Port, s.Port),
-		host,
+		hostArg,
 	)
 	return exec.Command(args[0], args[1:]...)
 }
@@ -121,7 +118,9 @@ func NewSSHTunnelStop(targetHost Host) *SSHTunnelStop {
 }
 
 func (s *SSHTunnelStop) Command() *exec.Cmd {
-	host, port := splitHostPort(string(s.TargetHost))
+	rawHost := string(s.TargetHost)
+	user, host, port := SplitUserHostPort(rawHost)
+	hostArg := formatSSHHost(rawHost, user, host)
 	args := []string{"ssh"}
 	if port != "" {
 		args = append(args, "-p", port)
@@ -129,7 +128,7 @@ func (s *SSHTunnelStop) Command() *exec.Cmd {
 	args = append(args,
 		"-S", ControlSocketPath(string(s.TargetHost)),
 		"-O", "exit",
-		host,
+		hostArg,
 	)
 	return exec.Command(args[0], args[1:]...)
 }
