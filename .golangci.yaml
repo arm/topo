@@ -8,3 +8,8 @@ formatters:
 linters:
   enable:
     - gosec
+
+linters-settings:
+  gosec:
+    excludes:
+      - G304

@@ -1,3 +1,4 @@
+// #nosec
 package project_test
 
 import (

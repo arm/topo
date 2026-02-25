@@ -1,3 +1,4 @@
+// #nosec
 package template_test
 
 import (

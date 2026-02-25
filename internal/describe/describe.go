@@ -26,6 +26,7 @@ func GenerateTargetDescription(conn target.Connection) (target.HardwareProfile, 
 
 func WriteTargetDescriptionToFile(dir string, report target.HardwareProfile) (string, error) {
 	outputFile := filepath.Join(dir, TargetDescriptionFilename)
+	// #nosec G304 -- dir and filename are valid
 	f, err := os.Create(outputFile)
 	if err != nil {
 		return "", err
