@@ -118,7 +118,6 @@ Use --dry-run to see what commands would be executed without actually running th
 					c.Log(entry)
 				}
 			}
-
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
