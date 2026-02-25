@@ -93,7 +93,8 @@ jobs:
         run: |
           docker build -t topo-e2e-target:latest ./internal/testutil/test-container
           go test ./... -v -covermode=atomic -coverprofile=coverage.out
-  gosec:
+
+  security:
     runs-on: ubuntu-latest
 
     permissions:
@@ -103,11 +104,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install security tools
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
 
       - name: Add Go bin to PATH
         run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Run gosec (fail on findings)
         run: gosec -exclude=G304 ./...
+
+      - name: Run govulncheck (fail on vulnerabilities)
+        run: govulncheck ./...
