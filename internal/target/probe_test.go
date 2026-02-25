@@ -43,6 +43,8 @@ func TestProbeHardware(t *testing.T) {
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
 			case command == "lscpu --json":
 				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
+			case strings.Contains(command, "meminfo"):
+				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
 			default:
 				return testutil.CmdWithOutput("not found", 1)
 			}
@@ -56,6 +58,7 @@ func TestProbeHardware(t *testing.T) {
 		assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].ModelName)
 		assert.Equal(t, 2, hw.HostProcessor[0].Cores)
 		assert.Equal(t, []string{"fp", "asimd"}, hw.HostProcessor[0].Features)
+		assert.Equal(t, int64(16384000), hw.TotalMemoryKb)
 	})
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
@@ -76,6 +79,8 @@ func TestProbeHardware(t *testing.T) {
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
 			case command == "lscpu --json":
 				return testutil.CmdWithOutput("not json", 0)
+			case strings.Contains(command, "meminfo"):
+				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
 			default:
 				return testutil.CmdWithOutput("not found", 1)
 			}

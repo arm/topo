@@ -30,7 +30,7 @@ type RemoteprocCPU struct {
 type HardwareProfile struct {
 	HostProcessor []HostProcessor `yaml:"host"`
 	RemoteCPU     []RemoteprocCPU `yaml:"remoteprocs"`
-	TotalMemory   int64
+	TotalMemoryKb int64           `yaml:"totalmemory_kb"`
 }
 
 type LscpuOutputField struct {
@@ -81,7 +81,7 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	if err != nil {
 		return hp, fmt.Errorf("collecting memory info: %w", err)
 	}
-	hp.TotalMemory = memTotal
+	hp.TotalMemoryKb = memTotal
 
 	return hp, nil
 }
