@@ -2,6 +2,7 @@ package target_test
 
 import (
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/ssh"
@@ -15,7 +16,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		out, err := conn.Run("ls")
 
@@ -27,12 +28,46 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("", 1)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		out, err := conn.Run("ls")
 
 		assert.Error(t, err)
 		assert.Empty(t, out)
+	})
+
+	t.Run("run with mutliplexing enabled includes Control args", func(t *testing.T) {
+		testutil.RequireOS(t, "linux")
+		var capturedArgs string
+		mockExec := func(_ ssh.Host, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
+			capturedArgs = strings.Join(sshArgs, " ")
+			return testutil.CmdWithOutput("success", 0)
+		}
+		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
+
+		_, err := conn.Run("ls")
+
+		assert.NoError(t, err)
+		assert.True(t, strings.Contains(capturedArgs, "-o ControlMaster"), "missing ControlMaster argument")
+		assert.True(t, strings.Contains(capturedArgs, "-o ControlPersist"), "missing ControlPersist argument")
+		assert.True(t, strings.Contains(capturedArgs, "-o ControlPath"), "missing ControlPath argument")
+	})
+
+	t.Run("run with mutliplexing enabled does not include Control args on windows", func(t *testing.T) {
+		testutil.RequireOS(t, "windows")
+		var capturedArgs string
+		mockExec := func(_ ssh.Host, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
+			capturedArgs = strings.Join(sshArgs, " ")
+			return testutil.CmdWithOutput("success", 0)
+		}
+		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
+
+		_, err := conn.Run("ls")
+
+		assert.NoError(t, err)
+		assert.False(t, strings.Contains(capturedArgs, "-o ControlMaster"), "unexpected ControlMaster argument")
+		assert.False(t, strings.Contains(capturedArgs, "-o ControlPersist"), "unexpected ControlPersist argument")
+		assert.False(t, strings.Contains(capturedArgs, "-o ControlPath"), "unexpected ControlPath argument")
 	})
 }
 
@@ -41,7 +76,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		got, err := conn.BinaryExists("bar")
 
@@ -53,7 +88,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection("hostname", mockExec, target.ConnectionOptions{})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 
 		got, err := conn.BinaryExists("b a r")
 

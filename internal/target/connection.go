@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -33,11 +34,11 @@ var (
 	}
 )
 
-type execSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
+type ExecSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
 
 type Connection struct {
 	SSHTarget ssh.Host
-	exec      execSSH
+	exec      ExecSSH
 	opts      ConnectionOptions
 }
 
@@ -48,14 +49,20 @@ type ConnectionOptions struct {
 	AuthProbeOutput   io.Writer
 	WithLoginShell    bool
 	WithStdin         []byte
+	Multiplex         bool
+	WithMockExec      ExecSSH
 }
 
 var ErrPasswordAuthentication = errors.New("only password authentication is configured; key-based ssh is required")
 
-func NewConnection(sshTarget string, exec execSSH, opts ConnectionOptions) Connection {
+func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
+	execFn := ssh.ExecCmd
+	if opts.WithMockExec != nil {
+		execFn = opts.WithMockExec
+	}
 	return Connection{
 		SSHTarget: ssh.Host(sshTarget),
-		exec:      exec,
+		exec:      execFn,
 		opts:      opts,
 	}
 }
@@ -65,7 +72,12 @@ func (c *Connection) Run(command string) (string, error) {
 		command = ssh.ShellCommand(command)
 	}
 
-	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin)
+	sshArgs := []string{}
+	if c.opts.Multiplex && runtime.GOOS != "windows" {
+		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
+	}
+
+	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin, sshArgs...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf

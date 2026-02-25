@@ -8,7 +8,6 @@ import (
 	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +24,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		conn := target.NewConnection(sshTarget, ssh.ExecCmd, target.ConnectionOptions{})
+		conn := target.NewConnection(sshTarget, target.ConnectionOptions{Multiplex: true})
 		report, err := describe.GenerateTargetDescription(conn)
 		if err != nil {
 			return err
