@@ -20,7 +20,7 @@ func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {
 	}
 
 	return Template{
-		ID:          makeTemplateID(metadata.Name),
+		Name:        slugifyTemplateName(metadata.Name),
 		Description: metadata.Description,
 		Features:    metadata.Features,
 		URL:         repoURL,
@@ -36,7 +36,7 @@ func parseRepoSpec(spec string) (repo, ref string) {
 	return
 }
 
-func makeTemplateID(name string) string {
+func slugifyTemplateName(name string) string {
 	parts := strings.Fields(name)
 	if len(parts) == 0 {
 		return ""

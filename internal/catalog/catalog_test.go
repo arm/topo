@@ -14,14 +14,13 @@ func TestGetTemplateRepo(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, &catalog.Repo{
-			Id:          "Lightbulb-moment",
+			Name:        "Lightbulb-moment",
 			Description: "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state. The lightbulb state is described by an LLM in any user-specified style.",
 			Features:    []string{"SVE", "NEON"},
-			Url:         "git@github.com:Arm-Examples/topo-template-lightbulb-moment.git",
+			URL:         "git@github.com:Arm-Examples/topo-lightbulb-moment.git",
 			Ref:         "main",
 		}, template)
 	})
-
 	t.Run("when template does not exist, it errors", func(t *testing.T) {
 		_, err := catalog.GetTemplateRepo("nonexistent-template")
 
@@ -38,17 +37,17 @@ func TestFilterTemplateRepos(t *testing.T) {
 
 		collection := []catalog.Repo{
 			{
-				Id:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah",
 				Features:    []string{"walnut"},
-				Url:         "url.git",
+				URL:         "url.git",
 				Ref:         "main",
 			},
 			{
-				Id:          "name-of-other-project",
+				Name:        "name-of-other-project",
 				Description: "blah blah blah",
 				Features:    []string{"almond"},
-				Url:         "url.git",
+				URL:         "url.git",
 				Ref:         "main",
 			},
 		}
@@ -58,10 +57,10 @@ func TestFilterTemplateRepos(t *testing.T) {
 
 		want := []catalog.Repo{
 			{
-				Id:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah",
 				Features:    []string{"walnut"},
-				Url:         "url.git",
+				URL:         "url.git",
 				Ref:         "main",
 			},
 		}
@@ -76,17 +75,17 @@ func TestFilterTemplateRepos(t *testing.T) {
 
 		collection := []catalog.Repo{
 			{
-				Id:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah",
 				Features:    []string{"WALNUT"},
-				Url:         "url.git",
+				URL:         "url.git",
 				Ref:         "main",
 			},
 			{
-				Id:          "name-of-other-project",
+				Name:        "name-of-other-project",
 				Description: "blah blah blah",
 				Features:    []string{"almond"},
-				Url:         "url.git",
+				URL:         "url.git",
 				Ref:         "main",
 			},
 		}
@@ -96,10 +95,10 @@ func TestFilterTemplateRepos(t *testing.T) {
 
 		want := []catalog.Repo{
 			{
-				Id:          "name-of-project",
+				Name:        "name-of-project",
 				Description: "blah blah blah",
 				Features:    []string{"WALNUT"},
-				Url:         "url.git",
+				URL:         "url.git",
 				Ref:         "main",
 			},
 		}
@@ -112,14 +111,14 @@ func TestListRepos(t *testing.T) {
 	t.Run("parses valid JSON successfully", func(t *testing.T) {
 		jsonData := []byte(`[
 			{
-				"id": "test-repo",
+				"name": "test-repo",
 				"description": "A test template",
 				"features": ["feat1", "feat2"],
 				"url": "https://example.com/repo.git",
 				"ref": "main"
 			},
 			{
-				"id": "another-repo",
+				"name": "another-repo",
 				"description": "Another template",
 				"features": null,
 				"url": "https://example.com/another.git",
@@ -132,17 +131,17 @@ func TestListRepos(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, templates, 2)
 		assert.Equal(t, catalog.Repo{
-			Id:          "test-repo",
+			Name:        "test-repo",
 			Description: "A test template",
 			Features:    []string{"feat1", "feat2"},
-			Url:         "https://example.com/repo.git",
+			URL:         "https://example.com/repo.git",
 			Ref:         "main",
 		}, templates[0])
 		assert.Equal(t, catalog.Repo{
-			Id:          "another-repo",
+			Name:        "another-repo",
 			Description: "Another template",
 			Features:    nil,
-			Url:         "https://example.com/another.git",
+			URL:         "https://example.com/another.git",
 			Ref:         "v1.0.0",
 		}, templates[1])
 	})
@@ -159,7 +158,7 @@ func TestListRepos(t *testing.T) {
 	t.Run("returns error for unknown fields", func(t *testing.T) {
 		jsonData := []byte(`[
 			{
-				"id": "test",
+				"name": "test",
 				"description": "desc",
 				"features": [],
 				"url": "https://example.com",
@@ -177,13 +176,13 @@ func TestListRepos(t *testing.T) {
 func TestGetRepo(t *testing.T) {
 	validJSON := []byte(`[
 		{
-			"id": "repo1",
+			"name": "repo1",
 			"description": "first",
 			"features": ["feat"],
 			"url": "https://example.com/repo1.git"
 		},
 		{
-			"id": "repo2",
+			"name": "repo2",
 			"description": "second",
 			"features": null,
 			"url": "https://example.com/repo2.git",
@@ -196,10 +195,10 @@ func TestGetRepo(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, &catalog.Repo{
-			Id:          "repo1",
+			Name:        "repo1",
 			Description: "first",
 			Features:    []string{"feat"},
-			Url:         "https://example.com/repo1.git",
+			URL:         "https://example.com/repo1.git",
 		}, repo)
 	})
 
@@ -208,10 +207,10 @@ func TestGetRepo(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, &catalog.Repo{
-			Id:          "repo2",
+			Name:        "repo2",
 			Description: "second",
 			Features:    nil,
-			Url:         "https://example.com/repo2.git",
+			URL:         "https://example.com/repo2.git",
 			Ref:         "main",
 		}, repo)
 	})
