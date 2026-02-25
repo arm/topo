@@ -4,4 +4,7 @@ formatters:
   enable:
     - gofmt
     - gofumpt
+
+linters:
+  enable:
     - gosec
