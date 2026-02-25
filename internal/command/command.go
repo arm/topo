@@ -22,6 +22,7 @@ func DockerCompose(h ssh.Host, composeFile string, args ...string) *exec.Cmd {
 
 func SSHKeyGen(keyType string, keyPath string, targetHost string) *exec.Cmd {
 	sshKeyGenArgs := []string{"-t", keyType, "-f", keyPath, "-C", targetHost}
+	// #nosec G204 -- Callers validate the command args
 	return exec.Command("ssh-keygen", sshKeyGenArgs...)
 }
 
