@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -14,6 +15,7 @@ import (
 	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 
 	"github.com/spf13/cobra"
 )
@@ -104,6 +106,19 @@ Use --dry-run to see what commands would be executed without actually running th
 				Level:   logger.Warning,
 				Message: "registry transfer is not yet supported with this configuration. Falling back to direct transfer.",
 			})
+		}
+
+		logResult := checks.EnsureSSHGatewayPortsAreDisabled(targetHost, target.ConnectionOptions{WithLoginShell: true})
+		if len(logResult) > 0 {
+			for _, entry := range logResult {
+				switch entry.Level {
+				case logger.Err:
+					return errors.New(entry.Message)
+				case logger.Warning:
+					c.Log(entry)
+				}
+			}
+
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
