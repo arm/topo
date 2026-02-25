@@ -1,6 +1,7 @@
 package target
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ type RemoteprocCPU struct {
 type HardwareProfile struct {
 	HostProcessor []HostProcessor `yaml:"host"`
 	RemoteCPU     []RemoteprocCPU `yaml:"remoteprocs"`
+	TotalMemory   int64
 }
 
 type LscpuOutputField struct {
@@ -75,6 +77,12 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	}
 	hp.RemoteCPU = cpus
 
+	memTotal, err := c.collectMemInfo()
+	if err != nil {
+		return hp, fmt.Errorf("collecting memory info: %w", err)
+	}
+	hp.TotalMemory = memTotal
+
 	return hp, nil
 }
 
@@ -118,6 +126,33 @@ func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
 	}
 
 	return CreateCPUProfile(lscpuOutput.Lscpu)
+}
+
+func FindKeyValueInString(key string, text string) (int64, error) {
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) >= 2 && fields[0] == key+":" {
+			return strconv.ParseInt(fields[1], 10, 64)
+		}
+	}
+	return 0, fmt.Errorf("field %s not found", key)
+}
+
+func (c *Connection) collectMemInfo() (int64, error) {
+	key := "MemTotal"
+	path := "/proc/meminfo"
+
+	out, err := c.Run(fmt.Sprintf("cat %s", path))
+	if err != nil {
+		return 0, err
+	}
+
+	value, err := FindKeyValueInString(key, out)
+	if err != nil {
+		return 0, fmt.Errorf("in checking %s", path)
+	}
+	return value, nil
 }
 
 func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, error) {
