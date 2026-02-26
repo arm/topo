@@ -14,8 +14,6 @@ linters:
         - G304
       severity: medium
       confidence: medium
-
-issues:
   exclusions:
     rules:
       - path: (.+)_test.go
