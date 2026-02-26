@@ -110,11 +110,11 @@ func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 	conn := target.NewConnection(sshTarget, opts)
 	targetStatus := ProbeHealthStatus(conn)
 	report := GenerateReport(dependencyStatuses, targetStatus)
-	if err := targetStatus.AuthError; err != nil {
+	if err := targetStatus.ConnectionError; err != nil {
 		if errors.Is(err, target.ErrPasswordAuthentication) {
 			return report, fmt.Errorf(passwordAuthErrorMessage, sshTarget)
 		}
-		return report, err
+		return report, nil
 	}
 	return report, nil
 }

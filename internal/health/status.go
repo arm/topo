@@ -20,7 +20,6 @@ func (h HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
 type Status struct {
 	SSHTarget       ssh.Host
 	ConnectionError error
-	AuthError       error
 	Dependencies    []DependencyStatus
 	Hardware        HardwareProfile
 }
@@ -30,11 +29,6 @@ func ProbeHealthStatus(c target.Connection) Status {
 	status.SSHTarget = c.SSHTarget
 
 	if err := c.ProbeAuthentication(); err != nil {
-		status.AuthError = err
-		return status
-	}
-
-	if err := c.ProbeConnection(); err != nil {
 		status.ConnectionError = err
 		return status
 	}
