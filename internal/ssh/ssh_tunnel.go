@@ -127,11 +127,15 @@ func (c *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 		_, host, _ := SplitUserHostPort(rawHost)
 		return exec.Command("curl", fmt.Sprintf("%s:%s", host, c.Port), "--max-time", "5")
 	}
-	return exec.Command("echo", "Skipping security check for localhost")
+	return nil
 }
 
 func (c *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 	cmd := c.Command()
+	if cmd == nil {
+		_, _ = fmt.Fprintln(w, "SSH tunnel target is localhost, skipping security check")
+		return nil
+	}
 	cmd.Stdout = w
 	cmd.Stderr = w
 
