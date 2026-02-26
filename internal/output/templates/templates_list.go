@@ -24,7 +24,7 @@ const repoTemplate = `
 {{- end }}
 
 {{- define "repoRow" }}
-{{- cyan .Id }} | {{ blue .Url }} | {{ yellow .Ref }}
+{{- cyan .Name }} | {{ blue .URL }} | {{ yellow .Ref }}
 {{- template "featuresRow" . }}
 {{- template "descriptionRow" . }}
 {{- end }}
