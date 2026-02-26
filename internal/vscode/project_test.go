@@ -1,4 +1,3 @@
-// #nosec
 package vscode_test
 
 import (

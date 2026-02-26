@@ -1,4 +1,3 @@
-// #nosec
 package e2e
 
 import (
