@@ -121,9 +121,12 @@ func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecu
 }
 
 func (c *CheckSSHTunnelSecurity) Command() *exec.Cmd {
-	rawHost := resolveSSHConfigHost(string(c.TargetHost))
-	_, host, _ := SplitUserHostPort(rawHost)
-	return exec.Command("curl", fmt.Sprintf("%s:%s", host, c.Port), "--max-time", "5")
+	if !c.TargetHost.IsPlainLocalhost() {
+		rawHost := resolveSSHConfigHost(string(c.TargetHost))
+		_, host, _ := SplitUserHostPort(rawHost)
+		return exec.Command("curl", fmt.Sprintf("%s:%s", host, c.Port), "--max-time", "5")
+	}
+	return exec.Command("echo", "Skipping security check for localhost")
 }
 
 func (c *CheckSSHTunnelSecurity) Run(w io.Writer) error {
