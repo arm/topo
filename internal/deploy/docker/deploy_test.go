@@ -49,6 +49,7 @@ func TestNewDeployment(t *testing.T) {
 		want = append(want, operation.NewRunRegistry(port)...)
 		want = append(want,
 			ssh.NewSSHTunnelStart(remoteHost, port, opts.UseSSHControlSockets),
+			ssh.NewCheckSSHTunnelSecurity(remoteHost, port),
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
 			ssh.NewSSHTunnelStop(remoteHost),
 			operation.NewDockerComposeRun(composeFile, remoteHost, upArgs),
@@ -130,7 +131,7 @@ func TestNewDeployment(t *testing.T) {
 		}
 		got, _ := docker.NewDeployment(composeFile, opts)
 
-		wantTunnelStart, wantTunnelEnd := ssh.NewSSHTunnel(remoteHost, opts.Port, opts.UseSSHControlSockets)
+		wantTunnelStart, wantSecurityCheck, wantTunnelEnd := ssh.NewSSHTunnel(remoteHost, opts.Port, opts.UseSSHControlSockets)
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
@@ -138,6 +139,7 @@ func TestNewDeployment(t *testing.T) {
 		want = append(want, operation.NewRunRegistry(port)...)
 		want = append(want,
 			wantTunnelStart,
+			wantSecurityCheck,
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
 			wantTunnelEnd,
 			operation.NewDockerComposeRun(composeFile, remoteHost, upArgs),
