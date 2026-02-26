@@ -16,7 +16,8 @@ linters:
       confidence: medium
 
 issues:
-  exclude-rules:
-    - path: (.+)_test.go
-      linters:
-        - gosec
+  exclusions:
+    rules:
+      - path: (.+)_test.go
+        linters:
+          - gosec
