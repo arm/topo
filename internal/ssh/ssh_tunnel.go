@@ -35,8 +35,10 @@ func formatSSHHost(raw string, user string, host string) string {
 	return user + "@" + hostPart
 }
 
-func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operation.Operation, operation.Operation) {
+func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	start := NewSSHTunnelStart(targetHost, port, useControlSockets)
+	securityCheck := NewCheckSSHTunnelSecurity(targetHost, port)
+
 	var stop operation.Operation
 	if useControlSockets {
 		stop = NewSSHTunnelStop(targetHost)
@@ -44,7 +46,7 @@ func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operati
 		stop = NewSSHTunnelProcessStop(start)
 	}
 
-	return start, stop
+	return start, securityCheck, stop
 }
 
 type SSHTunnelStart struct {
@@ -103,6 +105,45 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 
 func (s *SSHTunnelStart) DryRun(w io.Writer) error {
 	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
+	return nil
+}
+
+type CheckSSHTunnelSecurity struct {
+	TargetHost Host
+	Port       string
+}
+
+func (c *CheckSSHTunnelSecurity) Description() string {
+	return "Check SSH tunnel security"
+}
+
+func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecurity {
+	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
+}
+
+func (c *CheckSSHTunnelSecurity) Command() *exec.Cmd {
+	rawHost := resolveSSHConfigHost(string(c.TargetHost))
+	_, host, _ := SplitUserHostPort(rawHost)
+	return exec.Command("curl", fmt.Sprintf("%s:%s", host, c.Port), "--max-time", "5")
+}
+
+func (c *CheckSSHTunnelSecurity) Run(w io.Writer) error {
+	cmd := c.Command()
+	cmd.Stdout = w
+	cmd.Stderr = w
+
+	err := cmd.Run()
+	if err == nil {
+		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", c.TargetHost)
+	} else {
+		_, _ = fmt.Fprintln(w, "Your SSH tunnel appears to be secure: unable to access registry port without authentication")
+	}
+
+	return nil
+}
+
+func (c *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
+	_, _ = fmt.Fprintln(w, strings.Join(c.Command().Args, " "))
 	return nil
 }
 
