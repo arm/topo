@@ -122,7 +122,7 @@ func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecu
 }
 
 func (c *CheckSSHTunnelSecurity) Command() *exec.Cmd {
-	if !c.TargetHost.IsPlainLocalhost() {
+	if !c.TargetHost.IsLocalhost() {
 		rawHost := resolveSSHConfigHost(string(c.TargetHost))
 		_, host, _ := SplitUserHostPort(rawHost)
 		return exec.Command("curl", fmt.Sprintf("%s:%s", host, c.Port), "--max-time", "5")

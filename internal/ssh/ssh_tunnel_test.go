@@ -200,6 +200,15 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 			want := fmt.Sprintf("curl remote:%s --max-time 5", port)
 			assert.Equal(t, want, got)
 		})
+
+		t.Run("it returns nil when target is localhost", func(t *testing.T) {
+			host := ssh.Host("root@localhost")
+			port := operation.DefaultRegistryPort
+
+			cs := ssh.NewCheckSSHTunnelSecurity(host, port)
+			got := cs.Command()
+			assert.Nil(t, got)
+		})
 	})
 
 	t.Run("DryRun", func(t *testing.T) {
