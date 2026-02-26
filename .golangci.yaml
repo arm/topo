@@ -8,6 +8,7 @@ formatters:
 linters:
   enable:
     - gosec
+
   settings:
     gosec:
       excludes:
