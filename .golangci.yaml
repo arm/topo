@@ -8,7 +8,6 @@ formatters:
 linters:
   enable:
     - gosec
-    - govulncheck
   settings:
     gosec:
       excludes:

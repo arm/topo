@@ -7,25 +7,30 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-jobs:
-  lint:
-    runs-on: [ ubuntu-latest ]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+lint:
+  runs-on: [ ubuntu-latest ]
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-          cache-dependency-path: |
-            **/go.sum
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
-        with:
-          version: v2.7.2
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: 'go.mod'
+        cache: true
+        cache-dependency-path: |
+          **/go.sum
+
+    - name: Run govulncheck
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+      with:
+        version: v2.7.2
 
   build-and-test:
     strategy:
