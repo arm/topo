@@ -25,6 +25,9 @@ func TestGenerate(t *testing.T) {
 			if strings.Contains(command, "remoteproc") {
 				return testutil.CmdWithOutput("remoteproc1 remoteproc2", 0)
 			}
+			if strings.Contains(command, "meminfo") {
+				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
+			}
 			return testutil.CmdWithOutput("", 0)
 		}
 		expected := target.HardwareProfile{
@@ -39,6 +42,7 @@ func TestGenerate(t *testing.T) {
 				{Name: "remoteproc1"},
 				{Name: "remoteproc2"},
 			},
+			TotalMemoryKb: 16384000,
 		}
 
 		conn := target.NewConnection("test", target.ConnectionOptions{WithMockExec: mockExecSSH})

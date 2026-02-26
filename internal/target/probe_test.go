@@ -43,6 +43,8 @@ func TestProbeHardware(t *testing.T) {
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
 			case command == "lscpu --json":
 				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
+			case strings.Contains(command, "meminfo"):
+				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
 			default:
 				return testutil.CmdWithOutput("not found", 1)
 			}
@@ -56,6 +58,7 @@ func TestProbeHardware(t *testing.T) {
 		assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].Model)
 		assert.Equal(t, 2, hw.HostProcessor[0].Cores)
 		assert.Equal(t, []string{"fp", "asimd"}, hw.HostProcessor[0].Features)
+		assert.Equal(t, int64(16384000), hw.TotalMemoryKb)
 	})
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
@@ -76,6 +79,8 @@ func TestProbeHardware(t *testing.T) {
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
 			case command == "lscpu --json":
 				return testutil.CmdWithOutput("not json", 0)
+			case strings.Contains(command, "meminfo"):
+				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
 			default:
 				return testutil.CmdWithOutput("not found", 1)
 			}
@@ -85,6 +90,35 @@ func TestProbeHardware(t *testing.T) {
 		_, err := conn.ProbeHardware()
 
 		assert.ErrorContains(t, err, "collecting CPU info")
+	})
+}
+
+func TestFindKeyValueInString(t *testing.T) {
+	t.Run("finds key and parses value", func(t *testing.T) {
+		text := `MemTotal:       16384000 kB
+MemFree:        8192000 kB`
+
+		got, err := target.FindKeyValueInString("MemTotal", text)
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(16384000), got)
+	})
+
+	t.Run("returns error when key not found", func(t *testing.T) {
+		text := `MemTotal:       16384000 kB`
+
+		got, err := target.FindKeyValueInString("MissingKey", text)
+
+		assert.Error(t, err)
+		assert.Equal(t, int64(0), got)
+	})
+
+	t.Run("returns error when value is invalid", func(t *testing.T) {
+		text := `MemTotal:       notanumber`
+
+		_, err := target.FindKeyValueInString("MemTotal", text)
+
+		assert.Error(t, err)
 	})
 }
 
