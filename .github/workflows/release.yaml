@@ -91,7 +91,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
-          path: dist/topo_darwin_arm64_*/topo
+          path: |
+            dist/topo_darwin_amd64_*/topo
+            dist/topo_darwin_arm64_*/topo
           if-no-files-found: error
 
       - name: Upload unsigned Windows artifacts
