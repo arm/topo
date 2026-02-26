@@ -63,7 +63,7 @@ func TestProbeAuthentication(t *testing.T) {
 		mockExec := newMockExec(map[string]mockResponse{
 			"public": {stdout: "", err: nil},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestProbeAuthentication(t *testing.T) {
 		mockExec := newMockExec(map[string]mockResponse{
 			"public": {stdout: "Host key verification failed", err: errSSH},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
@@ -91,7 +91,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"public":   {stdout: "Permission denied", err: errSSH},
 			"password": {stdout: "Host key verification failed", err: errSSH},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
@@ -105,7 +105,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"public":   {stdout: "Permission denied", err: errSSH},
 			"password": {stdout: "Authentication failed", err: errSSH},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrPasswordAuthentication)
@@ -117,7 +117,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"public":   {stdout: "Permission denied", err: errSSH},
 			"password": {stdout: "ok", err: nil},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"public":   {stdout: "Permission denied", err: errSSH},
 			"password": {stdout: "Some other error", err: errSSH},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: true, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.Error(t, err)
@@ -144,7 +144,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"knownhost": {stdout: "Permission denied", err: errSSH},
 			"public":    {stdout: "", err: nil},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: false, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.NoError(t, err)
@@ -158,7 +158,7 @@ func TestProbeAuthentication(t *testing.T) {
 		mockExec := newMockExec(map[string]mockResponse{
 			"knownhost": {stdout: "HOST KEY VERIFICATION FAILED", err: errSSH},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: false, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
@@ -170,7 +170,7 @@ func TestProbeAuthentication(t *testing.T) {
 		mockExec := newMockExec(map[string]mockResponse{
 			"knownhost": {stdout: "dial tcp: lookup host: no such host", err: errSSH},
 		}, &calls)
-		opts := target.ConnectionOptions{AuthProbeEnabled: true, AcceptNewHostKeys: false, WithMockExec: mockExec}
+		opts := target.ConnectionOptions{AcceptNewHostKeys: false, WithMockExec: mockExec}
 		conn := target.NewConnection("user@host", opts)
 		err := conn.ProbeAuthentication()
 		require.Error(t, err)
