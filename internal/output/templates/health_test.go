@@ -114,16 +114,16 @@ func TestPrintHealthReport(t *testing.T) {
 			require.NoError(t, err)
 
 			want := `{
-				"Host": {
-					"Dependencies": [
-						{"Name":"Flux Capacitor","Healthy":true,"Value":""}
+				"host": {
+					"dependencies": [
+						{"name":"Flux Capacitor","healthy":true,"value":""}
 					]
 				},
-				"Target": {
-					"IsLocalhost": false,
-					"Connectivity": {"Name":"Connected","Healthy":true,"Value":""},
-					"Dependencies": [],
-					"SubsystemDriver": {"Name":"","Healthy":false,"Value":""}
+				"target": {
+					"is_localhost": false,
+					"connectivity": {"name":"Connected","healthy":true,"value":""},
+					"dependencies": [],
+					"subsystem_driver": {"name":"","healthy":false,"value":""}
 				}
 			}`
 

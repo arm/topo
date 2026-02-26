@@ -15,24 +15,24 @@ const passwordAuthErrorMessage = `note: Topo does not support SSH password-based
 - run 'topo setup-keys --target %s' to let Topo generate keys and configure passwordless authentication`
 
 type HealthCheck struct {
-	Name    string
-	Healthy bool
-	Value   string
+	Name    string `json:"name"`
+	Healthy bool   `json:"healthy"`
+	Value   string `json:"value"`
 }
 type HostReport struct {
-	Dependencies []HealthCheck
+	Dependencies []HealthCheck `json:"dependencies"`
 }
 
 type TargetReport struct {
-	IsLocalhost     bool
-	Connectivity    HealthCheck
-	Dependencies    []HealthCheck
-	SubsystemDriver HealthCheck
+	IsLocalhost     bool          `json:"is_localhost"`
+	Connectivity    HealthCheck   `json:"connectivity"`
+	Dependencies    []HealthCheck `json:"dependencies"`
+	SubsystemDriver HealthCheck   `json:"subsystem_driver"`
 }
 
 type Report struct {
-	Host   HostReport
-	Target TargetReport
+	Host   HostReport   `json:"host"`
+	Target TargetReport `json:"target"`
 }
 
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
