@@ -57,11 +57,6 @@ func (proc *HostProcessor) ExtractArmFeatures() []string {
 	return res
 }
 
-func (c *Connection) ProbeConnection() error {
-	_, err := c.Run("true")
-	return err
-}
-
 func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	var hp HardwareProfile
 
