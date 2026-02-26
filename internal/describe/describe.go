@@ -12,7 +12,7 @@ import (
 const TargetDescriptionFilename = "target-description.yaml"
 
 func GenerateTargetDescription(conn target.Connection) (target.HardwareProfile, error) {
-	if err := conn.ProbeConnection(); err != nil {
+	if err := conn.ProbeAuthentication(); err != nil {
 		return target.HardwareProfile{}, err
 	}
 

@@ -43,7 +43,6 @@ type Connection struct {
 }
 
 type ConnectionOptions struct {
-	AuthProbeEnabled  bool
 	AcceptNewHostKeys bool
 	AuthProbeInput    io.Reader
 	AuthProbeOutput   io.Writer
@@ -110,10 +109,6 @@ func (c *Connection) BinaryExists(bin string) (bool, error) {
 }
 
 func (c *Connection) ProbeAuthentication() error {
-	if !c.opts.AuthProbeEnabled {
-		return nil
-	}
-
 	if !c.opts.AcceptNewHostKeys {
 		err := c.runSSHAuthenticationProbe(knownHostProbeArgs)
 		if err != nil && !errors.Is(err, ErrAuthenticationFailure) {
