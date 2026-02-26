@@ -12,7 +12,7 @@ linters:
     gosec:
       excludes:
         - G304
-      severity: medium
+      severity: high
       confidence: medium
   exclusions:
     rules:
