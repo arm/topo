@@ -134,7 +134,7 @@ func getLatestReleaseTarAddress(repoURL string) (*url.URL, error) {
 
 	base.Path = path.Join(
 		"repos",
-		url.PathEscape(repoURL),
+		repoURL,
 		"releases",
 		"latest",
 	)
