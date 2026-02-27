@@ -19,17 +19,6 @@ var getProjectCmd = &cobra.Command{
 	},
 }
 
-var getConfigMetadataCmd = &cobra.Command{
-	Use:    "get-config-metadata",
-	Short:  "Show config metadata",
-	Hidden: true,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		cmd.SilenceUsage = true
-		return vscode.PrintConfigMetadata(os.Stdout)
-	},
-}
-
 func init() {
 	rootCmd.AddCommand(getProjectCmd)
-	rootCmd.AddCommand(getConfigMetadataCmd)
 }
