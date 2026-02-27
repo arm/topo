@@ -120,10 +120,10 @@ func TestPrintHealthReport(t *testing.T) {
 					]
 				},
 				"target": {
-					"is_localhost": false,
+					"isLocalhost": false,
 					"connectivity": {"name":"Connected","healthy":true,"value":""},
 					"dependencies": [],
-					"subsystem_driver": {"name":"","healthy":false,"value":""}
+					"subsystemDriver": {"name":"","healthy":false,"value":""}
 				}
 			}`
 

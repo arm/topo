@@ -24,10 +24,10 @@ type HostReport struct {
 }
 
 type TargetReport struct {
-	IsLocalhost     bool          `json:"is_localhost"`
+	IsLocalhost     bool          `json:"isLocalhost"`
 	Connectivity    HealthCheck   `json:"connectivity"`
 	Dependencies    []HealthCheck `json:"dependencies"`
-	SubsystemDriver HealthCheck   `json:"subsystem_driver"`
+	SubsystemDriver HealthCheck   `json:"subsystemDriver"`
 }
 
 type Report struct {
