@@ -144,6 +144,14 @@ jobs:
             -f "binary-name=topo.exe" \
             -f "signing-artifactory-repo=edge-ai-tooling.topo-cli-signing" \
 
+      - name: Upload linux artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: topo-v${{ steps.version.outputs.version }}-linux
+          path: |
+            dist/topo_linux_*/topo
+          if-no-files-found: error
+
       - name: Trigger upload archives to artifactory workflow for linux artifacts
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
