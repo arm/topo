@@ -83,8 +83,13 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
           path: |
+<<<<<<< HEAD
             dist/topo_darwin_amd64_*/topo
             dist/topo_darwin_arm64_*/topo
+=======
+            dist/topo_darwin_amd64_*
+            dist/topo_darwin_arm64_*
+>>>>>>> 2e47013 (fix: publish all artifacts including readmes for signing and uploading)
           if-no-files-found: error
 
       - name: Upload unsigned Windows artifacts
@@ -92,8 +97,8 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-windows-unsigned
           path: |
-            dist/topo_windows_amd64_*/topo.exe
-            dist/topo_windows_arm64_*/topo.exe
+            dist/topo_windows_amd64_*
+            dist/topo_windows_arm64_*
           if-no-files-found: error
 
       - name: Create GitHub App token for signer
@@ -149,7 +154,7 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-linux
           path: |
-            dist/topo_linux_*/topo
+            dist/topo_linux_*
           if-no-files-found: error
 
       - name: Trigger upload archives to artifactory workflow for linux artifacts
@@ -166,7 +171,7 @@ jobs:
             --ref "$REF" \
             -f "run-id=$UPSTREAM_RUN_ID" \
             -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "archive-name=topo-${{ steps.version.outputs.version }}-linux" \
+            -f "archive-name=topo-v${{ steps.version.outputs.version }}-linux" \
             -f "artifactory-path=linux" \
             -f "repo-name=topo" \
             -f "org-name=arm" \
