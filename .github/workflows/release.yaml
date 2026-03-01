@@ -79,7 +79,7 @@ jobs:
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
 
       - name: Upload all archive artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: topo-v${{ steps.version.outputs.version }}-archives
           path: |
@@ -88,7 +88,7 @@ jobs:
             dist/checksums.txt
 
       - name: Upload unsigned macOS artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
           path: |
@@ -97,7 +97,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload unsigned Windows artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: topo-v${{ steps.version.outputs.version }}-windows-unsigned
           path: |
