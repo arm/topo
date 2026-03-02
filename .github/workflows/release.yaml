@@ -83,13 +83,8 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
           path: |
-<<<<<<< HEAD
-            dist/topo_darwin_amd64_*/topo
-            dist/topo_darwin_arm64_*/topo
-=======
             dist/topo_darwin_amd64_*
             dist/topo_darwin_arm64_*
->>>>>>> 2e47013 (fix: publish all artifacts including readmes for signing and uploading)
           if-no-files-found: error
 
       - name: Upload unsigned Windows artifacts
