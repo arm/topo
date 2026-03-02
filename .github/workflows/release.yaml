@@ -78,6 +78,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
 
+      - name: Place README.md in every architecture binary folder
+        run: |
+          for dir in dist/*/; do
+            cp README.md "$dir"
+          done
+
       - name: Upload unsigned macOS artifact
         uses: actions/upload-artifact@v6
         with:
