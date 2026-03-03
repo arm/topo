@@ -105,9 +105,9 @@ type jsonObject map[string]any
 
 func unmarshalNDJSON(ndJSON []byte) ([]jsonObject, error) {
 	objects := []jsonObject{}
-	lines := bytes.Split(bytes.TrimSpace(ndJSON), []byte("\n"))
+	lines := bytes.SplitSeq(bytes.TrimSpace(ndJSON), []byte("\n"))
 
-	for _, line := range lines {
+	for line := range lines {
 		line = bytes.TrimSpace(line)
 		if len(line) == 0 {
 			continue

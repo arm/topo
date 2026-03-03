@@ -1,5 +1,7 @@
 package arguments
 
+import "strings"
+
 import "fmt"
 
 // StrictProviderChain chains multiple providers and ensures all required arguments are resolved.
@@ -58,15 +60,16 @@ func (p *StrictProviderChain) Provide(args []Arg) ([]ResolvedArg, error) {
 type MissingArgsError []Arg
 
 func (e MissingArgsError) Error() string {
-	msg := "missing required build arguments:\n"
+	var msg strings.Builder
+	msg.WriteString("missing required build arguments:\n")
 	for _, arg := range e {
-		msg += fmt.Sprintf("  %s:\n", arg.Name)
-		msg += fmt.Sprintf("    description: %s\n", arg.Description)
+		msg.WriteString(fmt.Sprintf("  %s:\n", arg.Name))
+		msg.WriteString(fmt.Sprintf("    description: %s\n", arg.Description))
 		if arg.Example != "" {
-			msg += fmt.Sprintf("    example: %s\n", arg.Example)
+			msg.WriteString(fmt.Sprintf("    example: %s\n", arg.Example))
 		}
 	}
-	return msg
+	return msg.String()
 }
 
 func filterProvided(args []Arg, provided map[string]string) []Arg {

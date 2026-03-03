@@ -73,8 +73,8 @@ func (t *DockerComposePipeTransfer) getImagesFromCompose(cmdOutput io.Writer) ([
 		return nil, fmt.Errorf("failed to get image names from compose file: %w", err)
 	}
 	var imageNames []string
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(strings.TrimSpace(string(output)), "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line != "" {
 			imageNames = append(imageNames, line)
