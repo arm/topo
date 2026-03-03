@@ -7,10 +7,15 @@ import (
 	"github.com/arm/topo/internal/catalog"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
-var templateFilters catalog.TemplateFilters
+var (
+	templateFilters       catalog.TemplateFilters
+	targetDescriptionPath string
+)
 
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
@@ -22,9 +27,12 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
-		resolvedTarget, exists := lookupTarget(cmd)
-		if exists {
-			templateFilters.Target = resolvedTarget
+		// even if the target flag was not used, TOPO_TARGET may be set, so we check if the resolved target is non-empty
+		if targetDescriptionPath == "" {
+			resolvedTarget, exists := lookupTarget(cmd)
+			if exists && targetDescriptionPath == "" {
+				templateFilters.Target = resolvedTarget
+			}
 		}
 
 		repos, err := catalog.ParseRepos(catalog.TemplatesJSON)
@@ -36,7 +44,23 @@ var templatesCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("could not filter templates: %w", err)
 		}
-		return printable.Print(templates.RepoCollection(repos), os.Stdout, outputFormat)
+
+		reposWithCompatibility := catalog.WithCompatibility(repos)
+
+		if targetDescriptionPath != "" {
+			description, err := os.ReadFile(targetDescriptionPath)
+			if err != nil {
+				return fmt.Errorf("failed to read target description file %q: %w", targetDescriptionPath, err)
+			}
+
+			var profile target.HardwareProfile
+			if err := yaml.Unmarshal(description, &profile); err != nil {
+				return fmt.Errorf("failed to parse target description file %q: %w", targetDescriptionPath, err)
+			}
+			reposWithCompatibility = catalog.AnnotateCompatibility(profile, reposWithCompatibility)
+		}
+
+		return printable.Print(templates.RepoCollection(reposWithCompatibility), os.Stdout, outputFormat)
 	},
 }
 
@@ -48,6 +72,13 @@ func init() {
 		[]string{},
 		"Only show templates that use the indicated arm feature (NEON, SVE, SME, SVE2, SME2)",
 	)
+	templatesCmd.Flags().StringVar(
+		&targetDescriptionPath,
+		"target-description",
+		"",
+		"Path to the target description file used to show template compatibility",
+	)
 	templatesCmd.MarkFlagsMutuallyExclusive("target", "feature")
+	templatesCmd.MarkFlagsMutuallyExclusive("target", "target-description")
 	rootCmd.AddCommand(templatesCmd)
 }

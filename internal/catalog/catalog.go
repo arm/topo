@@ -23,6 +23,7 @@ type Repo struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Features    []string `json:"features"`
+	MinRAMKb    int64    `json:"min_ram_kb,omitempty"`
 	URL         string   `json:"url"`
 	Ref         string   `json:"ref"`
 }

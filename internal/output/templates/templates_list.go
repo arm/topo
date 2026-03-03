@@ -8,7 +8,7 @@ import (
 	"github.com/arm/topo/internal/catalog"
 )
 
-type RepoCollection []catalog.Repo
+type RepoCollection []catalog.RepoWithCompatibility
 
 const repoTemplate = `
 {{- define "featuresRow" -}}
@@ -24,7 +24,7 @@ const repoTemplate = `
 {{- end }}
 
 {{- define "repoRow" }}
-{{- cyan .Name }} | {{ blue .URL }} | {{ yellow .Ref }}
+{{- if .Compatibility }}{{ compatibilityMark .Compatibility }} {{ end }}{{ cyan .Name }} | {{ blue .URL }} | {{ yellow .Ref }}
 {{- template "featuresRow" . }}
 {{- template "descriptionRow" . }}
 {{- end }}

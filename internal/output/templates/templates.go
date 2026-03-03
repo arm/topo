@@ -4,16 +4,18 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/arm/topo/internal/catalog"
 	"github.com/arm/topo/internal/output/term"
 )
 
 func getFuncMap(isTTY bool) template.FuncMap {
 	f := template.FuncMap{
-		"join":   strings.Join,
-		"wrap":   func(s string) string { return term.WrapText(s, 80, 2) },
-		"cyan":   func(s string) string { return s },
-		"blue":   func(s string) string { return s },
-		"yellow": func(s string) string { return s },
+		"join":              strings.Join,
+		"wrap":              func(s string) string { return term.WrapText(s, 80, 2) },
+		"cyan":              func(s string) string { return s },
+		"blue":              func(s string) string { return s },
+		"yellow":            func(s string) string { return s },
+		"compatibilityMark": plainCompatibilityMark,
 	}
 
 	if isTTY {
@@ -23,4 +25,14 @@ func getFuncMap(isTTY bool) template.FuncMap {
 	}
 
 	return f
+}
+
+func plainCompatibilityMark(c *catalog.Compatibility) string {
+	if c == nil {
+		return ""
+	}
+	if c.Supported {
+		return "✅"
+	}
+	return "❌"
 }
