@@ -15,7 +15,9 @@ func TestInstall(t *testing.T) {
 
 	t.Run("installs the binary", func(t *testing.T) {
 		targetURL := fmt.Sprintf("ssh://%s", target.SSHConnectionString)
+
 		out, err := installRemoteproc(topo, targetURL)
+
 		require.NoError(t, err, out)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
 	})
@@ -23,13 +25,16 @@ func TestInstall(t *testing.T) {
 	t.Run("replaces the binary when installing a new version", func(t *testing.T) {
 		targetURL := fmt.Sprintf("ssh://%s", target.SSHConnectionString)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
+
 		out, err := installRemoteproc(topo, targetURL)
+
 		require.NoError(t, err, out)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
 	})
 
 	t.Run("fails to install when the target cannot connect", func(t *testing.T) {
 		_, err := installRemoteproc(topo, "fake@target")
+
 		require.Error(t, err)
 	})
 }
@@ -42,7 +47,9 @@ func requireInstalled(t *testing.T, binary, targetURL string) {
 		binary,
 		">/dev/null && echo ok",
 	)
+
 	vout, verr := verifyCmd.CombinedOutput()
+
 	require.NoError(t, verr, "verify failed: %s\noutput:\n%s", verifyCmd.String(), vout)
 	require.Contains(t, string(vout), "ok")
 }
