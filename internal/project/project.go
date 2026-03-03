@@ -16,8 +16,7 @@ import (
 
 func Clone(path string, src template.Source, argProvider arguments.Provider) ([]logger.Entry, error) {
 	if err := src.CopyTo(path); err != nil {
-		var errDestDirExists template.DestDirExistsError
-		if errors.As(err, &errDestDirExists) {
+		if errDestDirExists, ok := errors.AsType[template.DestDirExistsError](err); ok {
 			return nil, fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
 		}
 		return nil, fmt.Errorf("failed to copy Service Template: %w", err)
