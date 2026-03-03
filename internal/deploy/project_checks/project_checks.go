@@ -36,9 +36,9 @@ func EnsureProjectIsLinuxArm64Ready(composePath string) error {
 		}
 
 		if isPlatformMissing(svc.Platform) {
-			builder.WriteString(fmt.Sprintf("- service %q is missing platform declaration (set platform: %s or configure remoteproc)\n", svcName, linuxArm64Platform))
+			fmt.Fprintf(&builder, "- service %q is missing platform declaration (set platform: %s or configure remoteproc)\n", svcName, linuxArm64Platform)
 		} else if isPlatformMismatch(svc.Platform) {
-			builder.WriteString(fmt.Sprintf("- service %q declares platform %q (expected %s)\n", svcName, svc.Platform, linuxArm64Platform))
+			fmt.Fprintf(&builder, "- service %q declares platform %q (expected %s)\n", svcName, svc.Platform, linuxArm64Platform)
 		}
 	}
 
