@@ -63,10 +63,10 @@ func (e MissingArgsError) Error() string {
 	var msg strings.Builder
 	msg.WriteString("missing required build arguments:\n")
 	for _, arg := range e {
-		msg.WriteString(fmt.Sprintf("  %s:\n", arg.Name))
-		msg.WriteString(fmt.Sprintf("    description: %s\n", arg.Description))
+		fmt.Fprintf(&msg, "  %s:\n", arg.Name)
+		fmt.Fprintf(&msg, "    description: %s\n", arg.Description)
 		if arg.Example != "" {
-			msg.WriteString(fmt.Sprintf("    example: %s\n", arg.Example))
+			fmt.Fprintf(&msg, "    example: %s\n", arg.Example)
 		}
 	}
 	return msg.String()
