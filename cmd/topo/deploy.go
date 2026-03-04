@@ -9,6 +9,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/docker/operation"
+	goperation "github.com/arm/topo/internal/operation"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
@@ -106,7 +107,7 @@ Use --dry-run to see what commands would be executed without actually running th
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
-		stop := operation.SetupExitCleanup(os.Stdout, cleanup, os.Exit)
+		stop := goperation.SetupExitCleanup(os.Stdout, cleanup, os.Exit)
 
 		defer func() {
 			entries := stop()
