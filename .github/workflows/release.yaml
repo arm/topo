@@ -157,7 +157,7 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-linux
           path: |
-            dist/topo_*_linux_*
+            dist/topo_linux_*
           if-no-files-found: error
 
       - name: Trigger archive and upload to artifactory workflow for linux artifacts
