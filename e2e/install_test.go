@@ -16,7 +16,7 @@ func TestInstall(t *testing.T) {
 	t.Run("installs the binary", func(t *testing.T) {
 		targetURL := fmt.Sprintf("ssh://%s", target.SSHConnectionString)
 
-		out, err := installRemoteproc(topo, targetURL)
+		out, err := installRemoteprocRuntime(topo, targetURL)
 
 		require.NoError(t, err, out)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
@@ -26,11 +26,19 @@ func TestInstall(t *testing.T) {
 		targetURL := fmt.Sprintf("ssh://%s", target.SSHConnectionString)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
 
-		out, err := installRemoteproc(topo, targetURL)
+		out, err := installRemoteprocRuntime(topo, targetURL)
 
 		require.NoError(t, err, out)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
 	})
+}
+
+func installRemoteprocRuntime(topo string, targetURL string) (string, error) {
+	args := []string{"install", "remoteproc-runtime", "--target", targetURL}
+	installCmd := exec.Command(topo, args...)
+
+	out, err := installCmd.CombinedOutput()
+	return string(out), err
 }
 
 func requireInstalled(t *testing.T, binary, targetURL string) {
@@ -46,12 +54,4 @@ func requireInstalled(t *testing.T, binary, targetURL string) {
 
 	require.NoError(t, verr, "verify failed: %s\noutput:\n%s", verifyCmd.String(), vout)
 	require.Contains(t, string(vout), "ok")
-}
-
-func installRemoteproc(topo string, targetURL string) (string, error) {
-	args := []string{"install", "remoteproc", "--target", targetURL}
-	installCmd := exec.Command(topo, args...)
-
-	out, err := installCmd.CombinedOutput()
-	return string(out), err
 }
