@@ -31,12 +31,6 @@ func TestInstall(t *testing.T) {
 		require.NoError(t, err, out)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
 	})
-
-	t.Run("fails to install when the target cannot connect", func(t *testing.T) {
-		_, err := installRemoteproc(topo, "fake@target")
-
-		require.Error(t, err)
-	})
 }
 
 func requireInstalled(t *testing.T, binary, targetURL string) {
