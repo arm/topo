@@ -20,7 +20,6 @@ func resolveSSHConfigHost(raw string) (string, string, string) {
 
 	output, err := exec.Command("ssh", "-G", raw).Output()
 	if err != nil {
-
 		return "", "", ""
 	}
 

@@ -152,7 +152,10 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 }
 
 func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
+	if !ct.TargetHost.IsLocalhost() {
+		_, err := fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
+		return err
+	}
 	return nil
 }
 
