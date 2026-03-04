@@ -113,7 +113,7 @@ type CheckSSHTunnelSecurity struct {
 	Port       string
 }
 
-func (c *CheckSSHTunnelSecurity) Description() string {
+func (ct *CheckSSHTunnelSecurity) Description() string {
 	return "Check SSH tunnel security"
 }
 
@@ -121,19 +121,19 @@ func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecu
 	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
 }
 
-func (c *CheckSSHTunnelSecurity) Command() *exec.Cmd {
-	if !c.TargetHost.IsLocalhost() {
-		_, host, _ := resolveSSHConfigHost(string(c.TargetHost))
+func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
+	if !ct.TargetHost.IsLocalhost() {
+		_, host, _ := resolveSSHConfigHost(string(ct.TargetHost))
 		if host == "" {
 			return nil
 		}
-		return exec.Command("curl", fmt.Sprintf("%s:%s", host, c.Port), "--max-time", "5")
+		return exec.Command("curl", fmt.Sprintf("%s:%s", host, ct.Port), "--max-time", "5")
 	}
 	return nil
 }
 
-func (c *CheckSSHTunnelSecurity) Run(w io.Writer) error {
-	cmd := c.Command()
+func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
+	cmd := ct.Command()
 	if cmd == nil {
 		_, _ = fmt.Fprintln(w, "SSH tunnel target is localhost, skipping security check")
 		return nil
@@ -143,7 +143,7 @@ func (c *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 
 	err := cmd.Run()
 	if err == nil {
-		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", c.TargetHost)
+		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetHost)
 	} else {
 		_, _ = fmt.Fprintln(w, "Your SSH tunnel appears to be secure: unable to access registry port without authentication")
 	}
@@ -151,8 +151,8 @@ func (c *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 	return nil
 }
 
-func (c *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(c.Command().Args, " "))
+func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
+	_, _ = fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
 	return nil
 }
 
