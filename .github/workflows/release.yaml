@@ -78,10 +78,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
 
-      - name: Place README.md in every architecture binary folder
+      - name: delete the build folders now the archives are there
+        run: find dist -maxdepth 1 -type d -name 'topo_*_*_v*' -exec rm -rf {} +
+
+      - name: decompress the archives for signing
         run: |
-          for dir in dist/*/; do
-            cp README.md "$dir"
+          for archive in dist/*.tar.gz; do
+            base="${archive##*/}"
+            dir="dist/${base%.tar.gz}"
+            mkdir -p "$dir"
+            tar -xzf "$archive" -C "$dir"
+          done
+          for archive in dist/*.zip; do
+            base="${archive##*/}"
+            dir="dist/${base%.zip}"
+            mkdir -p "$dir"
+            unzip -o "$archive" -d "$dir"
           done
 
       - name: Upload unsigned macOS artifact
