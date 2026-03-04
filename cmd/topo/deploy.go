@@ -9,8 +9,8 @@ import (
 
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/docker/operation"
-	goperation "github.com/arm/topo/internal/operation"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
+	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
