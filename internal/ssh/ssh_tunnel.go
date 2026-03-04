@@ -103,8 +103,8 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 }
 
 func (s *SSHTunnelStart) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
-	return nil
+	_, err := fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
+	return err
 }
 
 type CheckSSHTunnelSecurity struct {
@@ -200,8 +200,8 @@ func (s *SSHTunnelStop) Run(w io.Writer) error {
 }
 
 func (s *SSHTunnelStop) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
-	return nil
+	_, err := fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
+	return err
 }
 
 type SSHTunnelProcessStop struct {
@@ -244,6 +244,6 @@ func (s *SSHTunnelProcessStop) Run(w io.Writer) error {
 }
 
 func (s *SSHTunnelProcessStop) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
-	return nil
+	_, err := fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
+	return err
 }
