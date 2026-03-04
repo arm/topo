@@ -138,12 +138,12 @@ topo stop --target my-board
 
 The Getting Started walkthrough above covers the core flow. These additional commands are available:
 
-| Command              | When to use it                                                                                              |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `init`               | Scaffold a new empty project instead of cloning a template                                                  |
-| `extend`             | Add services from a template into an existing project                                                       |
-| `service remove`     | Remove a service from your compose file                                                                     |
-| `setup-keys`         | Set up SSH key authentication if your target currently uses password-based SSH, which Topo does not support |
-| `install remoteproc` | Install the remoteproc runtime on your target                                                               |
+| Command                      | When to use it                                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `init`                       | Scaffold a new empty project instead of cloning a template                                                  |
+| `extend`                     | Add services from a template into an existing project                                                       |
+| `service remove`             | Remove a service from your compose file                                                                     |
+| `setup-keys`                 | Set up SSH key authentication if your target currently uses password-based SSH, which Topo does not support |
+| `install remoteproc-runtime` | Install the remoteproc runtime on your target                                                               |
 
 Run `topo <command> --help` for full usage details.
