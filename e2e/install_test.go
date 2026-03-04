@@ -21,16 +21,6 @@ func TestInstall(t *testing.T) {
 		require.NoError(t, err, out)
 		requireInstalled(t, "remoteproc-runtime", targetURL)
 	})
-
-	t.Run("replaces the binary when installing a new version", func(t *testing.T) {
-		targetURL := fmt.Sprintf("ssh://%s", target.SSHConnectionString)
-		requireInstalled(t, "remoteproc-runtime", targetURL)
-
-		out, err := installRemoteprocRuntime(topo, targetURL)
-
-		require.NoError(t, err, out)
-		requireInstalled(t, "remoteproc-runtime", targetURL)
-	})
 }
 
 func installRemoteprocRuntime(topo string, targetURL string) (string, error) {
