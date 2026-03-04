@@ -17,8 +17,8 @@ var installCmd = &cobra.Command{
 	Short: "Install components to target",
 }
 
-var installRemoteprocCmd = &cobra.Command{
-	Use:   "remoteproc",
+var installRemoteprocRuntimeCmd = &cobra.Command{
+	Use:   "remoteproc-runtime",
 	Short: "Install remoteproc-runtime and shim to a location on the target's PATH",
 	Long: `Install remoteproc-runtime and shim to a location on the target's PATH.
 
@@ -50,8 +50,8 @@ Falls back to ~/bin if no suitable locations are automatically found.
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-	installCmd.AddCommand(installRemoteprocCmd)
-	addTargetFlag(installRemoteprocCmd)
+	installCmd.AddCommand(installRemoteprocRuntimeCmd)
+	addTargetFlag(installRemoteprocRuntimeCmd)
 }
 
 func installRemoteprocRuntime(targetHost ssh.Host) (printable.Printable, error) {
