@@ -13,18 +13,19 @@ type sshConfigValues struct {
 	port string
 }
 
-func resolveSSHConfigHost(raw string) string {
+func resolveSSHConfigHost(raw string) (string, string, string) {
 	if raw == "" || isExplicitSSHHost(raw) {
-		return raw
+		return SplitUserHostPort(raw)
 	}
 
 	output, err := exec.Command("ssh", "-G", raw).Output()
 	if err != nil {
-		return raw
+
+		return "", "", ""
 	}
 
 	values := parseSSHConfigOutput(output)
-	return buildResolvedHost(raw, values)
+	return values.host, values.user, values.port
 }
 
 func isExplicitSSHHost(raw string) bool {
@@ -58,24 +59,4 @@ func parseSSHConfigOutput(output []byte) sshConfigValues {
 		}
 	}
 	return values
-}
-
-func buildResolvedHost(raw string, values sshConfigValues) string {
-	hostPart := values.host
-	if hostPart == "" {
-		hostPart = raw
-	}
-
-	if strings.Contains(hostPart, ":") {
-		hostPart = "[" + hostPart + "]"
-	}
-
-	if values.port != "" {
-		hostPart = hostPart + ":" + values.port
-	}
-
-	if values.user == "" {
-		return hostPart
-	}
-	return values.user + "@" + hostPart
 }
