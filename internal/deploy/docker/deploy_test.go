@@ -10,7 +10,6 @@ import (
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
-	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,7 @@ func TestNewDeployment(t *testing.T) {
 		deployOpts := docker.DeployOptions{TargetHost: remoteHost}
 		got, _ := docker.NewDeployment(composeFile, deployOpts)
 
-		want := goperation.Sequence{
+		want := operation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePipeTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
@@ -42,7 +41,7 @@ func TestNewDeployment(t *testing.T) {
 		}
 		got, _ := docker.NewDeployment(composeFile, opts)
 
-		want := goperation.Sequence{
+		want := operation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 		}
@@ -92,7 +91,7 @@ func TestNewDeployment(t *testing.T) {
 					ForceRecreate: tt.opts.ForceRecreate,
 					NoRecreate:    tt.opts.NoRecreate,
 				}
-				want := goperation.Sequence{
+				want := operation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 					operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 					operation.NewDockerComposeRun(composeFile, ssh.PlainLocalhost, upArgs),
@@ -117,7 +116,7 @@ func TestNewDeployment(t *testing.T) {
 		deployOpts := docker.DeployOptions{TargetHost: localHost, WithRegistry: true}
 		_, cleanup := docker.NewDeployment(composeFile, deployOpts)
 
-		var want goperation.Operation = nil
+		var want operation.Operation = nil
 		assert.Equal(t, want, cleanup)
 	})
 
@@ -131,7 +130,7 @@ func TestNewDeployment(t *testing.T) {
 		got, _ := docker.NewDeployment(composeFile, opts)
 
 		wantTunnelStart, wantTunnelEnd := ssh.NewSSHTunnel(remoteHost, opts.Port, opts.UseSSHControlSockets)
-		want := goperation.Sequence{
+		want := operation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 		}

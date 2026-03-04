@@ -10,7 +10,6 @@ import (
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
-	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,7 @@ func TestNewDeploymentStop(t *testing.T) {
 
 		got := docker.NewDeploymentStop(composeFile, remoteHost)
 
-		want := goperation.Sequence{
+		want := operation.Sequence{
 			operation.NewDockerComposeStop(composeFile, remoteHost),
 		}
 		assert.Equal(t, want, got)
@@ -33,7 +32,7 @@ func TestNewDeploymentStop(t *testing.T) {
 	t.Run("runs stop operation for local host", func(t *testing.T) {
 		got := docker.NewDeploymentStop(composeFile, ssh.PlainLocalhost)
 
-		want := goperation.Sequence{
+		want := operation.Sequence{
 			operation.NewDockerComposeStop(composeFile, ssh.PlainLocalhost),
 		}
 		assert.Equal(t, want, got)

@@ -5,17 +5,17 @@ import (
 	"os"
 	"path/filepath"
 
-	goperation "github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 )
 
-func NewKeySetup(target string, privKeyPath string) (goperation.Sequence, error) {
-	ops := []goperation.Operation{
+func NewKeySetup(target string, privKeyPath string) (operation.Sequence, error) {
+	ops := []operation.Operation{
 		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", target, "ed25519", privKeyPath, sshkeygen.SSHKeyGenOptions{}),
 		pubkeytransfer.NewPubKeyTransfer("Transfer public key to target and set it as an authorized key", target, privKeyPath, pubkeytransfer.PubKeyTransferOptions{}),
 	}
-	return goperation.NewSequence(ops...), nil
+	return operation.NewSequence(ops...), nil
 }
 
 func GetDefaultPrivateKeyPath(targetSlug string) (string, error) {

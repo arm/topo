@@ -7,7 +7,6 @@ import (
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
-	op "github.com/arm/topo/internal/operation"
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
@@ -20,9 +19,9 @@ func TestNewRunRegistry(t *testing.T) {
 
 		got := operation.NewRunRegistry(port)
 
-		want := op.NewSequence(
+		want := operation.NewSequence(
 			operation.NewDockerPull(ssh.PlainLocalhost, "registry:2"),
-			op.NewConditional(
+			operation.NewConditional(
 				operation.NewContainerExistsPredicate(ssh.PlainLocalhost, operation.RegistryContainerName),
 				operation.NewDockerStart(ssh.PlainLocalhost, operation.RegistryContainerName),
 				operation.NewRegistryRunWrapper(operation.NewDockerRun(ssh.PlainLocalhost, "registry:2", operation.RegistryContainerName,
