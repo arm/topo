@@ -36,7 +36,7 @@ func TestNewDeployment(t *testing.T) {
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteHost := ssh.Host("user@remote")
 		port := operation.DefaultRegistryPort
-		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false, Port: port, UseSSHControlSockets: true}
+		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false, RegistryPort: port, UseSSHControlSockets: true}
 		upArgs := operation.DockerComposeUpArgs{
 			ForceRecreate: opts.ForceRecreate,
 		}
@@ -124,13 +124,13 @@ func TestNewDeployment(t *testing.T) {
 	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
 		remoteHost := ssh.Host("user@remote")
 		port := operation.DefaultRegistryPort
-		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false, Port: port, UseSSHControlSockets: false}
+		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false, RegistryPort: port, UseSSHControlSockets: false}
 		upArgs := operation.DockerComposeUpArgs{
 			ForceRecreate: opts.ForceRecreate,
 		}
 		got, _ := docker.NewDeployment(composeFile, opts)
 
-		wantTunnelStart, wantTunnelEnd := ssh.NewSSHTunnel(remoteHost, opts.Port, opts.UseSSHControlSockets)
+		wantTunnelStart, wantTunnelEnd := ssh.NewSSHTunnel(remoteHost, opts.RegistryPort, opts.UseSSHControlSockets)
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
