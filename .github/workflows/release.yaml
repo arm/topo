@@ -101,8 +101,8 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
           path: |
-            dist/topo_darwin_amd64_*
-            dist/topo_darwin_arm64_*
+            dist/topo_darwin_amd64
+            dist/topo_darwin_arm64
           if-no-files-found: error
 
       - name: Upload unsigned Windows artifacts
@@ -110,8 +110,8 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-windows-unsigned
           path: |
-            dist/topo_windows_amd64_*
-            dist/topo_windows_arm64_*
+            dist/topo_windows_amd64
+            dist/topo_windows_arm64
           if-no-files-found: error
 
       - name: Create GitHub App token for signer
@@ -169,7 +169,8 @@ jobs:
         with:
           name: topo-v${{ steps.version.outputs.version }}-linux
           path: |
-            dist/topo_linux_*
+            dist/topo_linux_amd64
+            dist/topo_linux_arm64
           if-no-files-found: error
 
       - name: Trigger archive and upload to artifactory workflow for linux artifacts

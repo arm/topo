@@ -26,6 +26,7 @@ builds:
 
 archives:
   - id: archive
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     ids:
       - topo
     format_overrides:
