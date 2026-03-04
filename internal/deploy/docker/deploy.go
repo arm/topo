@@ -2,7 +2,7 @@ package docker
 
 import (
 	"github.com/arm/topo/internal/deploy/docker/operation"
-	goperation "github.com/arm/topo/internal/deploy/operation"
+	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 )
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )

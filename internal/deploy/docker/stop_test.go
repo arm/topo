@@ -10,7 +10,7 @@ import (
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
-	goperation "github.com/arm/topo/internal/deploy/operation"
+	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

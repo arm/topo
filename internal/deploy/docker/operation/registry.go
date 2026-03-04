@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 )
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	goperation "github.com/arm/topo/internal/deploy/operation"
+	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 )

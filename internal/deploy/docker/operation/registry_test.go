@@ -7,7 +7,7 @@ import (
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
-	op "github.com/arm/topo/internal/deploy/operation"
+	op "github.com/arm/topo/internal/operation"
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
