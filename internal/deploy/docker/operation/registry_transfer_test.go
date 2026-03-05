@@ -16,6 +16,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestParseDigestFromPushOutput(t *testing.T) {
+	t.Run("parses digest from typical push output", func(t *testing.T) {
+		output := `The push refers to repository [localhost:12737/myimage]
+latest: digest: sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2 size: 1234`
+
+		got, err := operation.ParseDigestFromPushOutput(output)
+
+		require.NoError(t, err)
+		assert.Equal(t, "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", got)
+	})
+
+	t.Run("parses digest with surrounding output", func(t *testing.T) {
+		output := `Using default tag: latest
+The push refers to repository [localhost:12737/alpine]
+5d3e392a13a0: Layer already exists
+latest: digest: sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890 size: 528`
+
+		got, err := operation.ParseDigestFromPushOutput(output)
+
+		require.NoError(t, err)
+		assert.Equal(t, "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890", got)
+	})
+
+	t.Run("returns error when no digest found", func(t *testing.T) {
+		output := `The push refers to repository [localhost:12737/myimage]
+latest: size: 1234`
+
+		_, err := operation.ParseDigestFromPushOutput(output)
+
+		assert.EqualError(t, err, "no digest found in push output")
+	})
+
+	t.Run("returns error for empty output", func(t *testing.T) {
+		_, err := operation.ParseDigestFromPushOutput("")
+
+		assert.EqualError(t, err, "no digest found in push output")
+	})
+}
+
 func TestRegistryTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
@@ -52,17 +91,19 @@ services:
 
 			alpineTag := fmt.Sprintf("localhost:%s/alpine:latest", port)
 			nginxTag := fmt.Sprintf("localhost:%s/nginx:latest", port)
+			alpineDigestRef := fmt.Sprintf("localhost:%s/alpine:latest@<digest>", port)
+			nginxDigestRef := fmt.Sprintf("localhost:%s/nginx:latest@<digest>", port)
 
 			expected := strings.TrimSpace(fmt.Sprintf(`
 docker tag alpine:latest %[1]s
 docker push %[1]s
-docker -H ssh://user@remote pull %[1]s
-docker -H ssh://user@remote tag %[1]s alpine:latest
+docker -H ssh://user@remote pull %[3]s
+docker -H ssh://user@remote tag %[3]s alpine:latest
 docker tag nginx:latest %[2]s
 docker push %[2]s
-docker -H ssh://user@remote pull %[2]s
-docker -H ssh://user@remote tag %[2]s nginx:latest
-`, alpineTag, nginxTag)) + "\n"
+docker -H ssh://user@remote pull %[4]s
+docker -H ssh://user@remote tag %[4]s nginx:latest
+`, alpineTag, nginxTag, alpineDigestRef, nginxDigestRef)) + "\n"
 
 			assert.Equal(t, expected, got)
 		})
