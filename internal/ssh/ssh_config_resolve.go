@@ -7,24 +7,25 @@ import (
 	"strings"
 )
 
-type sshConfigValues struct {
-	host string
-	user string
-	port string
+type SSHConfigValues struct {
+	host       Host
+	user       string
+	port       string
+	configName string
 }
 
-func resolveSSHConfigHost(raw string) (string, string, string) {
+func resolveSSHConfigHost(raw string) SSHConfigValues {
 	if raw == "" || isExplicitSSHHost(raw) {
-		return SplitUserHostPort(raw)
+		user, host, port := SplitUserHostPort(raw)
+		return SSHConfigValues{user: user, host: Host(host), port: port, configName: ""}
 	}
 
 	output, err := exec.Command("ssh", "-G", raw).Output()
 	if err != nil {
-		return "", "", ""
+		return SSHConfigValues{user: "", host: "", port: "", configName: ""}
 	}
-
-	values := parseSSHConfigOutput(output)
-	return values.user, values.host, values.port
+	user, host, port := parseSSHConfigOutput(output)
+	return SSHConfigValues{user: user, host: Host(host), port: port, configName: raw}
 }
 
 func isExplicitSSHHost(raw string) bool {
@@ -40,9 +41,9 @@ func isExplicitSSHHost(raw string) bool {
 	return false
 }
 
-func parseSSHConfigOutput(output []byte) sshConfigValues {
-	var values sshConfigValues
+func parseSSHConfigOutput(output []byte) (string, string, string) {
 	scanner := bufio.NewScanner(bytes.NewReader(output))
+	var user, host, port string
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) < 2 {
@@ -50,12 +51,12 @@ func parseSSHConfigOutput(output []byte) sshConfigValues {
 		}
 		switch strings.ToLower(fields[0]) {
 		case "hostname":
-			values.host = fields[1]
+			host = fields[1]
 		case "user":
-			values.user = fields[1]
+			user = fields[1]
 		case "port":
-			values.port = fields[1]
+			port = fields[1]
 		}
 	}
-	return values
+	return user, host, port
 }

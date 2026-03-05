@@ -15,29 +15,31 @@ import (
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"
 
-func ControlSocketPath(targetHost string) string {
-	hash := sha256.Sum256([]byte(targetHost))
+func ControlSocketPath(targetHost SSHConfigValues) string {
+	var hash [32]byte
+	if targetHost.configName != "" {
+		hash = sha256.Sum256([]byte(targetHost.configName))
+	} else {
+		hash = sha256.Sum256([]byte(string(targetHost.host) + targetHost.user + targetHost.port))
+	}
 	hostHash := fmt.Sprintf("%x", hash[:8]) // Hash to avoid filepath limits
 	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
 }
 
-func formatSSHHost(raw string, user string, host string) string {
-	if host == "" {
-		return raw
+func formatSSHHost(sshConfig SSHConfigValues) string {
+	formatted := string(sshConfig.host)
+	if strings.Contains(string(sshConfig.host), ":") {
+		formatted = "[" + formatted + "]"
 	}
-	hostPart := host
-	if strings.Contains(hostPart, ":") {
-		hostPart = "[" + hostPart + "]"
+	if sshConfig.user != "" {
+		formatted = fmt.Sprintf("%s@%s", sshConfig.user, formatted)
 	}
-	if user == "" {
-		return hostPart
-	}
-	return user + "@" + hostPart
+	return formatted
 }
 
-func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
-	start := NewSSHTunnelStart(targetHost, port, useControlSockets)
-	securityCheck := NewCheckSSHTunnelSecurity(targetHost, port)
+func NewSSHTunnel(targetHost Host, registryPort string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
+	start := NewSSHTunnelStart(targetHost, registryPort, useControlSockets)
+	securityCheck := NewCheckSSHTunnelSecurity(targetHost, registryPort)
 
 	var stop operation.Operation
 	if useControlSockets {
@@ -50,9 +52,9 @@ func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operati
 }
 
 type SSHTunnelStart struct {
-	TargetHost        Host
+	TargetHost        SSHConfigValues
 	UseControlSockets bool
-	Port              string
+	RegistryPort      string
 	Process           *os.Process
 }
 
@@ -60,25 +62,29 @@ func (s *SSHTunnelStart) Description() string {
 	return "Open registry SSH tunnel"
 }
 
-func NewSSHTunnelStart(targetHost Host, port string, useControlSockets bool) *SSHTunnelStart {
-	return &SSHTunnelStart{TargetHost: targetHost, Port: port, UseControlSockets: useControlSockets}
+func NewSSHTunnelStart(targetHost Host, registryPort string, useControlSockets bool) *SSHTunnelStart {
+	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
+	return &SSHTunnelStart{TargetHost: resolvedSSHInfo, RegistryPort: registryPort, UseControlSockets: useControlSockets}
 }
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
-	rawHost := string(s.TargetHost)
-	user, host, port := SplitUserHostPort(rawHost)
-	hostArg := formatSSHHost(rawHost, user, host)
+	var hostArg string
+	if s.TargetHost.configName == "" {
+		hostArg = formatSSHHost(s.TargetHost)
+	} else {
+		hostArg = s.TargetHost.configName
+	}
 	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
-	if port != "" {
-		args = append(args, "-p", port)
+	if s.TargetHost.port != "22" && s.TargetHost.port != "" {
+		args = append(args, "-p", s.TargetHost.port)
 	}
 	if s.UseControlSockets {
 		args = append(args,
-			"-fMS", ControlSocketPath(string(s.TargetHost)),
+			"-fMS", ControlSocketPath(s.TargetHost),
 		)
 	}
 	args = append(args,
-		"-R", fmt.Sprintf("%s:127.0.0.1:%s", s.Port, s.Port),
+		"-R", fmt.Sprintf("%s:127.0.0.1:%s", s.RegistryPort, s.RegistryPort),
 		hostArg,
 	)
 	// #nosec -- arguments are validated
@@ -109,7 +115,7 @@ func (s *SSHTunnelStart) DryRun(w io.Writer) error {
 }
 
 type CheckSSHTunnelSecurity struct {
-	TargetHost Host
+	TargetHost SSHConfigValues
 	Port       string
 }
 
@@ -118,22 +124,23 @@ func (ct *CheckSSHTunnelSecurity) Description() string {
 }
 
 func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecurity {
-	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
+	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
+	return &CheckSSHTunnelSecurity{TargetHost: resolvedSSHInfo, Port: port}
 }
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
-	if !ct.TargetHost.IsLocalhost() {
-		_, host, _ := resolveSSHConfigHost(string(ct.TargetHost))
-		if host == "" {
+	if !ct.TargetHost.host.IsLocalhost() {
+		hostPartStringified := string(ct.TargetHost.host)
+		if hostPartStringified == "" {
 			return nil
 		}
-		return exec.Command("curl", fmt.Sprintf("%s:%s", host, ct.Port), "--max-time", "1")
+		return exec.Command("curl", fmt.Sprintf("%s:%s", hostPartStringified, ct.Port), "--max-time", "1")
 	}
 	return nil
 }
 
 func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
-	if ct.TargetHost.IsLocalhost() {
+	if ct.TargetHost.host.IsLocalhost() {
 		return nil
 	}
 	cmd := ct.Command()
@@ -152,7 +159,7 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 }
 
 func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
-	if ct.TargetHost.IsLocalhost() {
+	if ct.TargetHost.host.IsLocalhost() {
 		return nil
 	}
 	_, err := fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
@@ -160,7 +167,7 @@ func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
 }
 
 type SSHTunnelStop struct {
-	TargetHost Host
+	TargetHost SSHConfigValues
 }
 
 func (s *SSHTunnelStop) Description() string {
@@ -168,19 +175,23 @@ func (s *SSHTunnelStop) Description() string {
 }
 
 func NewSSHTunnelStop(targetHost Host) *SSHTunnelStop {
-	return &SSHTunnelStop{TargetHost: targetHost}
+	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
+	return &SSHTunnelStop{TargetHost: resolvedSSHInfo}
 }
 
 func (s *SSHTunnelStop) Command() *exec.Cmd {
-	rawHost := string(s.TargetHost)
-	user, host, port := SplitUserHostPort(rawHost)
-	hostArg := formatSSHHost(rawHost, user, host)
+	var hostArg string
+	if s.TargetHost.configName != "" {
+		hostArg = s.TargetHost.configName
+	} else {
+		hostArg = formatSSHHost(s.TargetHost)
+	}
 	args := []string{"ssh"}
-	if port != "" {
-		args = append(args, "-p", port)
+	if s.TargetHost.port != "22" && s.TargetHost.port != "" {
+		args = append(args, "-p", s.TargetHost.port)
 	}
 	args = append(args,
-		"-S", ControlSocketPath(string(s.TargetHost)),
+		"-S", ControlSocketPath(s.TargetHost),
 		"-O", "exit",
 		hostArg,
 	)
@@ -189,7 +200,7 @@ func (s *SSHTunnelStop) Command() *exec.Cmd {
 }
 
 func (s *SSHTunnelStop) Run(w io.Writer) error {
-	if _, err := os.Stat(ControlSocketPath(string(s.TargetHost))); os.IsNotExist(err) {
+	if _, err := os.Stat(ControlSocketPath(s.TargetHost)); os.IsNotExist(err) {
 		return nil
 	}
 	cmd := s.Command()
