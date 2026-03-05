@@ -146,8 +146,6 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 	err := cmd.Run()
 	if err == nil {
 		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetHost)
-	} else {
-		_, _ = fmt.Fprintln(w, "Your SSH tunnel appears to be secure: unable to access registry port without authentication")
 	}
 
 	return nil
