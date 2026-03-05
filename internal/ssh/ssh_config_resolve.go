@@ -24,7 +24,7 @@ func resolveSSHConfigHost(raw string) (string, string, string) {
 	}
 
 	values := parseSSHConfigOutput(output)
-	return values.host, values.user, values.port
+	return values.user, values.host, values.port
 }
 
 func isExplicitSSHHost(raw string) bool {

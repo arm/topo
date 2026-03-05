@@ -127,7 +127,7 @@ func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 		if host == "" {
 			return nil
 		}
-		return exec.Command("curl", fmt.Sprintf("%s:%s", host, ct.Port), "--max-time", "5")
+		return exec.Command("curl", fmt.Sprintf("%s:%s", host, ct.Port), "--max-time", "1")
 	}
 	return nil
 }
