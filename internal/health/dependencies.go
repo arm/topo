@@ -17,7 +17,6 @@ type SoftwareDependency int
 const (
 	UnsetSoftwareDependency SoftwareDependency = iota
 	Docker
-	Podman
 	Lscpu
 )
 
@@ -32,13 +31,11 @@ type Dependency struct {
 var HostRequiredDependencies = []Dependency{
 	{Name: "ssh", Category: "SSH"},
 	{Name: "docker", Category: "Container Engine", SoftwareEnumID: Docker},
-	{Name: "podman", Category: "Container Engine", SoftwareEnumID: Podman},
 }
 
 var TargetRequiredDependencies = []Dependency{
 	{Name: "docker", Category: "Container Engine", SoftwareEnumID: Docker},
-	{Name: "podman", Category: "Container Engine", SoftwareEnumID: Podman},
-	{Name: "remoteproc-runtime", Category: "Remoteproc Runtime", SoftwarePrerequisites: []SoftwareDependency{Docker, Podman}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
+	{Name: "remoteproc-runtime", Category: "Remoteproc Runtime", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
 	{Name: "containerd-shim-remoteproc-v1", Category: "Remoteproc Shim", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
 	{Name: "lscpu", Category: "Hardware Info", SoftwareEnumID: Lscpu},
 }
