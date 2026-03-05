@@ -67,7 +67,14 @@ func TestHost(t *testing.T) {
 
 			assert.Equal(t, "ssh://user@host", h.AsURI())
 		})
+
+		t.Run("doesn't duplicate ssh:// scheme", func(t *testing.T) {
+			h := ssh.Host("ssh://user@host:123")
+
+			assert.Equal(t, "ssh://user@host:123", h.AsURI())
+		})
 	})
+
 	t.Run("Slugify", func(t *testing.T) {
 		tests := []struct {
 			input string
