@@ -30,10 +30,10 @@ func StartSpinner(w io.Writer, message string) *Spinner {
 		for i := 0; ; i++ {
 			select {
 			case <-s.stop:
-				fmt.Fprintf(w, "\r\033[K")
+				_, _ = fmt.Fprintf(w, "\r\033[K")
 				return
 			default:
-				fmt.Fprintf(w, "\r%s %s", frames[i%len(frames)], message)
+				_, _ = fmt.Fprintf(w, "\r%s %s", frames[i%len(frames)], message)
 				time.Sleep(100 * time.Millisecond)
 			}
 		}
