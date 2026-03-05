@@ -10,9 +10,13 @@ import (
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 )
 
-func NewKeySetup(target string, privKeyPath string) (operation.Sequence, error) {
+func NewKeySetup(target string, privKeyPath string, keyType string) (operation.Sequence, error) {
+	if keyType != "ed25519" && keyType != "rsa" {
+		return nil, fmt.Errorf("unsupported key type: %s", keyType)
+	}
+
 	ops := []operation.Operation{
-		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", target, "ed25519", privKeyPath, sshkeygen.SSHKeyGenOptions{}),
+		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", target, keyType, privKeyPath, sshkeygen.SSHKeyGenOptions{}),
 		pubkeytransfer.NewPubKeyTransfer("Transfer public key to target and set it as an authorized key", target, privKeyPath, pubkeytransfer.PubKeyTransferOptions{}),
 	}
 	return operation.NewSequence(ops...), nil
