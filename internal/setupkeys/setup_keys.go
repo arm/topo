@@ -10,9 +10,14 @@ import (
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 )
 
+const (
+	KeyTypeED25519 string = "ed25519"
+	KeyTypeRSA     string = "rsa"
+)
+
 func NewKeySetup(target string, privKeyPath string, keyType string) (operation.Sequence, error) {
-	if keyType != "ed25519" && keyType != "rsa" {
-		return nil, fmt.Errorf("unsupported key type: %s", keyType)
+	if err := isValidKeyType(keyType); err != nil {
+		return nil, err
 	}
 
 	ops := []operation.Operation{
@@ -30,4 +35,13 @@ func GetDefaultPrivateKeyPath(targetSlug string) (string, error) {
 	keyName := fmt.Sprintf("id_ed25519_topo_%s", targetSlug)
 	privKeyPath := filepath.Join(home, ".ssh", keyName)
 	return privKeyPath, nil
+}
+
+func isValidKeyType(s string) error {
+	switch s {
+	case KeyTypeED25519, KeyTypeRSA:
+		return nil
+	default:
+		return fmt.Errorf("unsupported key type %q, supported types: %s, %s", s, KeyTypeED25519, KeyTypeRSA)
+	}
 }
