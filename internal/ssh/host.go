@@ -17,7 +17,7 @@ func (h Host) IsPlainLocalhost() bool {
 
 func (h Host) AsURI() string {
 	const scheme = "ssh://"
-	withoutScheme := strings.TrimLeft(string(h), scheme)
+	withoutScheme := strings.TrimPrefix(string(h), scheme)
 	return fmt.Sprintf("ssh://%s", withoutScheme)
 }
 
