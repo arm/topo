@@ -8,7 +8,7 @@ The project uses [golangci-lint](https://golangci-lint.run/) for Go code quality
 
 ```bash
 # Install golangci-lint
-go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1
 
 # Run linter and formatter checks
 golangci-lint run
