@@ -133,10 +133,12 @@ func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 }
 
 func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
+	if ct.TargetHost.IsLocalhost() {
+		return nil
+	}
 	cmd := ct.Command()
 	if cmd == nil {
-		_, _ = fmt.Fprintln(w, "SSH tunnel target is localhost, skipping security check")
-		return nil
+		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetHost))
 	}
 	cmd.Stdout = w
 	cmd.Stderr = w
