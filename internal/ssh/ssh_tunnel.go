@@ -35,8 +35,10 @@ func formatSSHHost(raw string, user string, host string) string {
 	return user + "@" + hostPart
 }
 
-func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operation.Operation, operation.Operation) {
+func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	start := NewSSHTunnelStart(targetHost, port, useControlSockets)
+	securityCheck := NewCheckSSHTunnelSecurity(targetHost, port)
+
 	var stop operation.Operation
 	if useControlSockets {
 		stop = NewSSHTunnelStop(targetHost)
@@ -44,7 +46,7 @@ func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operati
 		stop = NewSSHTunnelProcessStop(start)
 	}
 
-	return start, stop
+	return start, securityCheck, stop
 }
 
 type SSHTunnelStart struct {
@@ -104,6 +106,57 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 func (s *SSHTunnelStart) DryRun(w io.Writer) error {
 	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
 	return nil
+}
+
+type CheckSSHTunnelSecurity struct {
+	TargetHost Host
+	Port       string
+}
+
+func (ct *CheckSSHTunnelSecurity) Description() string {
+	return "Check SSH tunnel security"
+}
+
+func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecurity {
+	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
+}
+
+func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
+	if !ct.TargetHost.IsLocalhost() {
+		_, host, _ := resolveSSHConfigHost(string(ct.TargetHost))
+		if host == "" {
+			return nil
+		}
+		return exec.Command("curl", fmt.Sprintf("%s:%s", host, ct.Port), "--max-time", "1")
+	}
+	return nil
+}
+
+func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
+	if ct.TargetHost.IsLocalhost() {
+		return nil
+	}
+	cmd := ct.Command()
+	if cmd == nil {
+		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetHost))
+	}
+	cmd.Stdout = w
+	cmd.Stderr = w
+
+	err := cmd.Run()
+	if err == nil {
+		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetHost)
+	}
+
+	return nil
+}
+
+func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
+	if ct.TargetHost.IsLocalhost() {
+		return nil
+	}
+	_, err := fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
+	return err
 }
 
 type SSHTunnelStop struct {

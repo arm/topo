@@ -15,6 +15,14 @@ func (h Host) IsPlainLocalhost() bool {
 	return strings.EqualFold(string(h), "localhost") || h == "127.0.0.1"
 }
 
+func (h Host) IsLocalhost() bool {
+	if h.IsPlainLocalhost() {
+		return true
+	}
+	_, host, _ := SplitUserHostPort(string(h))
+	return Host(host).IsPlainLocalhost()
+}
+
 func (h Host) AsURI() string {
 	const scheme = "ssh://"
 	withoutScheme := strings.TrimPrefix(string(h), scheme)

@@ -19,7 +19,7 @@ func TestSSHTunnel(t *testing.T) {
 		t.Run("it returns start and stop operations with control sockets", func(t *testing.T) {
 			host := ssh.Host("user@remote")
 
-			start, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, true)
+			start, _, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, true)
 
 			_, ok := start.(*ssh.SSHTunnelStart)
 			assert.True(t, ok, "start operation is not of type SSHTunnelStart")
@@ -30,7 +30,7 @@ func TestSSHTunnel(t *testing.T) {
 		t.Run("it returns start and stop operations without control sockets", func(t *testing.T) {
 			host := ssh.Host("user@remote")
 
-			start, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, false)
+			start, _, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, false)
 
 			_, ok := start.(*ssh.SSHTunnelStart)
 			assert.True(t, ok, "start operation is not of type SSHTunnelStart")
@@ -41,13 +41,22 @@ func TestSSHTunnel(t *testing.T) {
 		t.Run("stop operation has access to start operation process", func(t *testing.T) {
 			host := ssh.Host("user@remote")
 
-			start, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, false)
+			start, _, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, false)
 			startOp, ok := start.(*ssh.SSHTunnelStart)
 			require.True(t, ok, "start operation is not of type SSHTunnelStart")
 
 			stopOp, ok := stop.(*ssh.SSHTunnelProcessStop)
 			require.True(t, ok, "stop operation is not of type SSHTunnelProcessStop")
 			assert.Equal(t, startOp, stopOp.Start, "stop operation process does not match start operation process")
+		})
+
+		t.Run("it returns security check operation", func(t *testing.T) {
+			host := ssh.Host("user@remote")
+
+			_, securityCheck, _ := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, true)
+
+			_, ok := securityCheck.(*ssh.CheckSSHTunnelSecurity)
+			assert.True(t, ok, "security check operation is not of type CheckSSHTunnelSecurity")
 		})
 	})
 }
@@ -175,6 +184,55 @@ func TestSSHTunnelStartEdgeCases(t *testing.T) {
 
 			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -p 2222 -fMS %s -R %s:127.0.0.1:%s user@192.168.1.100", ssh.ControlSocketPath(string(host)), port, port)
 			assert.Equal(t, want, got)
+		})
+	})
+}
+
+func TestCheckSSHTunnelSecurity(t *testing.T) {
+	t.Run("Command", func(t *testing.T) {
+		t.Run("it generates correct curl command", func(t *testing.T) {
+			host := ssh.Host("user@remote")
+			port := operation.DefaultRegistryPort
+
+			cs := ssh.NewCheckSSHTunnelSecurity(host, port)
+			got := strings.Join(cs.Command().Args, " ")
+
+			want := fmt.Sprintf("curl remote:%s --max-time 1", port)
+			assert.Equal(t, want, got)
+		})
+
+		t.Run("it returns nil when target is localhost", func(t *testing.T) {
+			host := ssh.Host("root@localhost")
+			port := operation.DefaultRegistryPort
+
+			cs := ssh.NewCheckSSHTunnelSecurity(host, port)
+			got := cs.Command()
+			assert.Nil(t, got)
+		})
+	})
+
+	t.Run("DryRun", func(t *testing.T) {
+		t.Run("it outputs the curl command", func(t *testing.T) {
+			var buf bytes.Buffer
+			host := ssh.Host("user@remote")
+			port := operation.DefaultRegistryPort
+
+			cs := ssh.NewCheckSSHTunnelSecurity(host, port)
+			err := cs.DryRun(&buf)
+			got := strings.TrimSpace(buf.String())
+			require.NoError(t, err)
+			want := fmt.Sprintf("curl remote:%s --max-time 1", port)
+			assert.Equal(t, want, got)
+		})
+	})
+
+	t.Run("Description", func(t *testing.T) {
+		t.Run("it returns the expected string", func(t *testing.T) {
+			cs := ssh.NewCheckSSHTunnelSecurity(ssh.Host("user@remote"), operation.DefaultRegistryPort)
+
+			got := cs.Description()
+
+			assert.Equal(t, "Check SSH tunnel security", got)
 		})
 	})
 }
