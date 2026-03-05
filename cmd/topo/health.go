@@ -7,6 +7,7 @@ import (
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/output/term"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +33,15 @@ var healthCmd = &cobra.Command{
 			panic(fmt.Sprintf("internal error: %s flag not registered: %v", acceptNewHostFlag, err))
 		}
 
+		var spinner *term.Spinner
+		if outputFormat == term.Plain {
+			spinner = term.StartSpinner(os.Stderr, "Checking health...")
+		}
+
 		report, err := health.Check(sshTarget, acceptNewHostKeys)
+		if spinner != nil {
+			spinner.Stop()
+		}
 		if err != nil {
 			return err
 		}
