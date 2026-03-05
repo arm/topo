@@ -47,6 +47,6 @@ func ParseKeyType(s string) (KeyType, error) {
 	case KeyTypeRSA:
 		return KeyTypeRSA, nil
 	default:
-		return "", fmt.Errorf("unsupported key type %q, supported types: ed25519, rsa", s)
+		return "", fmt.Errorf("unsupported key type %q, supported types: %s, %s", s, KeyTypeED25519, KeyTypeRSA)
 	}
 }
