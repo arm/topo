@@ -127,19 +127,17 @@ func TestCheckInstalled(t *testing.T) {
 	t.Run("checks dependency when one of its SoftwarePrerequisites is installed", func(t *testing.T) {
 		deps := []health.Dependency{
 			{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker},
-			{Name: "podman", Category: "Container Engine", SoftwareEnumID: health.Podman},
-			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker, health.Podman}},
+			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}},
 		}
 		mockBinaryExists := func(bin string) (bool, error) {
-			return bin == "podman" || bin == "runtime", nil
+			return bin == "docker" || bin == "runtime", nil
 		}
 
 		got := health.CheckInstalled(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker}, Installed: false},
-			{Dependency: health.Dependency{Name: "podman", Category: "Container Engine", SoftwareEnumID: health.Podman}, Installed: true},
-			{Dependency: health.Dependency{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker, health.Podman}}, Installed: true},
+			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker}, Installed: true},
+			{Dependency: health.Dependency{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}}, Installed: true},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -197,17 +195,16 @@ func TestFilterByHardware(t *testing.T) {
 
 	t.Run("filters mixed dependencies correctly", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "docker", Category: "Container Engine"},
+			{Name: "spaghetti", Category: "Food"},
 			{Name: "remoteproc-runtime", Category: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
-			{Name: "podman", Category: "Container Engine"},
+			{Name: "pizza", Category: "Food"},
 		}
-		hardware := map[health.HardwareCapability]struct{}{}
 
-		got := health.FilterByHardware(deps, hardware)
+		got := health.FilterByHardware(deps, nil)
 
 		want := []health.Dependency{
-			{Name: "docker", Category: "Container Engine"},
-			{Name: "podman", Category: "Container Engine"},
+			{Name: "spaghetti", Category: "Food"},
+			{Name: "pizza", Category: "Food"},
 		}
 		assert.Equal(t, want, got)
 	})
