@@ -15,8 +15,8 @@ const TargetContainerHost = "root@localhost"
 const TargetContainerImage = "topo-e2e-target:latest"
 
 type TargetContainer struct {
-	SSHConnectionString string
-	ContainerName       string
+	SSHDestination string
+	ContainerName  string
 }
 
 func StartTargetContainer(t *testing.T) *TargetContainer {
@@ -44,7 +44,10 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 	waitForDockerReady(t, TargetContainerHost, port)
 
 	// #nosec G204 -- ignore as its a test helper
-	return &TargetContainer{SSHConnectionString: fmt.Sprintf("%s:%s", TargetContainerHost, port), ContainerName: containerName}
+	return &TargetContainer{
+		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, port),
+		ContainerName:  containerName,
+	}
 }
 
 func generateTargetContainerName(t *testing.T) string {

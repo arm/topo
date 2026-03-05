@@ -154,7 +154,7 @@ func TestDeployment(t *testing.T) {
 		target := testutil.StartTargetContainer(t)
 
 		t.Run("builds images, transfers them, and starts services", func(t *testing.T) {
-			remoteDockerHost := ssh.Host(target.SSHConnectionString)
+			remoteDockerHost := ssh.Host(target.SSHDestination)
 			tmpDir := t.TempDir()
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
 			dockerFileContent := `

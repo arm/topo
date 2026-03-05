@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"fmt"
 	"os/exec"
 	"testing"
 
@@ -31,8 +30,8 @@ func TestHealthCheck(t *testing.T) {
 
 	t.Run("fails to connect to an invalid target", func(t *testing.T) {
 		fakeContainer := testutil.TargetContainer{
-			SSHConnectionString: "fake@target",
-			ContainerName:       "fake-tgt-container",
+			SSHDestination: "fake@target",
+			ContainerName:  "fake-tgt-container",
 		}
 		out, err := runCheckHealth(topo, &fakeContainer)
 		assert.NoError(t, err)
@@ -41,8 +40,7 @@ func TestHealthCheck(t *testing.T) {
 }
 
 func runCheckHealth(topo string, target *testutil.TargetContainer) (string, error) {
-	targetURL := fmt.Sprintf("ssh://%s", target.SSHConnectionString)
-	args := []string{"health", "--target", targetURL}
+	args := []string{"health", "--target", target.SSHDestination}
 	healthCmd := exec.Command(topo, args...)
 
 	out, err := healthCmd.CombinedOutput()

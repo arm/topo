@@ -47,7 +47,7 @@ func TestDeploymentStop(t *testing.T) {
 		target := testutil.StartTargetContainer(t)
 
 		t.Run("deploys services then confirms stop shuts down containers", func(t *testing.T) {
-			remoteDockerHost := ssh.Host(target.SSHConnectionString)
+			remoteDockerHost := ssh.Host(target.SSHDestination)
 			tmpDir := t.TempDir()
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
 			dockerFileContent := `

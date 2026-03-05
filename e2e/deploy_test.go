@@ -22,7 +22,7 @@ func TestDeploy(t *testing.T) {
 		projectDir := t.TempDir()
 		composeFile := filepath.Join(projectDir, "compose.yaml")
 		t.Cleanup(func() {
-			composeDown(t, composeFile, target.SSHConnectionString)
+			composeDown(t, composeFile, target.SSHDestination)
 		})
 
 		requireInit(t, topo, projectDir)
@@ -32,7 +32,7 @@ func TestDeploy(t *testing.T) {
 
 		requireExtend(t, topo, projectDir, composeFile, nameArgValue)
 
-		requireDeploy(t, topo, projectDir, target.SSHConnectionString)
+		requireDeploy(t, topo, projectDir, target.SSHDestination)
 		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
@@ -43,12 +43,12 @@ func TestDeploy(t *testing.T) {
 		cloneDir := filepath.Join(baseDir, "project")
 		composeFile := filepath.Join(cloneDir, "compose.yaml")
 		t.Cleanup(func() {
-			composeDown(t, composeFile, target.SSHConnectionString)
+			composeDown(t, composeFile, target.SSHDestination)
 		})
 
 		nameArgValue := "Topo"
 		requireClone(t, topo, baseDir, cloneDir, "testdata/services/hello-server", fmt.Sprintf("NAME=%s", nameArgValue))
-		requireDeploy(t, topo, cloneDir, target.SSHConnectionString)
+		requireDeploy(t, topo, cloneDir, target.SSHDestination)
 		expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
 		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
 		require.NoError(t, err)
@@ -93,8 +93,8 @@ func requireExtend(t *testing.T, topo, projectDir, composeFile, customName strin
 	require.NoErrorf(t, err, "extend failed: %s", out)
 }
 
-func requireDeploy(t *testing.T, topo, projectDir, sshTarget string, extraArgs ...string) {
-	args := []string{"deploy", "--target", sshTarget, "--skip-project-checks"}
+func requireDeploy(t *testing.T, topo, projectDir, sshDestination string, extraArgs ...string) {
+	args := []string{"deploy", "--target", sshDestination, "--skip-project-checks"}
 	args = append(args, extraArgs...)
 
 	deployCmd := exec.Command(topo, args...)
@@ -125,9 +125,9 @@ func assertResponseBody(t *testing.T, url, wantBody string) {
 	assert.Equal(t, wantBody, string(body))
 }
 
-func composeDown(t *testing.T, composeFile, sshTarget string) {
+func composeDown(t *testing.T, composeFile, sshDestination string) {
 	t.Helper()
-	cmd := exec.Command("docker", "-H", "ssh://"+sshTarget, "compose", "-f", composeFile, "down", "-v")
+	cmd := exec.Command("docker", "-H", sshDestination, "compose", "-f", composeFile, "down", "-v")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("compose down failed: %v, output: %s", err, out)
 	}

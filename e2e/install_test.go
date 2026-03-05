@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"fmt"
 	"os/exec"
 	"testing"
 
@@ -14,12 +13,10 @@ func TestInstall(t *testing.T) {
 	topo := buildBinary(t)
 
 	t.Run("installs the binary", func(t *testing.T) {
-		targetURL := fmt.Sprintf("ssh://%s", target.SSHConnectionString)
-
-		out, err := installRemoteprocRuntime(topo, targetURL)
+		out, err := installRemoteprocRuntime(topo, target.SSHDestination)
 
 		require.NoError(t, err, out)
-		requireInstalled(t, "remoteproc-runtime", targetURL)
+		requireInstalled(t, "remoteproc-runtime", target.SSHDestination)
 	})
 }
 
