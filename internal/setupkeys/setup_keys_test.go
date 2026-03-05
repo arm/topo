@@ -81,5 +81,5 @@ func TestNewKeySetupDryRun(t *testing.T) {
 
 func TestNewKeySetupUnsupportedKeyType(t *testing.T) {
 	_, err := setupkeys.NewKeySetup("user@example.com", "/tmp/id_invalid", "ecdsa")
-	require.EqualError(t, err, "unsupported key type: ecdsa")
+	require.EqualError(t, err, "unsupported key type \"ecdsa\", supported types: ed25519, rsa")
 }
