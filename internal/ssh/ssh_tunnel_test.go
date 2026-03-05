@@ -197,7 +197,7 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 			cs := ssh.NewCheckSSHTunnelSecurity(host, port)
 			got := strings.Join(cs.Command().Args, " ")
 
-			want := fmt.Sprintf("curl remote:%s --max-time 5", port)
+			want := fmt.Sprintf("curl remote:%s --max-time 1", port)
 			assert.Equal(t, want, got)
 		})
 
@@ -221,7 +221,7 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 			err := cs.DryRun(&buf)
 			got := strings.TrimSpace(buf.String())
 			require.NoError(t, err)
-			want := fmt.Sprintf("curl remote:%s --max-time 5", port)
+			want := fmt.Sprintf("curl remote:%s --max-time 1", port)
 			assert.Equal(t, want, got)
 		})
 	})
