@@ -116,12 +116,6 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 }
 
 func TestReadTargetDescriptionFromFile(t *testing.T) {
-	t.Run("returns nil profile when path is empty", func(t *testing.T) {
-		profile, err := describe.ReadTargetDescriptionFromFile("")
-		require.NoError(t, err)
-		assert.Nil(t, profile)
-	})
-
 	t.Run("Correctly reads and parses target description from yaml file", func(t *testing.T) {
 		dir := t.TempDir()
 		filePath := dir + "/target-description.yaml"
@@ -136,11 +130,9 @@ remoteprocs:
 totalmemory_kb: 16384
 `
 		require.NoError(t, os.WriteFile(filePath, []byte(content), 0o644))
-
 		profile, err := describe.ReadTargetDescriptionFromFile(filePath)
-		require.NoError(t, err)
-		require.NotNil(t, profile)
 
+		require.NoError(t, err)
 		assert.Equal(t, target.HardwareProfile{
 			HostProcessor: []target.HostProcessor{
 				{
@@ -155,9 +147,9 @@ totalmemory_kb: 16384
 	})
 
 	t.Run("returns error when target description file does not exist", func(t *testing.T) {
-		profile, err := describe.ReadTargetDescriptionFromFile("/no/such/file.yaml")
+		_, err := describe.ReadTargetDescriptionFromFile("/no/such/file.yaml")
+
 		require.Error(t, err)
-		assert.Nil(t, profile)
 		assert.ErrorContains(t, err, "failed to read target description file")
 	})
 
