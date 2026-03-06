@@ -30,7 +30,7 @@ var templatesCmd = &cobra.Command{
 		// even if the target flag was not used, TOPO_TARGET may be set, so we check if the resolved target is non-empty
 		if targetDescriptionPath == "" {
 			resolvedTarget, exists := lookupTarget(cmd)
-			if exists && targetDescriptionPath == "" {
+			if exists {
 				templateFilters.Target = resolvedTarget
 			}
 		}
