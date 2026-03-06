@@ -20,20 +20,20 @@ type RepoWithCompatibility struct {
 }
 
 func AnnotateCompatibility(profile *target.HardwareProfile, repos []Repo) []RepoWithCompatibility {
-	annotated := withCompatibility(repos)
 	if profile == nil {
-		return annotated
+		return withCompatibility(repos)
 	}
 
 	hardwareProfile := *profile
 	supportedFeatures := extractSupportedFeatures(hardwareProfile)
 
-	for r := range annotated {
-		repo := &annotated[r]
-		repo.Compatibility = compatibilityStatus(hardwareProfile, supportedFeatures, repo.Repo)
+	checked := make([]RepoWithCompatibility, len(repos))
+	for i, repo := range repos {
+		checked[i].Repo = repo
+		checked[i].Compatibility = compatibilityStatus(hardwareProfile, supportedFeatures, repo)
 	}
 
-	return annotated
+	return checked
 }
 
 func withCompatibility(repos []Repo) []RepoWithCompatibility {
