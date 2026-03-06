@@ -10,7 +10,8 @@ import (
 
 func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("supports template requiring SVE when target has SVE", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "sve-template", Features: []string{"SVE"}}}
+		repo := catalog.Repo{Name: "sve-template", Features: []string{"SVE"}}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{
 			HostProcessor: []target.HostProcessor{
 				{Features: []string{"asimd", "sve"}},
@@ -18,11 +19,15 @@ func TestAnnotateCompatibility(t *testing.T) {
 		}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilitySupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("marks template unsupported when SVE is missing", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "sve-template", Features: []string{"SVE"}}}
+		repo := catalog.Repo{Name: "sve-template", Features: []string{"SVE"}}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{
 			HostProcessor: []target.HostProcessor{
 				{Features: []string{"asimd"}},
@@ -30,11 +35,15 @@ func TestAnnotateCompatibility(t *testing.T) {
 		}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilityUnsupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("supports template requiring NEON when target has NEON", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "neon-template", Features: []string{"NEON"}}}
+		repo := catalog.Repo{Name: "neon-template", Features: []string{"NEON"}}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{
 			HostProcessor: []target.HostProcessor{
 				{Features: []string{"asimd"}},
@@ -42,11 +51,15 @@ func TestAnnotateCompatibility(t *testing.T) {
 		}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilitySupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("marks template unsupported when NEON is missing", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "neon-template", Features: []string{"NEON"}}}
+		repo := catalog.Repo{Name: "neon-template", Features: []string{"NEON"}}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{
 			HostProcessor: []target.HostProcessor{
 				{Features: []string{"sve"}},
@@ -54,19 +67,27 @@ func TestAnnotateCompatibility(t *testing.T) {
 		}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilityUnsupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("marks template unsupported when remoteproc is required but absent", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "rp-template", Features: []string{"remoteproc"}}}
+		repo := catalog.Repo{Name: "rp-template", Features: []string{"remoteproc"}}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilityUnsupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("marks template supported when remoteproc is required and present", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "rp-template", Features: []string{"remoteproc"}}}
+		repo := catalog.Repo{Name: "rp-template", Features: []string{"remoteproc"}}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{
 			RemoteCPU: []target.RemoteprocCPU{
 				{Name: "m3"},
@@ -74,36 +95,44 @@ func TestAnnotateCompatibility(t *testing.T) {
 		}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilitySupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("marks template unsupported when RAM is below requirement", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "ram-template", MinRAMKb: 1024}}
+		repo := catalog.Repo{Name: "ram-template", MinRAMKb: 1024}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{TotalMemoryKb: 512}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilityUnsupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("supports template with no requirements and does not mutate input", func(t *testing.T) {
-		repos := []catalog.Repo{
-			{Name: "plain"},
-		}
+		repo := catalog.Repo{Name: "plain"}
+		repos := []catalog.Repo{repo}
 		profile := target.HardwareProfile{}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
-		assert.Len(t, got, 1)
-		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
-		assert.Equal(t, "plain", repos[0].Name)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilitySupported},
+		}
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("leaves compatibility unknown when profile is nil", func(t *testing.T) {
-		repos := []catalog.Repo{
-			{Name: "plain"},
-		}
+		repo := catalog.Repo{Name: "plain"}
+		repos := []catalog.Repo{repo}
 
 		got := catalog.AnnotateCompatibility(nil, repos)
-		assert.Len(t, got, 1)
-		assert.Equal(t, catalog.CompatibilityUnknown, got[0].Compatibility)
+		want := []catalog.RepoWithCompatibility{
+			{Repo: repo, Compatibility: catalog.CompatibilityUnknown},
+		}
+		assert.Equal(t, want, got)
 	})
 }
