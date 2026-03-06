@@ -61,13 +61,8 @@ func isRepoSupported(profile target.HardwareProfile, supportedFeatures map[strin
 		}
 	}
 
-	if repo.MinRAMKb > 0 {
-		if profile.TotalMemoryKb == 0 {
-			return false
-		}
-		if profile.TotalMemoryKb < repo.MinRAMKb {
-			return false
-		}
+	if repo.MinRAMKb > 0 && profile.TotalMemoryKb < repo.MinRAMKb {
+		return false
 	}
 
 	return true
