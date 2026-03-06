@@ -9,13 +9,13 @@ import (
 )
 
 func TestBinaryRegex(t *testing.T) {
-	t.Run("binary regex passes a correct binary name", func(t *testing.T) {
+	t.Run("binary regex fails an incorrect binary name", func(t *testing.T) {
 		got := "bin ary"
 
 		assert.False(t, ssh.BinaryRegex.MatchString(got))
 	})
 
-	t.Run("binary regex fails an incorrect binary name", func(t *testing.T) {
+	t.Run("binary regex passes a correct binary name", func(t *testing.T) {
 		got := "binary"
 
 		assert.True(t, ssh.BinaryRegex.MatchString(got))
