@@ -17,10 +17,10 @@ const TunnelPIDPlaceholder = "<ssh tunnel pid>"
 
 func ControlSocketPath(targetHost SSHConfigValues) string {
 	var hash [32]byte
-	if targetHost.configName != "" {
-		hash = sha256.Sum256([]byte(targetHost.configName))
-	} else {
+	if targetHost.configName == "" {
 		hash = sha256.Sum256([]byte(string(targetHost.host) + targetHost.user + targetHost.port))
+	} else {
+		hash = sha256.Sum256([]byte(targetHost.configName))
 	}
 	hostHash := fmt.Sprintf("%x", hash[:8]) // Hash to avoid filepath limits
 	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
