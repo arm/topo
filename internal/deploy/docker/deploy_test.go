@@ -44,11 +44,12 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 		}
 		want = append(want, operation.NewRunRegistry(port)...)
+		wantTunnelStart, wantSecurityCheck, wantTunnelStop := ssh.NewSSHTunnel(remoteHost, port, opts.UseSSHControlSockets)
 		want = append(want,
-			ssh.NewSSHTunnelStart(remoteHost, port, opts.UseSSHControlSockets),
-			ssh.NewCheckSSHTunnelSecurity(remoteHost, port),
+			wantTunnelStart,
+			wantSecurityCheck,
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
-			ssh.NewSSHTunnelStop(remoteHost),
+			wantTunnelStop,
 			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
 		)
 
@@ -97,7 +98,7 @@ func TestNewDeployment(t *testing.T) {
 		deployOpts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, UseSSHControlSockets: true}
 		_, cleanup := docker.NewDeployment(composeFile, deployOpts)
 
-		want := ssh.NewSSHTunnelStop(remoteHost)
+		_, _, want := ssh.NewSSHTunnel(remoteHost, operation.DefaultRegistryPort, true)
 		assert.Equal(t, want, cleanup)
 	})
 
