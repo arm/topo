@@ -166,7 +166,7 @@ totalmemory_kb: 16384
 		filePath := dir + "/invalid.yaml"
 		require.NoError(t, os.WriteFile(filePath, []byte("host_processor: ["), 0o644))
 
-		profile, err := describe.ReadTargetDescriptionFromFile(filePath)
+		_, err := describe.ReadTargetDescriptionFromFile(filePath)
 		assert.ErrorContains(t, err, "failed to parse target description file")
 	})
 }
