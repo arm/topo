@@ -116,16 +116,10 @@ func BinaryExistsLocally(bin string) (bool, error) {
 	return err == nil, nil
 }
 
-func CollectAvailableByCategory(dependencyStatuses []DependencyStatus) map[string][]DependencyStatus {
-	groupedByCategory := map[string][]DependencyStatus{}
-
-	for _, status := range dependencyStatuses {
-		statuses := groupedByCategory[status.Dependency.Category]
-		if status.Error == nil {
-			statuses = append(statuses, status)
-		}
-		groupedByCategory[status.Dependency.Category] = statuses
+func groupByCategory(statuses []DependencyStatus) map[string][]DependencyStatus {
+	grouped := map[string][]DependencyStatus{}
+	for _, status := range statuses {
+		grouped[status.Dependency.Category] = append(grouped[status.Dependency.Category], status)
 	}
-
-	return groupedByCategory
+	return grouped
 }

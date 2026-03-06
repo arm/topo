@@ -37,30 +37,24 @@ type Report struct {
 
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
-	availableDepsByCategory := CollectAvailableByCategory(statuses)
-
-	errorsByCategory := map[string][]string{}
-	for _, status := range statuses {
-		if status.Error != nil {
-			category := status.Dependency.Category
-			errorsByCategory[category] = append(errorsByCategory[category], status.Error.Error())
-		}
-	}
-
-	for category, installedDependencies := range availableDepsByCategory {
-		var value string
-		if len(installedDependencies) > 0 {
-			names := make([]string, len(installedDependencies))
-			for i, dep := range installedDependencies {
-				names[i] = dep.Dependency.Name
+	for category, deps := range groupByCategory(statuses) {
+		var installedNames, errorMessages []string
+		for _, dep := range deps {
+			if dep.Error == nil {
+				installedNames = append(installedNames, dep.Dependency.Name)
+			} else {
+				errorMessages = append(errorMessages, dep.Error.Error())
 			}
-			value = strings.Join(names, ", ")
+		}
+		var value string
+		if len(installedNames) > 0 {
+			value = strings.Join(installedNames, ", ")
 		} else {
-			value = strings.Join(errorsByCategory[category], ", ")
+			value = strings.Join(errorMessages, ", ")
 		}
 		res = append(res, HealthCheck{
 			Name:    category,
-			Healthy: len(installedDependencies) > 0,
+			Healthy: len(installedNames) > 0,
 			Value:   value,
 		})
 	}
