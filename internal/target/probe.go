@@ -101,12 +101,8 @@ func (c *Connection) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 }
 
 func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
-	ok, err := c.BinaryExists("lscpu")
-	if err != nil {
-		return nil, fmt.Errorf("checking for lscpu: %w", err)
-	}
-	if !ok {
-		return nil, errors.New("lscpu not found")
+	if err := c.BinaryExists("lscpu"); err != nil {
+		return nil, err
 	}
 
 	out, err := c.Run("lscpu --json")

@@ -99,13 +99,15 @@ func (c *Connection) DryRun(command string, output io.Writer) error {
 	return err
 }
 
-func (c *Connection) BinaryExists(bin string) (bool, error) {
+func (c *Connection) BinaryExists(bin string) error {
 	if err := ssh.ValidateBinaryName(bin); err != nil {
-		return false, err
+		return err
 	}
 
-	_, err := c.Run(fmt.Sprintf("command -v %s", bin))
-	return err == nil, nil
+	if _, err := c.Run(fmt.Sprintf("command -v %s", bin)); err != nil {
+		return fmt.Errorf("%q executable file not found in $PATH", bin)
+	}
+	return nil
 }
 
 func (c *Connection) ProbeAuthentication() error {

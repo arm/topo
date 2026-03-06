@@ -69,7 +69,7 @@ func TestProbeHardware(t *testing.T) {
 		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
 		_, err := conn.ProbeHardware()
 
-		assert.ErrorContains(t, err, "lscpu not found")
+		assert.ErrorContains(t, err, `"lscpu" executable file not found in $PATH`)
 	})
 
 	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {

@@ -46,7 +46,7 @@ type DependencyStatus struct {
 	Error      error
 }
 
-func CheckDependencies(binaryExists func(string) (bool, error), capabilities map[HardwareCapability]struct{}) []DependencyStatus {
+func CheckDependencies(binaryExists func(string) error, capabilities map[HardwareCapability]struct{}) []DependencyStatus {
 	deps := FilterByHardware(TargetRequiredDependencies, capabilities)
 	return CheckInstalled(deps, binaryExists)
 }
@@ -70,9 +70,9 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 	return false
 }
 
-type LookPath = func(bin string) (bool, error)
+type BinaryExistsFn = func(bin string) error
 
-func CheckInstalled(dependencies []Dependency, binaryExists LookPath) []DependencyStatus {
+func CheckInstalled(dependencies []Dependency, binaryExists BinaryExistsFn) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
 
@@ -81,19 +81,15 @@ func CheckInstalled(dependencies []Dependency, binaryExists LookPath) []Dependen
 			continue
 		}
 
-		isInstalled, _ := binaryExists(dep.Name)
+		err := binaryExists(dep.Name)
 
-		if isInstalled && dep.SoftwareEnumID != UnsetSoftwareDependency {
+		if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 			installed[dep.SoftwareEnumID] = struct{}{}
 		}
 
-		var statusErr error
-		if !isInstalled {
-			statusErr = fmt.Errorf("%s not found on path", dep.Name)
-		}
 		result = append(result, DependencyStatus{
 			Dependency: dep,
-			Error:      statusErr,
+			Error:      err,
 		})
 	}
 	return result
@@ -108,12 +104,14 @@ func hasAnyInstalledPrerequisite(required []SoftwareDependency, installed map[So
 	return false
 }
 
-func BinaryExistsLocally(bin string) (bool, error) {
+func BinaryExistsLocally(bin string) error {
 	if err := ssh.ValidateBinaryName(bin); err != nil {
-		return false, err
+		return err
 	}
-	_, err := exec.LookPath(bin)
-	return err == nil, nil
+	if _, err := exec.LookPath(bin); err != nil {
+		return fmt.Errorf("%q executable file not found in $PATH", bin)
+	}
+	return nil
 }
 
 func groupByCategory(statuses []DependencyStatus) map[string][]DependencyStatus {
