@@ -38,12 +38,13 @@ func formatSSHHost(sshConfig SSHConfigValues) string {
 }
 
 func NewSSHTunnel(targetHost Host, registryPort string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
-	start := NewSSHTunnelStart(targetHost, registryPort, useControlSockets)
-	securityCheck := NewCheckSSHTunnelSecurity(targetHost, registryPort)
+	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
+	start := NewSSHTunnelStart(resolvedSSHInfo, registryPort, useControlSockets)
+	securityCheck := NewCheckSSHTunnelSecurity(resolvedSSHInfo, registryPort)
 
 	var stop operation.Operation
 	if useControlSockets {
-		stop = NewSSHTunnelStop(targetHost)
+		stop = NewSSHTunnelStop(resolvedSSHInfo)
 	} else {
 		stop = NewSSHTunnelProcessStop(start)
 	}
@@ -62,9 +63,8 @@ func (s *SSHTunnelStart) Description() string {
 	return "Open registry SSH tunnel"
 }
 
-func NewSSHTunnelStart(targetHost Host, registryPort string, useControlSockets bool) *SSHTunnelStart {
-	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
-	return &SSHTunnelStart{TargetHost: resolvedSSHInfo, RegistryPort: registryPort, UseControlSockets: useControlSockets}
+func NewSSHTunnelStart(targetHost SSHConfigValues, registryPort string, useControlSockets bool) *SSHTunnelStart {
+	return &SSHTunnelStart{TargetHost: targetHost, RegistryPort: registryPort, UseControlSockets: useControlSockets}
 }
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
@@ -123,9 +123,8 @@ func (ct *CheckSSHTunnelSecurity) Description() string {
 	return "Check SSH tunnel security"
 }
 
-func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecurity {
-	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
-	return &CheckSSHTunnelSecurity{TargetHost: resolvedSSHInfo, Port: port}
+func NewCheckSSHTunnelSecurity(targetHost SSHConfigValues, port string) *CheckSSHTunnelSecurity {
+	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
 }
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
@@ -174,9 +173,8 @@ func (s *SSHTunnelStop) Description() string {
 	return "Close registry SSH tunnel"
 }
 
-func NewSSHTunnelStop(targetHost Host) *SSHTunnelStop {
-	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
-	return &SSHTunnelStop{TargetHost: resolvedSSHInfo}
+func NewSSHTunnelStop(targetHost SSHConfigValues) *SSHTunnelStop {
+	return &SSHTunnelStop{TargetHost: targetHost}
 }
 
 func (s *SSHTunnelStop) Command() *exec.Cmd {
