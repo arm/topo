@@ -1,6 +1,7 @@
 package health
 
 import (
+	"fmt"
 	"os/exec"
 
 	"github.com/arm/topo/internal/ssh"
@@ -42,7 +43,7 @@ var TargetRequiredDependencies = []Dependency{
 
 type DependencyStatus struct {
 	Dependency Dependency
-	Installed  bool
+	Error      error
 }
 
 func CheckDependencies(binaryExists func(string) (bool, error), capabilities map[HardwareCapability]struct{}) []DependencyStatus {
@@ -86,9 +87,13 @@ func CheckInstalled(dependencies []Dependency, binaryExists LookPath) []Dependen
 			installed[dep.SoftwareEnumID] = struct{}{}
 		}
 
+		var statusErr error
+		if !isInstalled {
+			statusErr = fmt.Errorf("%s not found on path", dep.Name)
+		}
 		result = append(result, DependencyStatus{
 			Dependency: dep,
-			Installed:  isInstalled,
+			Error:      statusErr,
 		})
 	}
 	return result
@@ -116,7 +121,7 @@ func CollectAvailableByCategory(dependencyStatuses []DependencyStatus) map[strin
 
 	for _, status := range dependencyStatuses {
 		statuses := groupedByCategory[status.Dependency.Category]
-		if status.Installed {
+		if status.Error == nil {
 			statuses = append(statuses, status)
 		}
 		groupedByCategory[status.Dependency.Category] = statuses

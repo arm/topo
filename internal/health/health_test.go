@@ -1,6 +1,7 @@
 package health_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -10,14 +11,8 @@ import (
 func TestGenerateReport(t *testing.T) {
 	t.Run("given two host dependencies in the same category, they are grouped in a health check", func(t *testing.T) {
 		dependencyStatuses := []health.DependencyStatus{
-			{
-				Dependency: health.Dependency{Name: "foo", Category: "Baz"},
-				Installed:  true,
-			},
-			{
-				Dependency: health.Dependency{Name: "bar", Category: "Baz"},
-				Installed:  true,
-			},
+			{Dependency: health.Dependency{Name: "foo", Category: "Baz"}, Error: nil},
+			{Dependency: health.Dependency{Name: "bar", Category: "Baz"}, Error: nil},
 		}
 
 		got := health.GenerateReport(dependencyStatuses, health.Status{})
@@ -34,7 +29,7 @@ func TestGenerateReport(t *testing.T) {
 		dependencyStatuses := []health.DependencyStatus{
 			{
 				Dependency: health.Dependency{Name: "whatever", Category: "Rube Golberg"},
-				Installed:  false,
+				Error:      fmt.Errorf("whatever not found on path"),
 			},
 		}
 
@@ -71,7 +66,7 @@ func TestGenerateReport(t *testing.T) {
 			Dependencies: []health.DependencyStatus{
 				{
 					Dependency: foo,
-					Installed:  true,
+					Error:      nil,
 				},
 			},
 		}
