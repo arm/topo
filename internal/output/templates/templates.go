@@ -27,12 +27,12 @@ func getFuncMap(isTTY bool) template.FuncMap {
 	return f
 }
 
-func plainCompatibilityMark(c *catalog.Compatibility) string {
-	if c == nil {
-		return ""
-	}
-	if c.Supported {
+func plainCompatibilityMark(c catalog.CompatibilityStatus) string {
+	if c == catalog.CompatibilitySupported {
 		return "✅"
 	}
-	return "❌"
+	if c == catalog.CompatibilityUnsupported {
+		return "❌"
+	}
+	return ""
 }

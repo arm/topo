@@ -6,13 +6,17 @@ import (
 	"github.com/arm/topo/internal/target"
 )
 
-type Compatibility struct {
-	Supported bool `json:"supported"`
-}
+type CompatibilityStatus string
+
+const (
+	CompatibilityUnknown     CompatibilityStatus = ""
+	CompatibilitySupported   CompatibilityStatus = "supported"
+	CompatibilityUnsupported CompatibilityStatus = "unsupported"
+)
 
 type RepoWithCompatibility struct {
 	Repo
-	Compatibility *Compatibility `json:"compatibility,omitempty"`
+	Compatibility CompatibilityStatus `json:"compatibility,omitempty"`
 }
 
 func WithCompatibility(repos []Repo) []RepoWithCompatibility {
@@ -31,12 +35,17 @@ func AnnotateCompatibility(profile target.HardwareProfile, repos []RepoWithCompa
 
 	for r := range annotated {
 		repo := &annotated[r]
-		repo.Compatibility = &Compatibility{
-			Supported: isRepoSupported(profile, supportedFeatures, repo.Repo),
-		}
+		repo.Compatibility = compatibilityStatus(profile, supportedFeatures, repo.Repo)
 	}
 
 	return annotated
+}
+
+func compatibilityStatus(profile target.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) CompatibilityStatus {
+	if isRepoSupported(profile, supportedFeatures, repo) {
+		return CompatibilitySupported
+	}
+	return CompatibilityUnsupported
 }
 
 func extractSupportedFeatures(profile target.HardwareProfile) map[string]struct{} {

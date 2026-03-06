@@ -220,9 +220,7 @@ name-of-other-project | url.git | main
 					URL:  "url.git",
 					Ref:  "main",
 				},
-				Compatibility: &catalog.Compatibility{
-					Supported: true,
-				},
+				Compatibility: catalog.CompatibilitySupported,
 			},
 		}
 
@@ -236,11 +234,11 @@ name-of-other-project | url.git | main
 	t.Run("prints compatibility marker if project is compatible and vice versa", func(t *testing.T) {
 		compatibleRepo := catalog.RepoWithCompatibility{
 			Repo:          catalog.Repo{Name: "lasagne"},
-			Compatibility: &catalog.Compatibility{Supported: true},
+			Compatibility: catalog.CompatibilitySupported,
 		}
 		incompatibleRepo := catalog.RepoWithCompatibility{
 			Repo:          catalog.Repo{Name: "spaghetti"},
-			Compatibility: &catalog.Compatibility{Supported: false},
+			Compatibility: catalog.CompatibilityUnsupported,
 		}
 		repos := []catalog.RepoWithCompatibility{compatibleRepo, incompatibleRepo}
 
@@ -260,7 +258,7 @@ name-of-other-project | url.git | main
 					URL:  "url.git",
 					Ref:  "main",
 				},
-				Compatibility: &catalog.Compatibility{Supported: true},
+				Compatibility: catalog.CompatibilitySupported,
 			},
 			{
 				Repo: catalog.Repo{
@@ -268,7 +266,7 @@ name-of-other-project | url.git | main
 					URL:  "url.git",
 					Ref:  "main",
 				},
-				Compatibility: &catalog.Compatibility{Supported: false},
+				Compatibility: catalog.CompatibilityUnsupported,
 			},
 		}
 
@@ -281,24 +279,20 @@ name-of-other-project | url.git | main
 
 		want := []any{
 			map[string]any{
-				"name":        "lasagne",
-				"description": "",
-				"features":    nil,
-				"url":         "url.git",
-				"ref":         "main",
-				"compatibility": map[string]any{
-					"supported": true,
-				},
+				"name":          "lasagne",
+				"description":   "",
+				"features":      nil,
+				"url":           "url.git",
+				"ref":           "main",
+				"compatibility": "supported",
 			},
 			map[string]any{
-				"name":        "spaghetti",
-				"description": "",
-				"features":    nil,
-				"url":         "url.git",
-				"ref":         "main",
-				"compatibility": map[string]any{
-					"supported": false,
-				},
+				"name":          "spaghetti",
+				"description":   "",
+				"features":      nil,
+				"url":           "url.git",
+				"ref":           "main",
+				"compatibility": "unsupported",
 			},
 		}
 
