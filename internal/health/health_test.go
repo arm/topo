@@ -38,6 +38,7 @@ func TestGenerateReport(t *testing.T) {
 		assert.Len(t, got.Host.Dependencies, 1)
 		assert.Equal(t, "Rube Golberg", got.Host.Dependencies[0].Name)
 		assert.False(t, got.Host.Dependencies[0].Healthy)
+		assert.Equal(t, "whatever not found on path", got.Host.Dependencies[0].Value)
 	})
 
 	t.Run("when the target has a connection error, Connectivity is unhealthy", func(t *testing.T) {

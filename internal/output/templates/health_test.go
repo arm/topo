@@ -39,6 +39,33 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "✅")
 		})
 
+		t.Run("it renders the error detail for unhealthy dependencies", func(t *testing.T) {
+			report := health.Report{
+				Host: health.HostReport{
+					Dependencies: []health.HealthCheck{
+						{
+							Name:    "Container Engine",
+							Healthy: false,
+							Value:   "docker not found on path",
+						},
+					},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.Plain,
+			)
+			require.NoError(t, err)
+
+			assert.Contains(t, out.String(), "Container Engine")
+			assert.Contains(t, out.String(), "❌")
+			assert.Contains(t, out.String(), "docker not found on path")
+		})
+
 		t.Run("it renders connection failures", func(t *testing.T) {
 			report := health.Report{
 				Target: health.TargetReport{

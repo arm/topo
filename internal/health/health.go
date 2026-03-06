@@ -39,15 +39,29 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	availableDepsByCategory := CollectAvailableByCategory(statuses)
 
+	errorsByCategory := map[string][]string{}
+	for _, status := range statuses {
+		if status.Error != nil {
+			category := status.Dependency.Category
+			errorsByCategory[category] = append(errorsByCategory[category], status.Error.Error())
+		}
+	}
+
 	for category, installedDependencies := range availableDepsByCategory {
-		names := make([]string, len(installedDependencies))
-		for i, dep := range installedDependencies {
-			names[i] = dep.Dependency.Name
+		var value string
+		if len(installedDependencies) > 0 {
+			names := make([]string, len(installedDependencies))
+			for i, dep := range installedDependencies {
+				names[i] = dep.Dependency.Name
+			}
+			value = strings.Join(names, ", ")
+		} else {
+			value = strings.Join(errorsByCategory[category], ", ")
 		}
 		res = append(res, HealthCheck{
 			Name:    category,
 			Healthy: len(installedDependencies) > 0,
-			Value:   strings.Join(names, ", "),
+			Value:   value,
 		})
 	}
 	return res
