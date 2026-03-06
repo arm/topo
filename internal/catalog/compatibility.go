@@ -19,14 +19,6 @@ type RepoWithCompatibility struct {
 	Compatibility CompatibilityStatus `json:"compatibility,omitempty"`
 }
 
-func withCompatibility(repos []Repo) []RepoWithCompatibility {
-	withCompatibility := make([]RepoWithCompatibility, len(repos))
-	for i, repo := range repos {
-		withCompatibility[i] = RepoWithCompatibility{Repo: repo}
-	}
-	return withCompatibility
-}
-
 func AnnotateCompatibility(profile *target.HardwareProfile, repos []Repo) []RepoWithCompatibility {
 	annotated := withCompatibility(repos)
 	if profile == nil {
@@ -42,6 +34,14 @@ func AnnotateCompatibility(profile *target.HardwareProfile, repos []Repo) []Repo
 	}
 
 	return annotated
+}
+
+func withCompatibility(repos []Repo) []RepoWithCompatibility {
+	withCompatibility := make([]RepoWithCompatibility, len(repos))
+	for i, repo := range repos {
+		withCompatibility[i] = RepoWithCompatibility{Repo: repo}
+	}
+	return withCompatibility
 }
 
 func compatibilityStatus(profile target.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) CompatibilityStatus {
