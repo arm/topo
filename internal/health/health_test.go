@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,6 +40,28 @@ func TestGenerateReport(t *testing.T) {
 		assert.Equal(t, "Rube Golberg", got.Host.Dependencies[0].Name)
 		assert.False(t, got.Host.Dependencies[0].Healthy)
 		assert.Equal(t, "whatever not found on path", got.Host.Dependencies[0].Value)
+	})
+
+	t.Run("when no remoteproc devices are found, SubsystemDriver is unhealthy with an error message", func(t *testing.T) {
+		ts := health.Status{}
+
+		got := health.GenerateReport(nil, ts)
+
+		assert.False(t, got.Target.SubsystemDriver.Healthy)
+		assert.Equal(t, "no remoteproc devices found", got.Target.SubsystemDriver.Value)
+	})
+
+	t.Run("when remoteproc devices are found, SubsystemDriver is healthy with device names", func(t *testing.T) {
+		ts := health.Status{
+			Hardware: health.HardwareProfile{
+				RemoteCPU: []target.RemoteprocCPU{{Name: "m4_0"}, {Name: "m4_1"}},
+			},
+		}
+
+		got := health.GenerateReport(nil, ts)
+
+		assert.True(t, got.Target.SubsystemDriver.Healthy)
+		assert.Equal(t, "m4_0, m4_1", got.Target.SubsystemDriver.Value)
 	})
 
 	t.Run("when the target has a connection error, Connectivity is unhealthy", func(t *testing.T) {

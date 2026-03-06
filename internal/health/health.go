@@ -82,15 +82,21 @@ func generateTargetReport(targetStatus Status) TargetReport {
 		Healthy: targetStatus.ConnectionError == nil,
 		Value:   "",
 	}
-	report.SubsystemDriver = HealthCheck{
-		Name:    "Subsystem Driver (remoteproc)",
-		Healthy: len(targetStatus.Hardware.RemoteCPU) > 0,
+
+	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
+	remoteCPUs := targetStatus.Hardware.RemoteCPU
+	if len(remoteCPUs) > 0 {
+		names := make([]string, len(remoteCPUs))
+		for i, remoteProc := range remoteCPUs {
+			names[i] = remoteProc.Name
+		}
+		report.SubsystemDriver.Healthy = true
+		report.SubsystemDriver.Value = strings.Join(names, ", ")
+	} else {
+		report.SubsystemDriver.Healthy = false
+		report.SubsystemDriver.Value = "no remoteproc devices found"
 	}
-	var remoteProcNames []string
-	for _, remoteProc := range targetStatus.Hardware.RemoteCPU {
-		remoteProcNames = append(remoteProcNames, remoteProc.Name)
-	}
-	report.SubsystemDriver.Value = strings.Join(remoteProcNames, ", ")
+
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 
 	return report
