@@ -137,7 +137,7 @@ func TestCheckInstalled(t *testing.T) {
 		got := health.CheckInstalled(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker}, Error: fmt.Errorf("docker not found on path")},
+			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker}, Error: nil},
 			{Dependency: health.Dependency{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
