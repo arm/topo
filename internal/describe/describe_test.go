@@ -159,6 +159,7 @@ totalmemory_kb: 16384
 		require.NoError(t, os.WriteFile(filePath, []byte("host_processor: ["), 0o644))
 
 		_, err := describe.ReadTargetDescriptionFromFile(filePath)
+
 		assert.ErrorContains(t, err, "failed to parse target description file")
 	})
 }
