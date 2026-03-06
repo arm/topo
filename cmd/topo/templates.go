@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
 )
 
@@ -44,9 +45,12 @@ var templatesCmd = &cobra.Command{
 			return fmt.Errorf("could not filter templates: %w", err)
 		}
 
-		profile, err := describe.ReadTargetDescriptionFromFile(targetDescriptionPath)
-		if err != nil {
-			return err
+		var profile *target.HardwareProfile
+		if targetDescriptionPath != "" {
+			profile, err = describe.ReadTargetDescriptionFromFile(targetDescriptionPath)
+			if err != nil {
+				return err
+			}
 		}
 
 		reposWithCompatibility := catalog.AnnotateCompatibility(profile, repos)

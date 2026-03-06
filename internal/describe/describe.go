@@ -36,10 +36,6 @@ func WriteTargetDescriptionToFile(dir string, report target.HardwareProfile) (st
 }
 
 func ReadTargetDescriptionFromFile(filePath string) (*target.HardwareProfile, error) {
-	if filePath == "" {
-		return nil, nil
-	}
-
 	description, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read target description file %q: %w", filePath, err)
