@@ -27,6 +27,19 @@ func AnnotateCompatibility(profile target.HardwareProfile, repos []RepoWithCompa
 	annotated := make([]RepoWithCompatibility, len(repos))
 	copy(annotated, repos)
 
+	supportedFeatures := extractSupportedFeatures(profile)
+
+	for r := range annotated {
+		repo := &annotated[r]
+		repo.Compatibility = &Compatibility{
+			Supported: isRepoSupported(profile, supportedFeatures, repo.Repo),
+		}
+	}
+
+	return annotated
+}
+
+func extractSupportedFeatures(profile target.HardwareProfile) map[string]struct{} {
 	supportedFeatures := map[string]struct{}{}
 	for _, proc := range profile.HostProcessor {
 		for _, feature := range proc.ExtractArmFeatures() {
@@ -37,29 +50,25 @@ func AnnotateCompatibility(profile target.HardwareProfile, repos []RepoWithCompa
 		supportedFeatures["remoteproc"] = struct{}{}
 		supportedFeatures["remoteproc-runtime"] = struct{}{}
 	}
+	return supportedFeatures
+}
 
-	for r := range annotated {
-		repo := &annotated[r]
-		supported := true
-
-		for _, feature := range repo.Features {
-			normalized := strings.ToLower(strings.TrimSpace(feature))
-			if _, ok := supportedFeatures[normalized]; !ok {
-				supported = false
-				break
-			}
+func isRepoSupported(profile target.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) bool {
+	for _, feature := range repo.Features {
+		normalized := strings.ToLower(strings.TrimSpace(feature))
+		if _, ok := supportedFeatures[normalized]; !ok {
+			return false
 		}
-
-		if repo.MinRAMKb > 0 {
-			if profile.TotalMemoryKb == 0 {
-				supported = false
-			} else if profile.TotalMemoryKb < repo.MinRAMKb {
-				supported = false
-			}
-		}
-
-		repo.Compatibility = &Compatibility{Supported: supported}
 	}
 
-	return annotated
+	if repo.MinRAMKb > 0 {
+		if profile.TotalMemoryKb == 0 {
+			return false
+		}
+		if profile.TotalMemoryKb < repo.MinRAMKb {
+			return false
+		}
+	}
+
+	return true
 }
