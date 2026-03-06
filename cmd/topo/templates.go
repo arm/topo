@@ -5,11 +5,10 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/catalog"
+	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
-	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -45,21 +44,12 @@ var templatesCmd = &cobra.Command{
 			return fmt.Errorf("could not filter templates: %w", err)
 		}
 
-		reposWithCompatibility := catalog.WithCompatibility(repos)
-
-		if targetDescriptionPath != "" {
-			description, err := os.ReadFile(targetDescriptionPath)
-			if err != nil {
-				return fmt.Errorf("failed to read target description file %q: %w", targetDescriptionPath, err)
-			}
-
-			var profile target.HardwareProfile
-			if err := yaml.Unmarshal(description, &profile); err != nil {
-				return fmt.Errorf("failed to parse target description file %q: %w", targetDescriptionPath, err)
-			}
-			reposWithCompatibility = catalog.AnnotateCompatibility(profile, reposWithCompatibility)
+		profile, err := describe.ReadTargetDescriptionFromFile(targetDescriptionPath)
+		if err != nil {
+			return err
 		}
 
+		reposWithCompatibility := catalog.AnnotateCompatibility(profile, repos)
 		return printable.Print(templates.RepoCollection(reposWithCompatibility), os.Stdout, outputFormat)
 	},
 }

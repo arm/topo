@@ -17,7 +17,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 			},
 		}
 
-		got := catalog.AnnotateCompatibility(profile, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
 	})
 
@@ -29,7 +29,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 			},
 		}
 
-		got := catalog.AnnotateCompatibility(profile, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
 	})
 
@@ -41,7 +41,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 			},
 		}
 
-		got := catalog.AnnotateCompatibility(profile, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
 	})
 
@@ -53,7 +53,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 			},
 		}
 
-		got := catalog.AnnotateCompatibility(profile, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
 	})
 
@@ -61,7 +61,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repos := []catalog.Repo{{Name: "rp-template", Features: []string{"remoteproc"}}}
 		profile := target.HardwareProfile{}
 
-		got := catalog.AnnotateCompatibility(profile, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
 	})
 
@@ -73,7 +73,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 			},
 		}
 
-		got := catalog.AnnotateCompatibility(profile, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
 	})
 
@@ -81,7 +81,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repos := []catalog.Repo{{Name: "ram-template", MinRAMKb: 1024}}
 		profile := target.HardwareProfile{TotalMemoryKb: 512}
 
-		got := catalog.AnnotateCompatibility(profile, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Equal(t, catalog.CompatibilityUnsupported, got[0].Compatibility)
 	})
 
@@ -89,10 +89,21 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repos := []catalog.Repo{
 			{Name: "plain"},
 		}
+		profile := target.HardwareProfile{}
 
-		got := catalog.AnnotateCompatibility(target.HardwareProfile{}, catalog.WithCompatibility(repos))
+		got := catalog.AnnotateCompatibility(&profile, repos)
 		assert.Len(t, got, 1)
 		assert.Equal(t, catalog.CompatibilitySupported, got[0].Compatibility)
 		assert.Equal(t, "plain", repos[0].Name)
+	})
+
+	t.Run("leaves compatibility unknown when profile is nil", func(t *testing.T) {
+		repos := []catalog.Repo{
+			{Name: "plain"},
+		}
+
+		got := catalog.AnnotateCompatibility(nil, repos)
+		assert.Len(t, got, 1)
+		assert.Equal(t, catalog.CompatibilityUnknown, got[0].Compatibility)
 	})
 }

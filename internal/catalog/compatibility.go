@@ -19,7 +19,7 @@ type RepoWithCompatibility struct {
 	Compatibility CompatibilityStatus `json:"compatibility,omitempty"`
 }
 
-func WithCompatibility(repos []Repo) []RepoWithCompatibility {
+func withCompatibility(repos []Repo) []RepoWithCompatibility {
 	withCompatibility := make([]RepoWithCompatibility, len(repos))
 	for i, repo := range repos {
 		withCompatibility[i] = RepoWithCompatibility{Repo: repo}
@@ -27,15 +27,18 @@ func WithCompatibility(repos []Repo) []RepoWithCompatibility {
 	return withCompatibility
 }
 
-func AnnotateCompatibility(profile target.HardwareProfile, repos []RepoWithCompatibility) []RepoWithCompatibility {
-	annotated := make([]RepoWithCompatibility, len(repos))
-	copy(annotated, repos)
+func AnnotateCompatibility(profile *target.HardwareProfile, repos []Repo) []RepoWithCompatibility {
+	annotated := withCompatibility(repos)
+	if profile == nil {
+		return annotated
+	}
 
-	supportedFeatures := extractSupportedFeatures(profile)
+	hardwareProfile := *profile
+	supportedFeatures := extractSupportedFeatures(hardwareProfile)
 
 	for r := range annotated {
 		repo := &annotated[r]
-		repo.Compatibility = compatibilityStatus(profile, supportedFeatures, repo.Repo)
+		repo.Compatibility = compatibilityStatus(hardwareProfile, supportedFeatures, repo.Repo)
 	}
 
 	return annotated
