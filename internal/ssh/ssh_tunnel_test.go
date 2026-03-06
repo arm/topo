@@ -149,7 +149,7 @@ func TestSSHTunnelStartEdgeCases(t *testing.T) {
 			st := mustStartFromHost(t, host, port, true)
 			got := strings.Join(st.Command().Args, " ")
 
-			socketPathPattern := `.*/topo-tunnel-[a-f0-9]+`
+			socketPathPattern := `(?i).*[/\\]topo-tunnel-[a-f0-9]+`
 			want := fmt.Sprintf(`^ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127\.0\.0\.1:%s (?:[^@ ]+@)?remote-server$`, socketPathPattern, port, port)
 			assert.Regexp(t, want, got)
 		})
@@ -334,7 +334,7 @@ func TestSSHTunnelStopEdgeCases(t *testing.T) {
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			got := strings.Join(st.Command().Args, " ")
 
-			socketPathPattern := `.*/topo-tunnel-[a-f0-9]+`
+			socketPathPattern := `(?i).*[/\\]topo-tunnel-[a-f0-9]+`
 			want := fmt.Sprintf(`^ssh -S %s -O exit (?:[^@ ]+@)?remote-server$`, socketPathPattern)
 			assert.Regexp(t, want, got)
 		})
