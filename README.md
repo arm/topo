@@ -142,6 +142,7 @@ The Getting Started walkthrough above covers the core flow. These additional com
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `init`                       | Scaffold a new empty project instead of cloning a template                                                  |
 | `extend`                     | Add services from a template into an existing project                                                       |
+| `ps`                         | Expose a live topology filesystem that groups containers by subsystem and supports `start`/`stop` actions  |
 | `service remove`             | Remove a service from your compose file                                                                     |
 | `setup-keys`                 | Set up SSH key authentication if your target currently uses password-based SSH, which Topo does not support |
 | `install remoteproc-runtime` | Install the remoteproc runtime on your target                                                               |
