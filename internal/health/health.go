@@ -14,10 +14,25 @@ const passwordAuthErrorMessage = `note: Topo does not support SSH password-based
 - create your own SSH keys for the target, or
 - run 'topo setup-keys --target %s' to let Topo generate keys and configure passwordless authentication`
 
+type CheckStatus string
+
+func NewCheckStatusFromError(err error) CheckStatus {
+	if err != nil {
+		return CheckStatusError
+	}
+	return CheckStatusOK
+}
+
+const (
+	CheckStatusOK      CheckStatus = "ok"
+	CheckStatusWarning CheckStatus = "warning"
+	CheckStatusError   CheckStatus = "error"
+)
+
 type HealthCheck struct {
-	Name    string `json:"name"`
-	Healthy bool   `json:"healthy"`
-	Value   string `json:"value"`
+	Name   string      `json:"name"`
+	Status CheckStatus `json:"status"`
+	Value  string      `json:"value"`
 }
 type HostReport struct {
 	Dependencies []HealthCheck `json:"dependencies"`
@@ -38,6 +53,8 @@ type Report struct {
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	for _, group := range groupByCategory(statuses) {
+		hc := HealthCheck{Name: group.Key}
+
 		var installedNames, errorMessages []string
 		for _, dep := range group.Members {
 			if dep.Error == nil {
@@ -46,17 +63,16 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 				errorMessages = append(errorMessages, dep.Error.Error())
 			}
 		}
-		var value string
+
 		if len(installedNames) > 0 {
-			value = strings.Join(installedNames, ", ")
+			hc.Value = strings.Join(installedNames, ", ")
+			hc.Status = CheckStatusOK
 		} else {
-			value = strings.Join(errorMessages, ", ")
+			hc.Value = strings.Join(errorMessages, ", ")
+			hc.Status = CheckStatusError
 		}
-		res = append(res, HealthCheck{
-			Name:    group.Key,
-			Healthy: len(installedNames) > 0,
-			Value:   value,
-		})
+
+		res = append(res, hc)
 	}
 	return res
 }
@@ -72,9 +88,9 @@ func generateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
 	report.Connectivity = HealthCheck{
-		Name:    "Connected",
-		Healthy: targetStatus.ConnectionError == nil,
-		Value:   "",
+		Name:   "Connected",
+		Status: NewCheckStatusFromError(targetStatus.ConnectionError),
+		Value:  "",
 	}
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
@@ -84,10 +100,10 @@ func generateTargetReport(targetStatus Status) TargetReport {
 		for i, remoteProc := range remoteCPUs {
 			names[i] = remoteProc.Name
 		}
-		report.SubsystemDriver.Healthy = true
+		report.SubsystemDriver.Status = CheckStatusOK
 		report.SubsystemDriver.Value = strings.Join(names, ", ")
 	} else {
-		report.SubsystemDriver.Healthy = false
+		report.SubsystemDriver.Status = CheckStatusWarning
 		report.SubsystemDriver.Value = "no remoteproc devices found"
 	}
 
