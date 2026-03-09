@@ -18,13 +18,8 @@ const (
 )
 
 func NewKeySetup(target string, privKeyPath string, keyType string) (operation.Sequence, error) {
-	parsedKeyType, err := ParseKeyType(keyType)
-	if err != nil {
-		return nil, err
-	}
-
 	ops := []operation.Operation{
-		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", target, string(parsedKeyType), privKeyPath, sshkeygen.SSHKeyGenOptions{}),
+		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", target, keyType, privKeyPath, sshkeygen.SSHKeyGenOptions{}),
 		pubkeytransfer.NewPubKeyTransfer("Transfer public key to target and set it as an authorized key", target, privKeyPath, pubkeytransfer.PubKeyTransferOptions{}),
 	}
 	return operation.NewSequence(ops...), nil

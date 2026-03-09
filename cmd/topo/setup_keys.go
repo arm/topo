@@ -43,7 +43,12 @@ Use --dry-run to see what commands would be executed without actually running th
 			}
 		}
 
-		seq, err := setupkeys.NewKeySetup(resolvedTarget, privateKeyPath, keyType)
+		parsedKeyType, err := setupkeys.ParseKeyType(keyType)
+		if err != nil {
+			return err
+		}
+
+		seq, err := setupkeys.NewKeySetup(resolvedTarget, privateKeyPath, string(parsedKeyType))
 		if err != nil {
 			return err
 		}
