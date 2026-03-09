@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/arm/topo/internal/collections"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -114,10 +115,9 @@ func BinaryExistsLocally(bin string) error {
 	return nil
 }
 
-func groupByCategory(statuses []DependencyStatus) map[string][]DependencyStatus {
-	grouped := map[string][]DependencyStatus{}
-	for _, status := range statuses {
-		grouped[status.Dependency.Category] = append(grouped[status.Dependency.Category], status)
-	}
-	return grouped
+func groupByCategory(statuses []DependencyStatus) []collections.Group[DependencyStatus, string] {
+	return collections.GroupBy(
+		statuses,
+		func(ds DependencyStatus) string { return ds.Dependency.Category },
+	)
 }

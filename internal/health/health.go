@@ -37,9 +37,9 @@ type Report struct {
 
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
-	for category, deps := range groupByCategory(statuses) {
+	for _, group := range groupByCategory(statuses) {
 		var installedNames, errorMessages []string
-		for _, dep := range deps {
+		for _, dep := range group.Members {
 			if dep.Error == nil {
 				installedNames = append(installedNames, dep.Dependency.Name)
 			} else {
@@ -53,7 +53,7 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 			value = strings.Join(errorMessages, ", ")
 		}
 		res = append(res, HealthCheck{
-			Name:    category,
+			Name:    group.Key,
 			Healthy: len(installedNames) > 0,
 			Value:   value,
 		})
