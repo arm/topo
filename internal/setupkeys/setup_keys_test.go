@@ -16,21 +16,31 @@ import (
 func TestNewKeySetupDryRun(t *testing.T) {
 	tests := []struct {
 		name         string
+		keyType      setupkeys.KeyType
 		wantTarget   string
 		inputKeyPath string
 		wantKeyPath  string
 	}{
 		{
 			name:         "default key path",
+			keyType:      setupkeys.KeyTypeED25519,
 			inputKeyPath: "",
 			wantTarget:   "user@some1thing.com",
 			wantKeyPath:  filepath.Join(".ssh", "id_ed25519_topo_user_some1thing.com"),
 		},
 		{
 			name:         "custom key path",
+			keyType:      setupkeys.KeyTypeED25519,
 			inputKeyPath: filepath.Join("custom_keys", "id_ed25519_custom"),
 			wantTarget:   "user@some2thing.com",
 			wantKeyPath:  filepath.Join("custom_keys", "id_ed25519_custom"),
+		},
+		{
+			name:         "rsa key type",
+			keyType:      setupkeys.KeyTypeRSA,
+			inputKeyPath: filepath.Join("custom_keys", "id_rsa_custom"),
+			wantTarget:   "user@some3thing.com",
+			wantKeyPath:  filepath.Join("custom_keys", "id_rsa_custom"),
 		},
 	}
 	for _, tt := range tests {
@@ -49,7 +59,7 @@ func TestNewKeySetupDryRun(t *testing.T) {
 				inputKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
 				require.NoError(t, err)
 			}
-			got, err := setupkeys.NewKeySetup(tt.wantTarget, inputKeyPath)
+			got, err := setupkeys.NewKeySetup(tt.wantTarget, inputKeyPath, tt.keyType)
 			require.NoError(t, err)
 			require.Len(t, got, 2)
 			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
@@ -59,7 +69,7 @@ func TestNewKeySetupDryRun(t *testing.T) {
 			var buf bytes.Buffer
 			require.NoError(t, got.DryRun(&buf))
 
-			wantKeygen := "ssh-keygen -t ed25519 -f " + wantKeyPath + " -C " + tt.wantTarget
+			wantKeygen := "ssh-keygen -t " + string(tt.keyType) + " -f " + wantKeyPath + " -C " + tt.wantTarget
 			wantSSH := "ssh -- " + tt.wantTarget
 			wantCmd := "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 			require.Contains(t, buf.String(), wantKeygen, "DryRun output should include keygen command")
@@ -67,4 +77,23 @@ func TestNewKeySetupDryRun(t *testing.T) {
 			require.Contains(t, buf.String(), wantCmd, "DryRun output should include correct authorized key addition command to be executed on target")
 		})
 	}
+}
+
+func TestParseKeyType(t *testing.T) {
+	t.Run("ed25519", func(t *testing.T) {
+		got, err := setupkeys.ParseKeyType("ed25519")
+		require.NoError(t, err)
+		require.Equal(t, setupkeys.KeyTypeED25519, got)
+	})
+
+	t.Run("rsa", func(t *testing.T) {
+		got, err := setupkeys.ParseKeyType("rsa")
+		require.NoError(t, err)
+		require.Equal(t, setupkeys.KeyTypeRSA, got)
+	})
+
+	t.Run("ecdsa", func(t *testing.T) {
+		_, err := setupkeys.ParseKeyType("ecdsa")
+		require.EqualError(t, err, `unsupported key type "ecdsa", supported types: ed25519, rsa`)
+	})
 }
