@@ -101,7 +101,7 @@ This SSHs into the target, probes CPU features, and writes a `target-description
 topo templates --target-description target-description.yaml
 ```
 
-This lists all templates and marks which ones are compatible with your target hardware.
+This lists available templates and indicates compatibility with your target hardware.
 
 ### 4. Clone a template into a new project
 
