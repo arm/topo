@@ -98,10 +98,10 @@ This SSHs into the target, probes CPU features, and writes a `target-description
 ### 3. Find a template
 
 ```sh
-topo templates --target my-board
+topo templates --target-description target-description.yaml
 ```
 
-This lists templates compatible with your target's hardware. Pass `--feature` to narrow it further (e.g. `--feature SVE`).
+This lists all templates and marks which ones are compatible with your target hardware.
 
 ### 4. Clone a template into a new project
 
