@@ -14,13 +14,13 @@ import (
 
 func TestPrintHealthReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
-		t.Run("it renders the host dependencies", func(t *testing.T) {
+		t.Run("it renders the healthy host dependencies", func(t *testing.T) {
 			report := health.Report{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
-							Name:    "Flux Capacitor",
-							Healthy: true,
+							Name:   "Flux Capacitor",
+							Status: health.CheckStatusOK,
 						},
 					},
 				},
@@ -39,14 +39,14 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "✅")
 		})
 
-		t.Run("it renders the error detail for unhealthy dependencies", func(t *testing.T) {
+		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
 			report := health.Report{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
-							Name:    "Container Engine",
-							Healthy: false,
-							Value:   "docker not found on path",
+							Name:   "Container Engine",
+							Status: health.CheckStatusError,
+							Value:  "docker not found on path",
 						},
 					},
 				},
@@ -66,12 +66,40 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "docker not found on path")
 		})
 
+		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
+			report := health.Report{
+				Target: health.TargetReport{
+					Connectivity: health.HealthCheck{
+						Name:   "Connected",
+						Status: health.CheckStatusOK,
+					},
+					SubsystemDriver: health.HealthCheck{
+						Name:   "Subsystem Driver (remoteproc)",
+						Status: health.CheckStatusWarning,
+						Value:  "no remoteproc devices found",
+					},
+				},
+			}
+
+			var out bytes.Buffer
+
+			err := printable.Print(
+				templates.PrintableHealthReport(report),
+				&out,
+				term.Plain,
+			)
+			require.NoError(t, err)
+
+			assert.Contains(t, out.String(), "⚠️")
+			assert.Contains(t, out.String(), "no remoteproc devices found")
+		})
+
 		t.Run("it renders connection failures", func(t *testing.T) {
 			report := health.Report{
 				Target: health.TargetReport{
 					Connectivity: health.HealthCheck{
-						Name:    "Connected",
-						Healthy: false,
+						Name:   "Connected",
+						Status: health.CheckStatusError,
 					},
 				},
 			}
@@ -93,8 +121,8 @@ func TestPrintHealthReport(t *testing.T) {
 			report := health.Report{
 				Target: health.TargetReport{
 					Connectivity: health.HealthCheck{
-						Name:    "Connected",
-						Healthy: false,
+						Name:   "Connected",
+						Status: health.CheckStatusError,
 					},
 				},
 			}
@@ -118,15 +146,18 @@ func TestPrintHealthReport(t *testing.T) {
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
-							Name:    "Flux Capacitor",
-							Healthy: true,
+							Name:   "Flux Capacitor",
+							Status: health.CheckStatusOK,
 						},
 					},
 				},
 				Target: health.TargetReport{
 					Connectivity: health.HealthCheck{
-						Name:    "Connected",
-						Healthy: true,
+						Name:   "Connected",
+						Status: health.CheckStatusOK,
+					},
+					SubsystemDriver: health.HealthCheck{
+						Status: health.CheckStatusWarning,
 					},
 				},
 			}
@@ -143,14 +174,14 @@ func TestPrintHealthReport(t *testing.T) {
 			want := `{
 				"host": {
 					"dependencies": [
-						{"name":"Flux Capacitor","healthy":true,"value":""}
+						{"name":"Flux Capacitor","status":"ok","value":""}
 					]
 				},
 				"target": {
 					"isLocalhost": false,
-					"connectivity": {"name":"Connected","healthy":true,"value":""},
+					"connectivity": {"name":"Connected","status":"ok","value":""},
 					"dependencies": [],
-					"subsystemDriver": {"name":"","healthy":false,"value":""}
+					"subsystemDriver": {"name":"","status":"warning","value":""}
 				}
 			}`
 

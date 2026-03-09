@@ -13,7 +13,7 @@ type PrintableHealthReport health.Report
 
 const healthCheckTemplate = `
 {{- define "checkRow" -}}
-  {{ .Name }}:{{- if .Healthy }} ✅{{- else }} ❌{{- end }}{{- if .Value }} ({{ .Value }}){{- end }}
+  {{ .Name }}:{{ statusIcon .Status }}{{- if .Value }} ({{ .Value }}){{- end }}
 {{- end -}}
 Host
 ----
@@ -26,7 +26,7 @@ Target
 {{- if not .Target.IsLocalhost }}
 {{ template "checkRow" .Target.Connectivity }}
 {{- end }}
-{{- if or .Target.IsLocalhost .Target.Connectivity.Healthy }}
+{{- if or .Target.IsLocalhost (isOK .Target.Connectivity.Status) }}
 {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
 {{- end }}
@@ -36,6 +36,19 @@ Target
 
 func (r PrintableHealthReport) AsPlain(isTTY bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
+	funcMap["statusIcon"] = func(s health.CheckStatus) string {
+		switch s {
+		case health.CheckStatusOK:
+			return " ✅"
+		case health.CheckStatusWarning:
+			return " ⚠️"
+		default:
+			return " ❌"
+		}
+	}
+	funcMap["isOK"] = func(s health.CheckStatus) bool {
+		return s == health.CheckStatusOK
+	}
 	tmpl, err := template.
 		New("healthcheck").
 		Funcs(funcMap).
