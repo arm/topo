@@ -8,7 +8,7 @@ type Group[I any, K comparable] struct {
 // GroupBy partitions items into groups by applying keyFn to each element.
 // Groups are returned in the order their keys first appear in items.
 func GroupBy[I any, K comparable](items []I, keyFn func(I) K) []Group[I, K] {
-	order, groupMap := groupBy(items, keyFn)
+	order, groupMap := groupAndCollectOrderBy(items, keyFn)
 
 	groups := make([]Group[I, K], len(order))
 
@@ -22,7 +22,7 @@ func GroupBy[I any, K comparable](items []I, keyFn func(I) K) []Group[I, K] {
 	return groups
 }
 
-func groupBy[I any, K comparable](slice []I, keyFn func(I) K) ([]K, map[K][]I) {
+func groupAndCollectOrderBy[I any, K comparable](slice []I, keyFn func(I) K) ([]K, map[K][]I) {
 	order := []K{}
 	groups := map[K][]I{}
 
