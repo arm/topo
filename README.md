@@ -102,6 +102,11 @@ topo templates --target-description target-description.yaml
 ```
 
 This lists available templates and indicates compatibility with your target hardware.
+If you don't already have a target description file for your board, you can still use:
+
+```sh
+topo templates --target my-board
+```
 
 ### 4. Clone a template into a new project
 

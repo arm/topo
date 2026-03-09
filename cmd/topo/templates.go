@@ -34,6 +34,16 @@ var templatesCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
+		} else {
+			resolvedTarget, exists := lookupTarget(cmd)
+			if exists {
+				conn := target.NewConnection(resolvedTarget, target.ConnectionOptions{Multiplex: true})
+				hwProfile, err := describe.GenerateTargetDescription(conn)
+				if err != nil {
+					return err
+				}
+				profile = &hwProfile
+			}
 		}
 
 		reposWithCompatibility := catalog.AnnotateCompatibility(profile, repos)
@@ -42,11 +52,13 @@ var templatesCmd = &cobra.Command{
 }
 
 func init() {
+	addTargetFlag(templatesCmd)
 	templatesCmd.Flags().StringVar(
 		&targetDescriptionPath,
 		"target-description",
 		"",
 		"Path to the target description file used to show template compatibility",
 	)
+	templatesCmd.MarkFlagsMutuallyExclusive("target", "target-description")
 	rootCmd.AddCommand(templatesCmd)
 }
