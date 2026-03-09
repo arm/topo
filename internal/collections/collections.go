@@ -5,6 +5,8 @@ type Group[I any, K comparable] struct {
 	Members []I
 }
 
+// GroupBy partitions items into groups by applying keyFn to each element.
+// Groups are returned in the order their keys first appear in items.
 func GroupBy[I any, K comparable](items []I, keyFn func(I) K) []Group[I, K] {
 	order, groupMap := groupBy(items, keyFn)
 
