@@ -16,28 +16,28 @@ import (
 func TestNewKeySetupDryRun(t *testing.T) {
 	tests := []struct {
 		name         string
-		keyType      string
+		keyType      setupkeys.KeyType
 		wantTarget   string
 		inputKeyPath string
 		wantKeyPath  string
 	}{
 		{
 			name:         "default key path",
-			keyType:      "ed25519",
+			keyType:      setupkeys.KeyTypeED25519,
 			inputKeyPath: "",
 			wantTarget:   "user@some1thing.com",
 			wantKeyPath:  filepath.Join(".ssh", "id_ed25519_topo_user_some1thing.com"),
 		},
 		{
 			name:         "custom key path",
-			keyType:      "ed25519",
+			keyType:      setupkeys.KeyTypeED25519,
 			inputKeyPath: filepath.Join("custom_keys", "id_ed25519_custom"),
 			wantTarget:   "user@some2thing.com",
 			wantKeyPath:  filepath.Join("custom_keys", "id_ed25519_custom"),
 		},
 		{
 			name:         "rsa key type",
-			keyType:      "rsa",
+			keyType:      setupkeys.KeyTypeRSA,
 			inputKeyPath: filepath.Join("custom_keys", "id_rsa_custom"),
 			wantTarget:   "user@some3thing.com",
 			wantKeyPath:  filepath.Join("custom_keys", "id_rsa_custom"),
@@ -69,7 +69,7 @@ func TestNewKeySetupDryRun(t *testing.T) {
 			var buf bytes.Buffer
 			require.NoError(t, got.DryRun(&buf))
 
-			wantKeygen := "ssh-keygen -t " + tt.keyType + " -f " + wantKeyPath + " -C " + tt.wantTarget
+			wantKeygen := "ssh-keygen -t " + string(tt.keyType) + " -f " + wantKeyPath + " -C " + tt.wantTarget
 			wantSSH := "ssh -- " + tt.wantTarget
 			wantCmd := "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 			require.Contains(t, buf.String(), wantKeygen, "DryRun output should include keygen command")
@@ -79,7 +79,21 @@ func TestNewKeySetupDryRun(t *testing.T) {
 	}
 }
 
-func TestNewKeySetupUnsupportedKeyType(t *testing.T) {
-	_, err := setupkeys.ParseKeyType("ecdsa")
-	require.EqualError(t, err, `unsupported key type "ecdsa", supported types: ed25519, rsa`)
+func TestParseKeyType(t *testing.T) {
+	t.Run("ed25519", func(t *testing.T) {
+		got, err := setupkeys.ParseKeyType("ed25519")
+		require.NoError(t, err)
+		require.Equal(t, setupkeys.KeyTypeED25519, got)
+	})
+
+	t.Run("rsa", func(t *testing.T) {
+		got, err := setupkeys.ParseKeyType("rsa")
+		require.NoError(t, err)
+		require.Equal(t, setupkeys.KeyTypeRSA, got)
+	})
+
+	t.Run("ecdsa", func(t *testing.T) {
+		_, err := setupkeys.ParseKeyType("ecdsa")
+		require.EqualError(t, err, `unsupported key type "ecdsa", supported types: ed25519, rsa`)
+	})
 }
