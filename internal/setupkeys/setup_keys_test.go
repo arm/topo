@@ -12,44 +12,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetupKeys(t *testing.T) {
+func TestNewKeySetup(t *testing.T) {
 	t.Run("NewKeySetup returns SSHKeyGen then PubKeyTransfer for supported key types", func(t *testing.T) {
-		tests := []struct {
-			name        string
-			keyType     setupkeys.KeyType
-			target      string
-			privKeyPath string
-		}{
-			{
-				name:        "ed25519 with empty private key path",
-				keyType:     setupkeys.KeyTypeED25519,
-				target:      "user@some1thing.com",
-				privKeyPath: "",
-			},
-			{
-				name:        "ed25519 with custom private key path",
-				keyType:     setupkeys.KeyTypeED25519,
-				target:      "user@some1thing.com",
-				privKeyPath: filepath.Join(t.TempDir(), "id_ed25519_custom"),
-			},
-			{
-				name:        "rsa with custom private key path",
-				keyType:     setupkeys.KeyTypeRSA,
-				target:      "user@some2thing.com",
-				privKeyPath: filepath.Join(t.TempDir(), "id_rsa_custom"),
-			},
-		}
+		t.Run("ed25519 with empty private key path", func(t *testing.T) {
+			got, err := setupkeys.NewKeySetup("user@some1thing.com", "", setupkeys.KeyTypeED25519)
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				got, err := setupkeys.NewKeySetup(tt.target, tt.privKeyPath, tt.keyType)
+			require.NoError(t, err)
+			require.Len(t, got, 2)
+			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
+			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+		})
 
-				require.NoError(t, err)
-				require.Len(t, got, 2)
-				require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
-				require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
-			})
-		}
+		t.Run("ed25519 with custom private key path", func(t *testing.T) {
+			got, err := setupkeys.NewKeySetup(
+				"user@some1thing.com",
+				filepath.Join(t.TempDir(), "id_ed25519_custom"),
+				setupkeys.KeyTypeED25519,
+			)
+
+			require.NoError(t, err)
+			require.Len(t, got, 2)
+			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
+			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+		})
+
+		t.Run("rsa with custom private key path", func(t *testing.T) {
+			got, err := setupkeys.NewKeySetup(
+				"user@some2thing.com",
+				filepath.Join(t.TempDir(), "id_rsa_custom"),
+				setupkeys.KeyTypeRSA,
+			)
+
+			require.NoError(t, err)
+			require.Len(t, got, 2)
+			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
+			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+		})
 	})
 }
 
