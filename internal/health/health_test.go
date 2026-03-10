@@ -10,40 +10,16 @@ import (
 )
 
 func TestGenerateHostReport(t *testing.T) {
-	t.Run("given two host dependencies in the same category, they are grouped in a health check", func(t *testing.T) {
-		dependencyStatuses := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "foo", Category: "Baz"}, Error: nil},
-			{Dependency: health.Dependency{Name: "bar", Category: "Baz"}, Error: nil},
-		}
-
-		got := health.GenerateHostReport(dependencyStatuses)
-
-		want := health.HealthCheck{
-			Name:   "Baz",
-			Status: health.CheckStatusOK,
-			Value:  "foo, bar",
-		}
-		assert.Contains(t, got.Dependencies, want)
-	})
-
-	t.Run("when a dependency is not installed, health check reports error", func(t *testing.T) {
-		dependencyStatuses := []health.DependencyStatus{
-			{
-				Dependency: health.Dependency{Name: "whatever", Category: "Rube Golberg"},
-				Error:      fmt.Errorf("whatever not found on path"),
-			},
-		}
-
-		got := health.GenerateHostReport(dependencyStatuses)
-
-		assert.Len(t, got.Dependencies, 1)
-		assert.Equal(t, "Rube Golberg", got.Dependencies[0].Name)
-		assert.Equal(t, health.CheckStatusError, got.Dependencies[0].Status)
-		assert.Equal(t, "whatever not found on path", got.Dependencies[0].Value)
+	testDependencyReporting(t, func(statuses []health.DependencyStatus) []health.HealthCheck {
+		return health.GenerateHostReport(statuses).Dependencies
 	})
 }
 
 func TestGenerateTargetReport(t *testing.T) {
+	testDependencyReporting(t, func(statuses []health.DependencyStatus) []health.HealthCheck {
+		return health.GenerateTargetReport(health.Status{Dependencies: statuses}).Dependencies
+	})
+
 	t.Run("when no remoteproc devices are found, SubsystemDriver health check reports error", func(t *testing.T) {
 		ts := health.Status{}
 
@@ -92,27 +68,31 @@ func TestGenerateTargetReport(t *testing.T) {
 
 		assert.Equal(t, health.CheckStatusOK, got.Connectivity.Status)
 	})
+}
 
-	t.Run("target dependencies are listed", func(t *testing.T) {
-		foo := health.Dependency{
-			Name:     "foo",
-			Category: "bar",
-		}
-		ts := health.Status{
-			ConnectionError: nil,
-			Dependencies: []health.DependencyStatus{
-				{
-					Dependency: foo,
-					Error:      nil,
-				},
-			},
+func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatus) []health.HealthCheck) {
+	t.Helper()
+
+	t.Run("given two dependencies in the same category, they are grouped in a health check", func(t *testing.T) {
+		statuses := []health.DependencyStatus{
+			{Dependency: health.Dependency{Name: "foo", Category: "Baz"}, Error: nil},
+			{Dependency: health.Dependency{Name: "bar", Category: "Baz"}, Error: nil},
 		}
 
-		got := health.GenerateTargetReport(ts)
+		got := extract(statuses)
 
-		want := []health.HealthCheck{
-			{Name: "bar", Status: health.CheckStatusOK, Value: "foo"},
+		assert.Contains(t, got, health.HealthCheck{Name: "Baz", Status: health.CheckStatusOK, Value: "foo, bar"})
+	})
+
+	t.Run("when a dependency is not installed, health check reports error", func(t *testing.T) {
+		statuses := []health.DependencyStatus{
+			{Dependency: health.Dependency{Name: "whatever", Category: "Rube Goldberg"}, Error: fmt.Errorf("whatever not found on path")},
 		}
-		assert.Equal(t, want, got.Dependencies)
+
+		got := extract(statuses)
+
+		assert.Equal(t, []health.HealthCheck{
+			{Name: "Rube Goldberg", Status: health.CheckStatusError, Value: "whatever not found on path"},
+		}, got)
 	})
 }
