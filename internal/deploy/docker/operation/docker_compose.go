@@ -16,11 +16,6 @@ type DockerCompose struct {
 	args        []string
 }
 
-type DockerComposeUpArgs struct {
-	ForceRecreate bool
-	NoRecreate    bool
-}
-
 func NewDockerCompose(description string, composeFile string, h ssh.Host, args []string) *DockerCompose {
 	return &DockerCompose{
 		description: description,
@@ -61,6 +56,11 @@ func NewDockerComposePull(composeFile string, h ssh.Host) *DockerCompose {
 
 func NewDockerComposeStop(composeFile string, h ssh.Host) *DockerCompose {
 	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
+}
+
+type DockerComposeUpArgs struct {
+	ForceRecreate bool
+	NoRecreate    bool
 }
 
 func NewDockerComposeUp(composeFile string, h ssh.Host, upArgs DockerComposeUpArgs) *DockerCompose {
