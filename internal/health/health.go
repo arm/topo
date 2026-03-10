@@ -51,31 +51,33 @@ type Report struct {
 	Target TargetReport `json:"target"`
 }
 
-func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
-	res := []HealthCheck{}
-	for _, group := range groupByCategory(statuses) {
-		hc := HealthCheck{Name: group.Key}
+func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Report {
+	report := Report{}
+	report.Host = generateHostReport(hostDependencies)
+	report.Target = generateTargetReport(targetStatus)
 
-		var installedNames, errorMessages []string
-		for _, dep := range group.Members {
-			if dep.Error == nil {
-				installedNames = append(installedNames, dep.Dependency.Name)
-			} else {
-				errorMessages = append(errorMessages, dep.Error.Error())
-			}
-		}
+	return report
+}
 
-		if len(installedNames) > 0 {
-			hc.Value = strings.Join(installedNames, ", ")
-			hc.Status = CheckStatusOK
-		} else {
-			hc.Value = strings.Join(errorMessages, ", ")
-			hc.Status = CheckStatusError
-		}
-
-		res = append(res, hc)
+func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
+	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
+	opts := target.ConnectionOptions{
+		AcceptNewHostKeys: acceptNewHostKeys,
+		AuthProbeInput:    os.Stdin,
+		AuthProbeOutput:   os.Stdout,
+		Multiplex:         true,
+		WithLoginShell:    true,
 	}
-	return res
+	conn := target.NewConnection(sshTarget, opts)
+	targetStatus := ProbeHealthStatus(conn)
+	report := GenerateReport(dependencyStatuses, targetStatus)
+	if err := targetStatus.ConnectionError; err != nil {
+		if errors.Is(err, target.ErrPasswordAuthentication) {
+			return report, fmt.Errorf(passwordAuthErrorMessage, sshTarget)
+		}
+		return report, nil
+	}
+	return report, nil
 }
 
 func generateHostReport(statuses []DependencyStatus) HostReport {
@@ -113,31 +115,29 @@ func generateTargetReport(targetStatus Status) TargetReport {
 	return report
 }
 
-func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Report {
-	report := Report{}
-	report.Host = generateHostReport(hostDependencies)
-	report.Target = generateTargetReport(targetStatus)
+func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
+	res := []HealthCheck{}
+	for _, group := range groupByCategory(statuses) {
+		hc := HealthCheck{Name: group.Key}
 
-	return report
-}
-
-func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
-	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
-	opts := target.ConnectionOptions{
-		AcceptNewHostKeys: acceptNewHostKeys,
-		AuthProbeInput:    os.Stdin,
-		AuthProbeOutput:   os.Stdout,
-		Multiplex:         true,
-		WithLoginShell:    true,
-	}
-	conn := target.NewConnection(sshTarget, opts)
-	targetStatus := ProbeHealthStatus(conn)
-	report := GenerateReport(dependencyStatuses, targetStatus)
-	if err := targetStatus.ConnectionError; err != nil {
-		if errors.Is(err, target.ErrPasswordAuthentication) {
-			return report, fmt.Errorf(passwordAuthErrorMessage, sshTarget)
+		var installedNames, errorMessages []string
+		for _, dep := range group.Members {
+			if dep.Error == nil {
+				installedNames = append(installedNames, dep.Dependency.Name)
+			} else {
+				errorMessages = append(errorMessages, dep.Error.Error())
+			}
 		}
-		return report, nil
+
+		if len(installedNames) > 0 {
+			hc.Value = strings.Join(installedNames, ", ")
+			hc.Status = CheckStatusOK
+		} else {
+			hc.Value = strings.Join(errorMessages, ", ")
+			hc.Status = CheckStatusError
+		}
+
+		res = append(res, hc)
 	}
-	return report, nil
+	return res
 }
