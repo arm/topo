@@ -9,7 +9,11 @@ import (
 	"github.com/arm/topo/internal/health"
 )
 
-type PrintableHealthReport health.Report
+type PrintableHealthReport struct {
+	Host       health.HostReport    `json:"host"`
+	Target     *health.TargetReport `json:"target,omitempty"`
+	TargetHint string               `json:"-"`
+}
 
 const healthCheckTemplate = `
 {{- define "checkRow" -}}
@@ -23,14 +27,18 @@ Host
 
 Target
 ------
-{{- if not .Target.IsLocalhost }}
+{{- if .Target }}
+  {{- if not .Target.IsLocalhost }}
 {{ template "checkRow" .Target.Connectivity }}
-{{- end }}
-{{- if or .Target.IsLocalhost (isOK .Target.Connectivity.Status) }}
-{{- range $targetCheckRow := .Target.Dependencies }}
+  {{- end }}
+  {{- if or .Target.IsLocalhost (isOK .Target.Connectivity.Status) }}
+    {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
-{{- end }}
+    {{- end }}
 {{ template "checkRow" .Target.SubsystemDriver }}
+  {{- end }}
+{{- else }}
+ℹ️ {{ .TargetHint }}
 {{- end }}
 `
 

@@ -2,6 +2,7 @@ package templates_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -15,7 +16,7 @@ import (
 func TestPrintHealthReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("it renders the healthy host dependencies", func(t *testing.T) {
-			report := health.Report{
+			toPrint := templates.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -25,22 +26,17 @@ func TestPrintHealthReport(t *testing.T) {
 					},
 				},
 			}
-
 			var out bytes.Buffer
 
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.Plain,
-			)
-			require.NoError(t, err)
+			err := printable.Print(toPrint, &out, term.Plain)
 
+			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Flux Capacitor")
 			assert.Contains(t, out.String(), "✅")
 		})
 
 		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
-			report := health.Report{
+			toPrint := templates.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -51,24 +47,19 @@ func TestPrintHealthReport(t *testing.T) {
 					},
 				},
 			}
-
 			var out bytes.Buffer
 
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.Plain,
-			)
-			require.NoError(t, err)
+			err := printable.Print(toPrint, &out, term.Plain)
 
+			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Container Engine")
 			assert.Contains(t, out.String(), "❌")
 			assert.Contains(t, out.String(), "docker not found on path")
 		})
 
 		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
-			report := health.Report{
-				Target: health.TargetReport{
+			toPrint := templates.PrintableHealthReport{
+				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
 						Status: health.CheckStatusOK,
@@ -80,69 +71,66 @@ func TestPrintHealthReport(t *testing.T) {
 					},
 				},
 			}
-
 			var out bytes.Buffer
 
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.Plain,
-			)
-			require.NoError(t, err)
+			err := printable.Print(toPrint, &out, term.Plain)
 
+			require.NoError(t, err)
 			assert.Contains(t, out.String(), "⚠️")
 			assert.Contains(t, out.String(), "no remoteproc devices found")
 		})
 
 		t.Run("it renders connection failures", func(t *testing.T) {
-			report := health.Report{
-				Target: health.TargetReport{
+			toPrint := templates.PrintableHealthReport{
+				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
 						Status: health.CheckStatusError,
 					},
 				},
 			}
-
 			var out bytes.Buffer
 
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.Plain,
-			)
-			require.NoError(t, err)
+			err := printable.Print(toPrint, &out, term.Plain)
 
+			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Connected")
 			assert.Contains(t, out.String(), "❌")
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
-			report := health.Report{
-				Target: health.TargetReport{
+			toPrint := templates.PrintableHealthReport{
+				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
 						Status: health.CheckStatusError,
 					},
 				},
 			}
-
 			var out bytes.Buffer
 
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.Plain,
-			)
-			require.NoError(t, err)
+			err := printable.Print(toPrint, &out, term.Plain)
 
+			require.NoError(t, err)
 			assert.NotContains(t, out.String(), "Features (Linux Host)")
+		})
+
+		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
+			hint := "Need to work on your aim"
+			toPrint := templates.PrintableHealthReport{TargetHint: hint}
+			var out bytes.Buffer
+
+			err := printable.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			want := fmt.Sprintf("ℹ️ %s", hint)
+			assert.Contains(t, out.String(), want)
 		})
 	})
 
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
-			report := health.Report{
+			toPrint := templates.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -151,7 +139,7 @@ func TestPrintHealthReport(t *testing.T) {
 						},
 					},
 				},
-				Target: health.TargetReport{
+				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
 						Status: health.CheckStatusOK,
@@ -161,16 +149,11 @@ func TestPrintHealthReport(t *testing.T) {
 					},
 				},
 			}
-
 			var out bytes.Buffer
 
-			err := printable.Print(
-				templates.PrintableHealthReport(report),
-				&out,
-				term.JSON,
-			)
-			require.NoError(t, err)
+			err := printable.Print(toPrint, &out, term.JSON)
 
+			require.NoError(t, err)
 			want := `{
 				"host": {
 					"dependencies": [
@@ -184,7 +167,6 @@ func TestPrintHealthReport(t *testing.T) {
 					"subsystemDriver": {"name":"","status":"warning","value":""}
 				}
 			}`
-
 			assert.JSONEq(t, want, out.String())
 		})
 	})

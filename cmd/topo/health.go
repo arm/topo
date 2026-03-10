@@ -45,7 +45,11 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return printable.Print(templates.PrintableHealthReport(report), os.Stdout, outputFormat)
+		toPrint := templates.PrintableHealthReport{
+			Host:   report.Host,
+			Target: &report.Target,
+		}
+		return printable.Print(toPrint, os.Stdout, outputFormat)
 	},
 }
 
