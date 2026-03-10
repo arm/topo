@@ -83,14 +83,6 @@ func CheckTarget(sshTarget string, acceptNewHostKeys bool) (TargetReport, error)
 	return GenerateTargetReport(targetStatus), nil
 }
 
-func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Report {
-	report := Report{}
-	report.Host = GenerateHostReport(hostDependencies)
-	report.Target = GenerateTargetReport(targetStatus)
-
-	return report
-}
-
 func GenerateHostReport(statuses []DependencyStatus) HostReport {
 	report := HostReport{}
 	report.Dependencies = generateDependencyReport(statuses)
