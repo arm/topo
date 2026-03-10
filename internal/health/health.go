@@ -46,22 +46,6 @@ type TargetReport struct {
 	SubsystemDriver HealthCheck   `json:"subsystemDriver"`
 }
 
-type Report struct {
-	Host   HostReport   `json:"host"`
-	Target TargetReport `json:"target"`
-}
-
-func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
-	targetReport, err := CheckTarget(sshTarget, acceptNewHostKeys)
-	if err != nil {
-		return Report{}, err
-	}
-	return Report{
-		Host:   CheckHost(),
-		Target: targetReport,
-	}, nil
-}
-
 func CheckHost() HostReport {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 	return GenerateHostReport(dependencyStatuses)
