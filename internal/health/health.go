@@ -54,7 +54,7 @@ type Report struct {
 func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 	targetReport, err := CheckTarget(sshTarget, acceptNewHostKeys)
 	if err != nil {
-		return Report{}, nil
+		return Report{}, err
 	}
 	return Report{
 		Host:   CheckHost(),
