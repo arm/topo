@@ -1,6 +1,7 @@
 package health
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -39,11 +40,27 @@ type HostReport struct {
 	Dependencies []HealthCheck `json:"dependencies"`
 }
 
+func (r HostReport) MarshalJSON() ([]byte, error) {
+	type Alias HostReport
+	if r.Dependencies == nil {
+		r.Dependencies = []HealthCheck{}
+	}
+	return json.Marshal(Alias(r))
+}
+
 type TargetReport struct {
 	IsLocalhost     bool          `json:"isLocalhost"`
 	Connectivity    HealthCheck   `json:"connectivity"`
 	Dependencies    []HealthCheck `json:"dependencies"`
 	SubsystemDriver HealthCheck   `json:"subsystemDriver"`
+}
+
+func (r TargetReport) MarshalJSON() ([]byte, error) {
+	type Alias TargetReport
+	if r.Dependencies == nil {
+		r.Dependencies = []HealthCheck{}
+	}
+	return json.Marshal(Alias(r))
 }
 
 func CheckHost() HostReport {

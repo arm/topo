@@ -73,13 +73,6 @@ func (r PrintableHealthReport) AsPlain(isTTY bool) (string, error) {
 }
 
 func (r PrintableHealthReport) AsJSON() (string, error) {
-	if r.Host.Dependencies == nil {
-		r.Host.Dependencies = []health.HealthCheck{}
-	}
-	if r.Target.Dependencies == nil {
-		r.Target.Dependencies = []health.HealthCheck{}
-	}
-
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("encode report as json: %w", err)
