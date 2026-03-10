@@ -34,6 +34,7 @@ type HealthCheck struct {
 	Status CheckStatus `json:"status"`
 	Value  string      `json:"value"`
 }
+
 type HostReport struct {
 	Dependencies []HealthCheck `json:"dependencies"`
 }
