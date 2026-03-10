@@ -51,14 +51,6 @@ type Report struct {
 	Target TargetReport `json:"target"`
 }
 
-func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Report {
-	report := Report{}
-	report.Host = generateHostReport(hostDependencies)
-	report.Target = generateTargetReport(targetStatus)
-
-	return report
-}
-
 func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
 	opts := target.ConnectionOptions{
@@ -78,6 +70,14 @@ func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 		return report, nil
 	}
 	return report, nil
+}
+
+func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Report {
+	report := Report{}
+	report.Host = generateHostReport(hostDependencies)
+	report.Target = generateTargetReport(targetStatus)
+
+	return report
 }
 
 func generateHostReport(statuses []DependencyStatus) HostReport {
