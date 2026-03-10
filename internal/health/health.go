@@ -52,7 +52,22 @@ type Report struct {
 }
 
 func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
+	targetReport, err := CheckTarget(sshTarget, acceptNewHostKeys)
+	if err != nil {
+		return Report{}, nil
+	}
+	return Report{
+		Host:   CheckHost(),
+		Target: targetReport,
+	}, nil
+}
+
+func CheckHost() HostReport {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
+	return GenerateHostReport(dependencyStatuses)
+}
+
+func CheckTarget(sshTarget string, acceptNewHostKeys bool) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		AcceptNewHostKeys: acceptNewHostKeys,
 		AuthProbeInput:    os.Stdin,
@@ -62,32 +77,28 @@ func Check(sshTarget string, acceptNewHostKeys bool) (Report, error) {
 	}
 	conn := target.NewConnection(sshTarget, opts)
 	targetStatus := ProbeHealthStatus(conn)
-	report := GenerateReport(dependencyStatuses, targetStatus)
-	if err := targetStatus.ConnectionError; err != nil {
-		if errors.Is(err, target.ErrPasswordAuthentication) {
-			return report, fmt.Errorf(passwordAuthErrorMessage, sshTarget)
-		}
-		return report, nil
+	if errors.Is(targetStatus.ConnectionError, target.ErrPasswordAuthentication) {
+		return TargetReport{}, fmt.Errorf(passwordAuthErrorMessage, sshTarget)
 	}
-	return report, nil
+	return GenerateTargetReport(targetStatus), nil
 }
 
 func GenerateReport(hostDependencies []DependencyStatus, targetStatus Status) Report {
 	report := Report{}
-	report.Host = generateHostReport(hostDependencies)
-	report.Target = generateTargetReport(targetStatus)
+	report.Host = GenerateHostReport(hostDependencies)
+	report.Target = GenerateTargetReport(targetStatus)
 
 	return report
 }
 
-func generateHostReport(statuses []DependencyStatus) HostReport {
+func GenerateHostReport(statuses []DependencyStatus) HostReport {
 	report := HostReport{}
 	report.Dependencies = generateDependencyReport(statuses)
 
 	return report
 }
 
-func generateTargetReport(targetStatus Status) TargetReport {
+func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
 	report.Connectivity = HealthCheck{
