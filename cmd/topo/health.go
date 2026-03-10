@@ -19,10 +19,6 @@ var healthCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := requireTarget(cmd)
-		if err != nil {
-			return err
-		}
 		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
 			return err
@@ -38,17 +34,27 @@ var healthCmd = &cobra.Command{
 			spinner = term.StartSpinner(os.Stderr, "Checking health...")
 		}
 
-		report, err := health.Check(sshTarget, acceptNewHostKeys)
+		toPrint := templates.PrintableHealthReport{
+			Host: health.CheckHost(),
+		}
+
+		if sshTarget, ok := lookupTarget(cmd); ok {
+			targetReport, err := health.CheckTarget(sshTarget, acceptNewHostKeys)
+			if err != nil {
+				if spinner != nil {
+					spinner.Stop()
+				}
+				return err
+			}
+			toPrint.Target = &targetReport
+		} else {
+			toPrint.TargetHint = "provide --target or set TOPO_TARGET to check target health"
+		}
+
 		if spinner != nil {
 			spinner.Stop()
 		}
-		if err != nil {
-			return err
-		}
-		toPrint := templates.PrintableHealthReport{
-			Host:   report.Host,
-			Target: &report.Target,
-		}
+
 		return printable.Print(toPrint, os.Stdout, outputFormat)
 	},
 }
