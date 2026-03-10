@@ -28,7 +28,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePipeTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
-			operation.NewDockerComposeRun(composeFile, remoteHost, operation.DockerComposeUpArgs{}),
+			operation.NewDockerComposeUp(composeFile, remoteHost, operation.DockerComposeUpArgs{}),
 		}
 		assert.Equal(t, want, got)
 	})
@@ -52,7 +52,7 @@ func TestNewDeployment(t *testing.T) {
 			ssh.NewCheckSSHTunnelSecurity(remoteHost, port),
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
 			ssh.NewSSHTunnelStop(remoteHost),
-			operation.NewDockerComposeRun(composeFile, remoteHost, upArgs),
+			operation.NewDockerComposeUp(composeFile, remoteHost, upArgs),
 		)
 
 		assert.Equal(t, want, got)
@@ -96,7 +96,7 @@ func TestNewDeployment(t *testing.T) {
 				want := goperation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 					operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
-					operation.NewDockerComposeRun(composeFile, ssh.PlainLocalhost, upArgs),
+					operation.NewDockerComposeUp(composeFile, ssh.PlainLocalhost, upArgs),
 				}
 
 				assert.Equal(t, want, got)
@@ -142,7 +142,7 @@ func TestNewDeployment(t *testing.T) {
 			wantSecurityCheck,
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
 			wantTunnelEnd,
-			operation.NewDockerComposeRun(composeFile, remoteHost, upArgs),
+			operation.NewDockerComposeUp(composeFile, remoteHost, upArgs),
 		)
 
 		assert.Equal(t, want, got)

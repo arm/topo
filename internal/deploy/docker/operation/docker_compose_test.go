@@ -101,7 +101,7 @@ func TestNewDockerComposePull(t *testing.T) {
 func TestNewDockerComposeRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.Host("user@remote")
-	opNoForce := operation.NewDockerComposeRun(composeFilePath, remoteHost, operation.DockerComposeUpArgs{})
+	opNoForce := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.DockerComposeUpArgs{})
 
 	t.Run("Description", func(t *testing.T) {
 		got := opNoForce.Description()
@@ -119,7 +119,7 @@ func TestNewDockerComposeRun(t *testing.T) {
 		assert.Equal(t, want, buf.String())
 	})
 
-	opForce := operation.NewDockerComposeRun(composeFilePath, remoteHost, operation.DockerComposeUpArgs{
+	opForce := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.DockerComposeUpArgs{
 		ForceRecreate: true,
 	})
 
@@ -139,7 +139,7 @@ func TestNewDockerComposeRun(t *testing.T) {
 		assert.Equal(t, want, buf.String())
 	})
 
-	opNoRecreate := operation.NewDockerComposeRun(composeFilePath, remoteHost, operation.DockerComposeUpArgs{
+	opNoRecreate := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.DockerComposeUpArgs{
 		NoRecreate: true,
 	})
 
