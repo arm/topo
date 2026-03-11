@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	commandpkg "github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
 
@@ -64,7 +66,18 @@ func (r TargetReport) MarshalJSON() ([]byte, error) {
 }
 
 func CheckHost() HostReport {
-	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
+	dependencyStatuses := CheckInstalled(HostRequiredDependencies, func(bin string) error {
+		if err := BinaryExistsLocally(bin); err != nil {
+			return err
+		}
+		if bin != "docker" {
+			return nil
+		}
+		if err := commandpkg.Docker(ssh.PlainLocalhost, "info").Run(); err != nil {
+			return fmt.Errorf("docker is installed but inaccessible: `docker info` failed: %w", err)
+		}
+		return nil
+	})
 	return GenerateHostReport(dependencyStatuses)
 }
 
