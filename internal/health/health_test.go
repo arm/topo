@@ -1,12 +1,14 @@
 package health_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerateHostReport(t *testing.T) {
@@ -67,6 +69,35 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusOK, got.Connectivity.Status)
+	})
+}
+
+func TestHostReport(t *testing.T) {
+	t.Run("MarshalJSON", func(t *testing.T) {
+		t.Run("nil dependencies are [] not null", func(t *testing.T) {
+			tr := health.HostReport{Dependencies: nil}
+
+			b, err := json.Marshal(tr)
+
+			require.NoError(t, err)
+			want := `{ "dependencies": [] }`
+			assert.JSONEq(t, want, string(b))
+		})
+	})
+}
+
+func TestTargetReport(t *testing.T) {
+	t.Run("MarshalJSON", func(t *testing.T) {
+		t.Run("nil dependencies are [] not null", func(t *testing.T) {
+			tr := health.TargetReport{Dependencies: nil}
+
+			b, err := json.Marshal(tr)
+
+			require.NoError(t, err)
+			var result map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal(b, &result))
+			assert.JSONEq(t, `[]`, string(result["dependencies"]))
+		})
 	})
 }
 
