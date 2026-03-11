@@ -27,8 +27,13 @@ func init() {
 	)
 }
 
+const targetEnvVar = "TOPO_TARGET"
+
 func addTargetFlag(cmd *cobra.Command) {
-	cmd.Flags().StringP("target", "t", "", "The SSH destination.")
+	cmd.Flags().StringP(
+		"target", "t", "",
+		fmt.Sprintf("The SSH destination (can also be set via %s env var).", targetEnvVar),
+	)
 }
 
 func addDryRunFlag(cmd *cobra.Command) {
@@ -36,8 +41,6 @@ func addDryRunFlag(cmd *cobra.Command) {
 }
 
 func lookupTarget(cmd *cobra.Command) (string, bool) {
-	const targetEnvVar = "TOPO_TARGET"
-
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
 		panic(fmt.Sprintf("internal error: target flag not registered: %v", err))
