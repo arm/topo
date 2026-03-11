@@ -216,3 +216,53 @@ func TestFilterByHardware(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 }
+
+func TestCheckAccessible(t *testing.T) {
+	t.Run("applies access check only to installed dependencies", func(t *testing.T) {
+		statuses := []health.DependencyStatus{
+			{
+				Dependency: health.Dependency{Name: "docker", Category: "Container Engine"},
+				Error:      nil,
+			},
+			{
+				Dependency: health.Dependency{Name: "lscpu", Category: "Hardware Info"},
+				Error:      nil,
+			},
+		}
+		want := []health.DependencyStatus{
+			{
+				Dependency: health.Dependency{Name: "docker", Category: "Container Engine"},
+				Error:      assert.AnError,
+			},
+			{
+				Dependency: health.Dependency{Name: "lscpu", Category: "Hardware Info"},
+				Error:      nil,
+			},
+		}
+
+		got := health.CheckAccessible(statuses, func(bin string) error {
+			if bin == "docker" {
+				return assert.AnError
+			}
+			return nil
+		})
+
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("does not apply access check when dependency is missing", func(t *testing.T) {
+		statuses := []health.DependencyStatus{
+			{
+				Dependency: health.Dependency{Name: "docker", Category: "Container Engine"},
+				Error:      fmt.Errorf("docker not found"),
+			},
+		}
+
+		got := health.CheckAccessible(statuses, func(bin string) error {
+			t.Fatal("access check should not be called when dependency is missing")
+			return nil
+		})
+
+		assert.Equal(t, statuses, got)
+	})
+}

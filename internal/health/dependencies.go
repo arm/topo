@@ -5,6 +5,7 @@ import (
 	"os/exec"
 
 	"github.com/arm/topo/internal/collections"
+	commandpkg "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -71,7 +72,10 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 	return false
 }
 
-type BinaryExistsFn = func(bin string) error
+type (
+	BinaryExistsFn = func(bin string) error
+	CheckAccessFn  = func(bin string) error
+)
 
 func CheckInstalled(dependencies []Dependency, binaryExists BinaryExistsFn) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
@@ -113,6 +117,31 @@ func BinaryExistsLocally(bin string) error {
 		return fmt.Errorf("%q executable file not found in $PATH", bin)
 	}
 	return nil
+}
+
+func CheckBinaryAccessLocally(bin string) error {
+	if bin != "docker" {
+		return nil
+	}
+
+	if err := commandpkg.Docker(ssh.PlainLocalhost, "info").Run(); err != nil {
+		return fmt.Errorf("%s is installed but inaccessible: `%s info` failed: %w", bin, bin, err)
+	}
+	return nil
+}
+
+func CheckAccessible(statuses []DependencyStatus, checkAccess CheckAccessFn) []DependencyStatus {
+	res := make([]DependencyStatus, len(statuses))
+	copy(res, statuses)
+
+	for i := range res {
+		if res[i].Error != nil {
+			continue
+		}
+		res[i].Error = checkAccess(res[i].Dependency.Name)
+	}
+
+	return res
 }
 
 func groupByCategory(statuses []DependencyStatus) []collections.Group[DependencyStatus, string] {

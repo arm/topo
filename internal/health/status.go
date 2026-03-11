@@ -1,6 +1,8 @@
 package health
 
 import (
+	"fmt"
+
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
@@ -36,6 +38,15 @@ func ProbeHealthStatus(c target.Connection) Status {
 	remoteprocs, _ := c.ProbeRemoteproc()
 	status.Hardware.RemoteCPU = remoteprocs
 	status.Dependencies = CheckDependencies(c.BinaryExists, status.Hardware.Capabilities())
+	status.Dependencies = CheckAccessible(status.Dependencies, func(bin string) error {
+		if bin != "docker" {
+			return nil
+		}
+		if _, err := c.Run("docker info"); err != nil {
+			return fmt.Errorf("%s is installed but inaccessible: `%s info` failed: %w", bin, bin, err)
+		}
+		return nil
+	})
 
 	return status
 }

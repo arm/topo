@@ -65,6 +65,7 @@ func (r TargetReport) MarshalJSON() ([]byte, error) {
 
 func CheckHost() HostReport {
 	dependencyStatuses := CheckInstalled(HostRequiredDependencies, BinaryExistsLocally)
+	dependencyStatuses = CheckAccessible(dependencyStatuses, CheckBinaryAccessLocally)
 	return GenerateHostReport(dependencyStatuses)
 }
 
