@@ -20,7 +20,7 @@ permissions:
   actions: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
