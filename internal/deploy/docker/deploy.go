@@ -22,8 +22,8 @@ func SupportsSSHControlSockets(goos string) bool {
 	return goos != "windows"
 }
 
-func NewDeploymentStop(composeFile string, targetHost ssh.Host) goperation.Operation {
-	return operation.NewDockerComposeStop(composeFile, targetHost)
+func NewDeploymentStop(composeFile string, targetHost ssh.Host) goperation.Sequence {
+	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, targetHost)}
 }
 
 func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence, goperation.Operation) {
