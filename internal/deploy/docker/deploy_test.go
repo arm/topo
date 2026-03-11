@@ -28,7 +28,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 			operation.NewDockerComposePipeTransfer(composeFile, ssh.PlainLocalhost, remoteHost),
-			operation.NewDockerComposeUp(composeFile, remoteHost, operation.DockerComposeUpArgs{}),
+			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
 		}
 		assert.Equal(t, want, got)
 	})
@@ -36,10 +36,7 @@ func TestNewDeployment(t *testing.T) {
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteHost := ssh.Host("user@remote")
 		port := operation.DefaultRegistryPort
-		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false, RegistryPort: port, UseSSHControlSockets: true}
-		upArgs := operation.DockerComposeUpArgs{
-			ForceRecreate: opts.ForceRecreate,
-		}
+		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, RegistryPort: port, UseSSHControlSockets: true}
 		got, _ := docker.NewDeployment(composeFile, opts)
 
 		want := goperation.Sequence{
@@ -52,7 +49,7 @@ func TestNewDeployment(t *testing.T) {
 			ssh.NewCheckSSHTunnelSecurity(remoteHost, port),
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
 			ssh.NewSSHTunnelStop(remoteHost),
-			operation.NewDockerComposeUp(composeFile, remoteHost, upArgs),
+			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
 		)
 
 		assert.Equal(t, want, got)
@@ -60,43 +57,34 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("excludes transfer operation for local host", func(t *testing.T) {
 		tests := []struct {
-			name string
-			opts docker.DeployOptions
+			name         string
+			recreateMode operation.RecreateMode
 		}{
 			{
-				name: "default",
-				opts: docker.DeployOptions{},
+				name:         "default",
+				recreateMode: operation.RecreateModeDefault,
 			},
 			{
-				name: "force recreate",
-				opts: docker.DeployOptions{
-					ForceRecreate: true,
-				},
+				name:         "force recreate",
+				recreateMode: operation.RecreateModeForce,
 			},
 			{
-				name: "no recreate",
-				opts: docker.DeployOptions{
-					NoRecreate: true,
-				},
+				name:         "no recreate",
+				recreateMode: operation.RecreateModeNone,
 			},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				deployOpts := docker.DeployOptions{
-					TargetHost:    ssh.PlainLocalhost,
-					ForceRecreate: tt.opts.ForceRecreate,
-					NoRecreate:    tt.opts.NoRecreate,
+					TargetHost:   ssh.PlainLocalhost,
+					RecreateMode: tt.recreateMode,
 				}
 				got, _ := docker.NewDeployment(composeFile, deployOpts)
 
-				upArgs := operation.DockerComposeUpArgs{
-					ForceRecreate: tt.opts.ForceRecreate,
-					NoRecreate:    tt.opts.NoRecreate,
-				}
 				want := goperation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, ssh.PlainLocalhost),
 					operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
-					operation.NewDockerComposeUp(composeFile, ssh.PlainLocalhost, upArgs),
+					operation.NewDockerComposeUp(composeFile, ssh.PlainLocalhost, tt.recreateMode),
 				}
 
 				assert.Equal(t, want, got)
@@ -125,10 +113,7 @@ func TestNewDeployment(t *testing.T) {
 	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
 		remoteHost := ssh.Host("user@remote")
 		port := operation.DefaultRegistryPort
-		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, ForceRecreate: false, RegistryPort: port, UseSSHControlSockets: false}
-		upArgs := operation.DockerComposeUpArgs{
-			ForceRecreate: opts.ForceRecreate,
-		}
+		opts := docker.DeployOptions{TargetHost: remoteHost, WithRegistry: true, RegistryPort: port, UseSSHControlSockets: false}
 		got, _ := docker.NewDeployment(composeFile, opts)
 
 		wantTunnelStart, wantSecurityCheck, wantTunnelEnd := ssh.NewSSHTunnel(remoteHost, opts.RegistryPort, opts.UseSSHControlSockets)
@@ -142,7 +127,7 @@ func TestNewDeployment(t *testing.T) {
 			wantSecurityCheck,
 			operation.NewRegistryTransfer(composeFile, ssh.PlainLocalhost, remoteHost, port),
 			wantTunnelEnd,
-			operation.NewDockerComposeUp(composeFile, remoteHost, upArgs),
+			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
 		)
 
 		assert.Equal(t, want, got)

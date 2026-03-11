@@ -7,10 +7,9 @@ import (
 )
 
 type DeployOptions struct {
-	ForceRecreate        bool
+	RecreateMode         operation.RecreateMode
 	WithRegistry         bool
 	TargetHost           ssh.Host
-	NoRecreate           bool
 	RegistryPort         string
 	UseSSHControlSockets bool
 }
@@ -48,10 +47,6 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, opts.TargetHost))
 		}
 	}
-	upArgs := operation.DockerComposeUpArgs{
-		ForceRecreate: opts.ForceRecreate,
-		NoRecreate:    opts.NoRecreate,
-	}
-	ops = append(ops, operation.NewDockerComposeUp(composeFile, opts.TargetHost, upArgs))
+	ops = append(ops, operation.NewDockerComposeUp(composeFile, opts.TargetHost, opts.RecreateMode))
 	return goperation.NewSequence(ops...), cleanup
 }

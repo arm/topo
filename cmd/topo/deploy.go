@@ -22,6 +22,8 @@ var (
 	noRegistry        bool
 	registryPort      string
 	skipProjectChecks bool
+	forceRecreate     bool
+	noRecreate        bool
 )
 
 var deployOpts docker.DeployOptions
@@ -98,6 +100,12 @@ Use --dry-run to see what commands would be executed without actually running th
 		goos := runtime.GOOS
 		deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, targetHost)
 		deployOpts.UseSSHControlSockets = docker.SupportsSSHControlSockets(goos)
+		switch {
+		case forceRecreate:
+			deployOpts.RecreateMode = operation.RecreateModeForce
+		case noRecreate:
+			deployOpts.RecreateMode = operation.RecreateModeNone
+		}
 
 		if !deployOpts.WithRegistry {
 			c.Log(logger.Entry{
@@ -159,8 +167,8 @@ func init() {
 	addDryRunFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
-	deployCmd.Flags().BoolVar(&deployOpts.ForceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
-	deployCmd.Flags().BoolVar(&deployOpts.NoRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
+	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
+	deployCmd.Flags().BoolVar(&noRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
 	deployCmd.Flags().BoolVar(&skipProjectChecks, "skip-project-checks", false, "Skip project compatibility checks for the target platform")
 	deployCmd.MarkFlagsMutuallyExclusive("force-recreate", "no-recreate")
 	rootCmd.AddCommand(deployCmd)
