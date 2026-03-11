@@ -139,7 +139,7 @@ func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 }
 
 func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
-	if ct.TargetHost.host.IsLocalhost() {
+	if Host(ct.TargetHost.host).IsLocalhost() {
 		return nil
 	}
 	cmd := ct.Command()
@@ -158,7 +158,7 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 }
 
 func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
-	if ct.TargetHost.host.IsLocalhost() {
+	if Host(ct.TargetHost.host).IsLocalhost() {
 		return nil
 	}
 	_, err := fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
