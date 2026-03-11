@@ -5,7 +5,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +31,20 @@ func init() {
 
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP("target", "t", "", "The SSH destination.")
+}
+
+func addTargetDescriptionFlag(cmd *cobra.Command) {
+	cmd.Flags().String(
+		"target-description",
+		"",
+		"Path to the target description file used to show template compatibility",
+	)
+}
+
+func addTargetDescriptionFlags(cmd *cobra.Command) {
+	addTargetFlag(cmd)
+	addTargetDescriptionFlag(cmd)
+	cmd.MarkFlagsMutuallyExclusive("target", "target-description")
 }
 
 func addDryRunFlag(cmd *cobra.Command) {
@@ -61,6 +77,29 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 		return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
 	}
 	return t, nil
+}
+
+func retrieveTargetDescription(cmd *cobra.Command) (*target.HardwareProfile, error) {
+	targetDescriptionPath, err := cmd.Flags().GetString("target-description")
+	if err != nil {
+		panic(fmt.Sprintf("internal error: target-description flag not registered: %v", err))
+	}
+
+	if strings.TrimSpace(targetDescriptionPath) != "" {
+		return describe.ReadTargetDescriptionFromFile(targetDescriptionPath)
+	}
+
+	resolvedTarget, exists := lookupTarget(cmd)
+	if !exists {
+		return nil, nil
+	}
+
+	conn := target.NewConnection(resolvedTarget, target.ConnectionOptions{Multiplex: true})
+	hwProfile, err := describe.GenerateTargetDescription(conn)
+	if err != nil {
+		return nil, err
+	}
+	return &hwProfile, nil
 }
 
 func resolveOutput(cmd *cobra.Command) (term.Format, error) {

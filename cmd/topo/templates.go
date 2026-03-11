@@ -4,14 +4,10 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/catalog"
-	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
-	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
 )
-
-var targetDescriptionPath string
 
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
@@ -28,22 +24,9 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
-		var profile *target.HardwareProfile
-		if targetDescriptionPath != "" {
-			profile, err = describe.ReadTargetDescriptionFromFile(targetDescriptionPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			resolvedTarget, exists := lookupTarget(cmd)
-			if exists {
-				conn := target.NewConnection(resolvedTarget, target.ConnectionOptions{Multiplex: true})
-				hwProfile, err := describe.GenerateTargetDescription(conn)
-				if err != nil {
-					return err
-				}
-				profile = &hwProfile
-			}
+		profile, err := retrieveTargetDescription(cmd)
+		if err != nil {
+			return err
 		}
 
 		reposWithCompatibility := catalog.AnnotateCompatibility(profile, repos)
@@ -52,13 +35,6 @@ var templatesCmd = &cobra.Command{
 }
 
 func init() {
-	addTargetFlag(templatesCmd)
-	templatesCmd.Flags().StringVar(
-		&targetDescriptionPath,
-		"target-description",
-		"",
-		"Path to the target description file used to show template compatibility",
-	)
-	templatesCmd.MarkFlagsMutuallyExclusive("target", "target-description")
+	addTargetDescriptionFlags(templatesCmd)
 	rootCmd.AddCommand(templatesCmd)
 }
