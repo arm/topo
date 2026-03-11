@@ -17,10 +17,13 @@ on:
 permissions:
   contents: write
   packages: read
+  actions: read
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -53,6 +56,7 @@ jobs:
           echo "Next version: $new"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set git config
         run: |
           git config --global user.email "topo-release@users.noreply.github.com"
@@ -73,7 +77,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean
+          args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
@@ -114,58 +118,8 @@ jobs:
             dist/topo_windows_arm64
           if-no-files-found: error
 
-      - name: Create GitHub App token for signer
-        id: app-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
-          private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
-          owner: Arm-debug
-          repositories: signer
-
-      - name: Trigger macOS signer workflow
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          OWNER: Arm-debug
-          REPO: signer
-          WORKFLOW_FILE: sign-and-post-macos.yml
-          REF: main
-          UPSTREAM_RUN_ID: ${{ github.run_id }}
-        run: |
-          gh workflow run "$WORKFLOW_FILE" \
-            --repo "$OWNER/$REPO" \
-            --ref "$REF" \
-            -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "artifact=topo-v${{ steps.version.outputs.version }}-macos-unsigned" \
-            -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "repo-name=topo" \
-            -f "org-name=arm" \
-            -f "binary-name=topo" \
-            -f "artifactory-uploadables=topo_darwin_*"
-
-      - name: Trigger Windows signer workflow
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          OWNER: Arm-debug
-          REPO: signer
-          WORKFLOW_FILE: sign-and-post-windows.yml
-          REF: main
-          UPSTREAM_RUN_ID: ${{ github.run_id }}
-        run: |
-          gh workflow run "$WORKFLOW_FILE" \
-            --repo "$OWNER/$REPO" \
-            --ref "$REF" \
-            -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "artifact=topo-v${{ steps.version.outputs.version }}-windows-unsigned" \
-            -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "repo-name=topo" \
-            -f "org-name=arm" \
-            -f "binary-name=topo.exe" \
-            -f "signing-artifactory-repo=edge-ai-tooling.topo-cli-signing" \
-            -f "artifactory-uploadables=topo_windows_*"
-
       - name: Upload linux artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: topo-v${{ steps.version.outputs.version }}-linux
           path: |
@@ -173,24 +127,55 @@ jobs:
             dist/topo_linux_arm64
           if-no-files-found: error
 
-      - name: Trigger archive and upload to artifactory workflow for linux artifacts
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          OWNER: Arm-debug
-          REPO: signer
-          WORKFLOW_FILE: archive-and-upload-to-artifactory.yml
-          REF: main
-          UPSTREAM_RUN_ID: ${{ github.run_id }}
+  sign-macos:
+    needs: build
+    uses: Arm-debug/signer/.github/workflows/sign-and-post-macos.yml@main
+    with:
+      run-id: ${{ github.run_id }}
+      artifact: topo-v${{ needs.build.outputs.version }}-macos-unsigned
+      release-version: ${{ needs.build.outputs.version }}
+      repo-name: topo
+      org-name: arm
+      binary-name: topo
+      artifactory-uploadables: topo_darwin_*
+
+  sign-windows:
+    needs: build
+    uses: Arm-debug/signer/.github/workflows/sign-and-post-windows.yml@main
+    with:
+      run-id: ${{ github.run_id }}
+      artifact: topo-v${{ needs.build.outputs.version }}-windows-unsigned
+      release-version: ${{ needs.build.outputs.version }}
+      repo-name: topo
+      org-name: arm
+      binary-name: topo.exe
+      signing-artifactory-repo: edge-ai-tooling.topo-cli-signing
+      artifactory-uploadables: topo_windows_*
+
+  sign-linux:
+    needs: build
+    uses: Arm-debug/signer/.github/workflows/archive-and-upload-to-artifactory.yml@main
+    with:
+      run-id: ${{ github.run_id }}
+      archive-name: topo-v${{ needs.build.outputs.version }}-linux
+      release-version: ${{ needs.build.outputs.version }}
+      repo-name: topo
+      org-name: arm
+      artifactory-path: linux
+      artifactory-uploadables: topo_linux_*
+      archive-format: tar.gz
+      executables: "*/topo"
+
+  post-release:
+    needs: [sign-macos, sign-windows, sign-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output artifact URLs
         run: |
-          gh workflow run "$WORKFLOW_FILE" \
-            --repo "$OWNER/$REPO" \
-            --ref "$REF" \
-            -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "archive-name=topo-v${{ steps.version.outputs.version }}-linux" \
-            -f "artifactory-path=linux" \
-            -f "repo-name=topo" \
-            -f "org-name=arm" \
-            -f "artifactory-uploadables=topo_linux_*" \
-            -f "archive-format=tar.gz" \
-            -f "executables=*/topo"
+          echo "## Artifactory URLs" >> $GITHUB_STEP_SUMMARY
+          echo "### macOS" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.sign-macos.outputs.artifact-urls }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Windows" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.sign-windows.outputs.artifact-urls }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Linux" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.sign-linux.outputs.artifact-urls }}" >> $GITHUB_STEP_SUMMARY
