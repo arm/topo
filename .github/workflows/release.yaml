@@ -141,7 +141,7 @@ jobs:
             -f "repo-name=topo" \
             -f "org-name=arm" \
             -f "binary-name=topo" \
-            -f "artifactory-uploadables=topo_darwin_*"
+            -f "artifactory-uploadables=topo_darwin_*" \
             -f "artifactory-host=https://arm.jfrog.io"
 
       - name: Trigger Windows signer workflow
