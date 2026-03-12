@@ -22,7 +22,7 @@ func resolveSSHConfigHost(raw string) SSHConfigValues {
 
 	output, err := exec.Command("ssh", "-G", raw).Output()
 	if err != nil {
-		return SSHConfigValues{user: "", host: "", port: "", configName: ""}
+		return SSHConfigValues{}
 	}
 	user, host, port := parseSSHConfigOutput(output)
 	return SSHConfigValues{user: user, host: host, port: port, configName: raw}

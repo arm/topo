@@ -39,6 +39,9 @@ func formatSSHHost(sshConfig SSHConfigValues) string {
 
 func NewSSHTunnel(targetHost Host, registryPort string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
+	if resolvedSSHInfo == (SSHConfigValues{}) {
+		return nil, nil, nil
+	}
 	start := NewSSHTunnelStart(resolvedSSHInfo, registryPort, useControlSockets)
 	securityCheck := NewCheckSSHTunnelSecurity(resolvedSSHInfo, registryPort)
 
