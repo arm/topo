@@ -37,6 +37,9 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.WithRegistry {
 			start, securityCheck, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.RegistryPort, opts.UseSSHControlSockets)
+			if start == nil {
+				return nil, nil
+			}
 			cleanup = stop
 			ops = append(ops, operation.NewRunRegistry(opts.RegistryPort)...)
 			ops = append(ops, start)
