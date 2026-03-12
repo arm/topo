@@ -104,17 +104,6 @@ func TestTargetReport(t *testing.T) {
 func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatus) []health.HealthCheck) {
 	t.Helper()
 
-	t.Run("given two dependencies in the same category, they are grouped in a health check", func(t *testing.T) {
-		statuses := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "foo", Category: "Baz"}, Error: nil},
-			{Dependency: health.Dependency{Name: "bar", Category: "Baz"}, Error: nil},
-		}
-
-		got := extract(statuses)
-
-		assert.Contains(t, got, health.HealthCheck{Name: "Baz", Status: health.CheckStatusOK, Value: "foo, bar"})
-	})
-
 	t.Run("when a dependency is not installed, health check reports error", func(t *testing.T) {
 		statuses := []health.DependencyStatus{
 			{Dependency: health.Dependency{Name: "whatever", Category: "Rube Goldberg"}, Error: fmt.Errorf("whatever not found on path")},

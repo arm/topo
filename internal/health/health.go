@@ -121,26 +121,15 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
-	for _, group := range groupByCategory(statuses) {
-		hc := HealthCheck{Name: group.Key}
-
-		var installedNames, errorMessages []string
-		for _, dep := range group.Members {
-			if dep.Error == nil {
-				installedNames = append(installedNames, dep.Dependency.Name)
-			} else {
-				errorMessages = append(errorMessages, dep.Error.Error())
-			}
-		}
-
-		if len(installedNames) > 0 {
-			hc.Value = strings.Join(installedNames, ", ")
+	for _, ds := range statuses {
+		hc := HealthCheck{Name: ds.Dependency.Category}
+		if ds.Error == nil {
 			hc.Status = CheckStatusOK
+			hc.Value = ds.Dependency.Name
 		} else {
-			hc.Value = strings.Join(errorMessages, ", ")
 			hc.Status = CheckStatusError
+			hc.Value = ds.Error.Error()
 		}
-
 		res = append(res, hc)
 	}
 	return res
