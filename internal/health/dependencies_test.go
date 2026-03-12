@@ -64,8 +64,8 @@ func TestDependencyFormat(t *testing.T) {
 
 func TestPerformChecks(t *testing.T) {
 	mockDependencies := []health.Dependency{
-		{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists("foo")}},
-		{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists("baz")}},
+		{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
+		{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
 	}
 
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
@@ -77,11 +77,11 @@ func TestPerformChecks(t *testing.T) {
 
 		want := []health.DependencyStatus{
 			{
-				Dependency: health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists("foo")}},
+				Dependency: health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
 				Error:      mockBinaryExists("foo"),
 			},
 			{
-				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists("baz")}},
+				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
 				Error:      mockBinaryExists("baz"),
 			},
 		}
@@ -100,11 +100,11 @@ func TestPerformChecks(t *testing.T) {
 
 		want := []health.DependencyStatus{
 			{
-				Dependency: health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists("foo")}},
+				Dependency: health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
 				Error:      mockBinaryExists("foo"),
 			},
 			{
-				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists("baz")}},
+				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
 				Error:      nil,
 			},
 		}
@@ -113,8 +113,8 @@ func TestPerformChecks(t *testing.T) {
 
 	t.Run("omits dependency when none of its SoftwarePrerequisites are installed", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists("docker")}},
-			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists("runtime")}},
+			{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}},
+			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}},
 		}
 		mockBinaryExists := func(bin string) error {
 			if bin == "runtime" {
@@ -126,15 +126,15 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists("docker")}}, Error: mockBinaryExists("docker")},
+			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}, Error: mockBinaryExists("docker")},
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("checks dependency when one of its SoftwarePrerequisites is installed", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists("docker")}},
-			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists("runtime")}},
+			{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists()}},
+			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}},
 		}
 		mockBinaryExists := func(bin string) error {
 			return nil
@@ -143,15 +143,15 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists("docker")}}, Error: nil},
-			{Dependency: health.Dependency{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists("runtime")}}, Error: nil},
+			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists()}}, Error: nil},
+			{Dependency: health.Dependency{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists("standalone")}},
+			{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists()}},
 		}
 		mockBinaryExists := func(bin string) error {
 			return nil
@@ -160,7 +160,7 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists("standalone")}}, Error: nil},
+			{Dependency: health.Dependency{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists()}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})

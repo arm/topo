@@ -18,8 +18,8 @@ type Check struct {
 	Arg  string
 }
 
-func BinaryExists(bin string) Check {
-	return Check{Kind: CheckBinaryExists, Arg: bin}
+func BinaryExists() Check {
+	return Check{Kind: CheckBinaryExists}
 }
 
 type HardwareCapability int
@@ -49,13 +49,13 @@ var HostRequiredDependencies = []Dependency{
 	{
 		Binary: "ssh",
 		Label:  "SSH",
-		Checks: []Check{BinaryExists("ssh")},
+		Checks: []Check{BinaryExists()},
 	},
 	{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,
-		Checks:         []Check{BinaryExists("docker")},
+		Checks:         []Check{BinaryExists()},
 	},
 }
 
@@ -64,27 +64,27 @@ var TargetRequiredDependencies = []Dependency{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,
-		Checks:         []Check{BinaryExists("docker")},
+		Checks:         []Check{BinaryExists()},
 	},
 	{
 		Binary:                "remoteproc-runtime",
 		Label:                 "Remoteproc Runtime",
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks:                []Check{BinaryExists("remoteproc-runtime")},
+		Checks:                []Check{BinaryExists()},
 	},
 	{
 		Binary:                "containerd-shim-remoteproc-v1",
 		Label:                 "Remoteproc Shim",
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks:                []Check{BinaryExists("containerd-shim-remoteproc-v1")},
+		Checks:                []Check{BinaryExists()},
 	},
 	{
 		Binary:         "lscpu",
 		Label:          "Hardware Info",
 		SoftwareEnumID: Lscpu,
-		Checks:         []Check{BinaryExists("lscpu")},
+		Checks:         []Check{BinaryExists()},
 	},
 }
 
@@ -127,7 +127,7 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []Dep
 		for _, check := range dep.Checks {
 			switch check.Kind {
 			case CheckBinaryExists:
-				err = binaryExists(check.Arg)
+				err = binaryExists(dep.Binary)
 				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 					installed[dep.SoftwareEnumID] = struct{}{}
 				}
