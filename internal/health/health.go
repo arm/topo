@@ -11,7 +11,7 @@ import (
 )
 
 // #nosec G101 -- Does not contain hardcoded credentials
-const passwordAuthErrorMessage = `note: Topo does not support SSH password-based authentication. To connect, either:
+const passwordAuthErrorMessage = `SSH password-based authentication not supported. To connect, either:
 - create your own SSH keys for the target, or
 - run 'topo setup-keys --target %s' to let Topo generate keys and configure passwordless authentication`
 
@@ -79,7 +79,7 @@ func CheckTarget(sshTarget string, acceptNewHostKeys bool) (TargetReport, error)
 	conn := target.NewConnection(sshTarget, opts)
 	targetStatus := ProbeHealthStatus(conn)
 	if errors.Is(targetStatus.ConnectionError, target.ErrPasswordAuthentication) {
-		return TargetReport{}, fmt.Errorf(passwordAuthErrorMessage, sshTarget)
+		targetStatus.ConnectionError = fmt.Errorf(passwordAuthErrorMessage, sshTarget)
 	}
 	return GenerateTargetReport(targetStatus), nil
 }
@@ -94,10 +94,14 @@ func GenerateHostReport(statuses []DependencyStatus) HostReport {
 func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
+	connectivityValue := ""
+	if targetStatus.ConnectionError != nil {
+		connectivityValue = targetStatus.ConnectionError.Error()
+	}
 	report.Connectivity = HealthCheck{
 		Name:   "Connected",
 		Status: NewCheckStatusFromError(targetStatus.ConnectionError),
-		Value:  "",
+		Value:  connectivityValue,
 	}
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"

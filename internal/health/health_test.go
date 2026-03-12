@@ -56,11 +56,13 @@ func TestGenerateTargetReport(t *testing.T) {
 	})
 
 	t.Run("when the target has a connection error, Connectivity status reports error", func(t *testing.T) {
-		ts := health.Status{ConnectionError: assert.AnError}
+		connectionErr := fmt.Errorf("unable to authenticate to target")
+		ts := health.Status{ConnectionError: connectionErr}
 
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
+		assert.Equal(t, connectionErr.Error(), got.Connectivity.Value)
 	})
 
 	t.Run("when the target has no connection error, Connectivity status is ok", func(t *testing.T) {
