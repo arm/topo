@@ -88,6 +88,25 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
+	t.Run("wraps error as WarningError when binary exists check severity is warning", func(t *testing.T) {
+		missingBin := health.Dependency{Binary: "missing-bin", Label: "Missing", Checks: []health.Check{health.BinaryExistsWarning()}}
+		deps := []health.Dependency{missingBin}
+		mockBinaryExists := func(bin string) error {
+			return fmt.Errorf("%q executable file not found in $PATH", bin)
+		}
+
+		got := health.PerformChecks(deps, mockBinaryExists)
+
+		assert.Len(t, got, 1)
+		want := []health.DependencyStatus{
+			{
+				Dependency: missingBin,
+				Error:      health.WarningError{Err: mockBinaryExists("missing-bin")},
+			},
+		}
+		assert.Equal(t, want, got)
+	})
+
 	t.Run("when a dependency is found, its status entry reflects that", func(t *testing.T) {
 		mockBinaryExists := func(bin string) error {
 			if bin == "baz" {

@@ -115,4 +115,16 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 			{Name: "Rube Goldberg", Status: health.CheckStatusError, Value: "whatever not found on path"},
 		}, got)
 	})
+
+	t.Run("when a dependency has a warning error, health check reports warning", func(t *testing.T) {
+		statuses := []health.DependencyStatus{
+			{Dependency: health.Dependency{Binary: "remoteproc-runtime", Label: "Remoteproc Runtime"}, Error: health.WarningError{Err: fmt.Errorf("remoteproc-runtime not found on path")}},
+		}
+
+		got := extract(statuses)
+
+		assert.Equal(t, []health.HealthCheck{
+			{Name: "Remoteproc Runtime", Status: health.CheckStatusWarning, Value: "remoteproc-runtime not found on path"},
+		}, got)
+	})
 }

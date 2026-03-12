@@ -127,7 +127,11 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 			hc.Status = CheckStatusOK
 			hc.Value = ds.Dependency.Binary
 		} else {
-			hc.Status = CheckStatusError
+			if _, ok := errors.AsType[WarningError](ds.Error); ok {
+				hc.Status = CheckStatusWarning
+			} else {
+				hc.Status = CheckStatusError
+			}
 			hc.Value = ds.Error.Error()
 		}
 		res = append(res, hc)

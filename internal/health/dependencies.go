@@ -13,13 +13,29 @@ const (
 	CheckBinaryExists CheckKind = iota
 )
 
+type CheckSeverity int
+
+const (
+	SeverityError   CheckSeverity = iota
+	SeverityWarning CheckSeverity = iota
+)
+
+type WarningError struct{ Err error }
+
+func (w WarningError) Error() string { return w.Err.Error() }
+
 type Check struct {
-	Kind CheckKind
-	Arg  string
+	Kind     CheckKind
+	Arg      string
+	Severity CheckSeverity
 }
 
 func BinaryExists() Check {
-	return Check{Kind: CheckBinaryExists}
+	return Check{Kind: CheckBinaryExists, Severity: SeverityError}
+}
+
+func BinaryExistsWarning() Check {
+	return Check{Kind: CheckBinaryExists, Severity: SeverityWarning}
 }
 
 type HardwareCapability int
@@ -71,14 +87,14 @@ var TargetRequiredDependencies = []Dependency{
 		Label:                 "Remoteproc Runtime",
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks:                []Check{BinaryExists()},
+		Checks:                []Check{BinaryExistsWarning()},
 	},
 	{
 		Binary:                "containerd-shim-remoteproc-v1",
 		Label:                 "Remoteproc Shim",
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks:                []Check{BinaryExists()},
+		Checks:                []Check{BinaryExistsWarning()},
 	},
 	{
 		Binary:         "lscpu",
@@ -133,6 +149,9 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []Dep
 				}
 			}
 			if err != nil {
+				if check.Severity == SeverityWarning {
+					err = WarningError{Err: err}
+				}
 				break
 			}
 		}
