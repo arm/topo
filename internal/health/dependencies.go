@@ -47,11 +47,6 @@ type DependencyStatus struct {
 	Error      error
 }
 
-func CheckDependencies(binaryExists func(string) error, capabilities map[HardwareCapability]struct{}) []DependencyStatus {
-	deps := FilterByHardware(TargetRequiredDependencies, capabilities)
-	return CheckInstalled(deps, binaryExists)
-}
-
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
 	result := make([]Dependency, 0, len(deps))
 	for _, dep := range deps {
