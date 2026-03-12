@@ -150,7 +150,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: sign-and-post-windows.yml
-          REF: main
+          REF: switch-to-public-artifactory
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
@@ -163,7 +163,8 @@ jobs:
             -f "org-name=arm" \
             -f "binary-name=topo.exe" \
             -f "signing-artifactory-repo=edge-ai-tooling.topo-cli-signing" \
-            -f "artifactory-uploadables=topo_windows_*"
+            -f "artifactory-uploadables=topo_windows_*" \
+            -f "artifactory-host=https://arm.jfrog.io"
 
       - name: Upload linux artifacts
         uses: actions/upload-artifact@v6
@@ -180,7 +181,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: archive-and-upload-to-artifactory.yml
-          REF: main
+          REF: switch-to-public-artifactory
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
@@ -194,4 +195,5 @@ jobs:
             -f "org-name=arm" \
             -f "artifactory-uploadables=topo_linux_*" \
             -f "archive-format=tar.gz" \
-            -f "executables=*/topo"
+            -f "executables=*/topo" \
+            -f "artifactory-host=https://arm.jfrog.io"
