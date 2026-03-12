@@ -8,16 +8,16 @@ import (
 )
 
 type SSHConfigValues struct {
-	host       string
-	user       string
-	port       string
-	configName string
+	Host     string
+	HostName string
+	User     string
+	Port     string
 }
 
 func resolveSSHConfigHost(raw string) SSHConfigValues {
 	if raw == "" || isExplicitSSHHost(raw) {
 		user, host, port := SplitUserHostPort(raw)
-		return SSHConfigValues{user: user, host: host, port: port, configName: ""}
+		return SSHConfigValues{User: user, Host: host, Port: port, HostName: ""}
 	}
 
 	output, err := exec.Command("ssh", "-G", raw).Output()
@@ -25,7 +25,7 @@ func resolveSSHConfigHost(raw string) SSHConfigValues {
 		return SSHConfigValues{}
 	}
 	user, host, port := parseSSHConfigOutput(output)
-	return SSHConfigValues{user: user, host: host, port: port, configName: raw}
+	return SSHConfigValues{User: user, Host: host, Port: port, HostName: raw}
 }
 
 func isExplicitSSHHost(raw string) bool {
