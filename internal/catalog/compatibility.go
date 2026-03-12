@@ -66,16 +66,19 @@ func extractSupportedFeatures(profile target.HardwareProfile) map[string]struct{
 }
 
 func isRepoSupported(profile target.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) bool {
-	for _, feature := range repo.Features {
-		normalized := strings.ToLower(strings.TrimSpace(feature))
-		if _, ok := supportedFeatures[normalized]; !ok {
-			return false
-		}
-	}
-
 	if repo.MinRAMKb > 0 && profile.TotalMemoryKb < repo.MinRAMKb {
 		return false
 	}
 
-	return true
+	atLeastOneFeatureIsSupported := len(repo.Features) == 0
+
+	for _, feature := range repo.Features {
+		normalized := strings.ToLower(strings.TrimSpace(feature))
+		if _, ok := supportedFeatures[normalized]; ok {
+			atLeastOneFeatureIsSupported = true
+			break
+		}
+	}
+
+	return atLeastOneFeatureIsSupported
 }

@@ -16,7 +16,7 @@ func TestGetTemplateRepo(t *testing.T) {
 		assert.Equal(t, &catalog.Repo{
 			Name:        "Lightbulb-moment",
 			Description: "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state. The lightbulb state is described by an LLM in any user-specified style.",
-			Features:    []string{"SVE", "NEON", "remoteproc"},
+			Features:    []string{"remoteproc-runtime"},
 			URL:         "git@github.com:Arm-Examples/topo-lightbulb-moment.git",
 			Ref:         "main",
 		}, template)
