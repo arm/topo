@@ -34,16 +34,9 @@ archives:
         formats: zip
     files:
       - README.md
-      - CHANGELOG.md
 
 checksum:
   name_template: "checksums.txt"
 
 changelog:
-  sort: asc
-  use: git
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - "^refactor:"
+  disable: true
