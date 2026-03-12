@@ -18,6 +18,9 @@ type PrintableHealthReport struct {
 const healthCheckTemplate = `
 {{- define "checkRow" -}}
   {{ .Name }}:{{ statusIcon .Status }}{{- if .Value }} ({{ .Value }}){{- end }}
+{{- if .Fix }}
+  → {{ .Fix }}
+{{- end -}}
 {{- end -}}
 Host
 ----

@@ -1,6 +1,7 @@
 package health_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -166,6 +167,22 @@ func TestPerformChecks(t *testing.T) {
 			{Dependency: health.Dependency{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
+	})
+
+	t.Run("captures Fix from failing check", func(t *testing.T) {
+		dep := health.Dependency{
+			Binary: "vader.exe",
+			Label:  "Sith",
+			Checks: []health.Check{{Kind: health.CheckBinaryExists, Severity: health.SeverityWarning, Fix: "turn Anakin into a bad man"}},
+		}
+		mockBinaryExists := func(bin string) error {
+			return errors.New("vader not found")
+		}
+
+		got := health.PerformChecks([]health.Dependency{dep}, mockBinaryExists)
+
+		assert.Len(t, got, 1)
+		assert.Equal(t, "turn Anakin into a bad man", got[0].Fix)
 	})
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {

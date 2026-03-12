@@ -115,6 +115,22 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.NotContains(t, out.String(), "Features (Linux Host)")
 		})
 
+		t.Run("it renders the fix hint when a check has a fix", func(t *testing.T) {
+			toPrint := templates.PrintableHealthReport{
+				Host: health.HostReport{
+					Dependencies: []health.HealthCheck{
+						{Fix: "Apply Working Hands Cream"},
+					},
+				},
+			}
+			var out bytes.Buffer
+
+			err := printable.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "Apply Working Hands Cream")
+		})
+
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
 			hint := "Need to work on your aim"
 			toPrint := templates.PrintableHealthReport{TargetHint: hint}

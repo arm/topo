@@ -34,6 +34,7 @@ type HealthCheck struct {
 	Name   string      `json:"name"`
 	Status CheckStatus `json:"status"`
 	Value  string      `json:"value"`
+	Fix    string      `json:"fix,omitempty"`
 }
 
 type HostReport struct {
@@ -133,6 +134,7 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 				hc.Status = CheckStatusError
 			}
 			hc.Value = ds.Error.Error()
+			hc.Fix = ds.Fix
 		}
 		res = append(res, hc)
 	}

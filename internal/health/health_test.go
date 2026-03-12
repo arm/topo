@@ -2,6 +2,7 @@ package health_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -126,5 +127,22 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 		assert.Equal(t, []health.HealthCheck{
 			{Name: "Remoteproc Runtime", Status: health.CheckStatusWarning, Value: "remoteproc-runtime not found on path"},
 		}, got)
+	})
+
+	t.Run("propagates Fix from DependencyStatus to HealthCheck", func(t *testing.T) {
+		statuses := []health.DependencyStatus{
+			{
+				Dependency: health.Dependency{Binary: "pizza", Label: "Food"},
+				Error:      health.WarningError{Err: errors.New("not enough pineapple")},
+				Fix:        "add more pineapple",
+			},
+		}
+
+		got := extract(statuses)
+
+		want := []health.HealthCheck{
+			{Name: "Food", Status: health.CheckStatusWarning, Value: "not enough pineapple", Fix: "add more pineapple"},
+		}
+		assert.Equal(t, want, got)
 	})
 }

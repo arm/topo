@@ -28,6 +28,7 @@ type Check struct {
 	Kind     CheckKind
 	Arg      string
 	Severity CheckSeverity
+	Fix      string
 }
 
 func BinaryExists() Check {
@@ -87,14 +88,26 @@ var TargetRequiredDependencies = []Dependency{
 		Label:                 "Remoteproc Runtime",
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks:                []Check{BinaryExistsWarning()},
+		Checks: []Check{
+			{
+				Kind:     CheckBinaryExists,
+				Severity: SeverityWarning,
+				Fix:      "run `topo install remoteproc-runtime`",
+			},
+		},
 	},
 	{
 		Binary:                "containerd-shim-remoteproc-v1",
 		Label:                 "Remoteproc Shim",
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks:                []Check{BinaryExistsWarning()},
+		Checks: []Check{
+			{
+				Kind:     CheckBinaryExists,
+				Severity: SeverityWarning,
+				Fix:      "run `topo install remoteproc-runtime`",
+			},
+		},
 	},
 	{
 		Binary:         "lscpu",
@@ -107,6 +120,7 @@ var TargetRequiredDependencies = []Dependency{
 type DependencyStatus struct {
 	Dependency Dependency
 	Error      error
+	Fix        string
 }
 
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
@@ -140,6 +154,7 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []Dep
 		}
 
 		var err error
+		var fix string
 		for _, check := range dep.Checks {
 			switch check.Kind {
 			case CheckBinaryExists:
@@ -152,6 +167,7 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []Dep
 				if check.Severity == SeverityWarning {
 					err = WarningError{Err: err}
 				}
+				fix = check.Fix
 				break
 			}
 		}
@@ -159,6 +175,7 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []Dep
 		result = append(result, DependencyStatus{
 			Dependency: dep,
 			Error:      err,
+			Fix:        fix,
 		})
 	}
 	return result
