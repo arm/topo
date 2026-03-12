@@ -16,8 +16,8 @@ const (
 type CheckSeverity int
 
 const (
-	SeverityError   CheckSeverity = iota
-	SeverityWarning CheckSeverity = iota
+	SeverityError CheckSeverity = iota
+	SeverityWarning
 )
 
 type WarningError struct{ Err error }
