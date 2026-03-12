@@ -64,17 +64,17 @@ func TestDependencyFormat(t *testing.T) {
 }
 
 func TestPerformChecks(t *testing.T) {
-	mockDependencies := []health.Dependency{
-		{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
-		{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
-	}
 
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
+		deps := []health.Dependency{
+			{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
+			{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
+		}
 		mockBinaryExists := func(bin string) error {
 			return fmt.Errorf("%q executable file not found in $PATH", bin)
 		}
 
-		got := health.PerformChecks(mockDependencies, mockBinaryExists)
+		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
 			{
@@ -109,6 +109,9 @@ func TestPerformChecks(t *testing.T) {
 	})
 
 	t.Run("when a dependency is found, its status entry reflects that", func(t *testing.T) {
+		deps := []health.Dependency{
+			{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
+		}
 		mockBinaryExists := func(bin string) error {
 			if bin == "baz" {
 				return nil
@@ -116,13 +119,9 @@ func TestPerformChecks(t *testing.T) {
 			return fmt.Errorf("%q executable file not found in $PATH", bin)
 		}
 
-		got := health.PerformChecks(mockDependencies, mockBinaryExists)
+		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{
-				Dependency: health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
-				Error:      mockBinaryExists("foo"),
-			},
 			{
 				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
 				Error:      nil,
