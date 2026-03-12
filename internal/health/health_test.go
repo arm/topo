@@ -106,7 +106,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 
 	t.Run("when a dependency is not installed, health check reports error", func(t *testing.T) {
 		statuses := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "whatever", Category: "Rube Goldberg"}, Error: fmt.Errorf("whatever not found on path")},
+			{Dependency: health.Dependency{Binary: "whatever", Label: "Rube Goldberg"}, Error: fmt.Errorf("whatever not found on path")},
 		}
 
 		got := extract(statuses)

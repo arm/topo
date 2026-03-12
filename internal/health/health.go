@@ -122,10 +122,10 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	for _, ds := range statuses {
-		hc := HealthCheck{Name: ds.Dependency.Category}
+		hc := HealthCheck{Name: ds.Dependency.Label}
 		if ds.Error == nil {
 			hc.Status = CheckStatusOK
-			hc.Value = ds.Dependency.Name
+			hc.Value = ds.Dependency.Binary
 		} else {
 			hc.Status = CheckStatusError
 			hc.Value = ds.Error.Error()
