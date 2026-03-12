@@ -129,14 +129,13 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []Dep
 			switch check.Kind {
 			case CheckBinaryExists:
 				err = binaryExists(check.Arg)
+				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
+					installed[dep.SoftwareEnumID] = struct{}{}
+				}
 			}
 			if err != nil {
 				break
 			}
-		}
-
-		if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
-			installed[dep.SoftwareEnumID] = struct{}{}
 		}
 
 		result = append(result, DependencyStatus{
