@@ -8,6 +8,21 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
+type CheckKind int
+
+const (
+	CheckBinaryExists CheckKind = iota
+)
+
+type Check struct {
+	Kind CheckKind
+	Arg  string
+}
+
+func BinaryExists(bin string) Check {
+	return Check{Kind: CheckBinaryExists, Arg: bin}
+}
+
 type HardwareCapability int
 
 const (
@@ -25,21 +40,53 @@ const (
 type Dependency struct {
 	Name                  string
 	Category              string
+	Checks                []Check
 	SoftwareEnumID        SoftwareDependency
 	SoftwarePrerequisites []SoftwareDependency
 	HardwarePrerequisite  []HardwareCapability
 }
 
 var HostRequiredDependencies = []Dependency{
-	{Name: "ssh", Category: "SSH"},
-	{Name: "docker", Category: "Container Engine", SoftwareEnumID: Docker},
+	{
+		Name:     "ssh",
+		Category: "SSH",
+		Checks:   []Check{BinaryExists("ssh")},
+	},
+	{
+		Name:           "docker",
+		Category:       "Container Engine",
+		SoftwareEnumID: Docker,
+		Checks:         []Check{BinaryExists("docker")},
+	},
 }
 
 var TargetRequiredDependencies = []Dependency{
-	{Name: "docker", Category: "Container Engine", SoftwareEnumID: Docker},
-	{Name: "remoteproc-runtime", Category: "Remoteproc Runtime", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
-	{Name: "containerd-shim-remoteproc-v1", Category: "Remoteproc Shim", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
-	{Name: "lscpu", Category: "Hardware Info", SoftwareEnumID: Lscpu},
+	{
+		Name:           "docker",
+		Category:       "Container Engine",
+		SoftwareEnumID: Docker,
+		Checks:         []Check{BinaryExists("docker")},
+	},
+	{
+		Name:                  "remoteproc-runtime",
+		Category:              "Remoteproc Runtime",
+		SoftwarePrerequisites: []SoftwareDependency{Docker},
+		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
+		Checks:                []Check{BinaryExists("remoteproc-runtime")},
+	},
+	{
+		Name:                  "containerd-shim-remoteproc-v1",
+		Category:              "Remoteproc Shim",
+		SoftwarePrerequisites: []SoftwareDependency{Docker},
+		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
+		Checks:                []Check{BinaryExists("containerd-shim-remoteproc-v1")},
+	},
+	{
+		Name:           "lscpu",
+		Category:       "Hardware Info",
+		SoftwareEnumID: Lscpu,
+		Checks:         []Check{BinaryExists("lscpu")},
+	},
 }
 
 type DependencyStatus struct {
@@ -68,7 +115,7 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 
 type BinaryExistsFn = func(bin string) error
 
-func CheckInstalled(dependencies []Dependency, binaryExists BinaryExistsFn) []DependencyStatus {
+func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
 
@@ -77,7 +124,16 @@ func CheckInstalled(dependencies []Dependency, binaryExists BinaryExistsFn) []De
 			continue
 		}
 
-		err := binaryExists(dep.Name)
+		var err error
+		for _, check := range dep.Checks {
+			switch check.Kind {
+			case CheckBinaryExists:
+				err = binaryExists(check.Arg)
+			}
+			if err != nil {
+				break
+			}
+		}
 
 		if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 			installed[dep.SoftwareEnumID] = struct{}{}

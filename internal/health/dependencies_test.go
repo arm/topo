@@ -62,10 +62,10 @@ func TestDependencyFormat(t *testing.T) {
 	})
 }
 
-func TestCheckInstalled(t *testing.T) {
+func TestPerformChecks(t *testing.T) {
 	mockDependencies := []health.Dependency{
-		{Name: "foo", Category: "bar"},
-		{Name: "baz", Category: "qux"},
+		{Name: "foo", Category: "bar", Checks: []health.Check{health.BinaryExists("foo")}},
+		{Name: "baz", Category: "qux", Checks: []health.Check{health.BinaryExists("baz")}},
 	}
 
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
@@ -73,15 +73,15 @@ func TestCheckInstalled(t *testing.T) {
 			return fmt.Errorf("%q executable file not found in $PATH", bin)
 		}
 
-		got := health.CheckInstalled(mockDependencies, mockBinaryExists)
+		got := health.PerformChecks(mockDependencies, mockBinaryExists)
 
 		want := []health.DependencyStatus{
 			{
-				Dependency: health.Dependency{Name: "foo", Category: "bar"},
+				Dependency: health.Dependency{Name: "foo", Category: "bar", Checks: []health.Check{health.BinaryExists("foo")}},
 				Error:      mockBinaryExists("foo"),
 			},
 			{
-				Dependency: health.Dependency{Name: "baz", Category: "qux"},
+				Dependency: health.Dependency{Name: "baz", Category: "qux", Checks: []health.Check{health.BinaryExists("baz")}},
 				Error:      mockBinaryExists("baz"),
 			},
 		}
@@ -96,15 +96,15 @@ func TestCheckInstalled(t *testing.T) {
 			return fmt.Errorf("%q executable file not found in $PATH", bin)
 		}
 
-		got := health.CheckInstalled(mockDependencies, mockBinaryExists)
+		got := health.PerformChecks(mockDependencies, mockBinaryExists)
 
 		want := []health.DependencyStatus{
 			{
-				Dependency: health.Dependency{Name: "foo", Category: "bar"},
+				Dependency: health.Dependency{Name: "foo", Category: "bar", Checks: []health.Check{health.BinaryExists("foo")}},
 				Error:      mockBinaryExists("foo"),
 			},
 			{
-				Dependency: health.Dependency{Name: "baz", Category: "qux"},
+				Dependency: health.Dependency{Name: "baz", Category: "qux", Checks: []health.Check{health.BinaryExists("baz")}},
 				Error:      nil,
 			},
 		}
@@ -113,8 +113,8 @@ func TestCheckInstalled(t *testing.T) {
 
 	t.Run("omits dependency when none of its SoftwarePrerequisites are installed", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "docker", Category: "Container Engine"},
-			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}},
+			{Name: "docker", Category: "Container Engine", Checks: []health.Check{health.BinaryExists("docker")}},
+			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists("runtime")}},
 		}
 		mockBinaryExists := func(bin string) error {
 			if bin == "runtime" {
@@ -123,44 +123,44 @@ func TestCheckInstalled(t *testing.T) {
 			return fmt.Errorf("%q executable file not found in $PATH", bin)
 		}
 
-		got := health.CheckInstalled(deps, mockBinaryExists)
+		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine"}, Error: mockBinaryExists("docker")},
+			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", Checks: []health.Check{health.BinaryExists("docker")}}, Error: mockBinaryExists("docker")},
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("checks dependency when one of its SoftwarePrerequisites is installed", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker},
-			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}},
+			{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists("docker")}},
+			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists("runtime")}},
 		}
 		mockBinaryExists := func(bin string) error {
 			return nil
 		}
 
-		got := health.CheckInstalled(deps, mockBinaryExists)
+		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker}, Error: nil},
-			{Dependency: health.Dependency{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}}, Error: nil},
+			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists("docker")}}, Error: nil},
+			{Dependency: health.Dependency{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists("runtime")}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "standalone", Category: "Tools"},
+			{Name: "standalone", Category: "Tools", Checks: []health.Check{health.BinaryExists("standalone")}},
 		}
 		mockBinaryExists := func(bin string) error {
 			return nil
 		}
 
-		got := health.CheckInstalled(deps, mockBinaryExists)
+		got := health.PerformChecks(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "standalone", Category: "Tools"}, Error: nil},
+			{Dependency: health.Dependency{Name: "standalone", Category: "Tools", Checks: []health.Check{health.BinaryExists("standalone")}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})
