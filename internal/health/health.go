@@ -10,11 +10,6 @@ import (
 	"github.com/arm/topo/internal/target"
 )
 
-// #nosec G101 -- Does not contain hardcoded credentials
-const passwordAuthErrorMessage = `note: Topo does not support SSH password-based authentication. To connect, either:
-- create your own SSH keys for the target, or
-- run 'topo setup-keys --target %s' to let Topo generate keys and configure passwordless authentication`
-
 type CheckStatus string
 
 func NewCheckStatusFromError(err error) CheckStatus {
@@ -79,9 +74,6 @@ func CheckTarget(sshTarget string, acceptNewHostKeys bool) (TargetReport, error)
 	}
 	conn := target.NewConnection(sshTarget, opts)
 	targetStatus := ProbeHealthStatus(conn)
-	if errors.Is(targetStatus.ConnectionError, target.ErrPasswordAuthentication) {
-		return TargetReport{}, fmt.Errorf(passwordAuthErrorMessage, sshTarget)
-	}
 	return GenerateTargetReport(targetStatus), nil
 }
 
@@ -95,11 +87,7 @@ func GenerateHostReport(statuses []DependencyStatus) HostReport {
 func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
-	report.Connectivity = HealthCheck{
-		Name:   "Connectivity",
-		Status: NewCheckStatusFromError(targetStatus.ConnectionError),
-		Value:  "",
-	}
+	report.Connectivity = connectivityCheck(targetStatus)
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
 	remoteCPUs := targetStatus.Hardware.RemoteCPU
@@ -118,6 +106,22 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 
 	return report
+}
+
+func connectivityCheck(targetStatus Status) HealthCheck {
+	check := HealthCheck{
+		Name:   "Connectivity",
+		Status: NewCheckStatusFromError(targetStatus.ConnectionError),
+	}
+	if targetStatus.ConnectionError == nil {
+		return check
+	}
+
+	check.Value = targetStatus.ConnectionError.Error()
+	if errors.Is(targetStatus.ConnectionError, target.ErrPasswordAuthentication) {
+		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` or manually setup SSH keys for the target", targetStatus.SSHTarget)
+	}
+	return check
 }
 
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {

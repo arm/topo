@@ -62,6 +62,8 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
+		assert.Equal(t, assert.AnError.Error(), got.Connectivity.Value)
+		assert.Empty(t, got.Connectivity.Fix)
 	})
 
 	t.Run("when the target has no connection error, Connectivity status is ok", func(t *testing.T) {
@@ -70,6 +72,20 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusOK, got.Connectivity.Status)
+		assert.Empty(t, got.Connectivity.Value)
+		assert.Empty(t, got.Connectivity.Fix)
+	})
+
+	t.Run("when password authentication is required, Connectivity includes a setup-keys fix", func(t *testing.T) {
+		ts := health.Status{
+			SSHTarget:       "user@my-target",
+			ConnectionError: target.ErrPasswordAuthentication,
+		}
+
+		got := health.GenerateTargetReport(ts)
+
+		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
+		assert.Contains(t, got.Connectivity.Fix, "topo setup-keys --target user@my-target")
 	})
 }
 
