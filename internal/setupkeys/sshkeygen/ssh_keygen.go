@@ -54,6 +54,7 @@ func (kg *SSHKeyGen) Run(cmdOutput io.Writer) error {
 	}
 
 	cmd := kg.buildCommand()
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = cmdOutput
 	cmd.Stderr = cmdOutput
 	return cmd.Run()
