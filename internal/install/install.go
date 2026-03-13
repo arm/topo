@@ -25,10 +25,17 @@ const (
 	downloadTimeout = 2 * time.Minute
 )
 
-var (
-	ErrPermissionDenied = errors.New("permission denied")
-	ErrSSHAuthFailed    = errors.New("SSH authentication failed")
-)
+var ErrPermissionDenied = errors.New("permission denied")
+
+func classifyStderr(stderr string) error {
+	lower := strings.ToLower(stderr)
+	if strings.Contains(lower, "permission denied") ||
+		strings.Contains(lower, "cannot create") ||
+		strings.Contains(lower, "read-only") {
+		return ErrPermissionDenied
+	}
+	return nil
+}
 
 var defaultCandidatePaths = []string{"/usr/local/bin", "/usr/bin", "~/bin"}
 
@@ -286,20 +293,15 @@ func install(installPath string, targetHost ssh.Host, binaries map[string][]byte
 
 		installCmd := fmt.Sprintf("install -D -m %s /dev/stdin %s/%s", mode, installPath, binaryName)
 		conn := target.NewConnection(string(targetHost), target.ConnectionOptions{WithLoginShell: true, WithStdin: binaryData})
-		stderr, err := conn.Run(installCmd)
+		output, err := conn.Run(installCmd)
 		if err != nil {
-			stderrStr := strings.ToLower(stderr)
-			if strings.Contains(stderrStr, "publickey") ||
-				strings.Contains(stderrStr, "authentication") ||
-				strings.Contains(stderrStr, "connection refused") {
-				return fmt.Errorf("%w: %s", ErrSSHAuthFailed, stderr)
+			if errors.Is(err, ssh.ErrSSH) {
+				return err
 			}
-			if strings.Contains(stderrStr, "permission denied") ||
-				strings.Contains(stderrStr, "cannot create") ||
-				strings.Contains(stderrStr, "read-only") {
-				return fmt.Errorf("%w: %s", ErrPermissionDenied, stderr)
+			if classified := classifyStderr(output); classified != nil {
+				return classified
 			}
-			return errors.New(stderr)
+			return err
 		}
 	}
 	return nil

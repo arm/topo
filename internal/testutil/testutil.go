@@ -73,6 +73,17 @@ func WriteComposeFile(t *testing.T, dir, content string) string {
 	return composePath
 }
 
+func CmdWithStderr(output string, exitCode int) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		script := "$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::Error.Write($env:TOPO_CMD_OUT); exit [int]$env:TOPO_CMD_CODE"
+		cmd := exec.Command("powershell", "-NoProfile", "-Command", script)
+		cmd.Env = append(os.Environ(), "TOPO_CMD_OUT="+output, fmt.Sprintf("TOPO_CMD_CODE=%d", exitCode))
+		return cmd
+	}
+	// #nosec G204 -- ignore as its a test helper
+	return exec.Command("sh", "-c", fmt.Sprintf("printf %%s \"$1\" >&2; exit %d", exitCode), "sh", output)
+}
+
 func CmdWithOutput(output string, exitCode int) *exec.Cmd {
 	if runtime.GOOS == "windows" {
 		// PowerShell: emit exact bytes (no extra newline), UTF-8, and requested exit code.

@@ -83,8 +83,11 @@ func (c *Connection) Run(command string) (string, error) {
 
 	err := cmd.Run()
 	if err != nil {
-		combined := stdoutBuf.String() + stderrBuf.String()
-		return combined, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", string(c.SSHTarget), err, stderrBuf.String())
+		stderr := stderrBuf.String()
+		if classified := ssh.ClassifyStderr(stderr); classified != nil {
+			err = classified
+		}
+		return stdoutBuf.String() + stderr, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", string(c.SSHTarget), err, stderr)
 	}
 	return stdoutBuf.String(), nil
 }

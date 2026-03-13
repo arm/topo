@@ -36,6 +36,28 @@ func TestRun(t *testing.T) {
 		assert.Empty(t, out)
 	})
 
+	t.Run("returns ErrAuthFailed when stderr contains auth failure", func(t *testing.T) {
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithStderr("Permission denied (publickey)", 1)
+		}
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
+
+		_, err := conn.Run("ls")
+
+		assert.ErrorIs(t, err, ssh.ErrAuthFailed)
+	})
+
+	t.Run("returns ErrConnectionFailed when stderr contains connection refused", func(t *testing.T) {
+		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+			return testutil.CmdWithStderr("ssh: connect to host foo port 22: Connection refused", 1)
+		}
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
+
+		_, err := conn.Run("ls")
+
+		assert.ErrorIs(t, err, ssh.ErrConnectionFailed)
+	})
+
 	t.Run("run with mutliplexing enabled includes Control args", func(t *testing.T) {
 		testutil.RequireOS(t, "linux")
 		var capturedArgs string
