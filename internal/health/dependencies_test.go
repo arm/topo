@@ -208,18 +208,18 @@ func TestPerformChecks(t *testing.T) {
 
 	t.Run("captures failure from a command successful check and verifies that arguments are passed correctly", func(t *testing.T) {
 		dep := health.Dependency{
-			Binary: "docker",
-			Label:  "Container Engine",
+			Binary: "potatoes",
+			Label:  "Air Fryer Engine",
 			Checks: []health.Check{health.BinaryExists(), {
 				Kind:     health.CheckCommandSuccessful,
-				Arg:      "docker --version",
+				Arg:      "potatoes --cook-well",
 				Severity: health.SeverityError,
-				Fix:      "Ensure current user can run docker commands",
+				Fix:      "Ensure current user can run the potatoe cooker",
 			}},
 		}
 		mockBinaryExists := func(string) error { return nil }
 		mockCommandSuccessful := func(cmd string) error {
-			if cmd == "docker --version" {
+			if cmd == "potatoes --cook-well" {
 				return errors.New("permission denied")
 			}
 			return nil
@@ -231,7 +231,7 @@ func TestPerformChecks(t *testing.T) {
 			{
 				Dependency: dep,
 				Error:      errors.New("permission denied"),
-				Fix:        "Ensure current user can run docker commands",
+				Fix:        "Ensure current user can run the potatoe cooker",
 			},
 		}
 		assert.Equal(t, want, got)
