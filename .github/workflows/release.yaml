@@ -129,7 +129,7 @@ jobs:
 
   sign-macos:
     needs: build
-    uses: Arm-debug/signer/.github/workflows/sign-and-post-macos.yml@return-release-urls
+    uses: Arm-debug/signer/.github/workflows/sign-and-post-macos.yml@workflow-calls
     with:
       run-id: ${{ github.run_id }}
       artifact: topo-v${{ needs.build.outputs.version }}-macos-unsigned
@@ -143,7 +143,7 @@ jobs:
 
   sign-windows:
     needs: build
-    uses: Arm-debug/signer/.github/workflows/sign-and-post-windows.yml@return-release-urls
+    uses: Arm-debug/signer/.github/workflows/sign-and-post-windows.yml@workflow-calls
     with:
       run-id: ${{ github.run_id }}
       artifact: topo-v${{ needs.build.outputs.version }}-windows-unsigned
@@ -158,7 +158,7 @@ jobs:
 
   upload-linux:
     needs: build
-    uses: Arm-debug/signer/.github/workflows/archive-and-upload-to-artifactory.yml@return-release-urls
+    uses: Arm-debug/signer/.github/workflows/archive-and-upload-to-artifactory.yml@workflow-calls
     with:
       run-id: ${{ github.run_id }}
       archive-name: topo-v${{ needs.build.outputs.version }}-linux
