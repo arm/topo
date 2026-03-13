@@ -138,6 +138,8 @@ jobs:
       org-name: arm
       binary-name: topo
       artifactory-uploadables: topo_darwin_*
+      artifactory-host: https://arm.jfrog.io
+      artifactory-repo-name: devx-topo
 
   sign-windows:
     needs: build
@@ -151,8 +153,10 @@ jobs:
       binary-name: topo.exe
       signing-artifactory-repo: edge-ai-tooling.topo-cli-signing
       artifactory-uploadables: topo_windows_*
+      artifactory-host: https://arm.jfrog.io
+      artifactory-repo-name: devx-topo
 
-  sign-linux:
+  upload-linux:
     needs: build
     uses: Arm-debug/signer/.github/workflows/archive-and-upload-to-artifactory.yml@return-release-urls
     with:
@@ -163,11 +167,14 @@ jobs:
       org-name: arm
       artifactory-path: linux
       artifactory-uploadables: topo_linux_*
+      artifactory-host: https://arm.jfrog.io
+      artifactory-repo-name: devx-topo
       archive-format: tar.gz
       executables: "*/topo"
 
+
   post-release:
-    needs: [sign-macos, sign-windows, sign-linux]
+    needs: [sign-macos, sign-windows, upload-linux]
     runs-on: ubuntu-latest
     steps:
       - name: Output artifact URLs
@@ -178,4 +185,4 @@ jobs:
           echo "### Windows" >> $GITHUB_STEP_SUMMARY
           echo "${{ needs.sign-windows.outputs.artifact-urls }}" >> $GITHUB_STEP_SUMMARY
           echo "### Linux" >> $GITHUB_STEP_SUMMARY
-          echo "${{ needs.sign-linux.outputs.artifact-urls }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.upload-linux.outputs.artifact-urls }}" >> $GITHUB_STEP_SUMMARY
