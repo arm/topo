@@ -17,6 +17,7 @@ on:
 permissions:
   contents: write
   packages: read
+  actions: read
 
 jobs:
   release:
@@ -73,7 +74,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean
+          args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
@@ -114,58 +115,8 @@ jobs:
             dist/topo_windows_arm64
           if-no-files-found: error
 
-      - name: Create GitHub App token for signer
-        id: app-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
-          private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
-          owner: Arm-debug
-          repositories: signer
-
-      - name: Trigger macOS signer workflow
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          OWNER: Arm-debug
-          REPO: signer
-          WORKFLOW_FILE: sign-and-post-macos.yml
-          REF: main
-          UPSTREAM_RUN_ID: ${{ github.run_id }}
-        run: |
-          gh workflow run "$WORKFLOW_FILE" \
-            --repo "$OWNER/$REPO" \
-            --ref "$REF" \
-            -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "artifact=topo-v${{ steps.version.outputs.version }}-macos-unsigned" \
-            -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "repo-name=topo" \
-            -f "org-name=arm" \
-            -f "binary-name=topo" \
-            -f "artifactory-uploadables=topo_darwin_*"
-
-      - name: Trigger Windows signer workflow
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          OWNER: Arm-debug
-          REPO: signer
-          WORKFLOW_FILE: sign-and-post-windows.yml
-          REF: main
-          UPSTREAM_RUN_ID: ${{ github.run_id }}
-        run: |
-          gh workflow run "$WORKFLOW_FILE" \
-            --repo "$OWNER/$REPO" \
-            --ref "$REF" \
-            -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "artifact=topo-v${{ steps.version.outputs.version }}-windows-unsigned" \
-            -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "repo-name=topo" \
-            -f "org-name=arm" \
-            -f "binary-name=topo.exe" \
-            -f "signing-artifactory-repo=edge-ai-tooling.topo-cli-signing" \
-            -f "artifactory-uploadables=topo_windows_*"
-
       - name: Upload linux artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: topo-v${{ steps.version.outputs.version }}-linux
           path: |
@@ -173,24 +124,46 @@ jobs:
             dist/topo_linux_arm64
           if-no-files-found: error
 
-      - name: Trigger archive and upload to artifactory workflow for linux artifacts
+      - name: Create draft GitHub Release
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          OWNER: Arm-debug
-          REPO: signer
-          WORKFLOW_FILE: archive-and-upload-to-artifactory.yml
-          REF: main
-          UPSTREAM_RUN_ID: ${{ github.run_id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh workflow run "$WORKFLOW_FILE" \
-            --repo "$OWNER/$REPO" \
-            --ref "$REF" \
-            -f "run-id=$UPSTREAM_RUN_ID" \
-            -f "release-version=${{ steps.version.outputs.version }}" \
-            -f "archive-name=topo-v${{ steps.version.outputs.version }}-linux" \
-            -f "artifactory-path=linux" \
-            -f "repo-name=topo" \
-            -f "org-name=arm" \
-            -f "artifactory-uploadables=topo_linux_*" \
-            -f "archive-format=tar.gz" \
-            -f "executables=*/topo"
+          gh release create "v${VERSION}" \
+            --draft \
+            --title "v${VERSION}" \
+            --notes "Release v${VERSION} - signing in progress..."
+
+      - name: Create GitHub App token for signer
+        id: signer-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SIGNER_APP_ID }}
+          private-key: ${{ secrets.SIGNER_APP_PRIVATE_KEY }}
+          owner: Arm-Debug
+          repositories: signer
+
+      - name: Trigger sign-and-release workflow
+        env:
+          GH_TOKEN: ${{ steps.signer-token.outputs.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh workflow run sign-and-release.yml \
+            --repo Arm-Debug/signer \
+            --field run-id=${{ github.run_id }} \
+            --field release-version=${VERSION} \
+            --field release-tag=v${VERSION} \
+            --field repo-name=topo \
+            --field org-name=Arm-Debug \
+            --field macos-artifact=topo-v${VERSION}-macos-unsigned \
+            --field macos-binary-name=topo \
+            --field macos-artifactory-uploadables="topo_darwin_*" \
+            --field windows-artifact=topo-v${VERSION}-windows-unsigned \
+            --field windows-binary-name=topo.exe \
+            --field windows-signing-artifactory-repo=edge-ai-tooling.topo-cli-signing \
+            --field windows-artifactory-uploadables="topo_windows_*" \
+            --field linux-archive-name=topo-v${VERSION}-linux \
+            --field linux-artifactory-uploadables="topo_linux_*" \
+            --field linux-artifactory-path=linux \
+            --field linux-archive-format=tar.gz \
+            --field linux-executables="*/topo"
