@@ -78,7 +78,7 @@ var HostRequiredDependencies = []Dependency{
 			Kind:     CheckCommandSuccessful,
 			Arg:      "docker info",
 			Severity: SeverityError,
-			Fix:      "Ensure docker can be executed successfully by the current user",
+			Fix:      "Ensure current user can run docker commands",
 		}},
 	},
 }
@@ -92,7 +92,7 @@ var TargetRequiredDependencies = []Dependency{
 			Kind:     CheckCommandSuccessful,
 			Arg:      "docker info",
 			Severity: SeverityError,
-			Fix:      "Ensure docker can be executed successfully by the current user",
+			Fix:      "Ensure current user can run docker commands",
 		}},
 	},
 	{

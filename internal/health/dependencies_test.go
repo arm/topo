@@ -214,7 +214,7 @@ func TestPerformChecks(t *testing.T) {
 				Kind:     health.CheckCommandSuccessful,
 				Arg:      "docker --version",
 				Severity: health.SeverityError,
-				Fix:      "Ensure docker can be executed successfully by the current user",
+				Fix:      "Ensure current user can run docker commands",
 			}},
 		}
 		mockBinaryExists := func(string) error { return nil }
@@ -226,7 +226,7 @@ func TestPerformChecks(t *testing.T) {
 			{
 				Dependency: dep,
 				Error:      errors.New("permission denied"),
-				Fix:        "Ensure docker can be executed successfully by the current user",
+				Fix:        "Ensure current user can run docker commands",
 			},
 		}
 		assert.Equal(t, want, got)
@@ -240,7 +240,7 @@ func TestPerformChecks(t *testing.T) {
 				Kind:     health.CheckCommandSuccessful,
 				Arg:      "docker --version",
 				Severity: health.SeverityError,
-				Fix:      "Ensure docker can be executed successfully by the current user",
+				Fix:      "Ensure current user can run docker commands",
 			}},
 		}
 		mockBinaryExists := func(string) error { return nil }
