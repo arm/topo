@@ -206,7 +206,7 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("captures failure from a command successful check", func(t *testing.T) {
+	t.Run("captures failure from a command successful check and verifies that arguments are passed correctly", func(t *testing.T) {
 		dep := health.Dependency{
 			Binary: "docker",
 			Label:  "Container Engine",
@@ -218,7 +218,12 @@ func TestPerformChecks(t *testing.T) {
 			}},
 		}
 		mockBinaryExists := func(string) error { return nil }
-		mockCommandSuccessful := func(string) error { return errors.New("permission denied") }
+		mockCommandSuccessful := func(cmd string) error {
+			if cmd == "docker --version" {
+				return errors.New("permission denied")
+			}
+			return nil
+		}
 
 		got := health.PerformChecks([]health.Dependency{dep}, mockBinaryExists, mockCommandSuccessful)
 
@@ -230,31 +235,6 @@ func TestPerformChecks(t *testing.T) {
 			},
 		}
 		assert.Equal(t, want, got)
-	})
-
-	t.Run("passes runnable check args through from the check definition", func(t *testing.T) {
-		dep := health.Dependency{
-			Binary: "docker",
-			Label:  "Container Engine",
-			Checks: []health.Check{health.BinaryExists(), {
-				Kind:     health.CheckCommandSuccessful,
-				Arg:      "docker --version",
-				Severity: health.SeverityError,
-				Fix:      "Ensure current user can run docker commands",
-			}},
-		}
-		mockBinaryExists := func(string) error { return nil }
-		calledWithCmd := ""
-		mockCommandSuccessful := func(cmd string) error {
-			calledWithCmd = cmd
-			return nil
-		}
-
-		got := health.PerformChecks([]health.Dependency{dep}, mockBinaryExists, mockCommandSuccessful)
-
-		assert.Len(t, got, 1)
-		assert.Equal(t, "docker --version", calledWithCmd)
-		assert.NoError(t, got[0].Error)
 	})
 }
 
