@@ -1,12 +1,10 @@
 package ssh
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -15,39 +13,13 @@ import (
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"
 
-func ControlSocketPath(targetHost SSHConfigValues) string {
-	var hash [32]byte
-	if targetHost.HostName == "" {
-		hash = sha256.Sum256([]byte(string(targetHost.Host) + targetHost.User + targetHost.Port))
-	} else {
-		hash = sha256.Sum256([]byte(targetHost.HostName))
-	}
-	hostHash := fmt.Sprintf("%x", hash[:8]) // Hash to avoid filepath limits
-	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
-}
-
-func formatSSHHost(sshConfig SSHConfigValues) string {
-	formatted := string(sshConfig.Host)
-	if strings.Contains(string(sshConfig.Host), ":") {
-		formatted = "[" + formatted + "]"
-	}
-	if sshConfig.User != "" {
-		formatted = fmt.Sprintf("%s@%s", sshConfig.User, formatted)
-	}
-	return formatted
-}
-
-func NewSSHTunnel(targetHost Host, registryPort string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
-	resolvedSSHInfo := resolveSSHConfigHost(string(targetHost))
-	if resolvedSSHInfo == (SSHConfigValues{}) {
-		return nil, nil, nil
-	}
-	start := NewSSHTunnelStart(resolvedSSHInfo, registryPort, useControlSockets)
-	securityCheck := NewCheckSSHTunnelSecurity(resolvedSSHInfo, registryPort)
+func NewSSHTunnel(targetHost SSHConnection, registryPort string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
+	start := NewSSHTunnelStart(targetHost, registryPort, useControlSockets)
+	securityCheck := NewCheckSSHTunnelSecurity(targetHost, registryPort)
 
 	var stop operation.Operation
 	if useControlSockets {
-		stop = NewSSHTunnelStop(resolvedSSHInfo)
+		stop = NewSSHTunnelStop(targetHost)
 	} else {
 		stop = NewSSHTunnelProcessStop(start)
 	}
@@ -56,7 +28,7 @@ func NewSSHTunnel(targetHost Host, registryPort string, useControlSockets bool) 
 }
 
 type SSHTunnelStart struct {
-	TargetHost        SSHConfigValues
+	TargetHost        SSHConnection
 	UseControlSockets bool
 	RegistryPort      string
 	Process           *os.Process
@@ -66,31 +38,12 @@ func (s *SSHTunnelStart) Description() string {
 	return "Open registry SSH tunnel"
 }
 
-func NewSSHTunnelStart(targetHost SSHConfigValues, registryPort string, useControlSockets bool) *SSHTunnelStart {
+func NewSSHTunnelStart(targetHost SSHConnection, registryPort string, useControlSockets bool) *SSHTunnelStart {
 	return &SSHTunnelStart{TargetHost: targetHost, RegistryPort: registryPort, UseControlSockets: useControlSockets}
 }
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
-	var hostArg string
-	if s.TargetHost.HostName == "" {
-		hostArg = formatSSHHost(s.TargetHost)
-	} else {
-		hostArg = s.TargetHost.HostName
-	}
-	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
-	if s.TargetHost.Port != "22" && s.TargetHost.Port != "" {
-		args = append(args, "-p", s.TargetHost.Port)
-	}
-	if s.UseControlSockets {
-		args = append(args,
-			"-fMS", ControlSocketPath(s.TargetHost),
-		)
-	}
-	args = append(args,
-		"-R", fmt.Sprintf("%s:127.0.0.1:%s", s.RegistryPort, s.RegistryPort),
-		hostArg,
-	)
-	// #nosec -- arguments are validated
+	args := s.TargetHost.FormatSSHConnectCommand(s.UseControlSockets, s.RegistryPort)
 	return exec.Command(args[0], args[1:]...)
 }
 
@@ -118,7 +71,7 @@ func (s *SSHTunnelStart) DryRun(w io.Writer) error {
 }
 
 type CheckSSHTunnelSecurity struct {
-	TargetHost SSHConfigValues
+	TargetHost SSHConnection
 	Port       string
 }
 
@@ -126,13 +79,13 @@ func (ct *CheckSSHTunnelSecurity) Description() string {
 	return "Check SSH tunnel security"
 }
 
-func NewCheckSSHTunnelSecurity(targetHost SSHConfigValues, port string) *CheckSSHTunnelSecurity {
+func NewCheckSSHTunnelSecurity(targetHost SSHConnection, port string) *CheckSSHTunnelSecurity {
 	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
 }
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 	if !ct.TargetHost.IsLocalhost() {
-		host := resolveHost(string(ct.TargetHost))
+		host := ct.TargetHost.GetHost()
 		if host == "" {
 			return nil
 		}
@@ -142,7 +95,7 @@ func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 }
 
 func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
-	if Host(ct.TargetHost.Host).IsLocalhost() {
+	if ct.TargetHost.IsLocalhost() {
 		return nil
 	}
 	cmd := ct.Command()
@@ -161,7 +114,7 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 }
 
 func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
-	if Host(ct.TargetHost.Host).IsLocalhost() {
+	if ct.TargetHost.IsLocalhost() {
 		return nil
 	}
 	_, err := fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
@@ -169,39 +122,24 @@ func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
 }
 
 type SSHTunnelStop struct {
-	TargetHost SSHConfigValues
+	TargetHost SSHConnection
 }
 
 func (s *SSHTunnelStop) Description() string {
 	return "Close registry SSH tunnel"
 }
 
-func NewSSHTunnelStop(targetHost SSHConfigValues) *SSHTunnelStop {
+func NewSSHTunnelStop(targetHost SSHConnection) *SSHTunnelStop {
 	return &SSHTunnelStop{TargetHost: targetHost}
 }
 
 func (s *SSHTunnelStop) Command() *exec.Cmd {
-	var hostArg string
-	if s.TargetHost.HostName != "" {
-		hostArg = s.TargetHost.HostName
-	} else {
-		hostArg = formatSSHHost(s.TargetHost)
-	}
-	args := []string{"ssh"}
-	if s.TargetHost.Port != "22" && s.TargetHost.Port != "" {
-		args = append(args, "-p", s.TargetHost.Port)
-	}
-	args = append(args,
-		"-S", ControlSocketPath(s.TargetHost),
-		"-O", "exit",
-		hostArg,
-	)
-	// #nosec -- arguments are validated
+	args := s.TargetHost.FormatSSHExitCommand()
 	return exec.Command(args[0], args[1:]...)
 }
 
 func (s *SSHTunnelStop) Run(w io.Writer) error {
-	if _, err := os.Stat(ControlSocketPath(s.TargetHost)); os.IsNotExist(err) {
+	if _, err := os.Stat(s.TargetHost.ControlSocketPath()); os.IsNotExist(err) {
 		return nil
 	}
 	cmd := s.Command()
