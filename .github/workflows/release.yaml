@@ -155,7 +155,7 @@ jobs:
             --field release-version=${VERSION} \
             --field release-tag=v${VERSION} \
             --field repo-name=topo \
-            --field org-name=Arm-Debug \
+            --field org-name=arm \
             --field artifactory-host=${{ vars.ARTIFACTORY_HOST }} \
             --field artifactory-repo-name=devx-topo \
             --field macos-artifact=topo-v${VERSION}-macos-unsigned \
