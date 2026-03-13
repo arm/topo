@@ -52,7 +52,7 @@ type ConnectionOptions struct {
 	WithMockExec      ExecSSH
 }
 
-var ErrPasswordAuthentication = errors.New("only password authentication is configured; key-based ssh is required")
+var ErrPasswordAuthentication = errors.New("key-based SSH authentication is not setup")
 
 func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
 	execFn := ssh.ExecCmd
