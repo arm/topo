@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      signer-token: ${{ steps.signer-token.outputs.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -126,10 +127,21 @@ jobs:
             dist/topo_linux_amd64
             dist/topo_linux_arm64
           if-no-files-found: error
+      
+      - name: Create GitHub App token for signer
+        id: signer-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
+          private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
+          owner: Arm-debug
+          repositories: signer
 
   sign-macos:
     needs: build
     uses: Arm-debug/signer/.github/workflows/sign-and-post-macos.yml@workflow-calls
+    secrets:
+      GH_TOKEN: ${{ needs.build.outputs.signer-token }}
     with:
       run-id: ${{ github.run_id }}
       artifact: topo-v${{ needs.build.outputs.version }}-macos-unsigned
@@ -144,6 +156,8 @@ jobs:
   sign-windows:
     needs: build
     uses: Arm-debug/signer/.github/workflows/sign-and-post-windows.yml@workflow-calls
+    secrets:
+      GH_TOKEN: ${{ needs.build.outputs.signer-token }}
     with:
       run-id: ${{ github.run_id }}
       artifact: topo-v${{ needs.build.outputs.version }}-windows-unsigned
@@ -159,6 +173,8 @@ jobs:
   upload-linux:
     needs: build
     uses: Arm-debug/signer/.github/workflows/archive-and-upload-to-artifactory.yml@workflow-calls
+    secrets:
+      GH_TOKEN: ${{ needs.build.outputs.signer-token }}
     with:
       run-id: ${{ github.run_id }}
       archive-name: topo-v${{ needs.build.outputs.version }}-linux
