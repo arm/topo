@@ -129,7 +129,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: sign-and-post-macos.yml
-          REF: switch-to-public-artifactory
+          REF: main
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
@@ -151,7 +151,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: sign-and-post-windows.yml
-          REF: switch-to-public-artifactory
+          REF: main
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
@@ -183,7 +183,7 @@ jobs:
           OWNER: Arm-debug
           REPO: signer
           WORKFLOW_FILE: archive-and-upload-to-artifactory.yml
-          REF: switch-to-public-artifactory
+          REF: main
           UPSTREAM_RUN_ID: ${{ github.run_id }}
         run: |
           gh workflow run "$WORKFLOW_FILE" \
