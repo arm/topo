@@ -157,7 +157,7 @@ jobs:
             --field repo-name=topo \
             --field org-name=Arm-Debug \
             --field artifactory-host=${{ vars.ARTIFACTORY_HOST }} \
-            --field artifactory-repo-name=topo \
+            --field artifactory-repo-name=devx-topo \
             --field macos-artifact=topo-v${VERSION}-macos-unsigned \
             --field macos-binary-name=topo \
             --field macos-artifactory-uploadables="topo_darwin_*" \
