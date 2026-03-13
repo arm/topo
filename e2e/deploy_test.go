@@ -62,7 +62,7 @@ func requireClone(t *testing.T, topo string, projectDir string, cloneDir string,
 	cloneDirPath, err := filepath.Abs(cloneDir)
 	require.NoError(t, err)
 
-	args := []string{"clone", cloneDirPath, fmt.Sprintf("dir:%s", remoteDirPath)}
+	args := []string{"clone", fmt.Sprintf("dir:%s", remoteDirPath), cloneDirPath}
 	args = append(args, extraArgs...)
 	cloneCmd := exec.Command(topo, args...)
 	cloneCmd.Dir = projectDir
