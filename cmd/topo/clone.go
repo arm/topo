@@ -37,7 +37,7 @@ Local directory (must contain a Topo template):
 
 Some projects require build arguments. Supply them on the command line or answer prompts:
 
-  # Will prompt for required args (path defaults to template name)
+  # Will prompt for required args
   topo clone template:Hello-World
   # Provide args explicitly
   topo clone template:Hello-World GREETING_NAME="World"
