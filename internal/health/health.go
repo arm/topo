@@ -96,7 +96,7 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
 	report.Connectivity = HealthCheck{
-		Name:   "Connected",
+		Name:   "Connectivity",
 		Status: NewCheckStatusFromError(targetStatus.ConnectionError),
 		Value:  "",
 	}
