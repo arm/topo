@@ -25,18 +25,6 @@ const (
 	downloadTimeout = 2 * time.Minute
 )
 
-var ErrPermissionDenied = errors.New("permission denied")
-
-func classifyStderr(stderr string) error {
-	lower := strings.ToLower(stderr)
-	if strings.Contains(lower, "permission denied") ||
-		strings.Contains(lower, "cannot create") ||
-		strings.Contains(lower, "read-only") {
-		return ErrPermissionDenied
-	}
-	return nil
-}
-
 var defaultCandidatePaths = []string{"/usr/local/bin", "/usr/bin", "~/bin"}
 
 type PathCandidate struct {
@@ -411,4 +399,16 @@ func InstallBinariesFromGithubRelease(targetHost ssh.Host, repoURL string, binar
 	}
 
 	return results, nil
+}
+
+var ErrPermissionDenied = errors.New("permission denied")
+
+func classifyStderr(stderr string) error {
+	lower := strings.ToLower(stderr)
+	if strings.Contains(lower, "permission denied") ||
+		strings.Contains(lower, "cannot create") ||
+		strings.Contains(lower, "read-only") {
+		return ErrPermissionDenied
+	}
+	return nil
 }
