@@ -64,7 +64,6 @@ func TestDependencyFormat(t *testing.T) {
 }
 
 func TestPerformChecks(t *testing.T) {
-
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
 		deps := []health.Dependency{
 			{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
