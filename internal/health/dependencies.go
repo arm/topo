@@ -3,6 +3,7 @@ package health
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/arm/topo/internal/ssh"
 )
@@ -11,6 +12,7 @@ type CheckKind int
 
 const (
 	CheckBinaryExists CheckKind = iota
+	CheckCommandSuccessful
 )
 
 type CheckSeverity int
@@ -72,7 +74,12 @@ var HostRequiredDependencies = []Dependency{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,
-		Checks:         []Check{BinaryExists()},
+		Checks: []Check{BinaryExists(), {
+			Kind:     CheckCommandSuccessful,
+			Arg:      "docker info",
+			Severity: SeverityError,
+			Fix:      "Ensure docker can be executed successfully by the current user",
+		}},
 	},
 }
 
@@ -81,7 +88,12 @@ var TargetRequiredDependencies = []Dependency{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,
-		Checks:         []Check{BinaryExists()},
+		Checks: []Check{BinaryExists(), {
+			Kind:     CheckCommandSuccessful,
+			Arg:      "docker info",
+			Severity: SeverityError,
+			Fix:      "Ensure docker can be executed successfully by the current user",
+		}},
 	},
 	{
 		Binary:                "remoteproc-runtime",
@@ -142,9 +154,12 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 	return false
 }
 
-type BinaryExistsFn = func(bin string) error
+type (
+	BinaryExistsFn      = func(bin string) error
+	CommandSuccessfulFn = func(fullCmd string) error
+)
 
-func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []DependencyStatus {
+func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn, commandSuccessful CommandSuccessfulFn) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
 
@@ -162,6 +177,8 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn) []Dep
 				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 					installed[dep.SoftwareEnumID] = struct{}{}
 				}
+			case CheckCommandSuccessful:
+				err = commandSuccessful(check.Arg)
 			}
 			if err != nil {
 				if check.Severity == SeverityWarning {
@@ -196,6 +213,15 @@ func BinaryExistsLocally(bin string) error {
 	}
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf("%q executable file not found in $PATH", bin)
+	}
+	return nil
+}
+
+func CommandSuccessfulLocally(fullCmd string) error {
+	cmdParts := strings.Fields(fullCmd)
+	execCmd := exec.Command(cmdParts[0], cmdParts[1:]...)
+	if err := execCmd.Run(); err != nil {
+		return fmt.Errorf("failed to run `%s`: %w", fullCmd, err)
 	}
 	return nil
 }
