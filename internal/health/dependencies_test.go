@@ -26,13 +26,13 @@ func TestBinaryRegex(t *testing.T) {
 func TestDependencyFormat(t *testing.T) {
 	t.Run("host dependencies are of the correct format", func(t *testing.T) {
 		for _, dep := range health.HostRequiredDependencies {
-			assert.True(t, ssh.BinaryRegex.MatchString(dep.Name))
+			assert.True(t, ssh.BinaryRegex.MatchString(dep.Binary))
 		}
 	})
 
 	t.Run("target dependencies are of the correct format", func(t *testing.T) {
 		for _, dep := range health.TargetRequiredDependencies {
-			assert.True(t, ssh.BinaryRegex.MatchString(dep.Name))
+			assert.True(t, ssh.BinaryRegex.MatchString(dep.Binary))
 		}
 	})
 
@@ -44,9 +44,9 @@ func TestDependencyFormat(t *testing.T) {
 			for _, dep := range health.TargetRequiredDependencies {
 				if dep.SoftwareEnumID != health.UnsetSoftwareDependency {
 					if existingDep, exists := seenEnums[dep.SoftwareEnumID]; exists {
-						t.Errorf("Duplicate SoftwareEnumID %d assigned to both %q and %q", dep.SoftwareEnumID, existingDep, dep.Name)
+						t.Errorf("Duplicate SoftwareEnumID %d assigned to both %q and %q", dep.SoftwareEnumID, existingDep, dep.Binary)
 					}
-					seenEnums[dep.SoftwareEnumID] = dep.Name
+					seenEnums[dep.SoftwareEnumID] = dep.Binary
 					availableEnums[dep.SoftwareEnumID] = true
 				}
 			}
@@ -55,7 +55,7 @@ func TestDependencyFormat(t *testing.T) {
 		t.Run("all SoftwarePrerequisites reference valid SoftwareEnumID", func(t *testing.T) {
 			for _, dep := range health.TargetRequiredDependencies {
 				for _, prereq := range dep.SoftwarePrerequisites {
-					assert.True(t, availableEnums[prereq], "%q has SoftwarePrerequisites %v which is not provided by any dependency's SoftwareEnumID", dep.Name, prereq)
+					assert.True(t, availableEnums[prereq], "%q has SoftwarePrerequisites %v which is not provided by any dependency's SoftwareEnumID", dep.Binary, prereq)
 				}
 			}
 		})
@@ -64,8 +64,8 @@ func TestDependencyFormat(t *testing.T) {
 
 func TestCheckInstalled(t *testing.T) {
 	mockDependencies := []health.Dependency{
-		{Name: "foo", Category: "bar"},
-		{Name: "baz", Category: "qux"},
+		{Binary: "foo", Label: "bar"},
+		{Binary: "baz", Label: "qux"},
 	}
 
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
@@ -77,11 +77,11 @@ func TestCheckInstalled(t *testing.T) {
 
 		want := []health.DependencyStatus{
 			{
-				Dependency: health.Dependency{Name: "foo", Category: "bar"},
+				Dependency: health.Dependency{Binary: "foo", Label: "bar"},
 				Error:      mockBinaryExists("foo"),
 			},
 			{
-				Dependency: health.Dependency{Name: "baz", Category: "qux"},
+				Dependency: health.Dependency{Binary: "baz", Label: "qux"},
 				Error:      mockBinaryExists("baz"),
 			},
 		}
@@ -100,11 +100,11 @@ func TestCheckInstalled(t *testing.T) {
 
 		want := []health.DependencyStatus{
 			{
-				Dependency: health.Dependency{Name: "foo", Category: "bar"},
+				Dependency: health.Dependency{Binary: "foo", Label: "bar"},
 				Error:      mockBinaryExists("foo"),
 			},
 			{
-				Dependency: health.Dependency{Name: "baz", Category: "qux"},
+				Dependency: health.Dependency{Binary: "baz", Label: "qux"},
 				Error:      nil,
 			},
 		}
@@ -113,8 +113,8 @@ func TestCheckInstalled(t *testing.T) {
 
 	t.Run("omits dependency when none of its SoftwarePrerequisites are installed", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "docker", Category: "Container Engine"},
-			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}},
+			{Binary: "docker", Label: "Container Engine"},
+			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}},
 		}
 		mockBinaryExists := func(bin string) error {
 			if bin == "runtime" {
@@ -126,15 +126,15 @@ func TestCheckInstalled(t *testing.T) {
 		got := health.CheckInstalled(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine"}, Error: mockBinaryExists("docker")},
+			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine"}, Error: mockBinaryExists("docker")},
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("checks dependency when one of its SoftwarePrerequisites is installed", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker},
-			{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}},
+			{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker},
+			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}},
 		}
 		mockBinaryExists := func(bin string) error {
 			return nil
@@ -143,15 +143,15 @@ func TestCheckInstalled(t *testing.T) {
 		got := health.CheckInstalled(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "docker", Category: "Container Engine", SoftwareEnumID: health.Docker}, Error: nil},
-			{Dependency: health.Dependency{Name: "runtime", Category: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}}, Error: nil},
+			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker}, Error: nil},
+			{Dependency: health.Dependency{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "standalone", Category: "Tools"},
+			{Binary: "standalone", Label: "Tools"},
 		}
 		mockBinaryExists := func(bin string) error {
 			return nil
@@ -160,7 +160,7 @@ func TestCheckInstalled(t *testing.T) {
 		got := health.CheckInstalled(deps, mockBinaryExists)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Name: "standalone", Category: "Tools"}, Error: nil},
+			{Dependency: health.Dependency{Binary: "standalone", Label: "Tools"}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -169,7 +169,7 @@ func TestCheckInstalled(t *testing.T) {
 func TestFilterByHardware(t *testing.T) {
 	t.Run("includes dependencies with no hardware requirement", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "docker", Category: "Container Engine"},
+			{Binary: "docker", Label: "Container Engine"},
 		}
 		hardware := map[health.HardwareCapability]struct{}{}
 
@@ -180,7 +180,7 @@ func TestFilterByHardware(t *testing.T) {
 
 	t.Run("includes dependencies when hardware is present", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "remoteproc-runtime", Category: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
+			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
 		}
 		hardware := map[health.HardwareCapability]struct{}{health.Remoteproc: {}}
 
@@ -191,7 +191,7 @@ func TestFilterByHardware(t *testing.T) {
 
 	t.Run("excludes dependencies when hardware is absent", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "remoteproc-runtime", Category: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
+			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
 		}
 		hardware := map[health.HardwareCapability]struct{}{}
 
@@ -202,16 +202,16 @@ func TestFilterByHardware(t *testing.T) {
 
 	t.Run("filters mixed dependencies correctly", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Name: "spaghetti", Category: "Food"},
-			{Name: "remoteproc-runtime", Category: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
-			{Name: "pizza", Category: "Food"},
+			{Binary: "spaghetti", Label: "Food"},
+			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
+			{Binary: "pizza", Label: "Food"},
 		}
 
 		got := health.FilterByHardware(deps, nil)
 
 		want := []health.Dependency{
-			{Name: "spaghetti", Category: "Food"},
-			{Name: "pizza", Category: "Food"},
+			{Binary: "spaghetti", Label: "Food"},
+			{Binary: "pizza", Label: "Food"},
 		}
 		assert.Equal(t, want, got)
 	})

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/arm/topo/internal/collections"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -23,23 +22,23 @@ const (
 )
 
 type Dependency struct {
-	Name                  string
-	Category              string
+	Binary                string
+	Label                 string
 	SoftwareEnumID        SoftwareDependency
 	SoftwarePrerequisites []SoftwareDependency
 	HardwarePrerequisite  []HardwareCapability
 }
 
 var HostRequiredDependencies = []Dependency{
-	{Name: "ssh", Category: "SSH"},
-	{Name: "docker", Category: "Container Engine", SoftwareEnumID: Docker},
+	{Binary: "ssh", Label: "SSH"},
+	{Binary: "docker", Label: "Container Engine", SoftwareEnumID: Docker},
 }
 
 var TargetRequiredDependencies = []Dependency{
-	{Name: "docker", Category: "Container Engine", SoftwareEnumID: Docker},
-	{Name: "remoteproc-runtime", Category: "Remoteproc Runtime", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
-	{Name: "containerd-shim-remoteproc-v1", Category: "Remoteproc Shim", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
-	{Name: "lscpu", Category: "Hardware Info", SoftwareEnumID: Lscpu},
+	{Binary: "docker", Label: "Container Engine", SoftwareEnumID: Docker},
+	{Binary: "remoteproc-runtime", Label: "Remoteproc Runtime", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
+	{Binary: "containerd-shim-remoteproc-v1", Label: "Remoteproc Shim", SoftwarePrerequisites: []SoftwareDependency{Docker}, HardwarePrerequisite: []HardwareCapability{Remoteproc}},
+	{Binary: "lscpu", Label: "Hardware Info", SoftwareEnumID: Lscpu},
 }
 
 type DependencyStatus struct {
@@ -82,7 +81,7 @@ func CheckInstalled(dependencies []Dependency, binaryExists BinaryExistsFn) []De
 			continue
 		}
 
-		err := binaryExists(dep.Name)
+		err := binaryExists(dep.Binary)
 
 		if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 			installed[dep.SoftwareEnumID] = struct{}{}
@@ -113,11 +112,4 @@ func BinaryExistsLocally(bin string) error {
 		return fmt.Errorf("%q executable file not found in $PATH", bin)
 	}
 	return nil
-}
-
-func groupByCategory(statuses []DependencyStatus) []collections.Group[DependencyStatus, string] {
-	return collections.GroupBy(
-		statuses,
-		func(ds DependencyStatus) string { return ds.Dependency.Category },
-	)
 }
