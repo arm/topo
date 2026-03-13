@@ -138,8 +138,8 @@ jobs:
         id: signer-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.SIGNER_APP_ID }}
-          private-key: ${{ secrets.SIGNER_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
+          private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
           owner: Arm-Debug
           repositories: signer
 
