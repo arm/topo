@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 
 	commandpkg "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
@@ -50,6 +51,7 @@ type ConnectionOptions struct {
 	WithStdin         []byte
 	Multiplex         bool
 	WithMockExec      ExecSSH
+	ConnectTimeout    time.Duration
 }
 
 var ErrPasswordAuthentication = errors.New("key-based SSH authentication is not setup")
@@ -71,7 +73,7 @@ func (c *Connection) Run(command string) (string, error) {
 		command = ssh.ShellCommand(command)
 	}
 
-	sshArgs := []string{}
+	sshArgs := c.connectTimeoutArgs()
 	if c.opts.Multiplex && runtime.GOOS != "windows" {
 		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
 	}
@@ -161,10 +163,17 @@ func (c *Connection) isPasswordAuthenticated() (bool, error) {
 	}
 }
 
+func (c *Connection) connectTimeoutArgs() []string {
+	if c.opts.ConnectTimeout <= 0 {
+		return nil
+	}
+	return []string{"-o", fmt.Sprintf("ConnectTimeout=%d", int(c.opts.ConnectTimeout.Seconds()))}
+}
+
 // All SSH authentication probes run the command "true" to check if the authentication method works.
 // All sshArgs should be hardcoded SSH options, not user-provided arguments.
 func (c *Connection) runSSHAuthenticationProbe(sshArgs []string) error {
-	cmd := c.exec(c.SSHTarget, "true", nil, sshArgs...)
+	cmd := c.exec(c.SSHTarget, "true", nil, slices.Concat(c.connectTimeoutArgs(), sshArgs)...)
 	stdoutBytes, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil
