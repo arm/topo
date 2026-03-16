@@ -56,7 +56,7 @@ func (h SSHDestination) GetHost() string {
 }
 
 func formatSSHDestinationWithoutPort(user, host string) string {
-	var dest = host
+	dest := host
 	if strings.Contains(host, ":") {
 		dest = "[" + host + "]"
 	}
