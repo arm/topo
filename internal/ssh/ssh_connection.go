@@ -6,4 +6,5 @@ type SSHConnection interface {
 	FormatSSHExitCommand() []string
 	GetHost() string
 	IsLocalhost() bool
+	AsURI() string
 }

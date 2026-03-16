@@ -9,20 +9,20 @@ import (
 type DeployOptions struct {
 	RecreateMode         operation.RecreateMode
 	WithRegistry         bool
-	TargetHost           ssh.SSHDestination
+	TargetHost           ssh.SSHConnection
 	RegistryPort         string
 	UseSSHControlSockets bool
 }
 
-func SupportsRegistry(noRegistry bool, targetHost ssh.SSHDestination) bool {
-	return !noRegistry && !targetHost.IsPlainLocalhost()
+func SupportsRegistry(noRegistry bool, targetHost ssh.SSHConnection) bool {
+	return !noRegistry && !targetHost.IsLocalhost()
 }
 
 func SupportsSSHControlSockets(goos string) bool {
 	return goos != "windows"
 }
 
-func NewDeploymentStop(composeFile string, targetHost ssh.SSHDestination) goperation.Sequence {
+func NewDeploymentStop(composeFile string, targetHost ssh.SSHConnection) goperation.Sequence {
 	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, targetHost)}
 }
 
@@ -34,7 +34,7 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 	}
 
 	var cleanup goperation.Operation
-	if !opts.TargetHost.IsPlainLocalhost() {
+	if !opts.TargetHost.IsLocalhost() {
 		if opts.WithRegistry {
 			start, securityCheck, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.RegistryPort, opts.UseSSHControlSockets)
 			if start == nil {
