@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/arm/topo/internal/target"
 )
@@ -64,13 +65,14 @@ func CheckHost() HostReport {
 	return GenerateHostReport(dependencyStatuses)
 }
 
-func CheckTarget(sshTarget string, acceptNewHostKeys bool) (TargetReport, error) {
+func CheckTarget(sshTarget string, acceptNewHostKeys bool, connectTimeout time.Duration) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		AcceptNewHostKeys: acceptNewHostKeys,
 		AuthProbeInput:    os.Stdin,
 		AuthProbeOutput:   os.Stdout,
 		Multiplex:         true,
 		WithLoginShell:    true,
+		ConnectTimeout:    connectTimeout,
 	}
 	conn := target.NewConnection(sshTarget, opts)
 	targetStatus := ProbeHealthStatus(conn)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/arm/topo/internal/catalog"
 	"github.com/arm/topo/internal/describe"
@@ -37,7 +38,7 @@ var templatesCmd = &cobra.Command{
 		} else {
 			resolvedTarget, exists := lookupTarget(cmd)
 			if exists {
-				conn := target.NewConnection(resolvedTarget, target.ConnectionOptions{Multiplex: true})
+				conn := target.NewConnection(resolvedTarget, target.ConnectionOptions{Multiplex: true, ConnectTimeout: 5 * time.Second})
 				hwProfile, err := describe.GenerateTargetDescription(conn)
 				if err != nil {
 					return err

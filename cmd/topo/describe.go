@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/output/console"
@@ -24,7 +25,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		conn := target.NewConnection(sshTarget, target.ConnectionOptions{Multiplex: true})
+		conn := target.NewConnection(sshTarget, target.ConnectionOptions{Multiplex: true, ConnectTimeout: 5 * time.Second})
 		report, err := describe.GenerateTargetDescription(conn)
 		if err != nil {
 			return err
