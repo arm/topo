@@ -400,6 +400,16 @@ func InstallBinariesFromGithubRelease(targetHost ssh.Host, repoURL string, binar
 			return nil, fmt.Errorf("installation of new binaries failed: %w", err)
 		}
 
+		// Re-check PATH after installation: on some systems (e.g. Ubuntu/Debian),
+		// ~/.profile only adds ~/bin to PATH if the directory already exists.
+		// Creating the directory during install means a new login shell will now
+		// include the path, even though it wasn't present during the earlier check.
+		if !installLoc.OnPath {
+			if pathDirs, pathErr := getPathDirs(targetHost); pathErr == nil {
+				installLoc.OnPath = slices.Contains(pathDirs, installLoc.Path)
+			}
+		}
+
 		for _, binaryName := range installedBinaries {
 			results = append(results, InstallResult{
 				Location: installLoc,
