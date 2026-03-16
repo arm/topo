@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/output/printable"
@@ -40,7 +39,7 @@ var healthCmd = &cobra.Command{
 		}
 
 		if sshTarget, ok := lookupTarget(cmd); ok {
-			targetReport, err := health.CheckTarget(sshTarget, acceptNewHostKeys, 5*time.Second)
+			targetReport, err := health.CheckTarget(sshTarget, acceptNewHostKeys, sshConnectTimeout)
 			if err != nil {
 				if spinner != nil {
 					spinner.Stop()

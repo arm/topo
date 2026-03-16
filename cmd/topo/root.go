@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/version"
@@ -28,6 +29,8 @@ func init() {
 }
 
 const targetEnvVar = "TOPO_TARGET"
+
+const sshConnectTimeout = 5 * time.Second
 
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
