@@ -138,6 +138,17 @@ var (
 	ErrAuthenticationFailure = errors.New("ssh authentication failed")
 )
 
+type ConnectionTimeoutError struct {
+	Timeout time.Duration
+}
+
+func (e ConnectionTimeoutError) Error() string {
+	if e.Timeout > 0 {
+		return fmt.Sprintf("ssh connection timed out after %s", e.Timeout)
+	}
+	return "ssh connection timed out"
+}
+
 func (c *Connection) isPasswordAuthenticated() (bool, error) {
 	var extraArgs []string
 	if c.opts.AcceptNewHostKeys {
@@ -184,6 +195,9 @@ func (c *Connection) runSSHAuthenticationProbe(sshArgs []string) error {
 	}
 	if strings.Contains(output, "permission denied") || strings.Contains(output, "authentication failed") || strings.Contains(output, "password") {
 		return ErrAuthenticationFailure
+	}
+	if strings.Contains(output, "timed out") || strings.Contains(output, "connection timeout") || strings.Contains(output, "did not properly respond after a period of time") {
+		return ConnectionTimeoutError{Timeout: c.opts.ConnectTimeout}
 	}
 	return fmt.Errorf("ssh probe failed: %w", err)
 }
