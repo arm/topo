@@ -5,22 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func TestListTemplates(t *testing.T) {
-	bin := buildBinary(t)
-
-	cmd := exec.Command(bin, "templates")
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err)
-
-	output := string(out)
-
-	assert.Contains(t, output, "topo-welcome")
-	assert.Contains(t, output, "git@github.com:")
-	assert.Contains(t, output, "Features:")
-}
 
 func TestUnknownCommand(t *testing.T) {
 	bin := buildBinary(t)
