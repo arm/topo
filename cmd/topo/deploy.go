@@ -150,9 +150,9 @@ func validatePort(port string) error {
 	return nil
 }
 
-func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
-	const portEnvVar = "TOPO_PORT"
+const portEnvVar = "TOPO_PORT"
 
+func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 	if cmd.Flags().Changed("registry-port") {
 		return flagValue, nil
 	}
@@ -165,7 +165,7 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 func init() {
 	addTargetFlag(deployCmd)
 	addDryRunFlag(deployCmd)
-	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, "Registry and SSH tunnel port (can also be set via TOPO_PORT env var)")
+	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, fmt.Sprintf("Registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
 	deployCmd.Flags().BoolVar(&noRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
