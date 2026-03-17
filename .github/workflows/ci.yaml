@@ -98,4 +98,4 @@ jobs:
           DOCKER_HOST: ${{ matrix.docker_host }}
         run: |
           docker build -t topo-e2e-target:latest ./internal/testutil/test-container
-          go test ./... -v -covermode=atomic -coverprofile=coverage.out
+          go test ./... -p 1 -v -covermode=atomic -coverprofile=coverage.out
