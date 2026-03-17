@@ -18,7 +18,7 @@ func (h HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
 }
 
 type Status struct {
-	SSHTarget       ssh.SSHDestination
+	SSHTarget       ssh.Host
 	ConnectionError error
 	Dependencies    []DependencyStatus
 	Hardware        HardwareProfile

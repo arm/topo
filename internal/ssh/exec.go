@@ -37,7 +37,7 @@ func ShellCommand(command string) string {
 
 // ExecCmd builds a command to be executed on the target host. If the target is localhost, it will run locally when executed.
 // Pass stdin data as optional parameter, or nil for no stdin.
-func ExecCmd(target SSHDestination, command string, stdin []byte, sshArgs ...string) *exec.Cmd {
+func ExecCmd(target Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd {
 	var cmd *exec.Cmd
 	if target.IsPlainLocalhost() {
 		// #nosec G204 -- command should be validated by callers

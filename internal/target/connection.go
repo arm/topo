@@ -34,10 +34,10 @@ var (
 	}
 )
 
-type ExecSSH func(target ssh.SSHDestination, command string, stdin []byte, sshArgs ...string) *exec.Cmd
+type ExecSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
 
 type Connection struct {
-	SSHTarget ssh.SSHDestination
+	SSHTarget ssh.Host
 	exec      ExecSSH
 	opts      ConnectionOptions
 }
@@ -60,7 +60,7 @@ func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
 		execFn = opts.WithMockExec
 	}
 	return Connection{
-		SSHTarget: ssh.SSHDestination(sshTarget),
+		SSHTarget: ssh.Host(sshTarget),
 		exec:      execFn,
 		opts:      opts,
 	}
