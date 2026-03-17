@@ -17,7 +17,7 @@ import (
 func TestSSHTunnel(t *testing.T) {
 	t.Run("NewSSHTunnel", func(t *testing.T) {
 		t.Run("it returns start and stop operations with control sockets", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 
 			start, _, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, true)
 
@@ -28,7 +28,7 @@ func TestSSHTunnel(t *testing.T) {
 		})
 
 		t.Run("it returns start and stop operations without control sockets", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 
 			start, _, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, false)
 
@@ -39,7 +39,7 @@ func TestSSHTunnel(t *testing.T) {
 		})
 
 		t.Run("stop operation has access to start operation process", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 
 			start, _, stop := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, false)
 			startOp, ok := start.(*ssh.SSHTunnelStart)
@@ -51,7 +51,7 @@ func TestSSHTunnel(t *testing.T) {
 		})
 
 		t.Run("it returns security check operation", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 
 			_, securityCheck, _ := ssh.NewSSHTunnel(host, operation.DefaultRegistryPort, true)
 
@@ -64,7 +64,7 @@ func TestSSHTunnel(t *testing.T) {
 func TestSSHTunnelStart(t *testing.T) {
 	t.Run("Command", func(t *testing.T) {
 		t.Run("it generates correct ssh command", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -75,7 +75,7 @@ func TestSSHTunnelStart(t *testing.T) {
 		})
 
 		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-			host := ssh.Host("user@remote:2222")
+			host := ssh.SSHDestination("user@remote:2222")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -86,7 +86,7 @@ func TestSSHTunnelStart(t *testing.T) {
 		})
 
 		t.Run("it does not include control socket flag when disabled", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, false)
@@ -100,7 +100,7 @@ func TestSSHTunnelStart(t *testing.T) {
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("it outputs the ssh command", func(t *testing.T) {
 			var buf bytes.Buffer
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -115,7 +115,7 @@ func TestSSHTunnelStart(t *testing.T) {
 
 		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
 			var buf bytes.Buffer
-			host := ssh.Host("user@remote:2222")
+			host := ssh.SSHDestination("user@remote:2222")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -131,7 +131,7 @@ func TestSSHTunnelStart(t *testing.T) {
 
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
-			st := mustStartFromHost(t, ssh.Host("user@remote"), operation.DefaultRegistryPort, true)
+			st := mustStartFromHost(t, ssh.SSHDestination("user@remote"), operation.DefaultRegistryPort, true)
 
 			got := st.Description()
 
@@ -143,7 +143,7 @@ func TestSSHTunnelStart(t *testing.T) {
 func TestSSHTunnelStartEdgeCases(t *testing.T) {
 	t.Run("Command", func(t *testing.T) {
 		t.Run("it handles host without user", func(t *testing.T) {
-			host := ssh.Host("remote-server")
+			host := ssh.SSHDestination("remote-server")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -155,7 +155,7 @@ func TestSSHTunnelStartEdgeCases(t *testing.T) {
 		})
 
 		t.Run("it handles host without user but with port", func(t *testing.T) {
-			host := ssh.Host("remote-server:2222")
+			host := ssh.SSHDestination("remote-server:2222")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -166,7 +166,7 @@ func TestSSHTunnelStartEdgeCases(t *testing.T) {
 		})
 
 		t.Run("it handles IP address", func(t *testing.T) {
-			host := ssh.Host("user@192.168.1.100")
+			host := ssh.SSHDestination("user@192.168.1.100")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -177,7 +177,7 @@ func TestSSHTunnelStartEdgeCases(t *testing.T) {
 		})
 
 		t.Run("it handles IP address with port", func(t *testing.T) {
-			host := ssh.Host("user@192.168.1.100:2222")
+			host := ssh.SSHDestination("user@192.168.1.100:2222")
 			port := operation.DefaultRegistryPort
 
 			st := mustStartFromHost(t, host, port, true)
@@ -189,7 +189,7 @@ func TestSSHTunnelStartEdgeCases(t *testing.T) {
 	})
 }
 
-func mustStartFromHost(t *testing.T, host ssh.Host, port string, useControlSockets bool) *ssh.SSHTunnelStart {
+func mustStartFromHost(t *testing.T, host ssh.SSHDestination, port string, useControlSockets bool) *ssh.SSHTunnelStart {
 	t.Helper()
 	start, _, _ := ssh.NewSSHTunnel(host, port, useControlSockets)
 	startOp, ok := start.(*ssh.SSHTunnelStart)
@@ -197,7 +197,7 @@ func mustStartFromHost(t *testing.T, host ssh.Host, port string, useControlSocke
 	return startOp
 }
 
-func mustStopFromHost(t *testing.T, host ssh.Host, port string) *ssh.SSHTunnelStop {
+func mustStopFromHost(t *testing.T, host ssh.SSHDestination, port string) *ssh.SSHTunnelStop {
 	t.Helper()
 	_, _, stop := ssh.NewSSHTunnel(host, port, true)
 	stopOp, ok := stop.(*ssh.SSHTunnelStop)
@@ -205,7 +205,7 @@ func mustStopFromHost(t *testing.T, host ssh.Host, port string) *ssh.SSHTunnelSt
 	return stopOp
 }
 
-func mustCheckFromHost(t *testing.T, host ssh.Host, port string) *ssh.CheckSSHTunnelSecurity {
+func mustCheckFromHost(t *testing.T, host ssh.SSHDestination, port string) *ssh.CheckSSHTunnelSecurity {
 	t.Helper()
 	_, check, _ := ssh.NewSSHTunnel(host, port, true)
 	checkOp, ok := check.(*ssh.CheckSSHTunnelSecurity)
@@ -216,7 +216,7 @@ func mustCheckFromHost(t *testing.T, host ssh.Host, port string) *ssh.CheckSSHTu
 func TestCheckSSHTunnelSecurity(t *testing.T) {
 	t.Run("Command", func(t *testing.T) {
 		t.Run("it generates correct curl command", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 			port := operation.DefaultRegistryPort
 
 			cs := mustCheckFromHost(t, host, port)
@@ -227,7 +227,7 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 		})
 
 		t.Run("it returns nil when target is localhost", func(t *testing.T) {
-			host := ssh.Host("root@localhost")
+			host := ssh.SSHDestination("root@localhost")
 			port := operation.DefaultRegistryPort
 
 			cs := mustCheckFromHost(t, host, port)
@@ -239,7 +239,7 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("it outputs the curl command", func(t *testing.T) {
 			var buf bytes.Buffer
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 			port := operation.DefaultRegistryPort
 
 			cs := mustCheckFromHost(t, host, port)
@@ -253,7 +253,7 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns the expected string", func(t *testing.T) {
-			cs := mustCheckFromHost(t, ssh.Host("user@remote"), operation.DefaultRegistryPort)
+			cs := mustCheckFromHost(t, ssh.SSHDestination("user@remote"), operation.DefaultRegistryPort)
 
 			got := cs.Description()
 
@@ -265,7 +265,7 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 func TestSSHTunnelStop(t *testing.T) {
 	t.Run("Command", func(t *testing.T) {
 		t.Run("it generates correct ssh command", func(t *testing.T) {
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			got := strings.Join(st.Command().Args, " ")
@@ -275,7 +275,7 @@ func TestSSHTunnelStop(t *testing.T) {
 		})
 
 		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-			host := ssh.Host("user@remote:2222")
+			host := ssh.SSHDestination("user@remote:2222")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			got := strings.Join(st.Command().Args, " ")
@@ -288,7 +288,7 @@ func TestSSHTunnelStop(t *testing.T) {
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("generates the correct ssh command", func(t *testing.T) {
 			var buf bytes.Buffer
-			host := ssh.Host("user@remote")
+			host := ssh.SSHDestination("user@remote")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			err := st.DryRun(&buf)
@@ -302,7 +302,7 @@ func TestSSHTunnelStop(t *testing.T) {
 
 		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
 			var buf bytes.Buffer
-			host := ssh.Host("user@remote:2222")
+			host := ssh.SSHDestination("user@remote:2222")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			err := st.DryRun(&buf)
@@ -317,7 +317,7 @@ func TestSSHTunnelStop(t *testing.T) {
 
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
-			st := mustStopFromHost(t, ssh.Host("user@remote"), operation.DefaultRegistryPort)
+			st := mustStopFromHost(t, ssh.SSHDestination("user@remote"), operation.DefaultRegistryPort)
 
 			got := st.Description()
 
@@ -329,7 +329,7 @@ func TestSSHTunnelStop(t *testing.T) {
 func TestSSHTunnelStopEdgeCases(t *testing.T) {
 	t.Run("Command", func(t *testing.T) {
 		t.Run("handles host without user", func(t *testing.T) {
-			host := ssh.Host("remote-server")
+			host := ssh.SSHDestination("remote-server")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			got := strings.Join(st.Command().Args, " ")
@@ -340,7 +340,7 @@ func TestSSHTunnelStopEdgeCases(t *testing.T) {
 		})
 
 		t.Run("handles host without user but with port", func(t *testing.T) {
-			host := ssh.Host("remote-server:2222")
+			host := ssh.SSHDestination("remote-server:2222")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			got := strings.Join(st.Command().Args, " ")
@@ -350,7 +350,7 @@ func TestSSHTunnelStopEdgeCases(t *testing.T) {
 		})
 
 		t.Run("handles IP address", func(t *testing.T) {
-			host := ssh.Host("user@192.168.1.100")
+			host := ssh.SSHDestination("user@192.168.1.100")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			got := strings.Join(st.Command().Args, " ")
@@ -360,7 +360,7 @@ func TestSSHTunnelStopEdgeCases(t *testing.T) {
 		})
 
 		t.Run("handles IP address with port", func(t *testing.T) {
-			host := ssh.Host("user@192.168.1.100:2222")
+			host := ssh.SSHDestination("user@192.168.1.100:2222")
 
 			st := mustStopFromHost(t, host, operation.DefaultRegistryPort)
 			got := strings.Join(st.Command().Args, " ")
