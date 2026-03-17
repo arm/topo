@@ -123,7 +123,7 @@ func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecu
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 	if !ct.TargetHost.IsLocalhost() {
-		_, host, _ := resolveSSHConfigHost(string(ct.TargetHost))
+		_, host, _ := resolveSSHHost(string(ct.TargetHost))
 		if host == "" {
 			return nil
 		}
