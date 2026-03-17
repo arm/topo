@@ -8,23 +8,25 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	gtestutil "github.com/arm/topo/internal/testutil"
 )
 
-const TargetContainerHost = "root@localhost"
+const ContainerHost = "root@localhost"
 
-const TargetContainerImage = "topo-e2e-target:latest"
+const ContainerImage = "topo-e2e-target:latest"
 
-type TargetContainer struct {
+type Container struct {
 	SSHDestination string
 	ContainerName  string
 }
 
-func StartTargetContainer(t *testing.T) *TargetContainer {
+func StartTargetContainer(t *testing.T) *Container {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping test that requires a target container in short mode")
 	}
-	RequireLinuxDockerEngine(t)
+	gtestutil.RequireLinuxDockerEngine(t)
 
 	containerName := generateTargetContainerName(t)
 
@@ -41,17 +43,17 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
-	waitForDockerReady(t, TargetContainerHost, port)
+	waitForDockerReady(t, ContainerHost, port)
 
 	// #nosec G204 -- ignore as its a test helper
-	return &TargetContainer{
-		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, port),
+	return &Container{
+		SSHDestination: fmt.Sprintf("ssh://%s:%s", ContainerHost, port),
 		ContainerName:  containerName,
 	}
 }
 
 func generateTargetContainerName(t *testing.T) string {
-	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
+	return fmt.Sprintf("topo-test-%s", gtestutil.SanitiseTestName(t))
 }
 
 func requireImageExists(t *testing.T, imageName string) {
@@ -69,10 +71,10 @@ func requireImageExists(t *testing.T, imageName string) {
 
 func createTargetContainer(t *testing.T, containerName string) error {
 	t.Helper()
-	requireImageExists(t, TargetContainerImage)
+	requireImageExists(t, ContainerImage)
 	deleteContainer(containerName)
 	// #nosec G204 -- ignore as its a test helper
-	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", TargetContainerImage)
+	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", ContainerImage)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

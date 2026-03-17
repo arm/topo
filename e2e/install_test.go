@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/e2e/testutil"
 	"github.com/stretchr/testify/require"
 )
 

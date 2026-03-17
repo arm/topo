@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/e2e/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +29,7 @@ func TestHealthCheck(t *testing.T) {
 	})
 
 	t.Run("fails to connect to an invalid target", func(t *testing.T) {
-		fakeContainer := testutil.TargetContainer{
+		fakeContainer := testutil.Container{
 			SSHDestination: "fake@target",
 			ContainerName:  "fake-tgt-container",
 		}
@@ -39,7 +39,7 @@ func TestHealthCheck(t *testing.T) {
 	})
 }
 
-func runCheckHealth(topo string, target *testutil.TargetContainer) (string, error) {
+func runCheckHealth(topo string, target *testutil.Container) (string, error) {
 	args := []string{"health", "--target", target.SSHDestination}
 	healthCmd := exec.Command(topo, args...)
 

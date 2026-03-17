@@ -4,15 +4,55 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/e2e/testutil"
+	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDeployment(t *testing.T) {
+	t.Run("Run", func(t *testing.T) {
+		target := testutil.StartTargetContainer(t)
+
+		t.Run("builds images, transfers them, and starts services", func(t *testing.T) {
+			remoteDockerHost := ssh.Host(target.SSHDestination)
+			tmpDir := t.TempDir()
+			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
+			dockerFileContent := `
+FROM alpine:latest
+CMD ["tail", "-f", "/dev/null"]
+`
+			testutil.RequireWriteFile(t, dockerFilePath, dockerFileContent)
+			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
+			composeFileContent := fmt.Sprintf(`
+name: %s
+services:
+  busybox:
+    image: busybox
+    command: ["tail", "-f", "/dev/null"]
+  a-service:
+    build: .
+`, testutil.TestProjectName(t))
+			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
+			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
+
+			deployOpts := docker.DeployOptions{TargetHost: remoteDockerHost}
+			d, _ := docker.NewDeployment(composeFilePath, deployOpts)
+
+			err := d.Run(os.Stdout)
+
+			require.NoError(t, err)
+			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
+		})
+	})
+}
 
 func TestDeploy(t *testing.T) {
 	target := testutil.StartTargetContainer(t)
