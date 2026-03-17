@@ -10,29 +10,29 @@ import (
 	"unicode"
 )
 
-type SSHDestination string
+type Host string
 
-const PlainLocalhost = SSHDestination("localhost")
+const PlainLocalhost = Host("localhost")
 
-func (h SSHDestination) IsPlainLocalhost() bool {
+func (h Host) IsPlainLocalhost() bool {
 	return strings.EqualFold(string(h), "localhost") || h == "127.0.0.1"
 }
 
-func (h SSHDestination) IsLocalhost() bool {
+func (h Host) IsLocalhost() bool {
 	if h.IsPlainLocalhost() {
 		return true
 	}
 	_, host, _ := SplitUserHostPort(string(h))
-	return SSHDestination(host).IsPlainLocalhost()
+	return Host(host).IsPlainLocalhost()
 }
 
-func (h SSHDestination) ControlSocketPath() string {
+func (h Host) ControlSocketPath() string {
 	hash := sha256.Sum256([]byte(h))
 	hostHash := fmt.Sprintf("%x", hash[:8]) // Hash to avoid filepath limits
 	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
 }
 
-func (h SSHDestination) FormatSSHConnectCommand(useControlSockets bool, registryPort string) []string {
+func (h Host) FormatSSHConnectCommand(useControlSockets bool, registryPort string) []string {
 	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
 	user, host, port := SplitUserHostPort(string(h))
 	if port != "22" && port != "" {
@@ -50,7 +50,7 @@ func (h SSHDestination) FormatSSHConnectCommand(useControlSockets bool, registry
 	return args
 }
 
-func (h SSHDestination) GetHost() string {
+func (h Host) GetHost() string {
 	_, host, _ := SplitUserHostPort(string(h))
 	return host
 }
@@ -66,7 +66,7 @@ func formatSSHDestinationWithoutPort(user, host string) string {
 	return dest
 }
 
-func (h SSHDestination) FormatSSHExitCommand() []string {
+func (h Host) FormatSSHExitCommand() []string {
 	args := []string{"ssh"}
 	user, host, port := SplitUserHostPort(string(h))
 	if port != "22" && port != "" {
@@ -80,13 +80,13 @@ func (h SSHDestination) FormatSSHExitCommand() []string {
 	return args
 }
 
-func (h SSHDestination) AsURI() string {
+func (h Host) AsURI() string {
 	const scheme = "ssh://"
 	withoutScheme := strings.TrimPrefix(string(h), scheme)
 	return fmt.Sprintf("ssh://%s", withoutScheme)
 }
 
-func (h SSHDestination) Slugify() string {
+func (h Host) Slugify() string {
 	var b strings.Builder
 	for _, r := range h {
 		toWrite := '_'

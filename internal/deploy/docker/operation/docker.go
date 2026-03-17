@@ -11,11 +11,11 @@ import (
 
 type Docker struct {
 	description string
-	host        ssh.SSHDestination
+	host        ssh.Host
 	args        []string
 }
 
-func NewDocker(description string, h ssh.SSHDestination, args []string) *Docker {
+func NewDocker(description string, h ssh.Host, args []string) *Docker {
 	return &Docker{
 		description: description,
 		host:        h,
@@ -44,17 +44,17 @@ func (d *Docker) buildCommand() *exec.Cmd {
 	return command.Docker(d.host, d.args...)
 }
 
-func NewDockerPull(host ssh.SSHDestination, image string) *Docker {
+func NewDockerPull(host ssh.Host, image string) *Docker {
 	description := fmt.Sprintf("Pull image %s", image)
 	return NewDocker(description, host, []string{"pull", image})
 }
 
-func NewDockerStart(host ssh.SSHDestination, container string) *Docker {
+func NewDockerStart(host ssh.Host, container string) *Docker {
 	description := fmt.Sprintf("Start container %s", container)
 	return NewDocker(description, host, []string{"start", container})
 }
 
-func NewDockerRun(host ssh.SSHDestination, image string, container string, dockerArgs []string) *Docker {
+func NewDockerRun(host ssh.Host, image string, container string, dockerArgs []string) *Docker {
 	description := fmt.Sprintf("Run image %s as container %s", image, container)
 	allArgs := []string{"run"}
 	allArgs = append(allArgs, dockerArgs...)
