@@ -41,13 +41,14 @@ func NewConfigFromBytes(data []byte) Config {
 	return config
 }
 
-func resolveSSHHost(raw string) (string, string, string) {
+func resolveSSHHost(raw string) string {
 	if raw == "" || isExplicitSSHHost(raw) {
-		return SplitUserHostPort(raw)
+		_, host, _ := SplitUserHostPort(raw)
+		return host
 	}
 
 	config := NewConfig(raw)
-	return config.user, config.host, config.port
+	return config.host
 }
 
 func isExplicitSSHHost(raw string) bool {
