@@ -93,9 +93,13 @@ jobs:
         run: |
           go build -v ./cmd/topo
 
-      - name: Run tests with coverage
+      - name: Run e2e tests
         env: 
           DOCKER_HOST: ${{ matrix.docker_host }}
         run: |
           docker build -t topo-e2e-target:latest ./internal/testutil/test-container
-          go test ./... -p 1 -v -covermode=atomic -coverprofile=coverage.out
+          go test ./e2e/... -p 1 -v
+
+      - name: Run unit tests
+        run: |
+          go test ./internal/... -v
