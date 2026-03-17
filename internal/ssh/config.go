@@ -41,8 +41,8 @@ func NewConfigFromBytes(data []byte) Config {
 	return config
 }
 
-func resolveSSHHost(raw string) string {
-	if raw == "" || isExplicitSSHHost(raw) {
+func resolveHost(raw string) string {
+	if raw == "" || isExplicitHost(raw) {
 		_, host, _ := SplitUserHostPort(raw)
 		return host
 	}
@@ -51,7 +51,7 @@ func resolveSSHHost(raw string) string {
 	return config.host
 }
 
-func isExplicitSSHHost(raw string) bool {
+func isExplicitHost(raw string) bool {
 	if strings.HasPrefix(raw, "ssh://") {
 		return true
 	}
