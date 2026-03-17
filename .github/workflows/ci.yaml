@@ -92,6 +92,10 @@ jobs:
       - name: Build
         run: |
           go build -v ./cmd/topo
+  
+      - name: Run unit tests
+        run: |
+          go test ./internal/... -v
 
       - name: Run e2e tests
         env: 
@@ -99,7 +103,3 @@ jobs:
         run: |
           docker build -t topo-e2e-target:latest ./internal/testutil/test-container
           go test ./e2e/... -p 1 -v
-
-      - name: Run unit tests
-        run: |
-          go test ./internal/... -v
