@@ -4,13 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
-	host string
-	user string
-	port string
+	host           string
+	user           string
+	port           string
+	connectTimeout time.Duration
 }
 
 func NewConfig(destination string) Config {
@@ -36,7 +39,19 @@ func NewConfigFromBytes(data []byte) Config {
 			config.user = fields[1]
 		case "port":
 			config.port = fields[1]
+		case "connecttimeout":
+			if secs, err := strconv.Atoi(fields[1]); err == nil {
+				config.connectTimeout = time.Duration(secs) * time.Second
+			}
 		}
 	}
 	return config
+}
+
+// ConnectTimeout returns the user's configured ConnectTimeout if set, otherwise the fallback.
+func (c Config) ConnectTimeout(fallback time.Duration) time.Duration {
+	if c.connectTimeout > 0 {
+		return c.connectTimeout
+	}
+	return fallback
 }

@@ -61,6 +61,7 @@ func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
 	if opts.WithMockExec != nil {
 		execFn = opts.WithMockExec
 	}
+	opts.ConnectTimeout = ssh.NewConfig(sshTarget).ConnectTimeout(opts.ConnectTimeout)
 	return Connection{
 		SSHTarget: ssh.Host(sshTarget),
 		exec:      execFn,

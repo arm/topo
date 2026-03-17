@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -48,5 +49,41 @@ Port 22
 
 		want := Config{host: "kwik.e.mart", user: "apu", port: "22"}
 		assert.Equal(t, want, got)
+	})
+
+	t.Run("parses connecttimeout as duration", func(t *testing.T) {
+		input := []byte(`hostname springfield.nuclear.gov
+connecttimeout 30
+`)
+
+		got := NewConfigFromBytes(input)
+
+		assert.Equal(t, 30*time.Second, got.connectTimeout)
+	})
+
+	t.Run("ignores non-numeric connecttimeout", func(t *testing.T) {
+		input := []byte(`hostname springfield.nuclear.gov
+connecttimeout none
+`)
+
+		got := NewConfigFromBytes(input)
+
+		assert.Equal(t, time.Duration(0), got.connectTimeout)
+	})
+}
+
+func TestConfigConnectTimeout(t *testing.T) {
+	const fallback = 5 * time.Second
+
+	t.Run("returns user config value when set", func(t *testing.T) {
+		config := Config{connectTimeout: 30 * time.Second}
+
+		assert.Equal(t, 30*time.Second, config.ConnectTimeout(fallback))
+	})
+
+	t.Run("returns fallback when not set in config", func(t *testing.T) {
+		config := Config{}
+
+		assert.Equal(t, fallback, config.ConnectTimeout(fallback))
 	})
 }
