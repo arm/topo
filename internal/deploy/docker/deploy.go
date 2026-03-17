@@ -6,12 +6,15 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
+type RegistryConfig struct {
+	Port              string
+	UseControlSockets bool
+}
+
 type DeployOptions struct {
-	RecreateMode         operation.RecreateMode
-	WithRegistry         bool
-	TargetHost           ssh.Host
-	RegistryPort         string
-	UseSSHControlSockets bool
+	RecreateMode operation.RecreateMode
+	TargetHost   ssh.Host
+	Registry     *RegistryConfig
 }
 
 func SupportsRegistry(noRegistry bool, targetHost ssh.Host) bool {
@@ -35,13 +38,13 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 
 	var cleanup goperation.Operation
 	if !opts.TargetHost.IsPlainLocalhost() {
-		if opts.WithRegistry {
-			start, securityCheck, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.RegistryPort, opts.UseSSHControlSockets)
+		if opts.Registry != nil {
+			start, securityCheck, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
 			cleanup = stop
-			ops = append(ops, operation.NewRunRegistry(opts.RegistryPort)...)
+			ops = append(ops, operation.NewRunRegistry(opts.Registry.Port)...)
 			ops = append(ops, start)
 			ops = append(ops, securityCheck)
-			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, opts.TargetHost, opts.RegistryPort))
+			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, opts.TargetHost, opts.Registry.Port))
 			ops = append(ops, stop)
 		} else {
 			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, opts.TargetHost))

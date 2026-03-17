@@ -89,7 +89,6 @@ Use --dry-run to see what commands would be executed without actually running th
 
 		targetHost := ssh.Host(resolvedTarget)
 		deployOpts.TargetHost = targetHost
-		deployOpts.RegistryPort = resolvedPort
 
 		if !skipProjectChecks {
 			if err := checks.EnsureProjectIsLinuxArm64Ready(composeFile); err != nil {
@@ -98,8 +97,12 @@ Use --dry-run to see what commands would be executed without actually running th
 		}
 
 		goos := runtime.GOOS
-		deployOpts.WithRegistry = docker.SupportsRegistry(noRegistry, targetHost)
-		deployOpts.UseSSHControlSockets = docker.SupportsSSHControlSockets(goos)
+		if docker.SupportsRegistry(noRegistry, targetHost) {
+			deployOpts.Registry = &docker.RegistryConfig{
+				Port:              resolvedPort,
+				UseControlSockets: docker.SupportsSSHControlSockets(goos),
+			}
+		}
 		switch {
 		case forceRecreate:
 			deployOpts.RecreateMode = operation.RecreateModeForce
@@ -107,7 +110,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			deployOpts.RecreateMode = operation.RecreateModeNone
 		}
 
-		if !deployOpts.WithRegistry {
+		if deployOpts.Registry == nil {
 			c.Log(logger.Entry{
 				Level:   logger.Warning,
 				Message: "registry transfer is not yet supported with this configuration. Falling back to direct transfer.",
