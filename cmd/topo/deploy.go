@@ -115,9 +115,6 @@ Use --dry-run to see what commands would be executed without actually running th
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
-		if deployment == nil {
-			return fmt.Errorf("failed to create deployment: SSH tunnel setup failed")
-		}
 		stop := goperation.SetupExitCleanup(os.Stdout, cleanup, os.Exit)
 
 		defer func() {
