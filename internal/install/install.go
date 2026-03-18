@@ -325,7 +325,7 @@ type InstallResult struct {
 	Binary   string
 }
 
-func InstallBinariesFromGithubRelease(targetHost ssh.Destination, repoURL string, binaryNames []string) ([]InstallResult, error) {
+func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string, binaryNames []string) ([]InstallResult, error) {
 	for _, binaryName := range binaryNames {
 		if err := ssh.ValidateBinaryName(binaryName); err != nil {
 			return nil, err
@@ -341,7 +341,7 @@ func InstallBinariesFromGithubRelease(targetHost ssh.Destination, repoURL string
 	var binariesNotOnPath []string
 
 	for _, binaryName := range binaryNames {
-		existingPath, err := getExistingBinaryDir(targetHost, binaryName)
+		existingPath, err := getExistingBinaryDir(targetDest, binaryName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existing path for %s: %w", binaryName, err)
 		}
@@ -362,7 +362,7 @@ func InstallBinariesFromGithubRelease(targetHost ssh.Destination, repoURL string
 		}
 
 		singleBinary := map[string][]byte{binaryName: binaryData}
-		err := install(dirPath, targetHost, singleBinary)
+		err := install(dirPath, targetDest, singleBinary)
 		if err != nil {
 			return nil, fmt.Errorf("failed to install %s to existing location %s: %w", binaryName, dirPath, err)
 		}
@@ -375,7 +375,7 @@ func InstallBinariesFromGithubRelease(targetHost ssh.Destination, repoURL string
 
 	// if not already on path, find a good spot for them.
 	if len(binariesNotOnPath) > 0 {
-		paths, err := FindPathDirs(targetHost)
+		paths, err := FindPathDirs(targetDest)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find valid PATH directories: %w", err)
 		}
@@ -385,7 +385,7 @@ func InstallBinariesFromGithubRelease(targetHost ssh.Destination, repoURL string
 			newBinariesMap[binaryName] = binaries[binaryName]
 		}
 
-		installLoc, installedBinaries, err := installToFirstWriteableDir(paths, targetHost, newBinariesMap)
+		installLoc, installedBinaries, err := installToFirstWriteableDir(paths, targetDest, newBinariesMap)
 		if err != nil {
 			return nil, fmt.Errorf("installation of new binaries failed: %w", err)
 		}
