@@ -298,14 +298,14 @@ func install(installPath string, targetDest ssh.Destination, binaries map[string
 // installToFirstWriteableDir attempts to install binaries to the highest preference path that the user has permissions for.
 // Silently ignores permission failures until the last path.
 // Returns the installation location and a list of installed binary names.
-func installToFirstWriteableDir(paths []PathCandidate, targetHost ssh.Destination, binaries map[string][]byte) (PathCandidate, []string, error) {
+func installToFirstWriteableDir(paths []PathCandidate, targetDest ssh.Destination, binaries map[string][]byte) (PathCandidate, []string, error) {
 	var binaryNames []string
 	for name := range binaries {
 		binaryNames = append(binaryNames, name)
 	}
 
 	for i, dir := range paths {
-		err := install(dir.Path, targetHost, binaries)
+		err := install(dir.Path, targetDest, binaries)
 		if err == nil {
 			return paths[i], binaryNames, nil
 		}
@@ -395,7 +395,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 		// Creating the directory during install means a new login shell will now
 		// include the path, even though it wasn't present during the earlier check.
 		if !installLoc.OnPath {
-			if pathDirs, pathErr := getPathDirs(targetHost); pathErr == nil {
+			if pathDirs, pathErr := getPathDirs(targetDest); pathErr == nil {
 				installLoc.OnPath = slices.Contains(pathDirs, installLoc.Path)
 			}
 		}
