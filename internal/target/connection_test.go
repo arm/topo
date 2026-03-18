@@ -13,10 +13,10 @@ import (
 
 func TestRun(t *testing.T) {
 	t.Run("run executes command successfully", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 
 		out, err := conn.Run("ls")
 
@@ -25,10 +25,10 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run returns error", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("", 1)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 
 		out, err := conn.Run("ls")
 
@@ -37,10 +37,10 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("returns ErrAuthFailed when stderr contains auth failure", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithStderr("Permission denied (publickey)", 1)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 
 		_, err := conn.Run("ls")
 
@@ -48,10 +48,10 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("returns ErrConnectionFailed when stderr contains connection refused", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithStderr("ssh: connect to host foo port 22: Connection refused", 1)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 
 		_, err := conn.Run("ls")
 
@@ -61,11 +61,11 @@ func TestRun(t *testing.T) {
 	t.Run("run with mutliplexing enabled includes Control args", func(t *testing.T) {
 		testutil.RequireOS(t, "linux")
 		var capturedArgs string
-		mockExec := func(_ ssh.Host, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
 			capturedArgs = strings.Join(sshArgs, " ")
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockCommand: mockCommand})
 
 		_, err := conn.Run("ls")
 
@@ -78,11 +78,11 @@ func TestRun(t *testing.T) {
 	t.Run("run with mutliplexing enabled does not include Control args on windows", func(t *testing.T) {
 		testutil.RequireOS(t, "windows")
 		var capturedArgs string
-		mockExec := func(_ ssh.Host, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
 			capturedArgs = strings.Join(sshArgs, " ")
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{Multiplex: true, WithMockCommand: mockCommand})
 
 		_, err := conn.Run("ls")
 
@@ -95,19 +95,19 @@ func TestRun(t *testing.T) {
 
 func TestBinaryExists(t *testing.T) {
 	t.Run("when binary found returns nil", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 
 		assert.NoError(t, conn.BinaryExists("bar"))
 	})
 
 	t.Run("invalid format returns an error", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 
 		assert.Error(t, conn.BinaryExists("b a r"))
 	})

@@ -18,7 +18,7 @@ import (
 
 func TestGenerate(t *testing.T) {
 	t.Run("returns hardware profile for given target", func(t *testing.T) {
-		mockExecSSH := func(target ssh.Host, cmdStr string, _ []byte, sshArgs ...string) *exec.Cmd {
+		mockCommand := func(target ssh.Host, cmdStr string, _ []byte, sshArgs ...string) *exec.Cmd {
 			if cmdStr == "lscpu --json" {
 				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
 			}
@@ -45,7 +45,7 @@ func TestGenerate(t *testing.T) {
 			TotalMemoryKb: 16384000,
 		}
 
-		conn := target.NewConnection("test", target.ConnectionOptions{WithMockCommand: mockExecSSH})
+		conn := target.NewConnection("test", target.ConnectionOptions{WithMockCommand: mockCommand})
 		report, err := describe.GenerateTargetDescription(conn)
 
 		require.NoError(t, err)
@@ -53,11 +53,11 @@ func TestGenerate(t *testing.T) {
 	})
 
 	t.Run("fails if ssh commands cannot be executed", func(t *testing.T) {
-		mockExecSSH := func(target ssh.Host, cmdStr string, _ []byte, sshArgs ...string) *exec.Cmd {
+		mockCommand := func(target ssh.Host, cmdStr string, _ []byte, sshArgs ...string) *exec.Cmd {
 			return testutil.CmdWithOutput(assert.AnError.Error(), 1)
 		}
 
-		conn := target.NewConnection("test", target.ConnectionOptions{WithMockCommand: mockExecSSH})
+		conn := target.NewConnection("test", target.ConnectionOptions{WithMockCommand: mockCommand})
 		_, err := describe.GenerateTargetDescription(conn)
 
 		assert.Error(t, err)

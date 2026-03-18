@@ -37,7 +37,7 @@ func TestExtractArmFeatures(t *testing.T) {
 
 func TestProbeHardware(t *testing.T) {
 	t.Run("returns model name and features", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
 			case strings.Contains(cmdStr, "command -v"):
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
@@ -50,7 +50,7 @@ func TestProbeHardware(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 		hw, err := conn.ProbeHardware()
 
 		require.NoError(t, err)
@@ -62,18 +62,18 @@ func TestProbeHardware(t *testing.T) {
 	})
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("not found", 1)
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 		_, err := conn.ProbeHardware()
 
 		assert.ErrorContains(t, err, `"lscpu" executable file not found in $PATH`)
 	})
 
 	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
 			case strings.Contains(cmdStr, "command -v"):
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
@@ -86,7 +86,7 @@ func TestProbeHardware(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 		_, err := conn.ProbeHardware()
 
 		assert.ErrorContains(t, err, "collecting CPU info")

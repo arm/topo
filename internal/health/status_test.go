@@ -14,11 +14,11 @@ import (
 
 func TestProbeHealthStatus(t *testing.T) {
 	t.Run("probe fails connection", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("connection refused", 1)
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 		ts := health.ProbeHealthStatus(conn)
 
 		assert.Error(t, ts.ConnectionError)
@@ -26,7 +26,7 @@ func TestProbeHealthStatus(t *testing.T) {
 	})
 
 	t.Run("probe finds remote CPUs", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
 			case cmdStr == "true":
 				return testutil.CmdWithOutput("", 0)
@@ -39,7 +39,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 		ts := health.ProbeHealthStatus(conn)
 
 		want := health.HardwareProfile{RemoteCPU: []target.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}}
@@ -48,7 +48,7 @@ func TestProbeHealthStatus(t *testing.T) {
 	})
 
 	t.Run("probe succeeds when no remoteproc support", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
+		mockCommand := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			switch cmdStr {
 			case "true":
 				return testutil.CmdWithOutput("", 0)
@@ -57,7 +57,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockCommand})
 		ts := health.ProbeHealthStatus(conn)
 
 		assert.NoError(t, ts.ConnectionError)
