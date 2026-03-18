@@ -43,8 +43,8 @@ Falls back to ~/bin if no suitable locations are automatically found.
 	},
 }
 
-func installRemoteprocRuntime(targetHost ssh.Destination) (printable.Printable, error) {
-	results, err := install.InstallBinariesFromGithubRelease(targetHost, remoteprocRuntimeRepoURL, []string{"remoteproc-runtime", "containerd-shim-remoteproc-v1"})
+func installRemoteprocRuntime(targetDest ssh.Destination) (printable.Printable, error) {
+	results, err := install.InstallBinariesFromGithubRelease(targetDest, remoteprocRuntimeRepoURL, []string{"remoteproc-runtime", "containerd-shim-remoteproc-v1"})
 	if err != nil {
 		return nil, err
 	}
