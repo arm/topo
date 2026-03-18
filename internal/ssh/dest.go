@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"unicode"
@@ -20,6 +21,12 @@ func (h Destination) IsLocalhost() bool {
 	}
 	_, host, _ := SplitUserHostPort(string(h))
 	return Destination(host).IsPlainLocalhost()
+}
+
+func (h Destination) AsURI() string {
+	const scheme = "ssh://"
+	withoutScheme := strings.TrimPrefix(string(h), scheme)
+	return fmt.Sprintf("ssh://%s", withoutScheme)
 }
 
 func (h Destination) Slugify() string {
