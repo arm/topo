@@ -44,7 +44,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposePull(composeFile, ssh.PlainLocalhost),
 		}
 		want = append(want, operation.NewRunRegistry(port)...)
-		wantTunnelStart, wantSecurityCheck, wantTunnelStop := ssh.NewSSHTunnel(remoteHost, port, opts.UseSSHControlSockets)
+		wantTunnelStart, wantSecurityCheck, wantTunnelStop := ssh.NewSSHTunnel(remoteHost, port, opts.Registry.UseControlSockets)
 		want = append(want,
 			wantTunnelStart,
 			wantSecurityCheck,
