@@ -14,7 +14,7 @@ import (
 )
 
 type sshTestCall struct {
-	target  ssh.Host
+	target  ssh.SSHDestination
 	command string
 	args    []string
 }
@@ -24,8 +24,8 @@ type mockResponse struct {
 	err    error
 }
 
-func newMockExec(responses map[string]mockResponse, calls *[]sshTestCall) func(ssh.Host, string, []byte, ...string) *exec.Cmd {
-	return func(target ssh.Host, command string, _ []byte, sshArgs ...string) *exec.Cmd {
+func newMockExec(responses map[string]mockResponse, calls *[]sshTestCall) func(ssh.SSHDestination, string, []byte, ...string) *exec.Cmd {
+	return func(target ssh.SSHDestination, command string, _ []byte, sshArgs ...string) *exec.Cmd {
 		*calls = append(*calls, sshTestCall{
 			target:  target,
 			command: command,

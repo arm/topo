@@ -35,7 +35,7 @@ func formatSSHHost(raw string, user string, host string) string {
 	return user + "@" + hostPart
 }
 
-func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
+func NewSSHTunnel(targetHost SSHDestination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	start := NewSSHTunnelStart(targetHost, port, useControlSockets)
 	securityCheck := NewCheckSSHTunnelSecurity(targetHost, port)
 
@@ -50,7 +50,7 @@ func NewSSHTunnel(targetHost Host, port string, useControlSockets bool) (operati
 }
 
 type SSHTunnelStart struct {
-	TargetHost        Host
+	TargetHost        SSHDestination
 	UseControlSockets bool
 	Port              string
 	Process           *os.Process
@@ -60,7 +60,7 @@ func (s *SSHTunnelStart) Description() string {
 	return "Open registry SSH tunnel"
 }
 
-func NewSSHTunnelStart(targetHost Host, port string, useControlSockets bool) *SSHTunnelStart {
+func NewSSHTunnelStart(targetHost SSHDestination, port string, useControlSockets bool) *SSHTunnelStart {
 	return &SSHTunnelStart{TargetHost: targetHost, Port: port, UseControlSockets: useControlSockets}
 }
 
@@ -109,7 +109,7 @@ func (s *SSHTunnelStart) DryRun(w io.Writer) error {
 }
 
 type CheckSSHTunnelSecurity struct {
-	TargetHost Host
+	TargetHost SSHDestination
 	Port       string
 }
 
@@ -117,7 +117,7 @@ func (ct *CheckSSHTunnelSecurity) Description() string {
 	return "Check SSH tunnel security"
 }
 
-func NewCheckSSHTunnelSecurity(targetHost Host, port string) *CheckSSHTunnelSecurity {
+func NewCheckSSHTunnelSecurity(targetHost SSHDestination, port string) *CheckSSHTunnelSecurity {
 	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
 }
 
@@ -160,14 +160,14 @@ func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
 }
 
 type SSHTunnelStop struct {
-	TargetHost Host
+	TargetHost SSHDestination
 }
 
 func (s *SSHTunnelStop) Description() string {
 	return "Close registry SSH tunnel"
 }
 
-func NewSSHTunnelStop(targetHost Host) *SSHTunnelStop {
+func NewSSHTunnelStop(targetHost SSHDestination) *SSHTunnelStop {
 	return &SSHTunnelStop{TargetHost: targetHost}
 }
 

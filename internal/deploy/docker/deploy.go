@@ -13,11 +13,11 @@ type RegistryConfig struct {
 
 type DeployOptions struct {
 	RecreateMode operation.RecreateMode
-	TargetHost   ssh.Host
+	TargetHost   ssh.SSHDestination
 	Registry     *RegistryConfig
 }
 
-func SupportsRegistry(noRegistry bool, targetHost ssh.Host) bool {
+func SupportsRegistry(noRegistry bool, targetHost ssh.SSHDestination) bool {
 	return !noRegistry && !targetHost.IsPlainLocalhost()
 }
 
@@ -25,7 +25,7 @@ func SupportsSSHControlSockets(goos string) bool {
 	return goos != "windows"
 }
 
-func NewDeploymentStop(composeFile string, targetHost ssh.Host) goperation.Sequence {
+func NewDeploymentStop(composeFile string, targetHost ssh.SSHDestination) goperation.Sequence {
 	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, targetHost)}
 }
 

@@ -12,11 +12,11 @@ import (
 type DockerCompose struct {
 	description string
 	composeFile string
-	host        ssh.Host
+	host        ssh.SSHDestination
 	args        []string
 }
 
-func NewDockerCompose(description string, composeFile string, h ssh.Host, args []string) *DockerCompose {
+func NewDockerCompose(description string, composeFile string, h ssh.SSHDestination, args []string) *DockerCompose {
 	return &DockerCompose{
 		description: description,
 		composeFile: composeFile,
@@ -46,15 +46,15 @@ func (dc *DockerCompose) buildCommand() *exec.Cmd {
 	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
 }
 
-func NewDockerComposeBuild(composeFile string, h ssh.Host) *DockerCompose {
+func NewDockerComposeBuild(composeFile string, h ssh.SSHDestination) *DockerCompose {
 	return NewDockerCompose("Build images", composeFile, h, []string{"build"})
 }
 
-func NewDockerComposePull(composeFile string, h ssh.Host) *DockerCompose {
+func NewDockerComposePull(composeFile string, h ssh.SSHDestination) *DockerCompose {
 	return NewDockerCompose("Pull images", composeFile, h, []string{"pull"})
 }
 
-func NewDockerComposeStop(composeFile string, h ssh.Host) *DockerCompose {
+func NewDockerComposeStop(composeFile string, h ssh.SSHDestination) *DockerCompose {
 	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
 }
 
@@ -66,7 +66,7 @@ const (
 	RecreateModeNone
 )
 
-func NewDockerComposeUp(composeFile string, h ssh.Host, mode RecreateMode) *DockerCompose {
+func NewDockerComposeUp(composeFile string, h ssh.SSHDestination, mode RecreateMode) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
 	switch mode {
 	case RecreateModeForce:

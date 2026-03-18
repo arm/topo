@@ -35,10 +35,10 @@ var (
 	}
 )
 
-type ExecSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
+type ExecSSH func(target ssh.SSHDestination, command string, stdin []byte, sshArgs ...string) *exec.Cmd
 
 type Connection struct {
-	SSHTarget ssh.Host
+	SSHTarget ssh.SSHDestination
 	exec      ExecSSH
 	opts      ConnectionOptions
 }
@@ -63,7 +63,7 @@ func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
 	}
 	opts.ConnectTimeout = ssh.NewConfig(sshTarget).ConnectTimeout(opts.ConnectTimeout)
 	return Connection{
-		SSHTarget: ssh.Host(sshTarget),
+		SSHTarget: ssh.SSHDestination(sshTarget),
 		exec:      execFn,
 		opts:      opts,
 	}
