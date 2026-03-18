@@ -30,7 +30,7 @@ func shellEscapeForDoubleQuotes(s string) string {
 	return repl.Replace(s)
 }
 
-func ShellCommand(cmdStr string) string {
+func ShellCommandStr(cmdStr string) string {
 	escaped := shellEscapeForDoubleQuotes(cmdStr)
 	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
 }

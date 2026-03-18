@@ -68,7 +68,7 @@ func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
 
 func (c *Connection) Run(cmdStr string) (string, error) {
 	if c.opts.WithLoginShell {
-		cmdStr = ssh.ShellCommand(cmdStr)
+		cmdStr = ssh.ShellCommandStr(cmdStr)
 	}
 
 	sshArgs := c.connectTimeoutArgs()
@@ -94,7 +94,7 @@ func (c *Connection) Run(cmdStr string) (string, error) {
 
 func (c *Connection) DryRun(cmdStr string, output io.Writer) error {
 	if c.opts.WithLoginShell {
-		cmdStr = ssh.ShellCommand(cmdStr)
+		cmdStr = ssh.ShellCommandStr(cmdStr)
 	}
 
 	cmd := c.command(c.SSHTarget, cmdStr, c.opts.WithStdin)
