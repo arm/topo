@@ -11,27 +11,27 @@ type Destination string
 
 const PlainLocalhost = Destination("localhost")
 
-func (h Destination) IsPlainLocalhost() bool {
-	return strings.EqualFold(string(h), "localhost") || h == "127.0.0.1"
+func (d Destination) IsPlainLocalhost() bool {
+	return strings.EqualFold(string(d), "localhost") || d == "127.0.0.1"
 }
 
-func (h Destination) IsLocalhost() bool {
-	if h.IsPlainLocalhost() {
+func (d Destination) IsLocalhost() bool {
+	if d.IsPlainLocalhost() {
 		return true
 	}
-	_, host, _ := SplitUserHostPort(string(h))
+	_, host, _ := SplitUserHostPort(string(d))
 	return Destination(host).IsPlainLocalhost()
 }
 
-func (h Destination) AsURI() string {
+func (d Destination) AsURI() string {
 	const scheme = "ssh://"
-	withoutScheme := strings.TrimPrefix(string(h), scheme)
+	withoutScheme := strings.TrimPrefix(string(d), scheme)
 	return fmt.Sprintf("ssh://%s", withoutScheme)
 }
 
-func (h Destination) Slugify() string {
+func (d Destination) Slugify() string {
 	var b strings.Builder
-	for _, r := range h {
+	for _, r := range d {
 		toWrite := '_'
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' {
 			toWrite = r
