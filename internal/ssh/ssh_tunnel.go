@@ -35,13 +35,13 @@ func formatSSHHost(raw string, user string, host string) string {
 	return user + "@" + hostPart
 }
 
-func NewSSHTunnel(targetHost Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
-	start := NewSSHTunnelStart(targetHost, port, useControlSockets)
-	securityCheck := NewCheckSSHTunnelSecurity(targetHost, port)
+func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
+	start := NewSSHTunnelStart(targetDest, port, useControlSockets)
+	securityCheck := NewCheckSSHTunnelSecurity(targetDest, port)
 
 	var stop operation.Operation
 	if useControlSockets {
-		stop = NewSSHTunnelStop(targetHost)
+		stop = NewSSHTunnelStop(targetDest)
 	} else {
 		stop = NewSSHTunnelProcessStop(start)
 	}
@@ -50,7 +50,7 @@ func NewSSHTunnel(targetHost Destination, port string, useControlSockets bool) (
 }
 
 type SSHTunnelStart struct {
-	TargetHost        Destination
+	TargetDest        Destination
 	UseControlSockets bool
 	Port              string
 	Process           *os.Process
@@ -60,12 +60,12 @@ func (s *SSHTunnelStart) Description() string {
 	return "Open registry SSH tunnel"
 }
 
-func NewSSHTunnelStart(targetHost Destination, port string, useControlSockets bool) *SSHTunnelStart {
-	return &SSHTunnelStart{TargetHost: targetHost, Port: port, UseControlSockets: useControlSockets}
+func NewSSHTunnelStart(targetDest Destination, port string, useControlSockets bool) *SSHTunnelStart {
+	return &SSHTunnelStart{TargetDest: targetDest, Port: port, UseControlSockets: useControlSockets}
 }
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
-	rawHost := string(s.TargetHost)
+	rawHost := string(s.TargetDest)
 	user, host, port := SplitUserHostPort(rawHost)
 	hostArg := formatSSHHost(rawHost, user, host)
 	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
@@ -74,7 +74,7 @@ func (s *SSHTunnelStart) Command() *exec.Cmd {
 	}
 	if s.UseControlSockets {
 		args = append(args,
-			"-fMS", ControlSocketPath(string(s.TargetHost)),
+			"-fMS", ControlSocketPath(string(s.TargetDest)),
 		)
 	}
 	args = append(args,
@@ -94,7 +94,7 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 		run = cmd.Run
 	}
 	if err := run(); err != nil {
-		return fmt.Errorf("failed to open SSH tunnel to %s: %w", s.TargetHost, err)
+		return fmt.Errorf("failed to open SSH tunnel to %s: %w", s.TargetDest, err)
 	}
 	if cmd.Process != nil {
 		s.Process = cmd.Process
@@ -109,7 +109,7 @@ func (s *SSHTunnelStart) DryRun(w io.Writer) error {
 }
 
 type CheckSSHTunnelSecurity struct {
-	TargetHost Destination
+	TargetDest Destination
 	Port       string
 }
 
@@ -117,13 +117,13 @@ func (ct *CheckSSHTunnelSecurity) Description() string {
 	return "Check SSH tunnel security"
 }
 
-func NewCheckSSHTunnelSecurity(targetHost Destination, port string) *CheckSSHTunnelSecurity {
-	return &CheckSSHTunnelSecurity{TargetHost: targetHost, Port: port}
+func NewCheckSSHTunnelSecurity(targetDest Destination, port string) *CheckSSHTunnelSecurity {
+	return &CheckSSHTunnelSecurity{TargetDest: targetDest, Port: port}
 }
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
-	if !ct.TargetHost.IsLocalhost() {
-		host := resolveHost(string(ct.TargetHost))
+	if !ct.TargetDest.IsLocalhost() {
+		host := resolveHost(string(ct.TargetDest))
 		if host == "" {
 			return nil
 		}
@@ -133,26 +133,26 @@ func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 }
 
 func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
-	if ct.TargetHost.IsLocalhost() {
+	if ct.TargetDest.IsLocalhost() {
 		return nil
 	}
 	cmd := ct.Command()
 	if cmd == nil {
-		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetHost))
+		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetDest))
 	}
 	cmd.Stdout = w
 	cmd.Stderr = w
 
 	err := cmd.Run()
 	if err == nil {
-		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetHost)
+		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
 	}
 
 	return nil
 }
 
 func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
-	if ct.TargetHost.IsLocalhost() {
+	if ct.TargetDest.IsLocalhost() {
 		return nil
 	}
 	_, err := fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
@@ -160,19 +160,19 @@ func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
 }
 
 type SSHTunnelStop struct {
-	TargetHost Destination
+	TargetDest Destination
 }
 
 func (s *SSHTunnelStop) Description() string {
 	return "Close registry SSH tunnel"
 }
 
-func NewSSHTunnelStop(targetHost Destination) *SSHTunnelStop {
-	return &SSHTunnelStop{TargetHost: targetHost}
+func NewSSHTunnelStop(targetDest Destination) *SSHTunnelStop {
+	return &SSHTunnelStop{TargetDest: targetDest}
 }
 
 func (s *SSHTunnelStop) Command() *exec.Cmd {
-	rawHost := string(s.TargetHost)
+	rawHost := string(s.TargetDest)
 	user, host, port := SplitUserHostPort(rawHost)
 	hostArg := formatSSHHost(rawHost, user, host)
 	args := []string{"ssh"}
@@ -180,7 +180,7 @@ func (s *SSHTunnelStop) Command() *exec.Cmd {
 		args = append(args, "-p", port)
 	}
 	args = append(args,
-		"-S", ControlSocketPath(string(s.TargetHost)),
+		"-S", ControlSocketPath(string(s.TargetDest)),
 		"-O", "exit",
 		hostArg,
 	)
@@ -189,14 +189,14 @@ func (s *SSHTunnelStop) Command() *exec.Cmd {
 }
 
 func (s *SSHTunnelStop) Run(w io.Writer) error {
-	if _, err := os.Stat(ControlSocketPath(string(s.TargetHost))); os.IsNotExist(err) {
+	if _, err := os.Stat(ControlSocketPath(string(s.TargetDest))); os.IsNotExist(err) {
 		return nil
 	}
 	cmd := s.Command()
 	cmd.Stdout = w
 	cmd.Stderr = w
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to close SSH tunnel to %s: %w", s.TargetHost, err)
+		return fmt.Errorf("failed to close SSH tunnel to %s: %w", s.TargetDest, err)
 	}
 	return nil
 }
