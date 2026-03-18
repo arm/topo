@@ -32,7 +32,7 @@ type PathCandidate struct {
 	OnPath bool
 }
 
-func getPathDirs(targetHost ssh.SSHDestination) ([]string, error) {
+func getPathDirs(targetHost ssh.Destination) ([]string, error) {
 	conn := target.NewConnection(string(targetHost), target.ConnectionOptions{WithLoginShell: true})
 	output, err := conn.Run("echo $PATH")
 	if err != nil {
@@ -45,7 +45,7 @@ func getPathDirs(targetHost ssh.SSHDestination) ([]string, error) {
 	return paths, nil
 }
 
-func getHomeDir(targetHost ssh.SSHDestination) (string, error) {
+func getHomeDir(targetHost ssh.Destination) (string, error) {
 	conn := target.NewConnection(string(targetHost), target.ConnectionOptions{WithLoginShell: true})
 	output, err := conn.Run("echo $HOME")
 	if err != nil {
@@ -54,7 +54,7 @@ func getHomeDir(targetHost ssh.SSHDestination) (string, error) {
 	return strings.TrimSpace(output), nil
 }
 
-func getExistingBinaryDir(targetHost ssh.SSHDestination, binaryName string) (string, error) {
+func getExistingBinaryDir(targetHost ssh.Destination, binaryName string) (string, error) {
 	conn := target.NewConnection(string(targetHost), target.ConnectionOptions{WithLoginShell: true})
 	output, err := conn.Run(fmt.Sprintf("command -v %s", binaryName))
 	if err != nil {
@@ -74,7 +74,7 @@ func getExistingBinaryDir(targetHost ssh.SSHDestination, binaryName string) (str
 	return fullPath[:lastSlash], nil
 }
 
-func FindPathDirs(targetHost ssh.SSHDestination) ([]PathCandidate, error) {
+func FindPathDirs(targetHost ssh.Destination) ([]PathCandidate, error) {
 	pathDirs, err := getPathDirs(targetHost)
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func FetchLatestReleaseBinaries(githubRepoSlug string, binaries []string) (map[s
 	return files, err
 }
 
-func install(installPath string, targetHost ssh.SSHDestination, binaries map[string][]byte) error {
+func install(installPath string, targetHost ssh.Destination, binaries map[string][]byte) error {
 	mode := "0755"
 
 	for binaryName, binaryData := range binaries {
@@ -298,7 +298,7 @@ func install(installPath string, targetHost ssh.SSHDestination, binaries map[str
 // installToFirstWriteableDir attempts to install binaries to the highest preference path that the user has permissions for.
 // Silently ignores permission failures until the last path.
 // Returns the installation location and a list of installed binary names.
-func installToFirstWriteableDir(paths []PathCandidate, targetHost ssh.SSHDestination, binaries map[string][]byte) (PathCandidate, []string, error) {
+func installToFirstWriteableDir(paths []PathCandidate, targetHost ssh.Destination, binaries map[string][]byte) (PathCandidate, []string, error) {
 	var binaryNames []string
 	for name := range binaries {
 		binaryNames = append(binaryNames, name)
@@ -325,7 +325,7 @@ type InstallResult struct {
 	Binary   string
 }
 
-func InstallBinariesFromGithubRelease(targetHost ssh.SSHDestination, repoURL string, binaryNames []string) ([]InstallResult, error) {
+func InstallBinariesFromGithubRelease(targetHost ssh.Destination, repoURL string, binaryNames []string) ([]InstallResult, error) {
 	for _, binaryName := range binaryNames {
 		if err := ssh.ValidateBinaryName(binaryName); err != nil {
 			return nil, err

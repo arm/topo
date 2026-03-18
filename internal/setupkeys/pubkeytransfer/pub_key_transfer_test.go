@@ -33,14 +33,14 @@ func TestPubKeyTransferRun(t *testing.T) {
 	require.NoError(t, os.WriteFile(pubKeyPath, pubKeyContent, 0o600))
 
 	type call struct {
-		host  ssh.SSHDestination
+		host  ssh.Destination
 		cmd   string
 		stdin []byte
 		args  []string
 	}
 	var got call
 
-	opts := pubkeytransfer.PubKeyTransferOptions{WithMockExec: func(h ssh.SSHDestination, command string, stdin []byte, args ...string) *exec.Cmd {
+	opts := pubkeytransfer.PubKeyTransferOptions{WithMockExec: func(h ssh.Destination, command string, stdin []byte, args ...string) *exec.Cmd {
 		got = call{host: h, cmd: command, stdin: stdin, args: args}
 		cmd := testutil.CmdWithOutput("ssh invoked", 0)
 		if stdin != nil {
@@ -53,7 +53,7 @@ func TestPubKeyTransferRun(t *testing.T) {
 	var buf bytes.Buffer
 	require.NoError(t, op.Run(&buf))
 	require.Contains(t, buf.String(), "ssh invoked")
-	require.Equal(t, ssh.SSHDestination("thing1@thing2.com"), got.host)
+	require.Equal(t, ssh.Destination("thing1@thing2.com"), got.host)
 	require.Contains(t, got.cmd, "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
 	require.Equal(t, pubKeyContent, got.stdin)
 	require.Empty(t, got.args)

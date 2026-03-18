@@ -35,7 +35,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		targetSlug := ssh.SSHDestination(resolvedTarget).Slugify()
+		targetSlug := ssh.Destination(resolvedTarget).Slugify()
 		if privateKeyPath == "" {
 			privateKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
 			if err != nil {

@@ -55,11 +55,11 @@ func (r *RegistryRunWrapper) Run(w io.Writer) error {
 }
 
 type ContainerExistsPredicate struct {
-	host          ssh.SSHDestination
+	host          ssh.Destination
 	containerName string
 }
 
-func NewContainerExistsPredicate(host ssh.SSHDestination, containerName string) *ContainerExistsPredicate {
+func NewContainerExistsPredicate(host ssh.Destination, containerName string) *ContainerExistsPredicate {
 	return &ContainerExistsPredicate{host: host, containerName: containerName}
 }
 

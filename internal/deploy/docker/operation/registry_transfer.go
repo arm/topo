@@ -17,12 +17,12 @@ var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 
 type RegistryTransfer struct {
 	composeFile string
-	sourceHost  ssh.SSHDestination
-	targetHost  ssh.SSHDestination
+	sourceHost  ssh.Destination
+	targetHost  ssh.Destination
 	port        string
 }
 
-func NewRegistryTransfer(composeFile string, sourceHost, targetHost ssh.SSHDestination, port string) *RegistryTransfer {
+func NewRegistryTransfer(composeFile string, sourceHost, targetHost ssh.Destination, port string) *RegistryTransfer {
 	return &RegistryTransfer{composeFile: composeFile, sourceHost: sourceHost, targetHost: targetHost, port: port}
 }
 

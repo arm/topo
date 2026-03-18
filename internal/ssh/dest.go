@@ -7,29 +7,29 @@ import (
 	"unicode"
 )
 
-type SSHDestination string
+type Destination string
 
-const PlainLocalhost = SSHDestination("localhost")
+const PlainLocalhost = Destination("localhost")
 
-func (h SSHDestination) IsPlainLocalhost() bool {
+func (h Destination) IsPlainLocalhost() bool {
 	return strings.EqualFold(string(h), "localhost") || h == "127.0.0.1"
 }
 
-func (h SSHDestination) IsLocalhost() bool {
+func (h Destination) IsLocalhost() bool {
 	if h.IsPlainLocalhost() {
 		return true
 	}
 	_, host, _ := SplitUserHostPort(string(h))
-	return SSHDestination(host).IsPlainLocalhost()
+	return Destination(host).IsPlainLocalhost()
 }
 
-func (h SSHDestination) AsURI() string {
+func (h Destination) AsURI() string {
 	const scheme = "ssh://"
 	withoutScheme := strings.TrimPrefix(string(h), scheme)
 	return fmt.Sprintf("ssh://%s", withoutScheme)
 }
 
-func (h SSHDestination) Slugify() string {
+func (h Destination) Slugify() string {
 	var b strings.Builder
 	for _, r := range h {
 		toWrite := '_'

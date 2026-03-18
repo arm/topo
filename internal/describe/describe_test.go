@@ -18,7 +18,7 @@ import (
 
 func TestGenerate(t *testing.T) {
 	t.Run("returns hardware profile for given target", func(t *testing.T) {
-		mockExecSSH := func(target ssh.SSHDestination, command string, _ []byte, sshArgs ...string) *exec.Cmd {
+		mockExecSSH := func(target ssh.Destination, command string, _ []byte, sshArgs ...string) *exec.Cmd {
 			if command == "lscpu --json" {
 				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
 			}
@@ -53,7 +53,7 @@ func TestGenerate(t *testing.T) {
 	})
 
 	t.Run("fails if ssh commands cannot be executed", func(t *testing.T) {
-		mockExecSSH := func(target ssh.SSHDestination, command string, _ []byte, sshArgs ...string) *exec.Cmd {
+		mockExecSSH := func(target ssh.Destination, command string, _ []byte, sshArgs ...string) *exec.Cmd {
 			return testutil.CmdWithOutput(assert.AnError.Error(), 1)
 		}
 
