@@ -40,7 +40,7 @@ func TestPubKeyTransferRun(t *testing.T) {
 	}
 	var got call
 
-	opts := pubkeytransfer.PubKeyTransferOptions{WithMockExec: func(h ssh.Host, command string, stdin []byte, args ...string) *exec.Cmd {
+	opts := pubkeytransfer.PubKeyTransferOptions{WithMockCommand: func(h ssh.Host, command string, stdin []byte, args ...string) *exec.Cmd {
 		got = call{host: h, cmd: command, stdin: stdin, args: args}
 		cmd := testutil.CmdWithOutput("ssh invoked", 0)
 		if stdin != nil {

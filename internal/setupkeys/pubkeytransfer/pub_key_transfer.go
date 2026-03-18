@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/arm/topo/internal/ssh"
 	target "github.com/arm/topo/internal/target"
 )
 
@@ -18,7 +19,7 @@ type PubKeyTransfer struct {
 }
 
 type PubKeyTransferOptions struct {
-	WithMockExec target.ExecSSH
+	WithMockCommand ssh.CommandFunc
 }
 
 func NewPubKeyTransfer(description string, targetHost string, privKeyPath string, opts PubKeyTransferOptions) *PubKeyTransfer {
@@ -32,8 +33,8 @@ func (kt *PubKeyTransfer) Description() string {
 func (kt *PubKeyTransfer) buildTransferConnection(stdin []byte) *target.Connection {
 	opts := target.ConnectionOptions{WithLoginShell: true, WithStdin: stdin}
 
-	if kt.opts.WithMockExec != nil {
-		opts.WithMockExec = kt.opts.WithMockExec
+	if kt.opts.WithMockCommand != nil {
+		opts.WithMockCommand = kt.opts.WithMockCommand
 	}
 
 	conn := target.NewConnection(kt.targetHost, opts)

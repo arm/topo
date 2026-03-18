@@ -45,7 +45,7 @@ func TestGenerate(t *testing.T) {
 			TotalMemoryKb: 16384000,
 		}
 
-		conn := target.NewConnection("test", target.ConnectionOptions{WithMockExec: mockExecSSH})
+		conn := target.NewConnection("test", target.ConnectionOptions{WithMockCommand: mockExecSSH})
 		report, err := describe.GenerateTargetDescription(conn)
 
 		require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestGenerate(t *testing.T) {
 			return testutil.CmdWithOutput(assert.AnError.Error(), 1)
 		}
 
-		conn := target.NewConnection("test", target.ConnectionOptions{WithMockExec: mockExecSSH})
+		conn := target.NewConnection("test", target.ConnectionOptions{WithMockCommand: mockExecSSH})
 		_, err := describe.GenerateTargetDescription(conn)
 
 		assert.Error(t, err)

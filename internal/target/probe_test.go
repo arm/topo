@@ -50,7 +50,7 @@ func TestProbeHardware(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
 		hw, err := conn.ProbeHardware()
 
 		require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestProbeHardware(t *testing.T) {
 			return testutil.CmdWithOutput("not found", 1)
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
 		_, err := conn.ProbeHardware()
 
 		assert.ErrorContains(t, err, `"lscpu" executable file not found in $PATH`)
@@ -86,7 +86,7 @@ func TestProbeHardware(t *testing.T) {
 			}
 		}
 
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockCommand: mockExec})
 		_, err := conn.ProbeHardware()
 
 		assert.ErrorContains(t, err, "collecting CPU info")

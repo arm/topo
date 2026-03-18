@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os/exec"
 	"runtime"
 	"slices"
 	"strings"
@@ -35,11 +34,9 @@ var (
 	}
 )
 
-type ExecSSH func(target ssh.Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
-
 type Connection struct {
 	SSHTarget ssh.Host
-	exec      ExecSSH
+	command   ssh.CommandFunc
 	opts      ConnectionOptions
 }
 
@@ -50,23 +47,23 @@ type ConnectionOptions struct {
 	WithLoginShell    bool
 	WithStdin         []byte
 	Multiplex         bool
-	WithMockExec      ExecSSH
+	WithMockCommand   ssh.CommandFunc
 	ConnectTimeout    time.Duration
 }
 
 var ErrPasswordAuthentication = errors.New("key-based SSH authentication is not setup")
 
 func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
-	execFn := ssh.ExecCmd
-	if opts.WithMockExec != nil {
-		execFn = opts.WithMockExec
-	}
 	opts.ConnectTimeout = ssh.NewConfig(sshTarget).ConnectTimeout(opts.ConnectTimeout)
-	return Connection{
+	connection := Connection{
 		SSHTarget: ssh.Host(sshTarget),
-		exec:      execFn,
+		command:   ssh.Command,
 		opts:      opts,
 	}
+	if opts.WithMockCommand != nil {
+		connection.command = opts.WithMockCommand
+	}
+	return connection
 }
 
 func (c *Connection) Run(command string) (string, error) {
@@ -79,7 +76,7 @@ func (c *Connection) Run(command string) (string, error) {
 		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
 	}
 
-	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin, sshArgs...)
+	cmd := c.command(c.SSHTarget, command, c.opts.WithStdin, sshArgs...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
@@ -100,7 +97,7 @@ func (c *Connection) DryRun(command string, output io.Writer) error {
 		command = ssh.ShellCommand(command)
 	}
 
-	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin)
+	cmd := c.command(c.SSHTarget, command, c.opts.WithStdin)
 	_, err := fmt.Fprintln(output, commandpkg.String(cmd))
 	return err
 }
@@ -185,7 +182,11 @@ func (c *Connection) connectTimeoutArgs() []string {
 // All SSH authentication probes run the command "true" to check if the authentication method works.
 // All sshArgs should be hardcoded SSH options, not user-provided arguments.
 func (c *Connection) runSSHAuthenticationProbe(sshArgs []string) error {
+<<<<<<< HEAD
 	cmd := c.exec(c.SSHTarget, "true", nil, slices.Concat(c.connectTimeoutArgs(), sshArgs)...)
+=======
+	cmd := c.command(c.SSHTarget, "true", nil, sshArgs...)
+>>>>>>> 629605e (Align naming of `exec.Command` producer with Go's stdlib)
 	stdoutBytes, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil
