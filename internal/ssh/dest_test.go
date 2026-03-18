@@ -20,9 +20,9 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					h := ssh.Destination(input)
+					d := ssh.Destination(input)
 
-					assert.True(t, h.IsPlainLocalhost())
+					assert.True(t, d.IsPlainLocalhost())
 				})
 			}
 		})
@@ -37,9 +37,9 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					h := ssh.Destination(input)
+					d := ssh.Destination(input)
 
-					assert.False(t, h.IsPlainLocalhost())
+					assert.False(t, d.IsPlainLocalhost())
 				})
 			}
 		})
@@ -53,9 +53,9 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					h := ssh.Destination(input)
+					d := ssh.Destination(input)
 
-					assert.False(t, h.IsPlainLocalhost())
+					assert.False(t, d.IsPlainLocalhost())
 				})
 			}
 		})
@@ -71,9 +71,9 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					h := ssh.Destination(input)
+					d := ssh.Destination(input)
 
-					assert.True(t, h.IsLocalhost())
+					assert.True(t, d.IsLocalhost())
 				})
 			}
 		})
@@ -88,9 +88,9 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					h := ssh.Destination(input)
+					d := ssh.Destination(input)
 
-					assert.True(t, h.IsLocalhost())
+					assert.True(t, d.IsLocalhost())
 				})
 			}
 		})
@@ -98,15 +98,15 @@ func TestDestination(t *testing.T) {
 
 	t.Run("AsURI", func(t *testing.T) {
 		t.Run("returns uri form of host string", func(t *testing.T) {
-			h := ssh.Destination("user@host")
+			d := ssh.Destination("user@host")
 
-			assert.Equal(t, "ssh://user@host", h.AsURI())
+			assert.Equal(t, "ssh://user@host", d.AsURI())
 		})
 
 		t.Run("doesn't duplicate ssh:// scheme", func(t *testing.T) {
-			h := ssh.Destination("ssh://user@host:123")
+			d := ssh.Destination("ssh://user@host:123")
 
-			assert.Equal(t, "ssh://user@host:123", h.AsURI())
+			assert.Equal(t, "ssh://user@host:123", d.AsURI())
 		})
 	})
 
