@@ -30,24 +30,24 @@ func shellEscapeForDoubleQuotes(s string) string {
 	return repl.Replace(s)
 }
 
-func ShellCommand(command string) string {
-	escaped := shellEscapeForDoubleQuotes(command)
+func ShellCommand(cmdStr string) string {
+	escaped := shellEscapeForDoubleQuotes(cmdStr)
 	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
 }
 
 // CommandFunc builds a command to be executed on a target host.
-type CommandFunc func(target Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd
+type CommandFunc func(target Host, cmdStr string, stdin []byte, sshArgs ...string) *exec.Cmd
 
 // Command builds a command to be executed on the target host. If the target is localhost, it will run locally when executed.
 // Pass stdin data as optional parameter, or nil for no stdin.
-func Command(target Host, command string, stdin []byte, sshArgs ...string) *exec.Cmd {
+func Command(target Host, cmdStr string, stdin []byte, sshArgs ...string) *exec.Cmd {
 	var cmd *exec.Cmd
 	if target.IsPlainLocalhost() {
-		// #nosec G204 -- command should be validated by callers
-		cmd = exec.Command("/bin/sh", "-c", command)
+		// #nosec G204 -- cmdStr should be validated by callers
+		cmd = exec.Command("/bin/sh", "-c", cmdStr)
 	} else {
-		args := slices.Concat(sshArgs, []string{"--", string(target), command})
-		// #nosec G204 -- command should be validated by callers
+		args := slices.Concat(sshArgs, []string{"--", string(target), cmdStr})
+		// #nosec G204 -- cmdStr should be validated by callers
 		cmd = exec.Command("ssh", args...)
 	}
 

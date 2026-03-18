@@ -26,16 +26,16 @@ func TestProbeHealthStatus(t *testing.T) {
 	})
 
 	t.Run("probe finds remote CPUs", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
+		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
-			case command == "true":
+			case cmdStr == "true":
 				return testutil.CmdWithOutput("", 0)
-			case strings.Contains(command, "ls /sys/class/remoteproc"):
+			case strings.Contains(cmdStr, "ls /sys/class/remoteproc"):
 				return testutil.CmdWithOutput("remoteproc0\nremoteproc1", 0)
-			case strings.Contains(command, "cat /sys/class/remoteproc"):
+			case strings.Contains(cmdStr, "cat /sys/class/remoteproc"):
 				return testutil.CmdWithOutput("foo\nbar", 0)
 			default:
-				return testutil.CmdWithOutput("unexpected command: "+command, 1)
+				return testutil.CmdWithOutput("unexpected command: "+cmdStr, 1)
 			}
 		}
 
@@ -48,8 +48,8 @@ func TestProbeHealthStatus(t *testing.T) {
 	})
 
 	t.Run("probe succeeds when no remoteproc support", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
-			switch command {
+		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
+			switch cmdStr {
 			case "true":
 				return testutil.CmdWithOutput("", 0)
 			default:

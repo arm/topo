@@ -37,13 +37,13 @@ func TestExtractArmFeatures(t *testing.T) {
 
 func TestProbeHardware(t *testing.T) {
 	t.Run("returns model name and features", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
+		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
-			case strings.Contains(command, "command -v"):
+			case strings.Contains(cmdStr, "command -v"):
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
-			case command == "lscpu --json":
+			case cmdStr == "lscpu --json":
 				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
-			case strings.Contains(command, "meminfo"):
+			case strings.Contains(cmdStr, "meminfo"):
 				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
 			default:
 				return testutil.CmdWithOutput("not found", 1)
@@ -62,7 +62,7 @@ func TestProbeHardware(t *testing.T) {
 	})
 
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
+		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("not found", 1)
 		}
 
@@ -73,13 +73,13 @@ func TestProbeHardware(t *testing.T) {
 	})
 
 	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-		mockExec := func(_ ssh.Host, command string, _ []byte, _ ...string) *exec.Cmd {
+		mockExec := func(_ ssh.Host, cmdStr string, _ []byte, _ ...string) *exec.Cmd {
 			switch {
-			case strings.Contains(command, "command -v"):
+			case strings.Contains(cmdStr, "command -v"):
 				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
-			case command == "lscpu --json":
+			case cmdStr == "lscpu --json":
 				return testutil.CmdWithOutput("not json", 0)
-			case strings.Contains(command, "meminfo"):
+			case strings.Contains(cmdStr, "meminfo"):
 				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
 			default:
 				return testutil.CmdWithOutput("not found", 1)

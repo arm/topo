@@ -66,9 +66,9 @@ func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
 	return connection
 }
 
-func (c *Connection) Run(command string) (string, error) {
+func (c *Connection) Run(cmdStr string) (string, error) {
 	if c.opts.WithLoginShell {
-		command = ssh.ShellCommand(command)
+		cmdStr = ssh.ShellCommand(cmdStr)
 	}
 
 	sshArgs := c.connectTimeoutArgs()
@@ -76,7 +76,7 @@ func (c *Connection) Run(command string) (string, error) {
 		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
 	}
 
-	cmd := c.command(c.SSHTarget, command, c.opts.WithStdin, sshArgs...)
+	cmd := c.command(c.SSHTarget, cmdStr, c.opts.WithStdin, sshArgs...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
@@ -92,12 +92,12 @@ func (c *Connection) Run(command string) (string, error) {
 	return stdoutBuf.String(), nil
 }
 
-func (c *Connection) DryRun(command string, output io.Writer) error {
+func (c *Connection) DryRun(cmdStr string, output io.Writer) error {
 	if c.opts.WithLoginShell {
-		command = ssh.ShellCommand(command)
+		cmdStr = ssh.ShellCommand(cmdStr)
 	}
 
-	cmd := c.command(c.SSHTarget, command, c.opts.WithStdin)
+	cmd := c.command(c.SSHTarget, cmdStr, c.opts.WithStdin)
 	_, err := fmt.Fprintln(output, commandpkg.String(cmd))
 	return err
 }

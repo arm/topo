@@ -14,9 +14,9 @@ import (
 )
 
 type sshTestCall struct {
-	target  ssh.Host
-	command string
-	args    []string
+	target ssh.Host
+	cmdStr string
+	args   []string
 }
 
 type mockResponse struct {
@@ -25,11 +25,11 @@ type mockResponse struct {
 }
 
 func newMockExec(responses map[string]mockResponse, calls *[]sshTestCall) func(ssh.Host, string, []byte, ...string) *exec.Cmd {
-	return func(target ssh.Host, command string, _ []byte, sshArgs ...string) *exec.Cmd {
+	return func(target ssh.Host, cmdStr string, _ []byte, sshArgs ...string) *exec.Cmd {
 		*calls = append(*calls, sshTestCall{
-			target:  target,
-			command: command,
-			args:    sshArgs,
+			target: target,
+			cmdStr: cmdStr,
+			args:   sshArgs,
 		})
 
 		mode := "default"
