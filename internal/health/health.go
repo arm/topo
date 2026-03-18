@@ -67,8 +67,6 @@ func CheckHost() HostReport {
 func CheckTarget(sshTarget string, acceptNewHostKeys bool) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		AcceptNewHostKeys: acceptNewHostKeys,
-		AuthProbeInput:    os.Stdin,
-		AuthProbeOutput:   os.Stdout,
 		Multiplex:         true,
 		WithLoginShell:    true,
 	}

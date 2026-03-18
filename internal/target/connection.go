@@ -44,8 +44,6 @@ type Connection struct {
 
 type ConnectionOptions struct {
 	AcceptNewHostKeys bool
-	AuthProbeInput    io.Reader
-	AuthProbeOutput   io.Writer
 	WithLoginShell    bool
 	WithStdin         []byte
 	Multiplex         bool
