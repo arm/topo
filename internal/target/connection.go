@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	commandpkg "github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -35,7 +35,7 @@ var (
 	}
 )
 
-type ExecSSH func(target ssh.Destination, command string, stdin []byte, sshArgs ...string) *exec.Cmd
+type ExecSSH func(target ssh.Destination, cmdStr string, stdin []byte, sshArgs ...string) *exec.Cmd
 
 type Connection struct {
 	SSHTarget ssh.Destination
@@ -67,9 +67,9 @@ func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
 	}
 }
 
-func (c *Connection) Run(command string) (string, error) {
+func (c *Connection) Run(cmdStr string) (string, error) {
 	if c.opts.WithLoginShell {
-		command = ssh.ShellCommand(command)
+		cmdStr = ssh.ShellCommand(cmdStr)
 	}
 
 	sshArgs := c.connectTimeoutArgs()
@@ -77,7 +77,7 @@ func (c *Connection) Run(command string) (string, error) {
 		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
 	}
 
-	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin, sshArgs...)
+	cmd := c.exec(c.SSHTarget, cmdStr, c.opts.WithStdin, sshArgs...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
@@ -93,18 +93,18 @@ func (c *Connection) Run(command string) (string, error) {
 	return stdoutBuf.String(), nil
 }
 
-func (c *Connection) DryRun(command string, output io.Writer) error {
+func (c *Connection) DryRun(cmdStr string, output io.Writer) error {
 	if c.opts.WithLoginShell {
-		command = ssh.ShellCommand(command)
+		cmdStr = ssh.ShellCommand(cmdStr)
 	}
 
-	cmd := c.exec(c.SSHTarget, command, c.opts.WithStdin)
-	_, err := fmt.Fprintln(output, commandpkg.String(cmd))
+	cmd := c.exec(c.SSHTarget, cmdStr, c.opts.WithStdin)
+	_, err := fmt.Fprintln(output, command.String(cmd))
 	return err
 }
 
 func (c *Connection) BinaryExists(bin string) error {
-	if err := commandpkg.ValidateBinaryName(bin); err != nil {
+	if err := command.ValidateBinaryName(bin); err != nil {
 		return err
 	}
 
