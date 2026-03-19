@@ -100,6 +100,22 @@ func (p *HardwareProbe) collectCPUInfo() ([]HostProcessor, error) {
 	return CreateCPUProfile(lscpuOutput.Lscpu)
 }
 
+func (p *HardwareProbe) collectMemInfo() (int64, error) {
+	key := "MemTotal"
+	path := "/proc/meminfo"
+
+	out, err := p.runner.Run(fmt.Sprintf("cat %s", path))
+	if err != nil {
+		return 0, err
+	}
+
+	value, err := FindKeyValueInString(key, out)
+	if err != nil {
+		return 0, fmt.Errorf("in checking %s", path)
+	}
+	return value, nil
+}
+
 var armCpuFeatures = map[string]string{
 	"asimd": "NEON",
 	"sve":   "SVE",
@@ -141,22 +157,6 @@ func FindKeyValueInString(key string, text string) (int64, error) {
 		}
 	}
 	return 0, fmt.Errorf("field %s not found", key)
-}
-
-func (p *HardwareProbe) collectMemInfo() (int64, error) {
-	key := "MemTotal"
-	path := "/proc/meminfo"
-
-	out, err := p.runner.Run(fmt.Sprintf("cat %s", path))
-	if err != nil {
-		return 0, err
-	}
-
-	value, err := FindKeyValueInString(key, out)
-	if err != nil {
-		return 0, fmt.Errorf("in checking %s", path)
-	}
-	return value, nil
 }
 
 func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, error) {
