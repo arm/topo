@@ -23,7 +23,7 @@ func TestModifySSHConfigWritesIncludeAndFragment(t *testing.T) {
 		}
 	}
 
-	targetHost := "user@example.com:2222"
+	targetHost := "ssh://user@example.com:2222"
 	targetFileName := "user_example_com_2222"
 	privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 

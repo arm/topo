@@ -82,8 +82,8 @@ func TestDestination(t *testing.T) {
 			tests := []string{
 				"user@localhost",
 				"user@127.0.0.1",
-				"localhost:2222",
-				"root@localhost:2222",
+				"ssh://localhost:2222",
+				"ssh://root@localhost:2222",
 			}
 
 			for _, input := range tests {

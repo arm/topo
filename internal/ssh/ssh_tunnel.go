@@ -69,8 +69,8 @@ func (s *SSHTunnelStart) Command() *exec.Cmd {
 	config := NewConfig(rawHost)
 	hostArg := config.ConnectionString()
 	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
-	if s.Port != "" && config.Port != "22" {
-		args = append(args, "-p", s.Port)
+	if config.Port != "" && config.Port != "22" {
+		args = append(args, "-p", config.Port)
 	}
 	if s.UseControlSockets {
 		args = append(args,
@@ -176,7 +176,7 @@ func (s *SSHTunnelStop) Command() *exec.Cmd {
 	config := NewConfig(rawHost)
 	hostArg := config.ConnectionString()
 	args := []string{"ssh"}
-	if config.Port != "" {
+	if config.Port != "" && config.Port != "22" {
 		args = append(args, "-p", config.Port)
 	}
 	args = append(args,
