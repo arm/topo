@@ -33,24 +33,30 @@ func TestProbe(t *testing.T) {
 			r.On("Run", "lscpu --json").Return(testutil.LsCpuOutputRaw, nil)
 			r.On("Run", "ls /sys/class/remoteproc").Return("", nil)
 			r.On("Run", "cat /proc/meminfo").Return("MemTotal:       16384000 kB", nil)
-
 			probe := target.NewProbe(r)
-			hw, err := probe.ProbeHardware()
+
+			got, err := probe.ProbeHardware()
 
 			require.NoError(t, err)
-			require.Len(t, hw.HostProcessor, 1)
-			assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].Model)
-			assert.Equal(t, 2, hw.HostProcessor[0].Cores)
-			assert.Equal(t, []string{"fp", "asimd"}, hw.HostProcessor[0].Features)
-			assert.Equal(t, int64(16384000), hw.TotalMemoryKb)
+			want := target.HardwareProfile{
+				HostProcessor: []target.HostProcessor{
+					{
+						Model:    "Cortex-A55",
+						Cores:    2,
+						Features: []string{"fp", "asimd"},
+					},
+				},
+				TotalMemoryKb: int64(16384000),
+			}
+			assert.Equal(t, want, got)
 			r.AssertExpectations(t)
 		})
 
 		t.Run("returns error when lscpu not found", func(t *testing.T) {
 			r := new(mockRunner)
 			r.On("BinaryExists", "lscpu").Return(fmt.Errorf("%q executable file not found in $PATH", "lscpu"))
-
 			probe := target.NewProbe(r)
+
 			_, err := probe.ProbeHardware()
 
 			assert.ErrorContains(t, err, `"lscpu" executable file not found in $PATH`)
@@ -61,8 +67,8 @@ func TestProbe(t *testing.T) {
 			r := new(mockRunner)
 			r.On("BinaryExists", "lscpu").Return(nil)
 			r.On("Run", "lscpu --json").Return("not json", nil)
-
 			probe := target.NewProbe(r)
+
 			_, err := probe.ProbeHardware()
 
 			assert.ErrorContains(t, err, "collecting CPU info")
