@@ -9,27 +9,6 @@ import (
 	"strings"
 )
 
-type Runner interface {
-	Run(command string) (string, error)
-	BinaryExists(bin string) error
-}
-
-type Probe struct {
-	runner Runner
-}
-
-func NewProbe(r Runner) Probe {
-	return Probe{runner: r}
-}
-
-var armCpuFeatures = map[string]string{
-	"asimd": "NEON",
-	"sve":   "SVE",
-	"sve2":  "SVE2",
-	"sme":   "SME",
-	"sme2":  "SME2",
-}
-
 type HostProcessor struct {
 	Model    string   `yaml:"model"`
 	Cores    int      `yaml:"cores"`
@@ -46,28 +25,17 @@ type HardwareProfile struct {
 	TotalMemoryKb int64           `yaml:"totalmemory_kb"`
 }
 
-type LscpuOutputField struct {
-	Field    string             `json:"field"`
-	Data     string             `json:"data"`
-	Children []LscpuOutputField `json:"children,omitempty"`
+type Runner interface {
+	Run(command string) (string, error)
+	BinaryExists(bin string) error
 }
 
-type lscpuOutput struct {
-	Lscpu []LscpuOutputField `json:"lscpu"`
+type Probe struct {
+	runner Runner
 }
 
-func (proc *HostProcessor) ExtractArmFeatures() []string {
-	if len(proc.Features) == 0 {
-		return nil
-	}
-
-	var res []string
-	for _, field := range proc.Features {
-		if name, ok := armCpuFeatures[field]; ok {
-			res = append(res, name)
-		}
-	}
-	return res
+func NewProbe(r Runner) Probe {
+	return Probe{runner: r}
 }
 
 func (p *Probe) ProbeHardware() (HardwareProfile, error) {
@@ -130,6 +98,38 @@ func (p *Probe) collectCPUInfo() ([]HostProcessor, error) {
 	}
 
 	return CreateCPUProfile(lscpuOutput.Lscpu)
+}
+
+var armCpuFeatures = map[string]string{
+	"asimd": "NEON",
+	"sve":   "SVE",
+	"sve2":  "SVE2",
+	"sme":   "SME",
+	"sme2":  "SME2",
+}
+
+type LscpuOutputField struct {
+	Field    string             `json:"field"`
+	Data     string             `json:"data"`
+	Children []LscpuOutputField `json:"children,omitempty"`
+}
+
+type lscpuOutput struct {
+	Lscpu []LscpuOutputField `json:"lscpu"`
+}
+
+func (proc *HostProcessor) ExtractArmFeatures() []string {
+	if len(proc.Features) == 0 {
+		return nil
+	}
+
+	var res []string
+	for _, field := range proc.Features {
+		if name, ok := armCpuFeatures[field]; ok {
+			res = append(res, name)
+		}
+	}
+	return res
 }
 
 func FindKeyValueInString(key string, text string) (int64, error) {
