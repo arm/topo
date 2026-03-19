@@ -66,11 +66,11 @@ func NewSSHTunnelStart(targetDest Destination, port string, useControlSockets bo
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
 	rawHost := string(s.TargetDest)
-	user, host, port := SplitUserHostPort(rawHost)
-	hostArg := formatSSHHost(rawHost, user, host)
+	config := NewConfig(rawHost)
+	hostArg := config.ConnectionString()
 	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
-	if port != "" {
-		args = append(args, "-p", port)
+	if s.Port != "" && config.Port != "22" {
+		args = append(args, "-p", s.Port)
 	}
 	if s.UseControlSockets {
 		args = append(args,
@@ -123,7 +123,7 @@ func NewCheckSSHTunnelSecurity(targetDest Destination, port string) *CheckSSHTun
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 	if !ct.TargetDest.IsLocalhost() {
-		host := resolveHost(string(ct.TargetDest))
+		host := resolveHostName(string(ct.TargetDest))
 		if host == "" {
 			return nil
 		}
@@ -173,11 +173,11 @@ func NewSSHTunnelStop(targetDest Destination) *SSHTunnelStop {
 
 func (s *SSHTunnelStop) Command() *exec.Cmd {
 	rawHost := string(s.TargetDest)
-	user, host, port := SplitUserHostPort(rawHost)
-	hostArg := formatSSHHost(rawHost, user, host)
+	config := NewConfig(rawHost)
+	hostArg := config.ConnectionString()
 	args := []string{"ssh"}
-	if port != "" {
-		args = append(args, "-p", port)
+	if config.Port != "" {
+		args = append(args, "-p", config.Port)
 	}
 	args = append(args,
 		"-S", ControlSocketPath(string(s.TargetDest)),
@@ -250,7 +250,7 @@ func (s *SSHTunnelProcessStop) DryRun(w io.Writer) error {
 	return nil
 }
 
-func resolveHost(raw string) string {
+func resolveHostName(raw string) string {
 	config := NewConfig(raw)
-	return config.host
+	return config.HostName
 }

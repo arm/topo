@@ -3,6 +3,7 @@ package ssh
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -10,9 +11,10 @@ import (
 )
 
 type Config struct {
-	host           string
-	user           string
-	port           string
+	HostName       string
+	Host           string
+	User           string
+	Port           string
 	connectTimeout time.Duration
 }
 
@@ -22,6 +24,10 @@ func NewConfig(destination string) Config {
 		return Config{}
 	}
 	return NewConfigFromBytes(output)
+}
+
+func (c Config) ConnectionString() string {
+	return fmt.Sprintf("%s@%s", c.User, c.Host)
 }
 
 func NewConfigFromBytes(data []byte) Config {
@@ -34,11 +40,13 @@ func NewConfigFromBytes(data []byte) Config {
 		}
 		switch strings.ToLower(fields[0]) {
 		case "hostname":
-			config.host = fields[1]
+			config.HostName = fields[1]
+		case "host":
+			config.Host = fields[1]
 		case "user":
-			config.user = fields[1]
+			config.User = fields[1]
 		case "port":
-			config.port = fields[1]
+			config.Port = fields[1]
 		case "connecttimeout":
 			if secs, err := strconv.Atoi(fields[1]); err == nil {
 				config.connectTimeout = time.Duration(secs) * time.Second

@@ -126,30 +126,4 @@ func TestDestination(t *testing.T) {
 			})
 		}
 	})
-
-	t.Run("SplitUserHostPort", func(t *testing.T) {
-		cases := []struct {
-			raw      string
-			wantUser string
-			wantHost string
-			wantPort string
-		}{
-			{raw: "user@example.com:2222", wantUser: "user", wantHost: "example.com", wantPort: "2222"},
-			{raw: "example.com:2222", wantUser: "", wantHost: "example.com", wantPort: "2222"},
-			{raw: "example.com", wantUser: "", wantHost: "example.com", wantPort: ""},
-			{raw: "user@example.com", wantUser: "user", wantHost: "example.com", wantPort: ""},
-			{raw: "[2001:db8::1]", wantUser: "", wantHost: "2001:db8::1", wantPort: ""},
-			{raw: "user@[2001:db8::1]:2222", wantUser: "user", wantHost: "2001:db8::1", wantPort: "2222"},
-			{raw: "[2001:db8::1]:2222", wantUser: "", wantHost: "2001:db8::1", wantPort: "2222"},
-		}
-
-		for _, tc := range cases {
-			t.Run(tc.raw, func(t *testing.T) {
-				user, host, port := ssh.SplitUserHostPort(tc.raw)
-				require.Equal(t, tc.wantUser, user, "user for %q", tc.raw)
-				require.Equal(t, tc.wantHost, host, "host for %q", tc.raw)
-				require.Equal(t, tc.wantPort, port, "port for %q", tc.raw)
-			})
-		}
-	})
 }

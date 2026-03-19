@@ -100,22 +100,19 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 }
 
 func buildSSHConfigFragment(targetHost string, privKeyPath string) string {
-	user, host, port := ssh.SplitUserHostPort(targetHost)
-	hostAlias := host
-	if hostAlias == "" {
-		hostAlias = targetHost
-	}
+	config := ssh.NewConfig(targetHost)
+	hostAlias := config.Host
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "Host %s\n", hostAlias)
-	if host != "" && (strings.Contains(targetHost, "@") || strings.Contains(targetHost, ":")) {
-		fmt.Fprintf(&b, "  HostName %s\n", host)
+	if config.Host != "" && (strings.Contains(targetHost, "@") || strings.Contains(targetHost, ":")) {
+		fmt.Fprintf(&b, "  HostName %s\n", config.Host)
 	}
-	if user != "" {
-		fmt.Fprintf(&b, "  User %s\n", user)
+	if config.User != "" {
+		fmt.Fprintf(&b, "  User %s\n", config.User)
 	}
-	if port != "" {
-		fmt.Fprintf(&b, "  Port %s\n", port)
+	if config.Port != "" {
+		fmt.Fprintf(&b, "  Port %s\n", config.Port)
 	}
 
 	// needs to be this way even on Windows to work with ssh config parsing, which generally accepts forward slashes
