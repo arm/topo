@@ -254,16 +254,3 @@ func resolveHost(raw string) string {
 	config := NewConfig(raw)
 	return config.host
 }
-
-func isExplicitHost(raw string) bool {
-	if strings.HasPrefix(raw, "ssh://") {
-		return true
-	}
-	if strings.Contains(raw, "@") || strings.Contains(raw, ":") {
-		return true
-	}
-	if strings.HasPrefix(raw, "[") {
-		return true
-	}
-	return false
-}
