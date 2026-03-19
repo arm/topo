@@ -251,11 +251,6 @@ func (s *SSHTunnelProcessStop) DryRun(w io.Writer) error {
 }
 
 func resolveHost(raw string) string {
-	if raw == "" || isExplicitHost(raw) {
-		_, host, _ := SplitUserHostPort(raw)
-		return host
-	}
-
 	config := NewConfig(raw)
 	return config.host
 }
