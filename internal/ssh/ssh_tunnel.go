@@ -21,20 +21,6 @@ func ControlSocketPath(targetHost string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
 }
 
-func formatSSHHost(raw string, user string, host string) string {
-	if host == "" {
-		return raw
-	}
-	hostPart := host
-	if strings.Contains(hostPart, ":") {
-		hostPart = "[" + hostPart + "]"
-	}
-	if user == "" {
-		return hostPart
-	}
-	return user + "@" + hostPart
-}
-
 func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	start := NewSSHTunnelStart(targetDest, port, useControlSockets)
 	securityCheck := NewCheckSSHTunnelSecurity(targetDest, port)
