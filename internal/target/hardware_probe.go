@@ -30,15 +30,15 @@ type Runner interface {
 	BinaryExists(bin string) error
 }
 
-type Probe struct {
+type HardwareProbe struct {
 	runner Runner
 }
 
-func NewProbe(r Runner) Probe {
-	return Probe{runner: r}
+func NewHardwareProbe(r Runner) HardwareProbe {
+	return HardwareProbe{runner: r}
 }
 
-func (p *Probe) ProbeHardware() (HardwareProfile, error) {
+func (p *HardwareProbe) Probe() (HardwareProfile, error) {
 	var hp HardwareProfile
 
 	cpuProfile, err := p.collectCPUInfo()
@@ -62,7 +62,7 @@ func (p *Probe) ProbeHardware() (HardwareProfile, error) {
 	return hp, nil
 }
 
-func (p *Probe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
+func (p *HardwareProbe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
 	out, err := p.runner.Run("ls /sys/class/remoteproc")
 	if err != nil || out == "" {
@@ -81,7 +81,7 @@ func (p *Probe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 	return remoteProcs, nil
 }
 
-func (p *Probe) collectCPUInfo() ([]HostProcessor, error) {
+func (p *HardwareProbe) collectCPUInfo() ([]HostProcessor, error) {
 	if err := p.runner.BinaryExists("lscpu"); err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func FindKeyValueInString(key string, text string) (int64, error) {
 	return 0, fmt.Errorf("field %s not found", key)
 }
 
-func (p *Probe) collectMemInfo() (int64, error) {
+func (p *HardwareProbe) collectMemInfo() (int64, error) {
 	key := "MemTotal"
 	path := "/proc/meminfo"
 
