@@ -38,7 +38,8 @@ var templatesCmd = &cobra.Command{
 			resolvedTarget, exists := lookupTarget(cmd)
 			if exists {
 				conn := target.NewConnection(resolvedTarget, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
-				hwProfile, err := conn.ProbeHardware()
+				probe := target.NewProbe(&conn)
+				hwProfile, err := probe.ProbeHardware()
 				if err != nil {
 					return err
 				}

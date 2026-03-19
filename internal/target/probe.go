@@ -9,6 +9,19 @@ import (
 	"strings"
 )
 
+type Runner interface {
+	Run(command string) (string, error)
+	BinaryExists(bin string) error
+}
+
+type Probe struct {
+	runner Runner
+}
+
+func NewProbe(r Runner) Probe {
+	return Probe{runner: r}
+}
+
 var armCpuFeatures = map[string]string{
 	"asimd": "NEON",
 	"sve":   "SVE",
@@ -57,22 +70,22 @@ func (proc *HostProcessor) ExtractArmFeatures() []string {
 	return res
 }
 
-func (c *Connection) ProbeHardware() (HardwareProfile, error) {
+func (p *Probe) ProbeHardware() (HardwareProfile, error) {
 	var hp HardwareProfile
 
-	cpuProfile, err := c.collectCPUInfo()
+	cpuProfile, err := p.collectCPUInfo()
 	if err != nil {
 		return hp, fmt.Errorf("collecting CPU info: %w", err)
 	}
 	hp.HostProcessor = cpuProfile
 
-	cpus, err := c.ProbeRemoteproc()
+	cpus, err := p.ProbeRemoteproc()
 	if err != nil {
 		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
 	}
 	hp.RemoteCPU = cpus
 
-	memTotal, err := c.collectMemInfo()
+	memTotal, err := p.collectMemInfo()
 	if err != nil {
 		return hp, fmt.Errorf("collecting memory info: %w", err)
 	}
@@ -81,14 +94,14 @@ func (c *Connection) ProbeHardware() (HardwareProfile, error) {
 	return hp, nil
 }
 
-func (c *Connection) ProbeRemoteproc() ([]RemoteprocCPU, error) {
+func (p *Probe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
-	out, err := c.Run("ls /sys/class/remoteproc")
+	out, err := p.runner.Run("ls /sys/class/remoteproc")
 	if err != nil || out == "" {
 		return remoteProcs, nil
 	}
 
-	out, err = c.Run("cat /sys/class/remoteproc/*/name")
+	out, err = p.runner.Run("cat /sys/class/remoteproc/*/name")
 	if err != nil {
 		return remoteProcs, err
 	}
@@ -100,12 +113,12 @@ func (c *Connection) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 	return remoteProcs, nil
 }
 
-func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
-	if err := c.BinaryExists("lscpu"); err != nil {
+func (p *Probe) collectCPUInfo() ([]HostProcessor, error) {
+	if err := p.runner.BinaryExists("lscpu"); err != nil {
 		return nil, err
 	}
 
-	out, err := c.Run("lscpu --json")
+	out, err := p.runner.Run("lscpu --json")
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +143,11 @@ func FindKeyValueInString(key string, text string) (int64, error) {
 	return 0, fmt.Errorf("field %s not found", key)
 }
 
-func (c *Connection) collectMemInfo() (int64, error) {
+func (p *Probe) collectMemInfo() (int64, error) {
 	key := "MemTotal"
 	path := "/proc/meminfo"
 
-	out, err := c.Run(fmt.Sprintf("cat %s", path))
+	out, err := p.runner.Run(fmt.Sprintf("cat %s", path))
 	if err != nil {
 		return 0, err
 	}
