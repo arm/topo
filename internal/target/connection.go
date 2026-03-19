@@ -182,11 +182,7 @@ func (c *Connection) connectTimeoutArgs() []string {
 // All SSH authentication probes run the command "true" to check if the authentication method works.
 // All sshArgs should be hardcoded SSH options, not user-provided arguments.
 func (c *Connection) runSSHAuthenticationProbe(sshArgs []string) error {
-<<<<<<< HEAD
-	cmd := c.exec(c.SSHTarget, "true", nil, slices.Concat(c.connectTimeoutArgs(), sshArgs)...)
-=======
-	cmd := c.command(c.SSHTarget, "true", nil, sshArgs...)
->>>>>>> 629605e (Align naming of `exec.Command` producer with Go's stdlib)
+	cmd := c.command(c.SSHTarget, "true", nil, slices.Concat(c.connectTimeoutArgs(), sshArgs)...)
 	stdoutBytes, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil
