@@ -12,15 +12,6 @@ import (
 
 const TargetDescriptionFilename = "target-description.yaml"
 
-func GenerateTargetDescription(conn target.Connection) (target.HardwareProfile, error) {
-	hwProfile, err := conn.ProbeHardware()
-	if err != nil {
-		return target.HardwareProfile{}, err
-	}
-
-	return hwProfile, nil
-}
-
 func WriteTargetDescriptionToFile(dir string, report target.HardwareProfile) (string, error) {
 	outputFile := filepath.Join(dir, TargetDescriptionFilename)
 	f, err := os.Create(outputFile)

@@ -25,7 +25,7 @@ var describeCmd = &cobra.Command{
 		}
 
 		conn := target.NewConnection(sshTarget, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
-		report, err := describe.GenerateTargetDescription(conn)
+		hwProfile, err := conn.ProbeHardware()
 		if err != nil {
 			return err
 		}
@@ -35,7 +35,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		outputPath, err := describe.WriteTargetDescriptionToFile(workDir, report)
+		outputPath, err := describe.WriteTargetDescriptionToFile(workDir, hwProfile)
 		if err != nil {
 			return err
 		}

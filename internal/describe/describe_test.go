@@ -2,67 +2,15 @@ package describe_test
 
 import (
 	"os"
-	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/target"
-	"github.com/arm/topo/internal/testutil"
 
-	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/assert/yaml"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGenerate(t *testing.T) {
-	t.Run("returns hardware profile for given target", func(t *testing.T) {
-		mockExecSSH := func(target ssh.Destination, command string, _ []byte, sshArgs ...string) *exec.Cmd {
-			if command == "lscpu --json" {
-				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
-			}
-			if strings.Contains(command, "remoteproc") {
-				return testutil.CmdWithOutput("remoteproc1 remoteproc2", 0)
-			}
-			if strings.Contains(command, "meminfo") {
-				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
-			}
-			return testutil.CmdWithOutput("", 0)
-		}
-		expected := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
-				{
-					Model:    "Cortex-A55",
-					Features: []string{"fp", "asimd"},
-					Cores:    2,
-				},
-			},
-			RemoteCPU: []target.RemoteprocCPU{
-				{Name: "remoteproc1"},
-				{Name: "remoteproc2"},
-			},
-			TotalMemoryKb: 16384000,
-		}
-
-		conn := target.NewConnection("test", target.ConnectionOptions{WithMockExec: mockExecSSH})
-		report, err := describe.GenerateTargetDescription(conn)
-
-		require.NoError(t, err)
-		assert.Equal(t, expected, report)
-	})
-
-	t.Run("fails if ssh commands cannot be executed", func(t *testing.T) {
-		mockExecSSH := func(target ssh.Destination, command string, _ []byte, sshArgs ...string) *exec.Cmd {
-			return testutil.CmdWithOutput(assert.AnError.Error(), 1)
-		}
-
-		conn := target.NewConnection("test", target.ConnectionOptions{WithMockExec: mockExecSSH})
-		_, err := describe.GenerateTargetDescription(conn)
-
-		assert.Error(t, err)
-	})
-}
 
 func TestWriteTargetDescriptionFile(t *testing.T) {
 	t.Run("writes full target to description to given directory", func(t *testing.T) {
