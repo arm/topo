@@ -5,35 +5,21 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestBinaryRegex(t *testing.T) {
-	t.Run("binary regex fails an incorrect binary name", func(t *testing.T) {
-		got := "bin ary"
-
-		assert.False(t, ssh.BinaryRegex.MatchString(got))
-	})
-
-	t.Run("binary regex passes a correct binary name", func(t *testing.T) {
-		got := "binary"
-
-		assert.True(t, ssh.BinaryRegex.MatchString(got))
-	})
-}
 
 func TestDependencyFormat(t *testing.T) {
 	t.Run("host dependencies are of the correct format", func(t *testing.T) {
 		for _, dep := range health.HostRequiredDependencies {
-			assert.True(t, ssh.BinaryRegex.MatchString(dep.Binary))
+			assert.NoError(t, command.ValidateBinaryName(dep.Binary))
 		}
 	})
 
 	t.Run("target dependencies are of the correct format", func(t *testing.T) {
 		for _, dep := range health.TargetRequiredDependencies {
-			assert.True(t, ssh.BinaryRegex.MatchString(dep.Binary))
+			assert.NoError(t, command.ValidateBinaryName(dep.Binary))
 		}
 	})
 

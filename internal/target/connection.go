@@ -104,7 +104,7 @@ func (c *Connection) DryRun(command string, output io.Writer) error {
 }
 
 func (c *Connection) BinaryExists(bin string) error {
-	if err := ssh.ValidateBinaryName(bin); err != nil {
+	if err := commandpkg.ValidateBinaryName(bin); err != nil {
 		return err
 	}
 
