@@ -60,11 +60,15 @@ func ModifySSHConfig(targetHost string, privKeyPath string, targetSlug string, d
 		return errMain
 	}
 
-	configContent := buildSSHConfigFragment(targetHost, privKeyPath)
-	mergedConfigContent := mergeOwnedSSHConfigDirectives(existingTopoContent, configContent, privKeyPath)
+	var fragmentToWrite []byte
+	if len(existingTopoContent) == 0 {
+		fragmentToWrite = buildSSHConfigFragment(targetHost, privKeyPath)
+	} else {
+		fragmentToWrite = mergeOwnedSSHConfigDirectives(existingTopoContent, privKeyPath)
+	}
 
-	if string(existingTopoContent) != mergedConfigContent {
-		if err := os.WriteFile(sshTopoConfigPath, []byte(mergedConfigContent), 0o600); err != nil {
+	if !bytes.Equal(existingTopoContent, fragmentToWrite) {
+		if err := os.WriteFile(sshTopoConfigPath, fragmentToWrite, 0o600); err != nil {
 			return fmt.Errorf("failed to write %s: %w", sshTopoConfigPath, err)
 		}
 	}
@@ -101,7 +105,7 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 	return false
 }
 
-func buildSSHConfigFragment(targetHost string, privKeyPath string) string {
+func buildSSHConfigFragment(targetHost string, privKeyPath string) []byte {
 	user, host, port := ssh.SplitUserHostPort(targetHost)
 	hostAlias := host
 	if hostAlias == "" {
@@ -123,14 +127,10 @@ func buildSSHConfigFragment(targetHost string, privKeyPath string) string {
 	// needs to be this way even on Windows to work with ssh config parsing, which generally accepts forward slashes
 	fmt.Fprintf(&b, "  IdentityFile %s\n", filepath.ToSlash(privKeyPath))
 	b.WriteString("  IdentitiesOnly yes\n")
-	return b.String()
+	return []byte(b.String())
 }
 
-func mergeOwnedSSHConfigDirectives(existing []byte, fallbackConfigContent string, privKeyPath string) string {
-	if len(existing) == 0 {
-		return fallbackConfigContent
-	}
-
+func mergeOwnedSSHConfigDirectives(existing []byte, privKeyPath string) []byte {
 	identityLine := []byte(fmt.Sprintf("  IdentityFile %s", filepath.ToSlash(privKeyPath)))
 	identitiesOnlyLine := []byte("  IdentitiesOnly yes")
 	var merged [][]byte
@@ -149,6 +149,5 @@ func mergeOwnedSSHConfigDirectives(existing []byte, fallbackConfigContent string
 	}
 
 	merged = append(merged, identityLine, identitiesOnlyLine)
-
-	return string(bytes.Join(merged, []byte("\n"))) + "\n"
+	return append(bytes.Join(merged, []byte("\n")), '\n')
 }
