@@ -95,3 +95,11 @@ func CmdWithOutput(output string, exitCode int) *exec.Cmd {
 	// #nosec G204 -- ignore as its a test helper
 	return exec.Command("sh", "-c", fmt.Sprintf("printf %%s \"$1\"; exit %d", exitCode), "sh", output)
 }
+
+func AssertFileContents(t *testing.T, wantContents string, path string) {
+	t.Helper()
+
+	got, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, wantContents, string(got))
+}
