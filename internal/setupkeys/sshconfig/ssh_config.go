@@ -60,11 +60,11 @@ func ModifySSHConfig(targetHost string, privKeyPath string, targetSlug string, d
 		return errMain
 	}
 
-	configBody := buildSSHConfigFragment(targetHost, privKeyPath)
-	mergedConfigBody := mergeOwnedSSHConfigDirectives(existingTopoContent, configBody, privKeyPath)
+	configContent := buildSSHConfigFragment(targetHost, privKeyPath)
+	mergedConfigContent := mergeOwnedSSHConfigDirectives(existingTopoContent, configContent, privKeyPath)
 
-	if string(existingTopoContent) != mergedConfigBody {
-		if err := os.WriteFile(sshTopoConfigPath, []byte(mergedConfigBody), 0o600); err != nil {
+	if string(existingTopoContent) != mergedConfigContent {
+		if err := os.WriteFile(sshTopoConfigPath, []byte(mergedConfigContent), 0o600); err != nil {
 			return fmt.Errorf("failed to write %s: %w", sshTopoConfigPath, err)
 		}
 	}
@@ -126,9 +126,9 @@ func buildSSHConfigFragment(targetHost string, privKeyPath string) string {
 	return b.String()
 }
 
-func mergeOwnedSSHConfigDirectives(existing []byte, fallbackConfigBody string, privKeyPath string) string {
+func mergeOwnedSSHConfigDirectives(existing []byte, fallbackConfigContent string, privKeyPath string) string {
 	if len(existing) == 0 {
-		return fallbackConfigBody
+		return fallbackConfigContent
 	}
 
 	identityLine := []byte(fmt.Sprintf("  IdentityFile %s", filepath.ToSlash(privKeyPath)))
