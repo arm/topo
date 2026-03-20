@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +40,8 @@ var healthCmd = &cobra.Command{
 		}
 
 		if sshTarget, ok := lookupTarget(cmd); ok {
-			targetReport, err := health.CheckTarget(sshTarget, acceptNewHostKeys, sshConnectTimeout)
+			cfg := ssh.NewConfig(sshTarget)
+			targetReport, err := health.CheckTarget(cfg.Destination, acceptNewHostKeys, sshConnectTimeout)
 			if err != nil {
 				if spinner != nil {
 					spinner.Stop()

@@ -54,14 +54,15 @@ type ConnectionOptions struct {
 
 var ErrPasswordAuthentication = errors.New("key-based SSH authentication is not setup")
 
-func NewConnection(sshTarget string, opts ConnectionOptions) Connection {
+func NewConnection(dest ssh.Destination, opts ConnectionOptions) Connection {
 	execFn := ssh.ExecCmd
 	if opts.WithMockExec != nil {
 		execFn = opts.WithMockExec
 	}
-	opts.ConnectTimeout = ssh.NewConfig(sshTarget).ConnectTimeout(opts.ConnectTimeout)
+	// We know this is sub-optimal, but acceptable tradeoff for now (refactor in progress)
+	opts.ConnectTimeout = ssh.NewConfig(dest.String()).ConnectTimeout(opts.ConnectTimeout)
 	return Connection{
-		SSHTarget: ssh.Destination(sshTarget),
+		SSHTarget: dest,
 		exec:      execFn,
 		opts:      opts,
 	}
@@ -88,7 +89,7 @@ func (c *Connection) Run(command string) (string, error) {
 		if classified := ssh.ClassifyStderr(stderr); classified != nil {
 			err = classified
 		}
-		return stdoutBuf.String() + stderr, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", string(c.SSHTarget), err, stderr)
+		return stdoutBuf.String() + stderr, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", c.SSHTarget, err, stderr)
 	}
 	return stdoutBuf.String(), nil
 }

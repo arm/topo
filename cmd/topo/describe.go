@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +25,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		conn := target.NewConnection(sshTarget, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+		conn := target.NewConnection(ssh.NewConfig(sshTarget).Destination, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
 		probe := target.NewHardwareProbe(&conn)
 		hwProfile, err := probe.Probe()
 		if err != nil {

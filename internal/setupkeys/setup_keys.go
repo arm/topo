@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
+	"github.com/arm/topo/internal/ssh"
 )
 
 type KeyType string
@@ -17,7 +18,7 @@ const (
 	KeyTypeRSA     KeyType = "rsa"
 )
 
-func NewKeySetup(target string, privKeyPath string, keyType KeyType) (operation.Sequence, error) {
+func NewKeySetup(target ssh.Destination, privKeyPath string, keyType KeyType) (operation.Sequence, error) {
 	ops := []operation.Operation{
 		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", target, string(keyType), privKeyPath, sshkeygen.SSHKeyGenOptions{}),
 		pubkeytransfer.NewPubKeyTransfer("Transfer public key to target and set it as an authorized key", target, privKeyPath, pubkeytransfer.PubKeyTransferOptions{}),

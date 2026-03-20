@@ -16,7 +16,13 @@ port 2222
 
 		got := NewConfigFromBytes(input)
 
-		want := Config{host: "springfield.nuclear.gov", user: "homer", port: "2222"}
+		want := Config{
+			Destination: Destination{
+				Host: "springfield.nuclear.gov",
+				User: "homer",
+				Port: "2222",
+			},
+		}
 		assert.Equal(t, want, got)
 	})
 
@@ -28,7 +34,12 @@ user homer
 
 		got := NewConfigFromBytes(input)
 
-		want := Config{host: "springfield.nuclear.gov", user: "homer"}
+		want := Config{
+			Destination: Destination{
+				Host: "springfield.nuclear.gov",
+				User: "homer",
+			},
+		}
 		assert.Equal(t, want, got)
 	})
 
@@ -47,7 +58,13 @@ Port 22
 
 		got := NewConfigFromBytes(input)
 
-		want := Config{host: "kwik.e.mart", user: "apu", port: "22"}
+		want := Config{
+			Destination: Destination{
+				Host: "kwik.e.mart",
+				User: "apu",
+				Port: "22",
+			},
+		}
 		assert.Equal(t, want, got)
 	})
 

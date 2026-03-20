@@ -7,35 +7,58 @@ import (
 	"unicode"
 )
 
-type Destination string
-
-func MustNewDestination(raw string) Destination {
-	return Destination(raw)
+type Destination struct {
+	User string
+	Host string
+	Port string
 }
 
-const PlainLocalhost = Destination("localhost")
+func (d Destination) String() string {
+	var builder strings.Builder
+	fmt.Fprint(&builder, "ssh://")
+	if d.User != "" {
+		fmt.Fprint(&builder, d.User)
+		fmt.Fprint(&builder, "@")
+	}
+	fmt.Fprint(&builder, d.Host)
+	if d.Port != "" {
+		fmt.Fprint(&builder, ":")
+		fmt.Fprint(&builder, d.Port)
+	}
+	return builder.String()
+}
+
+func MustNewDestination(raw string) Destination {
+	user, host, port := SplitUserHostPort(raw)
+	return Destination{
+		User: user,
+		Host: host,
+		Port: port,
+	}
+}
+
+var PlainLocalhost = MustNewDestination("localhost")
 
 func (d Destination) IsPlainLocalhost() bool {
-	return strings.EqualFold(string(d), "localhost") || d == "127.0.0.1"
+	if d.Port != "" || d.User != "" {
+		return false
+	}
+	return d.IsLocalhost()
 }
 
 func (d Destination) IsLocalhost() bool {
-	if d.IsPlainLocalhost() {
-		return true
-	}
-	_, host, _ := SplitUserHostPort(string(d))
-	return Destination(host).IsPlainLocalhost()
+	return strings.EqualFold(d.Host, "localhost") || d.Host == "127.0.0.1"
 }
 
 func (d Destination) AsURI() string {
-	const scheme = "ssh://"
-	withoutScheme := strings.TrimPrefix(string(d), scheme)
-	return fmt.Sprintf("ssh://%s", withoutScheme)
+	return d.String()
 }
 
 func (d Destination) Slugify() string {
 	var b strings.Builder
-	for _, r := range d {
+	uri := d.AsURI()
+	withoutScheme := strings.TrimPrefix(uri, "ssh://")
+	for _, r := range withoutScheme {
 		toWrite := '_'
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' {
 			toWrite = r

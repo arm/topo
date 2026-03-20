@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/arm/topo/internal/ssh"
 	target "github.com/arm/topo/internal/target"
 )
 
@@ -12,7 +13,7 @@ const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat 
 
 type PubKeyTransfer struct {
 	description string
-	targetHost  string
+	targetHost  ssh.Destination
 	pubKeyPath  string
 	opts        PubKeyTransferOptions
 }
@@ -21,7 +22,7 @@ type PubKeyTransferOptions struct {
 	WithMockExec target.ExecSSH
 }
 
-func NewPubKeyTransfer(description string, targetHost string, privKeyPath string, opts PubKeyTransferOptions) *PubKeyTransfer {
+func NewPubKeyTransfer(description string, targetHost ssh.Destination, privKeyPath string, opts PubKeyTransferOptions) *PubKeyTransfer {
 	return &PubKeyTransfer{description: description, targetHost: targetHost, pubKeyPath: privKeyPath + ".pub", opts: opts}
 }
 

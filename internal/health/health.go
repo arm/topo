@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
 
@@ -64,14 +65,14 @@ func CheckHost() HostReport {
 	return GenerateHostReport(dependencyStatuses)
 }
 
-func CheckTarget(sshTarget string, acceptNewHostKeys bool, connectTimeout time.Duration) (TargetReport, error) {
+func CheckTarget(dest ssh.Destination, acceptNewHostKeys bool, connectTimeout time.Duration) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		AcceptNewHostKeys: acceptNewHostKeys,
 		Multiplex:         true,
 		WithLoginShell:    true,
 		ConnectTimeout:    connectTimeout,
 	}
-	conn := target.NewConnection(sshTarget, opts)
+	conn := target.NewConnection(dest, opts)
 	targetStatus := ProbeHealthStatus(conn)
 	return GenerateTargetReport(targetStatus), nil
 }

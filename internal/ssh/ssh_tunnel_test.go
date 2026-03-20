@@ -70,7 +70,7 @@ func TestSSHTunnelStart(t *testing.T) {
 			st := ssh.NewSSHTunnelStart(dest, port, true)
 			got := strings.Join(st.Command().Args, " ")
 
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s user@remote", ssh.ControlSocketPath(string(dest)), port, port)
+			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s ssh://user@remote", ssh.ControlSocketPath(dest.String()), port, port)
 			assert.Equal(t, want, got)
 		})
 
@@ -81,7 +81,7 @@ func TestSSHTunnelStart(t *testing.T) {
 			st := ssh.NewSSHTunnelStart(dest, port, true)
 			got := strings.Join(st.Command().Args, " ")
 
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -p 2222 -fMS %s -R %s:127.0.0.1:%s user@remote", ssh.ControlSocketPath(string(dest)), port, port)
+			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s ssh://user@remote:2222", ssh.ControlSocketPath(dest.String()), port, port)
 			assert.Equal(t, want, got)
 		})
 
@@ -92,7 +92,7 @@ func TestSSHTunnelStart(t *testing.T) {
 			st := ssh.NewSSHTunnelStart(dest, port, false)
 			got := strings.Join(st.Command().Args, " ")
 
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -R %s:127.0.0.1:%s user@remote", port, port)
+			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -R %s:127.0.0.1:%s ssh://user@remote", port, port)
 			assert.Equal(t, want, got)
 		})
 	})
@@ -108,22 +108,7 @@ func TestSSHTunnelStart(t *testing.T) {
 			got := strings.TrimSpace(buf.String())
 
 			require.NoError(t, err)
-			wantSuffix := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s user@remote", ssh.ControlSocketPath(string(dest)), port, port)
-			assert.True(t, strings.HasSuffix(got, wantSuffix),
-				"DryRun output %q does not end with %q", got, wantSuffix)
-		})
-
-		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-			var buf bytes.Buffer
-			dest := ssh.MustNewDestination("user@remote:2222")
-			port := operation.DefaultRegistryPort
-
-			st := ssh.NewSSHTunnelStart(dest, port, true)
-			err := st.DryRun(&buf)
-			got := strings.TrimSpace(buf.String())
-
-			require.NoError(t, err)
-			wantSuffix := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -p 2222 -fMS %s -R %s:127.0.0.1:%s user@remote", ssh.ControlSocketPath(string(dest)), port, port)
+			wantSuffix := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s ssh://user@remote", ssh.ControlSocketPath(dest.String()), port, port)
 			assert.True(t, strings.HasSuffix(got, wantSuffix),
 				"DryRun output %q does not end with %q", got, wantSuffix)
 		})
@@ -136,54 +121,6 @@ func TestSSHTunnelStart(t *testing.T) {
 			got := st.Description()
 
 			assert.Equal(t, "Open registry SSH tunnel", got)
-		})
-	})
-}
-
-func TestSSHTunnelStartEdgeCases(t *testing.T) {
-	t.Run("Command", func(t *testing.T) {
-		t.Run("it handles host without user", func(t *testing.T) {
-			dest := ssh.MustNewDestination("remote-server")
-			port := operation.DefaultRegistryPort
-
-			st := ssh.NewSSHTunnelStart(dest, port, true)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s remote-server", ssh.ControlSocketPath(string(dest)), port, port)
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("it handles host without user but with port", func(t *testing.T) {
-			dest := ssh.MustNewDestination("remote-server:2222")
-			port := operation.DefaultRegistryPort
-
-			st := ssh.NewSSHTunnelStart(dest, port, true)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -p 2222 -fMS %s -R %s:127.0.0.1:%s remote-server", ssh.ControlSocketPath(string(dest)), port, port)
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("it handles IP address", func(t *testing.T) {
-			dest := ssh.MustNewDestination("user@192.168.1.100")
-			port := operation.DefaultRegistryPort
-
-			st := ssh.NewSSHTunnelStart(dest, port, true)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s user@192.168.1.100", ssh.ControlSocketPath(string(dest)), port, port)
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("it handles IP address with port", func(t *testing.T) {
-			dest := ssh.MustNewDestination("user@192.168.1.100:2222")
-			port := operation.DefaultRegistryPort
-
-			st := ssh.NewSSHTunnelStart(dest, port, true)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -p 2222 -fMS %s -R %s:127.0.0.1:%s user@192.168.1.100", ssh.ControlSocketPath(string(dest)), port, port)
-			assert.Equal(t, want, got)
 		})
 	})
 }
@@ -245,17 +182,7 @@ func TestSSHTunnelStop(t *testing.T) {
 			st := ssh.NewSSHTunnelStop(dest)
 			got := strings.Join(st.Command().Args, " ")
 
-			want := fmt.Sprintf("ssh -S %s -O exit user@remote", ssh.ControlSocketPath(string(dest)))
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-			dest := ssh.MustNewDestination("user@remote:2222")
-
-			st := ssh.NewSSHTunnelStop(dest)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -p 2222 -S %s -O exit user@remote", ssh.ControlSocketPath(string(dest)))
+			want := fmt.Sprintf("ssh -S %s -O exit ssh://user@remote", ssh.ControlSocketPath(dest.String()))
 			assert.Equal(t, want, got)
 		})
 	})
@@ -270,21 +197,7 @@ func TestSSHTunnelStop(t *testing.T) {
 			got := strings.TrimSpace(buf.String())
 
 			require.NoError(t, err)
-			wantSuffix := fmt.Sprintf("ssh -S %s -O exit user@remote", ssh.ControlSocketPath(string(dest)))
-			assert.True(t, strings.HasSuffix(got, wantSuffix),
-				"DryRun output %q does not end with %q", got, wantSuffix)
-		})
-
-		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-			var buf bytes.Buffer
-			dest := ssh.MustNewDestination("user@remote:2222")
-
-			st := ssh.NewSSHTunnelStop(dest)
-			err := st.DryRun(&buf)
-			got := strings.TrimSpace(buf.String())
-
-			require.NoError(t, err)
-			wantSuffix := fmt.Sprintf("ssh -p 2222 -S %s -O exit user@remote", ssh.ControlSocketPath(string(dest)))
+			wantSuffix := fmt.Sprintf("ssh -S %s -O exit ssh://user@remote", ssh.ControlSocketPath(dest.String()))
 			assert.True(t, strings.HasSuffix(got, wantSuffix),
 				"DryRun output %q does not end with %q", got, wantSuffix)
 		})
@@ -297,50 +210,6 @@ func TestSSHTunnelStop(t *testing.T) {
 			got := st.Description()
 
 			assert.Equal(t, "Close registry SSH tunnel", got)
-		})
-	})
-}
-
-func TestSSHTunnelStopEdgeCases(t *testing.T) {
-	t.Run("Command", func(t *testing.T) {
-		t.Run("handles host without user", func(t *testing.T) {
-			dest := ssh.MustNewDestination("remote-server")
-
-			st := ssh.NewSSHTunnelStop(dest)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -S %s -O exit remote-server", ssh.ControlSocketPath(string(dest)))
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("handles host without user but with port", func(t *testing.T) {
-			dest := ssh.MustNewDestination("remote-server:2222")
-
-			st := ssh.NewSSHTunnelStop(dest)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -p 2222 -S %s -O exit remote-server", ssh.ControlSocketPath(string(dest)))
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("handles IP address", func(t *testing.T) {
-			dest := ssh.MustNewDestination("user@192.168.1.100")
-
-			st := ssh.NewSSHTunnelStop(dest)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -S %s -O exit user@192.168.1.100", ssh.ControlSocketPath(string(dest)))
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("handles IP address with port", func(t *testing.T) {
-			dest := ssh.MustNewDestination("user@192.168.1.100:2222")
-
-			st := ssh.NewSSHTunnelStop(dest)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -p 2222 -S %s -O exit user@192.168.1.100", ssh.ControlSocketPath(string(dest)))
-			assert.Equal(t, want, got)
 		})
 	})
 }

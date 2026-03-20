@@ -8,13 +8,14 @@ import (
 	"path/filepath"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/ssh"
 )
 
 type execSSHKeyGen func(keyType string, keyPath string, targetHost string) *exec.Cmd
 
 type SSHKeyGen struct {
 	description string
-	targetHost  string
+	targetHost  ssh.Destination
 	keyType     string
 	keyPath     string
 	exec        execSSHKeyGen
@@ -24,7 +25,7 @@ type SSHKeyGenOptions struct {
 	WithMockKeyGen execSSHKeyGen
 }
 
-func NewSSHKeyGen(description string, targetHost string, keyType string, keyPath string, opts SSHKeyGenOptions) *SSHKeyGen {
+func NewSSHKeyGen(description string, targetHost ssh.Destination, keyType string, keyPath string, opts SSHKeyGenOptions) *SSHKeyGen {
 	execFn := command.SSHKeyGen
 	if opts.WithMockKeyGen != nil {
 		execFn = opts.WithMockKeyGen
@@ -44,7 +45,7 @@ func (kg *SSHKeyGen) Description() string {
 }
 
 func (kg *SSHKeyGen) buildCommand() *exec.Cmd {
-	return kg.exec(kg.keyType, kg.keyPath, kg.targetHost)
+	return kg.exec(kg.keyType, kg.keyPath, kg.targetHost.String())
 }
 
 func (kg *SSHKeyGen) Run(cmdOutput io.Writer) error {
