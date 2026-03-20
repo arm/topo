@@ -20,7 +20,7 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					d := ssh.Destination(input)
+					d := ssh.MustNewDestination(input)
 
 					assert.True(t, d.IsPlainLocalhost())
 				})
@@ -37,7 +37,7 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					d := ssh.Destination(input)
+					d := ssh.MustNewDestination(input)
 
 					assert.False(t, d.IsPlainLocalhost())
 				})
@@ -53,7 +53,7 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					d := ssh.Destination(input)
+					d := ssh.MustNewDestination(input)
 
 					assert.False(t, d.IsPlainLocalhost())
 				})
@@ -71,7 +71,7 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					d := ssh.Destination(input)
+					d := ssh.MustNewDestination(input)
 
 					assert.True(t, d.IsLocalhost())
 				})
@@ -88,7 +88,7 @@ func TestDestination(t *testing.T) {
 
 			for _, input := range tests {
 				t.Run(input, func(t *testing.T) {
-					d := ssh.Destination(input)
+					d := ssh.MustNewDestination(input)
 
 					assert.True(t, d.IsLocalhost())
 				})
@@ -98,13 +98,13 @@ func TestDestination(t *testing.T) {
 
 	t.Run("AsURI", func(t *testing.T) {
 		t.Run("returns uri form of host string", func(t *testing.T) {
-			d := ssh.Destination("user@host")
+			d := ssh.MustNewDestination("user@host")
 
 			assert.Equal(t, "ssh://user@host", d.AsURI())
 		})
 
 		t.Run("doesn't duplicate ssh:// scheme", func(t *testing.T) {
-			d := ssh.Destination("ssh://user@host:123")
+			d := ssh.MustNewDestination("ssh://user@host:123")
 
 			assert.Equal(t, "ssh://user@host:123", d.AsURI())
 		})
@@ -122,7 +122,7 @@ func TestDestination(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.input, func(t *testing.T) {
-				require.Equal(t, tt.want, ssh.Destination(tt.input).Slugify(), "Slugify should replace special characters with underscores and keep allowed characters")
+				require.Equal(t, tt.want, ssh.MustNewDestination(tt.input).Slugify(), "Slugify should replace special characters with underscores and keep allowed characters")
 			})
 		}
 	})

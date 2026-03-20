@@ -9,6 +9,10 @@ import (
 
 type Destination string
 
+func MustNewDestination(raw string) Destination {
+	return Destination(raw)
+}
+
 const PlainLocalhost = Destination("localhost")
 
 func (d Destination) IsPlainLocalhost() bool {

@@ -53,7 +53,7 @@ func TestPubKeyTransferRun(t *testing.T) {
 	var buf bytes.Buffer
 	require.NoError(t, op.Run(&buf))
 	require.Contains(t, buf.String(), "ssh invoked")
-	require.Equal(t, ssh.Destination("thing1@thing2.com"), got.dest)
+	require.Equal(t, ssh.MustNewDestination("thing1@thing2.com"), got.dest)
 	require.Contains(t, got.cmd, "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
 	require.Equal(t, pubKeyContent, got.stdin)
 	require.Empty(t, got.args)

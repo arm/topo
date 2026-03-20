@@ -57,7 +57,7 @@ func TestGetDefaultPrivateKeyPath(t *testing.T) {
 		testutil.SetHomeDir(t, tmp)
 
 		target := "user@some1thing.com"
-		targetSlug := ssh.Destination(target).Slugify()
+		targetSlug := ssh.MustNewDestination(target).Slugify()
 
 		got, err := setupkeys.GetDefaultPrivateKeyPath(targetSlug)
 
