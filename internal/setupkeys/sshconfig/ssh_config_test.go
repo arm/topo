@@ -4,25 +4,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/setupkeys/sshconfig"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 func TestModifySSHConfig(t *testing.T) {
 	t.Run("writes include and fragment", func(t *testing.T) {
 		tmp := t.TempDir()
-		t.Setenv("HOME", tmp)
-		if runtime.GOOS == "windows" {
-			t.Setenv("USERPROFILE", tmp)
-			if vol := filepath.VolumeName(tmp); vol != "" {
-				t.Setenv("HOMEDRIVE", vol)
-				t.Setenv("HOMEPATH", strings.TrimPrefix(tmp, vol))
-			}
-		}
+		testutil.SetHomeDir(t, tmp)
 
 		targetHost := "user@example.com:2222"
 		targetFileName := "user_example_com_2222"
@@ -54,14 +46,7 @@ func TestModifySSHConfig(t *testing.T) {
 
 	t.Run("preserves existing fragment content", func(t *testing.T) {
 		tmp := t.TempDir()
-		t.Setenv("HOME", tmp)
-		if runtime.GOOS == "windows" {
-			t.Setenv("USERPROFILE", tmp)
-			if vol := filepath.VolumeName(tmp); vol != "" {
-				t.Setenv("HOMEDRIVE", vol)
-				t.Setenv("HOMEPATH", strings.TrimPrefix(tmp, vol))
-			}
-		}
+		testutil.SetHomeDir(t, tmp)
 
 		targetHost := "user@example.com:2222"
 		targetFileName := "user_example_com_2222"
@@ -97,14 +82,7 @@ func TestModifySSHConfig(t *testing.T) {
 
 	t.Run("updates existing key settings without replacing other fields", func(t *testing.T) {
 		tmp := t.TempDir()
-		t.Setenv("HOME", tmp)
-		if runtime.GOOS == "windows" {
-			t.Setenv("USERPROFILE", tmp)
-			if vol := filepath.VolumeName(tmp); vol != "" {
-				t.Setenv("HOMEDRIVE", vol)
-				t.Setenv("HOMEPATH", strings.TrimPrefix(tmp, vol))
-			}
-		}
+		testutil.SetHomeDir(t, tmp)
 
 		targetHost := "user@example.com:2222"
 		targetFileName := "user_example_com_2222"
@@ -142,14 +120,7 @@ func TestModifySSHConfig(t *testing.T) {
 
 	t.Run("deduplicates existing owned key settings", func(t *testing.T) {
 		tmp := t.TempDir()
-		t.Setenv("HOME", tmp)
-		if runtime.GOOS == "windows" {
-			t.Setenv("USERPROFILE", tmp)
-			if vol := filepath.VolumeName(tmp); vol != "" {
-				t.Setenv("HOMEDRIVE", vol)
-				t.Setenv("HOMEPATH", strings.TrimPrefix(tmp, vol))
-			}
-		}
+		testutil.SetHomeDir(t, tmp)
 
 		targetHost := "user@example.com:2222"
 		targetFileName := "user_example_com_2222"
