@@ -33,7 +33,8 @@ func ProbeHealthStatus(c target.Connection) Status {
 		return status
 	}
 
-	remoteprocs, _ := c.ProbeRemoteproc()
+	probe := target.NewHardwareProbe(&c)
+	remoteprocs, _ := probe.ProbeRemoteproc()
 	status.Hardware.RemoteCPU = remoteprocs
 	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, status.Hardware.Capabilities())
 	status.Dependencies = PerformChecks(dependenciesToCheck, c.BinaryExists, func(fullCmd string) error {

@@ -9,14 +9,6 @@ import (
 	"strings"
 )
 
-var armCpuFeatures = map[string]string{
-	"asimd": "NEON",
-	"sve":   "SVE",
-	"sve2":  "SVE2",
-	"sme":   "SME",
-	"sme2":  "SME2",
-}
-
 type HostProcessor struct {
 	Model    string   `yaml:"model"`
 	Cores    int      `yaml:"cores"`
@@ -31,6 +23,105 @@ type HardwareProfile struct {
 	HostProcessor []HostProcessor `yaml:"host"`
 	RemoteCPU     []RemoteprocCPU `yaml:"remoteprocs"`
 	TotalMemoryKb int64           `yaml:"totalmemory_kb"`
+}
+
+type Runner interface {
+	Run(command string) (string, error)
+	BinaryExists(bin string) error
+}
+
+type HardwareProbe struct {
+	runner Runner
+}
+
+func NewHardwareProbe(r Runner) HardwareProbe {
+	return HardwareProbe{runner: r}
+}
+
+func (p *HardwareProbe) Probe() (HardwareProfile, error) {
+	var hp HardwareProfile
+
+	cpuProfile, err := p.collectCPUInfo()
+	if err != nil {
+		return hp, fmt.Errorf("collecting CPU info: %w", err)
+	}
+	hp.HostProcessor = cpuProfile
+
+	cpus, err := p.ProbeRemoteproc()
+	if err != nil {
+		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
+	}
+	hp.RemoteCPU = cpus
+
+	memTotal, err := p.collectMemInfo()
+	if err != nil {
+		return hp, fmt.Errorf("collecting memory info: %w", err)
+	}
+	hp.TotalMemoryKb = memTotal
+
+	return hp, nil
+}
+
+func (p *HardwareProbe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
+	var remoteProcs []RemoteprocCPU
+	out, err := p.runner.Run("ls /sys/class/remoteproc")
+	if err != nil || out == "" {
+		return remoteProcs, nil
+	}
+
+	out, err = p.runner.Run("cat /sys/class/remoteproc/*/name")
+	if err != nil {
+		return remoteProcs, err
+	}
+
+	remoteCPU := strings.FieldsSeq(out)
+	for cpu := range remoteCPU {
+		remoteProcs = append(remoteProcs, RemoteprocCPU{Name: cpu})
+	}
+	return remoteProcs, nil
+}
+
+func (p *HardwareProbe) collectCPUInfo() ([]HostProcessor, error) {
+	if err := p.runner.BinaryExists("lscpu"); err != nil {
+		return nil, err
+	}
+
+	out, err := p.runner.Run("lscpu --json")
+	if err != nil {
+		return nil, err
+	}
+
+	var lscpuOutput lscpuOutput
+	err = json.Unmarshal([]byte(out), &lscpuOutput)
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateCPUProfile(lscpuOutput.Lscpu)
+}
+
+func (p *HardwareProbe) collectMemInfo() (int64, error) {
+	key := "MemTotal"
+	path := "/proc/meminfo"
+
+	out, err := p.runner.Run(fmt.Sprintf("cat %s", path))
+	if err != nil {
+		return 0, err
+	}
+
+	value, err := FindKeyValueInString(key, out)
+	if err != nil {
+		return 0, fmt.Errorf("in checking %s", path)
+	}
+	return value, nil
+}
+
+var armCpuFeatures = map[string]string{
+	"asimd": "NEON",
+	"sve":   "SVE",
+	"sve2":  "SVE2",
+	"sme":   "SME",
+	"sme2":  "SME2",
 }
 
 type LscpuOutputField struct {
@@ -57,68 +148,6 @@ func (proc *HostProcessor) ExtractArmFeatures() []string {
 	return res
 }
 
-func (c *Connection) ProbeHardware() (HardwareProfile, error) {
-	var hp HardwareProfile
-
-	cpuProfile, err := c.collectCPUInfo()
-	if err != nil {
-		return hp, fmt.Errorf("collecting CPU info: %w", err)
-	}
-	hp.HostProcessor = cpuProfile
-
-	cpus, err := c.ProbeRemoteproc()
-	if err != nil {
-		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
-	}
-	hp.RemoteCPU = cpus
-
-	memTotal, err := c.collectMemInfo()
-	if err != nil {
-		return hp, fmt.Errorf("collecting memory info: %w", err)
-	}
-	hp.TotalMemoryKb = memTotal
-
-	return hp, nil
-}
-
-func (c *Connection) ProbeRemoteproc() ([]RemoteprocCPU, error) {
-	var remoteProcs []RemoteprocCPU
-	out, err := c.Run("ls /sys/class/remoteproc")
-	if err != nil || out == "" {
-		return remoteProcs, nil
-	}
-
-	out, err = c.Run("cat /sys/class/remoteproc/*/name")
-	if err != nil {
-		return remoteProcs, err
-	}
-
-	remoteCPU := strings.FieldsSeq(out)
-	for cpu := range remoteCPU {
-		remoteProcs = append(remoteProcs, RemoteprocCPU{Name: cpu})
-	}
-	return remoteProcs, nil
-}
-
-func (c *Connection) collectCPUInfo() ([]HostProcessor, error) {
-	if err := c.BinaryExists("lscpu"); err != nil {
-		return nil, err
-	}
-
-	out, err := c.Run("lscpu --json")
-	if err != nil {
-		return nil, err
-	}
-
-	var lscpuOutput lscpuOutput
-	err = json.Unmarshal([]byte(out), &lscpuOutput)
-	if err != nil {
-		return nil, err
-	}
-
-	return CreateCPUProfile(lscpuOutput.Lscpu)
-}
-
 func FindKeyValueInString(key string, text string) (int64, error) {
 	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
@@ -128,22 +157,6 @@ func FindKeyValueInString(key string, text string) (int64, error) {
 		}
 	}
 	return 0, fmt.Errorf("field %s not found", key)
-}
-
-func (c *Connection) collectMemInfo() (int64, error) {
-	key := "MemTotal"
-	path := "/proc/meminfo"
-
-	out, err := c.Run(fmt.Sprintf("cat %s", path))
-	if err != nil {
-		return 0, err
-	}
-
-	value, err := FindKeyValueInString(key, out)
-	if err != nil {
-		return 0, fmt.Errorf("in checking %s", path)
-	}
-	return value, nil
 }
 
 func newHostProcessor(name string, fields []LscpuOutputField) (HostProcessor, error) {

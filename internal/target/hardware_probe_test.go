@@ -1,16 +1,81 @@
 package target_test
 
 import (
-	"os/exec"
-	"strings"
+	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type mockRunner struct {
+	mock.Mock
+}
+
+func (m *mockRunner) Run(cmd string) (string, error) {
+	args := m.Called(cmd)
+	return args.String(0), args.Error(1)
+}
+
+func (m *mockRunner) BinaryExists(bin string) error {
+	args := m.Called(bin)
+	return args.Error(0)
+}
+
+func TestHardwareProbe(t *testing.T) {
+	t.Run("Probe", func(t *testing.T) {
+		t.Run("returns model name and features", func(t *testing.T) {
+			r := new(mockRunner)
+			r.On("BinaryExists", "lscpu").Return(nil)
+			r.On("Run", "lscpu --json").Return(testutil.LsCpuOutputRaw, nil)
+			r.On("Run", "ls /sys/class/remoteproc").Return("", nil)
+			r.On("Run", "cat /proc/meminfo").Return("MemTotal:       16384000 kB", nil)
+			probe := target.NewHardwareProbe(r)
+
+			got, err := probe.Probe()
+
+			require.NoError(t, err)
+			want := target.HardwareProfile{
+				HostProcessor: []target.HostProcessor{
+					{
+						Model:    "Cortex-A55",
+						Cores:    2,
+						Features: []string{"fp", "asimd"},
+					},
+				},
+				TotalMemoryKb: int64(16384000),
+			}
+			assert.Equal(t, want, got)
+			r.AssertExpectations(t)
+		})
+
+		t.Run("returns error when lscpu not found", func(t *testing.T) {
+			r := new(mockRunner)
+			r.On("BinaryExists", "lscpu").Return(fmt.Errorf("%q executable file not found in $PATH", "lscpu"))
+			probe := target.NewHardwareProbe(r)
+
+			_, err := probe.Probe()
+
+			assert.ErrorContains(t, err, `"lscpu" executable file not found in $PATH`)
+			r.AssertExpectations(t)
+		})
+
+		t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
+			r := new(mockRunner)
+			r.On("BinaryExists", "lscpu").Return(nil)
+			r.On("Run", "lscpu --json").Return("not json", nil)
+			probe := target.NewHardwareProbe(r)
+
+			_, err := probe.Probe()
+
+			assert.ErrorContains(t, err, "collecting CPU info")
+			r.AssertExpectations(t)
+		})
+	})
+}
 
 func TestExtractArmFeatures(t *testing.T) {
 	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
@@ -32,64 +97,6 @@ func TestExtractArmFeatures(t *testing.T) {
 		res := ts.ExtractArmFeatures()
 
 		assert.Empty(t, res)
-	})
-}
-
-func TestProbeHardware(t *testing.T) {
-	t.Run("returns model name and features", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, command string, _ []byte, _ ...string) *exec.Cmd {
-			switch {
-			case strings.Contains(command, "command -v"):
-				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
-			case command == "lscpu --json":
-				return testutil.CmdWithOutput(testutil.LsCpuOutputRaw, 0)
-			case strings.Contains(command, "meminfo"):
-				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
-			default:
-				return testutil.CmdWithOutput("not found", 1)
-			}
-		}
-
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
-		hw, err := conn.ProbeHardware()
-
-		require.NoError(t, err)
-		require.Len(t, hw.HostProcessor, 1)
-		assert.Equal(t, "Cortex-A55", hw.HostProcessor[0].Model)
-		assert.Equal(t, 2, hw.HostProcessor[0].Cores)
-		assert.Equal(t, []string{"fp", "asimd"}, hw.HostProcessor[0].Features)
-		assert.Equal(t, int64(16384000), hw.TotalMemoryKb)
-	})
-
-	t.Run("returns error when lscpu not found", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, command string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithOutput("not found", 1)
-		}
-
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
-		_, err := conn.ProbeHardware()
-
-		assert.ErrorContains(t, err, `"lscpu" executable file not found in $PATH`)
-	})
-
-	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, command string, _ []byte, _ ...string) *exec.Cmd {
-			switch {
-			case strings.Contains(command, "command -v"):
-				return testutil.CmdWithOutput("/usr/bin/lscpu", 0)
-			case command == "lscpu --json":
-				return testutil.CmdWithOutput("not json", 0)
-			case strings.Contains(command, "meminfo"):
-				return testutil.CmdWithOutput("MemTotal:       16384000 kB", 0)
-			default:
-				return testutil.CmdWithOutput("not found", 1)
-			}
-		}
-
-		conn := target.NewConnection("hostname", target.ConnectionOptions{WithMockExec: mockExec})
-		_, err := conn.ProbeHardware()
-
-		assert.ErrorContains(t, err, "collecting CPU info")
 	})
 }
 
