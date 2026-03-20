@@ -150,6 +150,7 @@ func TestDestination(t *testing.T) {
 			{raw: "[2001:db8::1]", wantUser: "", wantHost: "2001:db8::1", wantPort: ""},
 			{raw: "user@[2001:db8::1]:2222", wantUser: "user", wantHost: "2001:db8::1", wantPort: "2222"},
 			{raw: "[2001:db8::1]:2222", wantUser: "", wantHost: "2001:db8::1", wantPort: "2222"},
+			{raw: "ssh://user@example.com:2222", wantUser: "user", wantHost: "example.com", wantPort: "2222"},
 		}
 
 		for _, tc := range cases {

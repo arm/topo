@@ -69,6 +69,7 @@ func (d Destination) Slugify() string {
 }
 
 func SplitUserHostPort(raw string) (user, host, port string) {
+	raw = strings.TrimPrefix(raw, "ssh://")
 	hostPart := raw
 	if at := strings.LastIndex(raw, "@"); at != -1 {
 		user = raw[:at]
