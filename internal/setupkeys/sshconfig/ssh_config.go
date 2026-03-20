@@ -60,7 +60,7 @@ func ModifySSHConfig(targetHost string, privKeyPath string, targetSlug string, d
 		return errMain
 	}
 
-	configBody := buildCanonicalSSHConfigFragment(targetHost, privKeyPath)
+	configBody := buildSSHConfigFragment(targetHost, privKeyPath)
 	mergedConfigBody := mergeOwnedSSHConfigDirectives(existingTopoContent, configBody, privKeyPath)
 
 	if string(existingTopoContent) != mergedConfigBody {
@@ -101,7 +101,7 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 	return false
 }
 
-func buildCanonicalSSHConfigFragment(targetHost string, privKeyPath string) string {
+func buildSSHConfigFragment(targetHost string, privKeyPath string) string {
 	user, host, port := ssh.SplitUserHostPort(targetHost)
 	hostAlias := host
 	if hostAlias == "" {
