@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/arm/topo/internal/setupkeys"
 	"github.com/arm/topo/internal/ssh"
@@ -66,8 +65,8 @@ Use --dry-run to see what commands would be executed without actually running th
 		}
 
 		directives := []sshconfig.SSHConfigDirective{
-			{Key: "IdentityFile", Value: filepath.ToSlash(privateKeyPath)},
-			{Key: "IdentitiesOnly", Value: "yes"},
+			sshconfig.NewDirectiveIdentityFile(privateKeyPath),
+			sshconfig.NewDirective("IdentitiesOnly", "yes"),
 		}
 
 		return sshconfig.ModifySSHConfig(targetArg, targetSlug, dryRun, os.Stdout, directives)

@@ -21,8 +21,8 @@ func TestModifySSHConfig(t *testing.T) {
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 
 		err := sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
-			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
-			{Key: "IdentitiesOnly", Value: "yes"},
+			sshconfig.NewDirectiveIdentityFile(privKeyPath),
+			sshconfig.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)
 
@@ -63,8 +63,8 @@ func TestModifySSHConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		err = sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
-			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
-			{Key: "IdentitiesOnly", Value: "yes"},
+			sshconfig.NewDirectiveIdentityFile(privKeyPath),
+			sshconfig.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)
 
@@ -101,8 +101,8 @@ func TestModifySSHConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		err = sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
-			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
-			{Key: "IdentitiesOnly", Value: "yes"},
+			sshconfig.NewDirectiveIdentityFile(privKeyPath),
+			sshconfig.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)
 
@@ -139,8 +139,8 @@ func TestModifySSHConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		err = sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
-			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
-			{Key: "IdentitiesOnly", Value: "yes"},
+			sshconfig.NewDirectiveIdentityFile(privKeyPath),
+			sshconfig.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)
 

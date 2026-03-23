@@ -23,6 +23,20 @@ func (d SSHConfigDirective) String() string {
 	return fmt.Sprintf("%s %s", d.Key, d.Value)
 }
 
+func NewDirectiveIdentityFile(path string) SSHConfigDirective {
+	return SSHConfigDirective{
+		Key:   "IdentityFile",
+		Value: filepath.ToSlash(path), // needs to be this way even on Windows to work with ssh config parsing, which generally accepts forward slashes
+	}
+}
+
+func NewDirective(key, value string) SSHConfigDirective {
+	return SSHConfigDirective{
+		Key:   key,
+		Value: value,
+	}
+}
+
 func ModifySSHConfig(targetHost string, targetSlug string, dryRun bool, output io.Writer, directives []SSHConfigDirective) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -133,7 +147,6 @@ func buildSSHConfigFragment(targetHost string, directives []SSHConfigDirective) 
 		fmt.Fprintf(&b, "  Port %s\n", port)
 	}
 
-	// needs to be this way even on Windows to work with ssh config parsing, which generally accepts forward slashes
 	for _, directive := range directives {
 		fmt.Fprintf(&b, "  %s\n", directive.String())
 	}
