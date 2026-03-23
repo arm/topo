@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/arm/topo/internal/setupkeys"
-	"github.com/arm/topo/internal/setupkeys/sshconfig"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/ssh/sshconfig"
 	"github.com/spf13/cobra"
 )
 

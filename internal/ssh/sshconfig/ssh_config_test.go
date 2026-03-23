@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/setupkeys/sshconfig"
+	"github.com/arm/topo/internal/ssh/sshconfig"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
