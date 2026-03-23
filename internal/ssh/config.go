@@ -14,8 +14,8 @@ type Config struct {
 	connectTimeout time.Duration
 }
 
-func NewConfig(destination string) Config {
-	output, err := exec.Command("ssh", "-G", destination).Output()
+func NewConfig(dest Destination) Config {
+	output, err := exec.Command("ssh", "-G", dest.String()).Output()
 	if err != nil {
 		return Config{}
 	}

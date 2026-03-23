@@ -25,7 +25,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		conn := target.NewConnection(ssh.NewConfig(targetArg).Destination, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+		conn := target.NewConnection(ssh.NewDestination(targetArg), target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
 		probe := target.NewHardwareProbe(&conn)
 		hwProfile, err := probe.Probe()
 		if err != nil {
