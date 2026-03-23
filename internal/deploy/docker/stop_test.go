@@ -20,7 +20,7 @@ func TestNewDeploymentStop(t *testing.T) {
 	composeFile := "compose.yaml"
 
 	t.Run("runs stop operation for remote host", func(t *testing.T) {
-		remoteHost := testutil.MustNewDestination("user@remote")
+		remoteHost := ssh.NewDestination("user@remote")
 
 		got := docker.NewDeploymentStop(composeFile, remoteHost)
 
@@ -47,7 +47,7 @@ func TestDeploymentStop(t *testing.T) {
 		target := testutil.StartTargetContainer(t)
 
 		t.Run("deploys services then confirms stop shuts down containers", func(t *testing.T) {
-			remoteDockerHost := testutil.MustNewDestination(target.SSHDestination)
+			remoteDockerHost := ssh.NewDestination(target.SSHDestination)
 			tmpDir := t.TempDir()
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
 			dockerFileContent := `
@@ -93,7 +93,7 @@ services:
     image: alpine:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			dest := testutil.MustNewDestination("user@remote")
+			dest := ssh.NewDestination("user@remote")
 			stop := docker.NewDeploymentStop(composeFilePath, dest)
 
 			err := stop.DryRun(&buf)

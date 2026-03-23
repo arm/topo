@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/command"
 )
 
 type CheckKind int
@@ -208,7 +208,7 @@ func hasAnyInstalledPrerequisite(required []SoftwareDependency, installed map[So
 }
 
 func BinaryExistsLocally(bin string) error {
-	if err := ssh.ValidateBinaryName(bin); err != nil {
+	if err := command.ValidateBinaryName(bin); err != nil {
 		return err
 	}
 	if _, err := exec.LookPath(bin); err != nil {

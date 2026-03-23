@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
-	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,7 +76,7 @@ func TestGenerateTargetReport(t *testing.T) {
 
 	t.Run("when password authentication is required, Connectivity includes a setup-keys fix", func(t *testing.T) {
 		ts := health.Status{
-			SSHTarget:       testutil.MustNewDestination("user@my-target"),
+			SSHTarget:       ssh.NewDestination("user@my-target"),
 			ConnectionError: target.ErrPasswordAuthentication,
 		}
 

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/mholt/archives"
@@ -275,7 +276,7 @@ func install(installPath string, targetDest ssh.Destination, binaries map[string
 	mode := "0755"
 
 	for binaryName, binaryData := range binaries {
-		if err := ssh.ValidateBinaryName(binaryName); err != nil {
+		if err := command.ValidateBinaryName(binaryName); err != nil {
 			return err
 		}
 
@@ -327,7 +328,7 @@ type InstallResult struct {
 
 func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string, binaryNames []string) ([]InstallResult, error) {
 	for _, binaryName := range binaryNames {
-		if err := ssh.ValidateBinaryName(binaryName); err != nil {
+		if err := command.ValidateBinaryName(binaryName); err != nil {
 			return nil, err
 		}
 	}

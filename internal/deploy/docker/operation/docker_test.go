@@ -30,7 +30,7 @@ func TestDocker(t *testing.T) {
 	t.Run("DryRun", func(t *testing.T) {
 		t.Run("prints command with multiple args and remote host", func(t *testing.T) {
 			var buf bytes.Buffer
-			remoteHost := testutil.MustNewDestination("user@remote")
+			remoteHost := ssh.NewDestination("user@remote")
 			op := operation.NewDocker("Test operation", remoteHost, []string{"ps", "-a", "--format", "json"})
 
 			err := op.DryRun(&buf)
@@ -68,7 +68,7 @@ func TestDocker(t *testing.T) {
 
 func TestNewDockerPull(t *testing.T) {
 	image := "nginx:latest"
-	remoteHost := testutil.MustNewDestination("user@remote")
+	remoteHost := ssh.NewDestination("user@remote")
 	op := operation.NewDockerPull(remoteHost, image)
 
 	t.Run("Description", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestNewDockerPull(t *testing.T) {
 
 func TestNewDockerStart(t *testing.T) {
 	container := "my-container"
-	remoteHost := testutil.MustNewDestination("user@remote")
+	remoteHost := ssh.NewDestination("user@remote")
 	op := operation.NewDockerStart(remoteHost, container)
 
 	t.Run("Description", func(t *testing.T) {
@@ -113,7 +113,7 @@ func TestNewDockerStart(t *testing.T) {
 func TestNewDockerRun(t *testing.T) {
 	image := "alpine:latest"
 	container := "test-container"
-	remoteHost := testutil.MustNewDestination("user@remote")
+	remoteHost := ssh.NewDestination("user@remote")
 
 	t.Run("Description", func(t *testing.T) {
 		op := operation.NewDockerRun(remoteHost, image, container, []string{"-d"})

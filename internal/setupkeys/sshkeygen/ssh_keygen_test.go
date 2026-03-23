@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSSHKeyGenDryRun(t *testing.T) {
 	keyPath := filepath.Join(t.TempDir(), "keys", "id_ed25519_test")
-	op := sshkeygen.NewSSHKeyGen("Generate SSH key pair", testutil.MustNewDestination("user@example.com"), "ed25519", keyPath, sshkeygen.SSHKeyGenOptions{})
+	op := sshkeygen.NewSSHKeyGen("Generate SSH key pair", ssh.NewDestination("user@example.com"), "ed25519", keyPath, sshkeygen.SSHKeyGenOptions{})
 
 	var buf bytes.Buffer
 	require.NoError(t, op.DryRun(&buf))
@@ -28,7 +29,7 @@ func TestSSHKeyGenRun(t *testing.T) {
 			return testutil.CmdWithOutput("ssh-keygen invoked", 0)
 		},
 	}
-	op := sshkeygen.NewSSHKeyGen("Generate SSH key pair", testutil.MustNewDestination("user@example.com"), "ed25519", keyPath, opts)
+	op := sshkeygen.NewSSHKeyGen("Generate SSH key pair", ssh.NewDestination("user@example.com"), "ed25519", keyPath, opts)
 	var buf bytes.Buffer
 	require.NoError(t, op.Run(&buf))
 	require.Contains(t, buf.String(), "ssh-keygen invoked")

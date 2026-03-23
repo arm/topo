@@ -10,12 +10,12 @@ import (
 )
 
 type Config struct {
-	Destination
+	HostName       string
 	connectTimeout time.Duration
 }
 
-func NewConfig(destination string) Config {
-	output, err := exec.Command("ssh", "-G", destination).Output()
+func NewConfig(dest Destination) Config {
+	output, err := exec.Command("ssh", "-G", dest.String()).Output()
 	if err != nil {
 		return Config{}
 	}
@@ -32,11 +32,7 @@ func NewConfigFromBytes(data []byte) Config {
 		}
 		switch strings.ToLower(fields[0]) {
 		case "hostname":
-			config.Host = fields[1]
-		case "user":
-			config.User = fields[1]
-		case "port":
-			config.Port = fields[1]
+			config.HostName = fields[1]
 		case "connecttimeout":
 			if secs, err := strconv.Atoi(fields[1]); err == nil {
 				config.connectTimeout = time.Duration(secs) * time.Second

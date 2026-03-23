@@ -36,7 +36,8 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		targetSlug := ssh.NewConfig(targetArg).Slugify()
+		dest := ssh.NewDestination(targetArg)
+		targetSlug := dest.Slugify()
 		if privateKeyPath == "" {
 			privateKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
 			if err != nil {
@@ -49,8 +50,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		cfg := ssh.NewConfig(targetArg)
-		seq, err := setupkeys.NewKeySetup(cfg.Destination, privateKeyPath, parsedKeyType)
+		seq, err := setupkeys.NewKeySetup(dest, privateKeyPath, parsedKeyType)
 		if err != nil {
 			return err
 		}

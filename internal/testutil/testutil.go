@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/template"
 	"github.com/stretchr/testify/require"
 )
@@ -103,9 +102,4 @@ func AssertFileContents(t *testing.T, wantContents string, path string) {
 	got, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, wantContents, string(got))
-}
-
-func MustNewDestination(raw string) ssh.Destination {
-	user, host, port := ssh.SplitUserHostPort(raw)
-	return ssh.Destination{User: user, Host: host, Port: port}
 }

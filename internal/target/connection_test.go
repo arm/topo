@@ -16,7 +16,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		out, err := conn.Run("ls")
 
@@ -28,7 +28,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("", 1)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		out, err := conn.Run("ls")
 
@@ -40,7 +40,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithStderr("Permission denied (publickey)", 1)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		_, err := conn.Run("ls")
 
@@ -51,7 +51,7 @@ func TestRun(t *testing.T) {
 		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithStderr("ssh: connect to host foo port 22: Connection refused", 1)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		_, err := conn.Run("ls")
 
@@ -65,7 +65,7 @@ func TestRun(t *testing.T) {
 			capturedArgs = strings.Join(sshArgs, " ")
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
 
 		_, err := conn.Run("ls")
 
@@ -82,7 +82,7 @@ func TestRun(t *testing.T) {
 			capturedArgs = strings.Join(sshArgs, " ")
 			return testutil.CmdWithOutput("success", 0)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
 
 		_, err := conn.Run("ls")
 
@@ -98,7 +98,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		assert.NoError(t, conn.BinaryExists("bar"))
 	})
@@ -107,7 +107,7 @@ func TestBinaryExists(t *testing.T) {
 		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
-		conn := target.NewConnection(testutil.MustNewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		assert.Error(t, conn.BinaryExists("b a r"))
 	})

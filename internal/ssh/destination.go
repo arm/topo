@@ -13,6 +13,11 @@ type Destination struct {
 	Port string
 }
 
+func NewDestination(destStr string) Destination {
+	user, host, port := SplitUserHostPort(destStr)
+	return Destination{User: user, Host: host, Port: port}
+}
+
 func (d Destination) String() string {
 	var builder strings.Builder
 	fmt.Fprint(&builder, "ssh://")

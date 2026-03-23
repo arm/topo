@@ -35,8 +35,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 		if err != nil {
 			return err
 		}
-		cfg := ssh.NewConfig(targetArg)
-		p, err := installRemoteprocRuntime(cfg.Destination)
+		p, err := installRemoteprocRuntime(ssh.NewDestination(targetArg))
 		if err != nil {
 			return err
 		}

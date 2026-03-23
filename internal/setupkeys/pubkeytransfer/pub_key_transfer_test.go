@@ -16,7 +16,7 @@ import (
 func TestPubKeyTransferDryRun(t *testing.T) {
 	tmp := t.TempDir()
 	privKeyPath := filepath.Join(tmp, "id_ed25519_testrun")
-	op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", testutil.MustNewDestination("hola@chau"), privKeyPath, pubkeytransfer.PubKeyTransferOptions{})
+	op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", ssh.NewDestination("hola@chau"), privKeyPath, pubkeytransfer.PubKeyTransferOptions{})
 
 	var buf bytes.Buffer
 	require.NoError(t, op.DryRun(&buf))
@@ -48,12 +48,12 @@ func TestPubKeyTransferRun(t *testing.T) {
 		}
 		return cmd
 	}}
-	op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", testutil.MustNewDestination("thing1@thing2.com"), privKeyPath, opts)
+	op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", ssh.NewDestination("thing1@thing2.com"), privKeyPath, opts)
 
 	var buf bytes.Buffer
 	require.NoError(t, op.Run(&buf))
 	require.Contains(t, buf.String(), "ssh invoked")
-	require.Equal(t, testutil.MustNewDestination("thing1@thing2.com"), got.dest)
+	require.Equal(t, ssh.NewDestination("thing1@thing2.com"), got.dest)
 	require.Contains(t, got.cmd, "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
 	require.Equal(t, pubKeyContent, got.stdin)
 	require.Empty(t, got.args)

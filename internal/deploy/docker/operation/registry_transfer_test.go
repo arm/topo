@@ -82,7 +82,7 @@ services:
     image: nginx:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewRegistryTransfer(composeFilePath, h, testutil.MustNewDestination("user@remote"), port)
+			transfer := operation.NewRegistryTransfer(composeFilePath, h, ssh.NewDestination("user@remote"), port)
 
 			err := transfer.DryRun(&buf)
 

@@ -8,20 +8,14 @@ import (
 )
 
 func TestNewConfigFromBytes(t *testing.T) {
-	t.Run("parses hostname, user, and port", func(t *testing.T) {
+	t.Run("parses hostname", func(t *testing.T) {
 		input := []byte(`hostname springfield.nuclear.gov
-user homer
-port 2222
 `)
 
 		got := NewConfigFromBytes(input)
 
 		want := Config{
-			Destination: Destination{
-				Host: "springfield.nuclear.gov",
-				User: "homer",
-				Port: "2222",
-			},
+			HostName: "springfield.nuclear.gov",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -35,10 +29,7 @@ user homer
 		got := NewConfigFromBytes(input)
 
 		want := Config{
-			Destination: Destination{
-				Host: "springfield.nuclear.gov",
-				User: "homer",
-			},
+			HostName: "springfield.nuclear.gov",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -51,19 +42,12 @@ user homer
 	})
 
 	t.Run("matching is case-insensitive", func(t *testing.T) {
-		input := []byte(`Hostname kwik.e.mart
-User apu
-Port 22
-`)
+		input := []byte(`HoStNaMe kwik.e.mart`)
 
 		got := NewConfigFromBytes(input)
 
 		want := Config{
-			Destination: Destination{
-				Host: "kwik.e.mart",
-				User: "apu",
-				Port: "22",
-			},
+			HostName: "kwik.e.mart",
 		}
 		assert.Equal(t, want, got)
 	})
