@@ -28,7 +28,7 @@ func ProbeHealthStatus(c target.Connection, acceptNewHostKeys bool) Status {
 	var status Status
 	status.SSHTarget = c.SSHTarget
 
-	authProbe := target.NewAuthenticationProbe(&c, acceptNewHostKeys)
+	authProbe := target.NewSSHAuthenticationProbe(&c, acceptNewHostKeys)
 	if err := authProbe.Probe(); err != nil {
 		status.ConnectionError = err
 		return status

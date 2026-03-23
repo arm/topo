@@ -37,18 +37,19 @@ type SSHRunner interface {
 	RunWithArgs(command string, sshArgs ...string) (string, error)
 }
 
-type AuthenticationProbe struct {
+type SSHAuthenticationProbe struct {
 	runner            SSHRunner
 	acceptNewHostKeys bool
 }
 
-func NewAuthenticationProbe(runner SSHRunner, acceptNewHostKeys bool) AuthenticationProbe {
-	return AuthenticationProbe{runner: runner, acceptNewHostKeys: acceptNewHostKeys}
+func NewSSHAuthenticationProbe(runner SSHRunner, acceptNewHostKeys bool) SSHAuthenticationProbe {
+	return SSHAuthenticationProbe{runner: runner, acceptNewHostKeys: acceptNewHostKeys}
 }
 
-func (p AuthenticationProbe) Probe() error {
+
+func (p SSHAuthenticationProbe) Probe() error {
 	if !p.acceptNewHostKeys {
-		err := p.runSSHAuthenticationProbe(knownHostProbeArgs)
+		err := p.runSSHSSHAuthenticationProbe(knownHostProbeArgs)
 		if err != nil && !errors.Is(err, ErrAuthenticationFailure) {
 			return err
 		}
@@ -64,7 +65,7 @@ func (p AuthenticationProbe) Probe() error {
 	return nil
 }
 
-func (p AuthenticationProbe) isPasswordAuthenticated() (bool, error) {
+func (p SSHAuthenticationProbe) isPasswordAuthenticated() (bool, error) {
 	var extraArgs []string
 	if p.acceptNewHostKeys {
 		extraArgs = acceptNewHostKeyArgs
@@ -72,7 +73,7 @@ func (p AuthenticationProbe) isPasswordAuthenticated() (bool, error) {
 
 	// If public key auth succeeds, the target doesn't require password auth.
 	publicArgs := slices.Clone(publicKeyProbeArgs)
-	if err := p.runSSHAuthenticationProbe(slices.Concat(publicArgs, extraArgs)); err == nil {
+	if err := p.runSSHSSHAuthenticationProbe(slices.Concat(publicArgs, extraArgs)); err == nil {
 		return false, nil
 	} else if !errors.Is(err, ErrAuthenticationFailure) {
 		return false, err
@@ -80,7 +81,7 @@ func (p AuthenticationProbe) isPasswordAuthenticated() (bool, error) {
 
 	// Public key was rejected. Check if the target accepts password auth.
 	passwordArgs := slices.Clone(passwordProbeArgs)
-	if err := p.runSSHAuthenticationProbe(slices.Concat(passwordArgs, extraArgs)); err == nil {
+	if err := p.runSSHSSHAuthenticationProbe(slices.Concat(passwordArgs, extraArgs)); err == nil {
 		return false, nil
 	} else if errors.Is(err, ErrAuthenticationFailure) {
 		return true, nil
@@ -91,7 +92,7 @@ func (p AuthenticationProbe) isPasswordAuthenticated() (bool, error) {
 
 // All SSH authentication probes run the command "true" to check if the authentication method works.
 // All sshArgs should be hardcoded SSH options, not user-provided arguments.
-func (p AuthenticationProbe) runSSHAuthenticationProbe(sshArgs []string) error {
+func (p SSHAuthenticationProbe) runSSHSSHAuthenticationProbe(sshArgs []string) error {
 	out, err := p.runner.RunWithArgs("true", sshArgs...)
 	if err == nil {
 		return nil
