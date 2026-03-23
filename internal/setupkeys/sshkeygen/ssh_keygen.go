@@ -15,7 +15,7 @@ type execSSHKeyGen func(keyType string, keyPath string, targetHost string) *exec
 
 type SSHKeyGen struct {
 	description string
-	dest  ssh.Destination
+	dest        ssh.Destination
 	keyType     string
 	keyPath     string
 	exec        execSSHKeyGen
@@ -33,7 +33,7 @@ func NewSSHKeyGen(description string, dest ssh.Destination, keyType string, keyP
 
 	return &SSHKeyGen{
 		description: description,
-		dest:  dest,
+		dest:        dest,
 		keyType:     keyType,
 		keyPath:     keyPath,
 		exec:        execFn,

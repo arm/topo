@@ -28,16 +28,7 @@ func (d Destination) String() string {
 	return builder.String()
 }
 
-func MustNewDestination(raw string) Destination {
-	user, host, port := SplitUserHostPort(raw)
-	return Destination{
-		User: user,
-		Host: host,
-		Port: port,
-	}
-}
-
-var PlainLocalhost = MustNewDestination("localhost")
+var PlainLocalhost = Destination{Host: "localhost"}
 
 func (d Destination) IsPlainLocalhost() bool {
 	if d.Port != "" || d.User != "" {

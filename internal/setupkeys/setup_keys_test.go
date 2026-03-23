@@ -7,7 +7,6 @@ import (
 	"github.com/arm/topo/internal/setupkeys"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +14,7 @@ import (
 func TestNewKeySetup(t *testing.T) {
 	t.Run("NewKeySetup returns SSHKeyGen then PubKeyTransfer for supported key types", func(t *testing.T) {
 		t.Run("ed25519 with empty private key path", func(t *testing.T) {
-			got, err := setupkeys.NewKeySetup(ssh.MustNewDestination("user@some1thing.com"), "", setupkeys.KeyTypeED25519)
+			got, err := setupkeys.NewKeySetup(testutil.MustNewDestination("user@some1thing.com"), "", setupkeys.KeyTypeED25519)
 
 			require.NoError(t, err)
 			require.Len(t, got, 2)
@@ -25,7 +24,7 @@ func TestNewKeySetup(t *testing.T) {
 
 		t.Run("ed25519 with custom private key path", func(t *testing.T) {
 			got, err := setupkeys.NewKeySetup(
-				ssh.MustNewDestination("user@some1thing.com"),
+				testutil.MustNewDestination("user@some1thing.com"),
 				filepath.Join(t.TempDir(), "id_ed25519_custom"),
 				setupkeys.KeyTypeED25519,
 			)
@@ -38,7 +37,7 @@ func TestNewKeySetup(t *testing.T) {
 
 		t.Run("rsa with custom private key path", func(t *testing.T) {
 			got, err := setupkeys.NewKeySetup(
-				ssh.MustNewDestination("user@some2thing.com"),
+				testutil.MustNewDestination("user@some2thing.com"),
 				filepath.Join(t.TempDir(), "id_rsa_custom"),
 				setupkeys.KeyTypeRSA,
 			)
@@ -57,7 +56,7 @@ func TestGetDefaultPrivateKeyPath(t *testing.T) {
 		testutil.SetHomeDir(t, tmp)
 
 		target := "user@some1thing.com"
-		targetSlug := ssh.MustNewDestination(target).Slugify()
+		targetSlug := testutil.MustNewDestination(target).Slugify()
 
 		got, err := setupkeys.GetDefaultPrivateKeyPath(targetSlug)
 
