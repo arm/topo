@@ -80,7 +80,7 @@ services:
     image: nginx:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, testutil.MustNewDestination("user@remote"))
+			transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, ssh.NewDestination("user@remote"))
 
 			err := transfer.DryRun(&buf)
 

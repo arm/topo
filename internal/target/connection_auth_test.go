@@ -64,7 +64,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"public": {stdout: "", err: nil},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.NoError(t, err)
 
@@ -79,7 +79,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"public": {stdout: "Host key verification failed", err: errSSH},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
 		require.Len(t, calls, 1)
@@ -92,7 +92,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"password": {stdout: "Host key verification failed", err: errSSH},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
 		require.Len(t, calls, 2)
@@ -106,7 +106,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"password": {stdout: "Authentication failed", err: errSSH},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrPasswordAuthentication)
 	})
@@ -118,7 +118,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"password": {stdout: "ok", err: nil},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.NoError(t, err)
 		require.Len(t, calls, 2)
@@ -132,7 +132,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"password": {stdout: "Some other error", err: errSSH},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: true, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "ssh probe failed")
@@ -145,7 +145,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"public":    {stdout: "", err: nil},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: false, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.NoError(t, err)
 
@@ -159,7 +159,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"knownhost": {stdout: "HOST KEY VERIFICATION FAILED", err: errSSH},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: false, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
 		require.Len(t, calls, 1)
@@ -171,7 +171,7 @@ func TestProbeAuthentication(t *testing.T) {
 			"knownhost": {stdout: "dial tcp: lookup host: no such host", err: errSSH},
 		}, &calls)
 		opts := target.ConnectionOptions{AcceptNewHostKeys: false, WithMockExec: mockExec}
-		conn := target.NewConnection(testutil.MustNewDestination("user@host"), opts)
+		conn := target.NewConnection(ssh.NewDestination("user@host"), opts)
 		err := conn.ProbeAuthentication()
 		require.Error(t, err)
 		require.Len(t, calls, 1)

@@ -41,7 +41,7 @@ services:
 			var buf bytes.Buffer
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-			remoteHost := testutil.MustNewDestination("user@remote")
+			remoteHost := ssh.NewDestination("user@remote")
 			op := operation.NewDockerCompose("", composeFilePath, remoteHost, []string{"up", "-d", "--no-build"})
 
 			err := op.DryRun(&buf)
@@ -56,7 +56,7 @@ services:
 
 func TestNewDockerComposeBuild(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	remoteHost := testutil.MustNewDestination("user@remote")
+	remoteHost := ssh.NewDestination("user@remote")
 	op := operation.NewDockerComposeBuild(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestNewDockerComposeBuild(t *testing.T) {
 
 func TestNewDockerComposePull(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	remoteHost := testutil.MustNewDestination("user@remote")
+	remoteHost := ssh.NewDestination("user@remote")
 	op := operation.NewDockerComposePull(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestNewDockerComposePull(t *testing.T) {
 
 func TestNewDockerComposeRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	remoteHost := testutil.MustNewDestination("user@remote")
+	remoteHost := ssh.NewDestination("user@remote")
 	opDefault := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.RecreateModeDefault)
 
 	t.Run("Description", func(t *testing.T) {

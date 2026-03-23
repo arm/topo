@@ -20,7 +20,7 @@ func TestNewDeployment(t *testing.T) {
 	composeFile := "compose.yaml"
 
 	t.Run("includes transfer operation for remote host", func(t *testing.T) {
-		remoteHost := testutil.MustNewDestination("user@remote")
+		remoteHost := ssh.NewDestination("user@remote")
 		deployOpts := docker.DeployOptions{TargetHost: remoteHost}
 		got, _ := docker.NewDeployment(composeFile, deployOpts)
 
@@ -34,7 +34,7 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
-		remoteHost := testutil.MustNewDestination("user@remote")
+		remoteHost := ssh.NewDestination("user@remote")
 		port := operation.DefaultRegistryPort
 		opts := docker.DeployOptions{TargetHost: remoteHost, Registry: &docker.RegistryConfig{Port: port, UseControlSockets: true}}
 		got, _ := docker.NewDeployment(composeFile, opts)
@@ -94,7 +94,7 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	t.Run("returns an SSH tunnel cleanup operation for remote host", func(t *testing.T) {
-		remoteHost := testutil.MustNewDestination("user@remote")
+		remoteHost := ssh.NewDestination("user@remote")
 		deployOpts := docker.DeployOptions{TargetHost: remoteHost, Registry: &docker.RegistryConfig{UseControlSockets: true}}
 		_, cleanup := docker.NewDeployment(composeFile, deployOpts)
 
@@ -112,7 +112,7 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
-		remoteHost := testutil.MustNewDestination("user@remote")
+		remoteHost := ssh.NewDestination("user@remote")
 		port := operation.DefaultRegistryPort
 		opts := docker.DeployOptions{TargetHost: remoteHost, Registry: &docker.RegistryConfig{Port: port, UseControlSockets: false}}
 		got, _ := docker.NewDeployment(composeFile, opts)
@@ -142,7 +142,7 @@ func TestDeployment(t *testing.T) {
 		target := testutil.StartTargetContainer(t)
 
 		t.Run("builds images, transfers them, and starts services", func(t *testing.T) {
-			remoteDockerHost := testutil.MustNewDestination(target.SSHDestination)
+			remoteDockerHost := ssh.NewDestination(target.SSHDestination)
 			tmpDir := t.TempDir()
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
 			dockerFileContent := `
@@ -186,7 +186,7 @@ services:
     image: busybox
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			deployOpts := docker.DeployOptions{TargetHost: testutil.MustNewDestination("user@remote")}
+			deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination("user@remote")}
 			d, _ := docker.NewDeployment(composeFilePath, deployOpts)
 
 			err := d.DryRun(&buf)
