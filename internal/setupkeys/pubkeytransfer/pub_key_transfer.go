@@ -13,7 +13,7 @@ const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat 
 
 type PubKeyTransfer struct {
 	description string
-	dest  ssh.Destination
+	dest        ssh.Destination
 	pubKeyPath  string
 	opts        PubKeyTransferOptions
 }

@@ -18,7 +18,7 @@ var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 type RegistryTransfer struct {
 	composeFile string
 	sourceHost  ssh.Destination
-	dest  ssh.Destination
+	dest        ssh.Destination
 	port        string
 }
 
