@@ -14,7 +14,16 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
-func ModifySSHConfig(targetHost string, privKeyPath string, targetSlug string, dryRun bool, output io.Writer) error {
+type SSHConfigDirective struct {
+	Key   string
+	Value string
+}
+
+func (d SSHConfigDirective) String() string {
+	return fmt.Sprintf("%s %s", d.Key, d.Value)
+}
+
+func ModifySSHConfig(targetHost string, targetSlug string, dryRun bool, output io.Writer, directives []SSHConfigDirective) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)
@@ -62,9 +71,9 @@ func ModifySSHConfig(targetHost string, privKeyPath string, targetSlug string, d
 
 	var fragmentToWrite []byte
 	if len(existingTopoContent) == 0 {
-		fragmentToWrite = buildSSHConfigFragment(targetHost, privKeyPath)
+		fragmentToWrite = buildSSHConfigFragment(targetHost, directives)
 	} else {
-		fragmentToWrite = mergeOwnedSSHConfigDirectives(existingTopoContent, privKeyPath)
+		fragmentToWrite = mergeOwnedSSHConfigDirectives(existingTopoContent, directives)
 	}
 
 	if !bytes.Equal(existingTopoContent, fragmentToWrite) {
@@ -105,7 +114,7 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 	return false
 }
 
-func buildSSHConfigFragment(targetHost string, privKeyPath string) []byte {
+func buildSSHConfigFragment(targetHost string, directives []SSHConfigDirective) []byte {
 	user, host, port := ssh.SplitUserHostPort(targetHost)
 	hostAlias := host
 	if hostAlias == "" {
@@ -125,29 +134,40 @@ func buildSSHConfigFragment(targetHost string, privKeyPath string) []byte {
 	}
 
 	// needs to be this way even on Windows to work with ssh config parsing, which generally accepts forward slashes
-	fmt.Fprintf(&b, "  IdentityFile %s\n", filepath.ToSlash(privKeyPath))
-	b.WriteString("  IdentitiesOnly yes\n")
+	for _, directive := range directives {
+		fmt.Fprintf(&b, "  %s\n", directive.String())
+	}
 	return []byte(b.String())
 }
 
-func mergeOwnedSSHConfigDirectives(existing []byte, privKeyPath string) []byte {
-	identityLine := []byte(fmt.Sprintf("  IdentityFile %s", filepath.ToSlash(privKeyPath)))
-	identitiesOnlyLine := []byte("  IdentitiesOnly yes")
+func mergeOwnedSSHConfigDirectives(existing []byte, directives []SSHConfigDirective) []byte {
 	var merged [][]byte
+	directiveKeys := make(map[string]bool)
+	for _, d := range directives {
+		directiveKeys[d.Key] = true
+	}
 
 	for line := range bytes.SplitSeq(bytes.TrimRight(existing, "\n"), []byte("\n")) {
 		trimmed := bytes.TrimSpace(line)
+		key := extractSSHConfigKey(trimmed)
 
-		switch {
-		case bytes.HasPrefix(trimmed, []byte("IdentityFile ")):
+		if directiveKeys[key] {
 			continue
-		case bytes.HasPrefix(trimmed, []byte("IdentitiesOnly ")):
-			continue
-		default:
-			merged = append(merged, line)
 		}
+		merged = append(merged, line)
 	}
 
-	merged = append(merged, identityLine, identitiesOnlyLine)
+	for _, directive := range directives {
+		merged = append(merged, []byte("  "+directive.String()))
+	}
+
 	return append(bytes.Join(merged, []byte("\n")), '\n')
+}
+
+func extractSSHConfigKey(line []byte) string {
+	parts := bytes.Fields(line)
+	if len(parts) == 0 {
+		return ""
+	}
+	return string(parts[0])
 }

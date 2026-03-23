@@ -20,7 +20,10 @@ func TestModifySSHConfig(t *testing.T) {
 		targetFileName := "user_example_com_2222"
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 
-		err := sshconfig.ModifySSHConfig(targetHost, privKeyPath, targetFileName, false, nil)
+		err := sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
+			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
+			{Key: "IdentitiesOnly", Value: "yes"},
+		})
 		require.NoError(t, err)
 
 		mainConfigPath := filepath.Join(tmp, ".ssh", "config")
@@ -59,7 +62,10 @@ func TestModifySSHConfig(t *testing.T) {
 		err = os.WriteFile(fragmentPath, []byte(existing), 0o600)
 		require.NoError(t, err)
 
-		err = sshconfig.ModifySSHConfig(targetHost, privKeyPath, targetFileName, false, nil)
+		err = sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
+			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
+			{Key: "IdentitiesOnly", Value: "yes"},
+		})
 		require.NoError(t, err)
 
 		wantFragmentContents := fmt.Sprintf(`Host board-alias
@@ -94,7 +100,10 @@ func TestModifySSHConfig(t *testing.T) {
 		err = os.WriteFile(fragmentPath, []byte(existing), 0o600)
 		require.NoError(t, err)
 
-		err = sshconfig.ModifySSHConfig(targetHost, privKeyPath, targetFileName, false, nil)
+		err = sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
+			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
+			{Key: "IdentitiesOnly", Value: "yes"},
+		})
 		require.NoError(t, err)
 
 		wantFragmentContents := fmt.Sprintf(`Host board-alias
@@ -129,7 +138,10 @@ func TestModifySSHConfig(t *testing.T) {
 		err = os.WriteFile(fragmentPath, []byte(existing), 0o600)
 		require.NoError(t, err)
 
-		err = sshconfig.ModifySSHConfig(targetHost, privKeyPath, targetFileName, false, nil)
+		err = sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, []sshconfig.SSHConfigDirective{
+			{Key: "IdentityFile", Value: filepath.ToSlash(privKeyPath)},
+			{Key: "IdentitiesOnly", Value: "yes"},
+		})
 		require.NoError(t, err)
 
 		wantFragmentContents := fmt.Sprintf(`Host board-alias
@@ -139,6 +151,24 @@ func TestModifySSHConfig(t *testing.T) {
   IdentityFile %s
   IdentitiesOnly yes
 `, filepath.ToSlash(privKeyPath))
+		testutil.AssertFileContents(t, wantFragmentContents, fragmentPath)
+	})
+
+	t.Run("handles creation of stub file with no directives", func(t *testing.T) {
+		tmp := t.TempDir()
+		testutil.SetHomeDir(t, tmp)
+
+		targetHost := "user@example.com:2222"
+		targetFileName := "user_example_com_2222"
+		fragmentPath := filepath.Join(tmp, ".ssh", "topo_config", fmt.Sprintf("topo_%s.conf", targetFileName))
+
+		err := os.MkdirAll(filepath.Dir(fragmentPath), 0o700)
+		require.NoError(t, err)
+
+		err = sshconfig.ModifySSHConfig(targetHost, targetFileName, false, nil, nil)
+		require.NoError(t, err)
+
+		wantFragmentContents := "Host example.com\n  HostName example.com\n  User user\n  Port 2222\n"
 		testutil.AssertFileContents(t, wantFragmentContents, fragmentPath)
 	})
 }
