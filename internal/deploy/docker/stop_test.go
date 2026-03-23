@@ -93,8 +93,8 @@ services:
     image: alpine:latest
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			targetHost := ssh.MustNewDestination("user@remote")
-			stop := docker.NewDeploymentStop(composeFilePath, targetHost)
+			dest := ssh.MustNewDestination("user@remote")
+			stop := docker.NewDeploymentStop(composeFilePath, dest)
 
 			err := stop.DryRun(&buf)
 

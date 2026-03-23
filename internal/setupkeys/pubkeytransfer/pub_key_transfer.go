@@ -13,7 +13,7 @@ const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat 
 
 type PubKeyTransfer struct {
 	description string
-	targetHost  ssh.Destination
+	dest  ssh.Destination
 	pubKeyPath  string
 	opts        PubKeyTransferOptions
 }
@@ -22,8 +22,8 @@ type PubKeyTransferOptions struct {
 	WithMockExec target.ExecSSH
 }
 
-func NewPubKeyTransfer(description string, targetHost ssh.Destination, privKeyPath string, opts PubKeyTransferOptions) *PubKeyTransfer {
-	return &PubKeyTransfer{description: description, targetHost: targetHost, pubKeyPath: privKeyPath + ".pub", opts: opts}
+func NewPubKeyTransfer(description string, dest ssh.Destination, privKeyPath string, opts PubKeyTransferOptions) *PubKeyTransfer {
+	return &PubKeyTransfer{description: description, dest: dest, pubKeyPath: privKeyPath + ".pub", opts: opts}
 }
 
 func (kt *PubKeyTransfer) Description() string {
@@ -37,7 +37,7 @@ func (kt *PubKeyTransfer) buildTransferConnection(stdin []byte) *target.Connecti
 		opts.WithMockExec = kt.opts.WithMockExec
 	}
 
-	conn := target.NewConnection(kt.targetHost, opts)
+	conn := target.NewConnection(kt.dest, opts)
 
 	return &conn
 }
@@ -51,7 +51,7 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 	conn := kt.buildTransferConnection(pubKey)
 	cmdOutput, err := conn.Run(remoteAuthorizedKeysCommand)
 	if err != nil {
-		return fmt.Errorf("failed to transfer public key to target %s: %w", kt.targetHost, err)
+		return fmt.Errorf("failed to transfer public key to target %s: %w", kt.dest, err)
 	}
 	_, err = outputWriter.Write([]byte(cmdOutput))
 	return err
@@ -60,7 +60,7 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 func (kt *PubKeyTransfer) DryRun(output io.Writer) error {
 	conn := kt.buildTransferConnection(nil)
 	if err := conn.DryRun(remoteAuthorizedKeysCommand, output); err != nil {
-		return fmt.Errorf("failed to write dry-run output for public key transfer to target %s: %w", kt.targetHost, err)
+		return fmt.Errorf("failed to write dry-run output for public key transfer to target %s: %w", kt.dest, err)
 	}
 	return nil
 }

@@ -15,7 +15,7 @@ type execSSHKeyGen func(keyType string, keyPath string, targetHost string) *exec
 
 type SSHKeyGen struct {
 	description string
-	targetHost  ssh.Destination
+	dest  ssh.Destination
 	keyType     string
 	keyPath     string
 	exec        execSSHKeyGen
@@ -25,7 +25,7 @@ type SSHKeyGenOptions struct {
 	WithMockKeyGen execSSHKeyGen
 }
 
-func NewSSHKeyGen(description string, targetHost ssh.Destination, keyType string, keyPath string, opts SSHKeyGenOptions) *SSHKeyGen {
+func NewSSHKeyGen(description string, dest ssh.Destination, keyType string, keyPath string, opts SSHKeyGenOptions) *SSHKeyGen {
 	execFn := command.SSHKeyGen
 	if opts.WithMockKeyGen != nil {
 		execFn = opts.WithMockKeyGen
@@ -33,7 +33,7 @@ func NewSSHKeyGen(description string, targetHost ssh.Destination, keyType string
 
 	return &SSHKeyGen{
 		description: description,
-		targetHost:  targetHost,
+		dest:  dest,
 		keyType:     keyType,
 		keyPath:     keyPath,
 		exec:        execFn,
@@ -45,7 +45,7 @@ func (kg *SSHKeyGen) Description() string {
 }
 
 func (kg *SSHKeyGen) buildCommand() *exec.Cmd {
-	return kg.exec(kg.keyType, kg.keyPath, kg.targetHost.String())
+	return kg.exec(kg.keyType, kg.keyPath, kg.dest.String())
 }
 
 func (kg *SSHKeyGen) Run(cmdOutput io.Writer) error {

@@ -39,9 +39,9 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		targetHost := ssh.NewConfig(targetArg).Destination
+		dest := ssh.NewConfig(targetArg).Destination
 
-		stop := docker.NewDeploymentStop(composeFile, targetHost)
+		stop := docker.NewDeploymentStop(composeFile, dest)
 		if dryRun {
 			return stop.DryRun(os.Stdout)
 		}

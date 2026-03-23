@@ -15,14 +15,14 @@ import (
 type DockerComposePipeTransfer struct {
 	composeFile string
 	sourceHost  ssh.Destination
-	targetHost  ssh.Destination
+	dest  ssh.Destination
 }
 
-func NewDockerComposePipeTransfer(composeFile string, sourceHost, targetHost ssh.Destination) *DockerComposePipeTransfer {
+func NewDockerComposePipeTransfer(composeFile string, sourceHost, dest ssh.Destination) *DockerComposePipeTransfer {
 	return &DockerComposePipeTransfer{
 		composeFile: composeFile,
 		sourceHost:  sourceHost,
-		targetHost:  targetHost,
+		dest:  dest,
 	}
 }
 
@@ -61,7 +61,7 @@ func (t *DockerComposePipeTransfer) DryRun(output io.Writer) error {
 
 func (t *DockerComposePipeTransfer) buildTransferCommands(imageName string) (*exec.Cmd, *exec.Cmd) {
 	saveCmd := command.Docker(t.sourceHost, "save", imageName)
-	loadCmd := command.Docker(t.targetHost, "load")
+	loadCmd := command.Docker(t.dest, "load")
 	return saveCmd, loadCmd
 }
 

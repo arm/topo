@@ -17,16 +17,16 @@ type DeployOptions struct {
 	Registry     *RegistryConfig
 }
 
-func SupportsRegistry(noRegistry bool, targetHost ssh.Destination) bool {
-	return !noRegistry && !targetHost.IsPlainLocalhost()
+func SupportsRegistry(noRegistry bool, dest ssh.Destination) bool {
+	return !noRegistry && !dest.IsPlainLocalhost()
 }
 
 func SupportsSSHControlSockets(goos string) bool {
 	return goos != "windows"
 }
 
-func NewDeploymentStop(composeFile string, targetHost ssh.Destination) goperation.Sequence {
-	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, targetHost)}
+func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequence {
+	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, dest)}
 }
 
 func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence, goperation.Operation) {
