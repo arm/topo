@@ -8,6 +8,86 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewDestination(t *testing.T) {
+	t.Run("valid ssh destinations", func(t *testing.T) {
+		cases := []struct {
+			raw  string
+			want ssh.Destination
+		}{
+			{
+				raw:  "example.com",
+				want: ssh.Destination{Host: "example.com"},
+			},
+			{
+				raw:  "user@example.com",
+				want: ssh.Destination{User: "user", Host: "example.com"},
+			},
+			{
+				raw:  "ssh://example.com",
+				want: ssh.Destination{Host: "example.com"},
+			},
+			{
+				raw:  "ssh://user@example.com",
+				want: ssh.Destination{User: "user", Host: "example.com"},
+			},
+			{
+				raw:  "ssh://example.com:2222",
+				want: ssh.Destination{Host: "example.com", Port: "2222"},
+			},
+			{
+				raw:  "ssh://user@example.com:2222",
+				want: ssh.Destination{User: "user", Host: "example.com", Port: "2222"},
+			},
+			{
+				raw:  "ssh://[2001:db8::1]",
+				want: ssh.Destination{Host: "2001:db8::1"},
+			},
+			{
+				raw:  "ssh://[2001:db8::1]:2222",
+				want: ssh.Destination{Host: "2001:db8::1", Port: "2222"},
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.raw, func(t *testing.T) {
+				got := ssh.NewDestination(tc.raw)
+				assert.Equal(t, tc.want, got)
+			})
+		}
+	})
+
+	t.Run("convenience destinations", func(t *testing.T) {
+		cases := []struct {
+			raw  string
+			want ssh.Destination
+		}{
+			{
+				raw:  "example.com:2222",
+				want: ssh.Destination{Host: "example.com", Port: "2222"},
+			},
+			{
+				raw:  "user@example.com:2222",
+				want: ssh.Destination{User: "user", Host: "example.com", Port: "2222"},
+			},
+			{
+				raw:  "[2001:db8::1]",
+				want: ssh.Destination{Host: "2001:db8::1"},
+			},
+			{
+				raw:  "user@[2001:db8::1]:2222",
+				want: ssh.Destination{User: "user", Host: "2001:db8::1", Port: "2222"},
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.raw, func(t *testing.T) {
+				got := ssh.NewDestination(tc.raw)
+				assert.Equal(t, tc.want, got)
+			})
+		}
+	})
+}
+
 func TestDestination(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		t.Run("returns the uri form of destination", func(t *testing.T) {
