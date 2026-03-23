@@ -10,7 +10,9 @@ import (
 )
 
 type Config struct {
-	Destination
+	HostName       string
+	User           string
+	Port           string
 	connectTimeout time.Duration
 }
 
@@ -32,7 +34,7 @@ func NewConfigFromBytes(data []byte) Config {
 		}
 		switch strings.ToLower(fields[0]) {
 		case "hostname":
-			config.Host = fields[1]
+			config.HostName = fields[1]
 		case "user":
 			config.User = fields[1]
 		case "port":
