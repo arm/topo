@@ -67,13 +67,12 @@ func CheckHost() HostReport {
 
 func CheckTarget(dest ssh.Destination, acceptNewHostKeys bool, connectTimeout time.Duration) (TargetReport, error) {
 	opts := target.ConnectionOptions{
-		AcceptNewHostKeys: acceptNewHostKeys,
-		Multiplex:         true,
-		WithLoginShell:    true,
-		ConnectTimeout:    connectTimeout,
+		Multiplex:      true,
+		WithLoginShell: true,
+		ConnectTimeout: connectTimeout,
 	}
 	conn := target.NewConnection(dest, opts)
-	targetStatus := ProbeHealthStatus(conn)
+	targetStatus := ProbeHealthStatus(conn, acceptNewHostKeys)
 	return GenerateTargetReport(targetStatus), nil
 }
 
