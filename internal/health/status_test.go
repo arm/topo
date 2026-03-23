@@ -18,7 +18,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			return testutil.CmdWithOutput("connection refused", 1)
 		}
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn, true)
+		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 
 		assert.Error(t, ts.ConnectionError)
 		assert.ErrorContains(t, ts.ConnectionError, "exit status")
@@ -38,7 +38,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			}
 		}
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn, true)
+		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 
 		want := health.HardwareProfile{RemoteCPU: []target.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}}
 		assert.NoError(t, ts.ConnectionError)
@@ -53,7 +53,7 @@ func TestProbeHealthStatus(t *testing.T) {
 			return testutil.CmdWithOutput("no such directory", 1)
 		}
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn, true)
+		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 
 		assert.NoError(t, ts.ConnectionError)
 		assert.Len(t, ts.Hardware.RemoteCPU, 0)

@@ -65,14 +65,14 @@ func CheckHost() HostReport {
 	return GenerateHostReport(dependencyStatuses)
 }
 
-func CheckTarget(dest ssh.Destination, acceptNewHostKeys bool, connectTimeout time.Duration) (TargetReport, error) {
+func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		Multiplex:      true,
 		WithLoginShell: true,
 		ConnectTimeout: connectTimeout,
 	}
 	conn := target.NewConnection(dest, opts)
-	targetStatus := ProbeHealthStatus(conn, acceptNewHostKeys)
+	targetStatus := ProbeHealthStatus(conn, probeOpts)
 	return GenerateTargetReport(targetStatus), nil
 }
 

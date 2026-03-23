@@ -40,7 +40,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner := &mockSSHRunner{}
 		runner.On("RunWithArgs", "true", publicKeyMode).Return("", nil)
 
-		probe := target.NewSSHAuthenticationProbe(runner, true)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 		err := probe.Probe()
 
 		require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner := &mockSSHRunner{}
 		runner.On("RunWithArgs", "true", publicKeyMode).Return("Host key verification failed", errSSH)
 
-		probe := target.NewSSHAuthenticationProbe(runner, true)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 		err := probe.Probe()
 
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
@@ -65,7 +65,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		runner.On("RunWithArgs", "true", passwordMode).Return("Host key verification failed", errSSH)
 
-		probe := target.NewSSHAuthenticationProbe(runner, true)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 		err := probe.Probe()
 
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
@@ -77,7 +77,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		runner.On("RunWithArgs", "true", passwordMode).Return("Authentication failed", errSSH)
 
-		probe := target.NewSSHAuthenticationProbe(runner, true)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 		err := probe.Probe()
 
 		require.ErrorIs(t, err, target.ErrPasswordAuthentication)
@@ -88,7 +88,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		runner.On("RunWithArgs", "true", passwordMode).Return("", nil)
 
-		probe := target.NewSSHAuthenticationProbe(runner, true)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 		err := probe.Probe()
 
 		require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		runner.On("RunWithArgs", "true", passwordMode).Return("Some other error", errSSH)
 
-		probe := target.NewSSHAuthenticationProbe(runner, true)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 		err := probe.Probe()
 
 		require.ErrorIs(t, err, errSSH)
@@ -111,7 +111,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner.On("RunWithArgs", "true", knownHostMode).Return("Permission denied", errSSH)
 		runner.On("RunWithArgs", "true", publicKeyMode).Return("", nil)
 
-		probe := target.NewSSHAuthenticationProbe(runner, false)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{})
 		err := probe.Probe()
 
 		require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner := &mockSSHRunner{}
 		runner.On("RunWithArgs", "true", knownHostMode).Return("HOST KEY VERIFICATION FAILED", errSSH)
 
-		probe := target.NewSSHAuthenticationProbe(runner, false)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{})
 		err := probe.Probe()
 
 		require.ErrorIs(t, err, target.ErrHostKeyVerification)
@@ -134,7 +134,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 		runner := &mockSSHRunner{}
 		runner.On("RunWithArgs", "true", knownHostMode).Return("dial tcp: lookup host: no such host", errSSH)
 
-		probe := target.NewSSHAuthenticationProbe(runner, false)
+		probe := target.NewSSHAuthenticationProbe(runner, target.SSHAuthenticationProbeOptions{})
 		err := probe.Probe()
 
 		require.ErrorIs(t, err, errSSH)

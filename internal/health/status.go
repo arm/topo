@@ -24,11 +24,11 @@ type Status struct {
 	Hardware        HardwareProfile
 }
 
-func ProbeHealthStatus(c target.Connection, acceptNewHostKeys bool) Status {
+func ProbeHealthStatus(c target.Connection, probeOpts target.SSHAuthenticationProbeOptions) Status {
 	var status Status
 	status.SSHTarget = c.SSHTarget
 
-	authProbe := target.NewSSHAuthenticationProbe(&c, acceptNewHostKeys)
+	authProbe := target.NewSSHAuthenticationProbe(&c, probeOpts)
 	if err := authProbe.Probe(); err != nil {
 		status.ConnectionError = err
 		return status
