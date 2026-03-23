@@ -37,7 +37,8 @@ This will also update the main SSH config (~/.ssh/config) to include the topo-ma
 			return err
 		}
 
-		targetSlug := ssh.NewConfig(targetArg).Slugify()
+		dest := ssh.NewDestination(targetArg)
+		targetSlug := dest.Slugify()
 
 		if err != nil {
 			return err
