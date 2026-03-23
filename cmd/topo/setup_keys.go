@@ -18,17 +18,9 @@ var (
 var setupKeysCmd = &cobra.Command{
 	Use:   "setup-keys",
 	Short: "Generate SSH keys for the target and install the public key on the target host",
-	Long: `Generate SSH keys for the target and install the public key on the target host.
-
-Use --dry-run to see what commands would be executed without actually running them.`,
-	Args: cobra.ExactArgs(0),
+	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-
-		dryRun, err := cmd.Flags().GetBool("dry-run")
-		if err != nil {
-			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
-		}
 
 		targetArg, err := requireTarget(cmd)
 		if err != nil {
@@ -54,12 +46,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		if dryRun {
-			err = seq.DryRun(os.Stdout)
-		} else {
-			err = seq.Run(os.Stdout)
-		}
-
+		err = seq.Run(os.Stdout)
 		if err != nil {
 			return err
 		}
@@ -69,13 +56,12 @@ Use --dry-run to see what commands would be executed without actually running th
 			sshconfig.NewDirective("IdentitiesOnly", "yes"),
 		}
 
-		return sshconfig.ModifySSHConfig(targetArg, targetSlug, dryRun, os.Stdout, directives)
+		return sshconfig.CreateOrModifySSHConfig(targetArg, targetSlug, directives)
 	},
 }
 
 func init() {
 	addTargetFlag(setupKeysCmd)
-	addDryRunFlag(setupKeysCmd)
 	setupKeysCmd.Flags().StringVar(&privateKeyPath, "key-path", "", "Specify the SSH path where the generated key pair will be stored. Default directory: ~/.ssh. Default public key file name: id_ed25519_topo_<target>.pub)")
 	setupKeysCmd.Flags().StringVar(&keyType, "key-type", "ed25519", fmt.Sprintf("Specify the type of SSH key to generate. Supported types: %s, %s. Default: %s", setupkeys.KeyTypeED25519, setupkeys.KeyTypeRSA, setupkeys.KeyTypeED25519))
 	rootCmd.AddCommand(setupKeysCmd)

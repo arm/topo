@@ -2,15 +2,12 @@ package sshconfig
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -37,7 +34,11 @@ func NewDirective(key, value string) SSHConfigDirective {
 	}
 }
 
-func ModifySSHConfig(targetHost string, targetSlug string, dryRun bool, output io.Writer, directives []SSHConfigDirective) error {
+func CreateSSHConfig(targetHost string, targetSlug string) error {
+	return CreateOrModifySSHConfig(targetHost, targetSlug, nil)
+}
+
+func CreateOrModifySSHConfig(targetHost string, targetSlug string, directives []SSHConfigDirective) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)
@@ -50,24 +51,6 @@ func ModifySSHConfig(targetHost string, targetSlug string, dryRun bool, output i
 
 	// ssh config parsing expects forward slashes (even on Windows)
 	includeLine := fmt.Sprintf("Include %s", filepath.ToSlash(sshTopoConfigDir+"/*.conf"))
-
-	if dryRun {
-		if output == nil {
-			return errors.New("dry run requested but no output writer provided for SSH config changes")
-		}
-
-		if err := term.PrintHeader(output, "Update local SSH config for key-based authentication"); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(output, "Will update %s to include:\n- %s\n", mainConfigPath, includeLine); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(output, "Will create %s and place the target SSH config there pointing at the key that was just created.\n", sshTopoConfigPath); err != nil {
-			return err
-		}
-
-		return nil
-	}
 
 	if err := os.MkdirAll(sshTopoConfigDir, 0o700); err != nil {
 		return fmt.Errorf("failed to create %s: %w", sshTopoConfigDir, err)
