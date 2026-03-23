@@ -36,9 +36,9 @@ var templatesCmd = &cobra.Command{
 				return err
 			}
 		} else {
-			resolvedTarget, exists := lookupTarget(cmd)
+			targetArg, exists := lookupTarget(cmd)
 			if exists {
-				dest := ssh.NewConfig(resolvedTarget).Destination
+				dest := ssh.NewConfig(targetArg).Destination
 				conn := target.NewConnection(dest, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
 				probe := target.NewHardwareProbe(&conn)
 				hwProfile, err := probe.Probe()

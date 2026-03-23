@@ -29,7 +29,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
 		}
 
-		resolvedTarget, err := requireTarget(cmd)
+		targetArg, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -39,7 +39,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		targetHost := ssh.NewConfig(resolvedTarget).Destination
+		targetHost := ssh.NewConfig(targetArg).Destination
 
 		stop := docker.NewDeploymentStop(composeFile, targetHost)
 		if dryRun {

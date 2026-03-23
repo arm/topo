@@ -20,12 +20,12 @@ var describeCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := requireTarget(cmd)
+		targetArg, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
 
-		conn := target.NewConnection(ssh.NewConfig(sshTarget).Destination, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+		conn := target.NewConnection(ssh.NewConfig(targetArg).Destination, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
 		probe := target.NewHardwareProbe(&conn)
 		hwProfile, err := probe.Probe()
 		if err != nil {

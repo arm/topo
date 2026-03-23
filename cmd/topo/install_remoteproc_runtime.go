@@ -26,7 +26,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		sshTarget, err := requireTarget(cmd)
+		targetArg, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -35,7 +35,7 @@ Falls back to ~/bin if no suitable locations are automatically found.
 		if err != nil {
 			return err
 		}
-		cfg := ssh.NewConfig(sshTarget)
+		cfg := ssh.NewConfig(targetArg)
 		p, err := installRemoteprocRuntime(cfg.Destination)
 		if err != nil {
 			return err

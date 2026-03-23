@@ -68,7 +68,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			})
 		}
 
-		resolvedTarget, err := requireTarget(cmd)
+		targetArg, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ Use --dry-run to see what commands would be executed without actually running th
 			return err
 		}
 
-		cfg := ssh.NewConfig(resolvedTarget)
+		cfg := ssh.NewConfig(targetArg)
 		deployOpts.TargetHost = cfg.Destination
 
 		if !skipProjectChecks {

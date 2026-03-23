@@ -39,8 +39,8 @@ var healthCmd = &cobra.Command{
 			Host: health.CheckHost(),
 		}
 
-		if sshTarget, ok := lookupTarget(cmd); ok {
-			cfg := ssh.NewConfig(sshTarget)
+		if targetArg, ok := lookupTarget(cmd); ok {
+			cfg := ssh.NewConfig(targetArg)
 			targetReport, err := health.CheckTarget(cfg.Destination, acceptNewHostKeys, sshConnectTimeout)
 			if err != nil {
 				if spinner != nil {
