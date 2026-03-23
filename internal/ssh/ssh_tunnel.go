@@ -103,11 +103,8 @@ func NewCheckSSHTunnelSecurity(targetDest Destination, port string) *CheckSSHTun
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
 	if !ct.TargetDest.IsLocalhost() {
-		host := ct.TargetDest.Host
-		if host == "" {
-			return nil
-		}
-		return exec.Command("curl", fmt.Sprintf("%s:%s", host, ct.Port), "--max-time", "1")
+		hostName := NewConfig(ct.TargetDest).HostName
+		return exec.Command("curl", fmt.Sprintf("%s:%s", hostName, ct.Port), "--max-time", "1")
 	}
 	return nil
 }
