@@ -79,13 +79,13 @@ Container Engine: ✅ (docker)
 
 Target
 ------
-Connected: ✅
+Connectivity: ✅
 Container Engine: ✅ (docker)
 Hardware Info: ✅ (lscpu)
-Subsystem Driver (remoteproc): ❌
+Subsystem Driver (remoteproc): ⚠️ (no remoteproc devices found)
 ```
 
-Every check should show ✅ except Subsystem Driver, which is only needed for heterogeneous-CPU templates. If a required check fails, resolve it before continuing.
+Resolve any ❌ before continuing. A ⚠️ is informational and won't block the core workflow.
 
 ### 2. Describe your target hardware
 
@@ -111,16 +111,16 @@ topo templates --target my-board
 ### 4. Clone a template into a new project
 
 ```sh
-topo clone my-project template:Hello-World
+topo clone template:topo-welcome
 ```
 
 If the template requires build arguments, Topo will prompt you for them. You can also supply them on the command line:
 
 ```sh
-topo clone my-project template:Hello-World GREETING_NAME="World"
+topo clone template:topo-welcome GREETING_NAME="World"
 ```
 
-This creates a `my-project/` directory containing a `compose.yaml`, and any source files from the template.
+This creates a project directory containing a `compose.yaml`, and any source files from the template.
 
 ### 5. Deploy to your target
 
