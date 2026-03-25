@@ -180,6 +180,9 @@ volumes:
 services:
   app:
     image: nginx:alpine
+    build:
+      args:
+        GREETING: ${GREETING:-Hello}
 
 x-topo:
   name: "piggy-service"
@@ -211,6 +214,65 @@ services:
 		assert.YAMLEq(t, want, string(got))
 	})
 
+	t.Run("injects arguments only into services that declare them", func(t *testing.T) {
+		dir := t.TempDir()
+		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
+		sourceName := "service-args-scope"
+		mockSource := mockTemplateSourceWithContent(t, `
+services:
+  app:
+    image: nginx:alpine
+    build:
+      args:
+        GREETING: ${GREETING:-Hello}
+  worker:
+    image: redis:alpine
+    build:
+      args:
+        PORT: ${PORT:-8080}
+
+x-topo:
+  name: "service-args-scope"
+  args:
+    GREETING:
+      description: "Greeting message"
+      required: true
+    PORT:
+      description: "Worker port"
+      required: true
+`, sourceName)
+		provider := arguments.NewStaticProvider(
+			arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"},
+			arguments.ResolvedArg{Name: "PORT", Value: "9090"},
+		)
+
+		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(targetProjectFile)
+		require.NoError(t, err)
+		sourcePath := filepath.Join(sourceName, "compose.yaml")
+		want := fmt.Sprintf(`
+name: example-project
+services:
+  app:
+    extends:
+      file: %s
+      service: app
+    build:
+      args:
+        GREETING: "Hello, World"
+  worker:
+    extends:
+      file: %s
+      service: worker
+    build:
+      args:
+        PORT: "9090"
+`, sourcePath, sourcePath)
+		assert.YAMLEq(t, want, string(got))
+	})
+
 	t.Run("does not collect optional arguments into x-topo", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
@@ -219,6 +281,9 @@ services:
 services:
   app:
     image: nginx:alpine
+    build:
+      args:
+        GREETING: ${GREETING:-Hello}
 
 x-topo:
   name: "oyster-service"
