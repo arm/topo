@@ -51,46 +51,54 @@ func NewSSHAuthenticationProbe(runner SSHRunner, opts SSHAuthenticationProbeOpti
 }
 
 func (p SSHAuthenticationProbe) Probe() error {
-	if !p.opts.AcceptNewHostKeys {
-		err := p.runAuthenticationProbe(knownHostProbeArgs)
-		if err != nil && !errors.Is(err, ErrAuthenticationFailure) {
-			return err
-		}
-	}
-
-	isPwdAuth, err := p.isPasswordAuthenticated()
-	if err != nil {
+	if err := p.verifyKnownHost(); err != nil {
 		return err
 	}
-	if isPwdAuth {
-		return ErrPasswordAuthentication
+
+	if err := p.authenticateUsingPublicKey(); err == nil {
+		return nil
+	} else if !errors.Is(err, ErrAuthenticationFailure) {
+		return err
 	}
-	return nil
+
+	if err := p.authenticateUsingPassword(); err == nil {
+		return nil
+	} else if errors.Is(err, ErrAuthenticationFailure) {
+		return ErrPasswordAuthentication
+	} else {
+		return err
+	}
 }
 
-func (p SSHAuthenticationProbe) isPasswordAuthenticated() (bool, error) {
-	var extraArgs []string
+func (p SSHAuthenticationProbe) verifyKnownHost() error {
 	if p.opts.AcceptNewHostKeys {
-		extraArgs = acceptNewHostKeyArgs
+		return nil
 	}
 
-	// If public key auth succeeds, the target doesn't require password auth.
-	publicArgs := slices.Clone(publicKeyProbeArgs)
-	if err := p.runAuthenticationProbe(slices.Concat(publicArgs, extraArgs)); err == nil {
-		return false, nil
-	} else if !errors.Is(err, ErrAuthenticationFailure) {
-		return false, err
+	err := p.runAuthenticationProbe(knownHostProbeArgs)
+	if err == nil || errors.Is(err, ErrAuthenticationFailure) {
+		return nil
 	}
 
-	// Public key was rejected. Check if the target accepts password auth.
+	return err
+}
+
+func (p SSHAuthenticationProbe) authenticateUsingPublicKey() error {
+	publicKeyArgs := slices.Clone(publicKeyProbeArgs)
+	if p.opts.AcceptNewHostKeys {
+		publicKeyArgs = slices.Concat(publicKeyArgs, acceptNewHostKeyArgs)
+	}
+
+	return p.runAuthenticationProbe(publicKeyArgs)
+}
+
+func (p SSHAuthenticationProbe) authenticateUsingPassword() error {
 	passwordArgs := slices.Clone(passwordProbeArgs)
-	if err := p.runAuthenticationProbe(slices.Concat(passwordArgs, extraArgs)); err == nil {
-		return false, nil
-	} else if errors.Is(err, ErrAuthenticationFailure) {
-		return true, nil
-	} else {
-		return false, err
+	if p.opts.AcceptNewHostKeys {
+		passwordArgs = slices.Concat(passwordArgs, acceptNewHostKeyArgs)
 	}
+
+	return p.runAuthenticationProbe(passwordArgs)
 }
 
 // All SSH authentication probes run the command "true" to check if the authentication method works.
