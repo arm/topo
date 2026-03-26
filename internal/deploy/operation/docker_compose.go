@@ -84,6 +84,10 @@ func (dc *DockerCompose) buildCommand() *exec.Cmd {
 	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
 }
 
+func NewDockerComposePs(composeFile string, h command.Host) *DockerCompose {
+	return NewDockerCompose("List running services", composeFile, h, []string{"ps", "--format", "json"})
+}
+
 type RecreateMode int
 
 const (
