@@ -39,17 +39,10 @@ This command performs the following operations in sequence:
   3. Transfer - Transfers built and pulled images and compose file to the target host
   4. Run - Runs docker compose up on the target host
 
-The compose file (compose.yaml) must be in the current working directory, as this is used to select the containers to be deployed.
-
-Use --dry-run to see what commands would be executed without actually running them.`,
+The compose file (compose.yaml) must be in the current working directory, as this is used to select the containers to be deployed.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-
-		dryRun, err := cmd.Flags().GetBool("dry-run")
-		if err != nil {
-			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
-		}
 
 		outputFormat, err := resolveOutput(cmd)
 		if err != nil {
@@ -124,9 +117,6 @@ Use --dry-run to see what commands would be executed without actually running th
 			c.Log(entries...)
 		}()
 
-		if dryRun {
-			return deployment.DryRun(os.Stdout)
-		}
 		return deployment.Run(os.Stdout)
 	},
 }
@@ -166,7 +156,6 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 
 func init() {
 	addTargetFlag(deployCmd)
-	addDryRunFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, fmt.Sprintf("Registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
