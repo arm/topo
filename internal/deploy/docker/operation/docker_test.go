@@ -48,7 +48,6 @@ func TestNewDockerPull(t *testing.T) {
 
 		assert.Equal(t, "Pull image nginx:latest", got)
 	})
-
 }
 
 func TestNewDockerStart(t *testing.T) {
@@ -61,7 +60,6 @@ func TestNewDockerStart(t *testing.T) {
 
 		assert.Equal(t, "Start container my-container", got)
 	})
-
 }
 
 func TestNewDockerRun(t *testing.T) {
@@ -76,5 +74,4 @@ func TestNewDockerRun(t *testing.T) {
 
 		assert.Equal(t, "Run image alpine:latest as container test-container", got)
 	})
-
 }

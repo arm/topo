@@ -58,17 +58,6 @@ func (r *RegistryTransfer) getImagesFromCompose(w io.Writer) ([]string, error) {
 	return lines, nil
 }
 
-func (r *RegistryTransfer) buildTransferCommands(image string) []*exec.Cmd {
-	tag := fmt.Sprintf("localhost:%s/%s", r.port, image)
-	digestRef := fmt.Sprintf("localhost:%s/%s@<digest>", r.port, image)
-	return []*exec.Cmd{
-		command.Docker(r.source, "tag", image, tag),
-		command.Docker(r.source, "push", tag),
-		command.Docker(r.dest, "pull", digestRef),
-		command.Docker(r.dest, "tag", digestRef, image),
-	}
-}
-
 func (r *RegistryTransfer) transferImage(w io.Writer, image string) error {
 	tag := fmt.Sprintf("localhost:%s/%s", r.port, image)
 

@@ -80,5 +80,4 @@ services:
 			testutil.AssertContainersStopped(t, remoteDockerHost, composeFilePath)
 		})
 	})
-
 }

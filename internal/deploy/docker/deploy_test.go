@@ -171,5 +171,4 @@ services:
 			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
 		})
 	})
-
 }

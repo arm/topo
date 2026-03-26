@@ -34,7 +34,6 @@ services:
 			assert.Contains(t, buf.String(), "test-service")
 		})
 	})
-
 }
 
 func TestNewDockerComposeBuild(t *testing.T) {
@@ -47,7 +46,6 @@ func TestNewDockerComposeBuild(t *testing.T) {
 
 		assert.Equal(t, "Build images", got)
 	})
-
 }
 
 func TestNewDockerComposePull(t *testing.T) {
@@ -60,7 +58,6 @@ func TestNewDockerComposePull(t *testing.T) {
 
 		assert.Equal(t, "Pull images", got)
 	})
-
 }
 
 func TestNewDockerComposeRun(t *testing.T) {
