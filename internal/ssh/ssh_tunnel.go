@@ -117,14 +117,18 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 	if cmd == nil {
 		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetDest))
 	}
-	cmd.Stdout = w
-	cmd.Stderr = w
+
+	var buf strings.Builder
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
 
 	err := cmd.Run()
 	if err == nil {
+		_, _ = fmt.Fprint(w, buf.String())
 		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
 	}
 
+	_, _ = fmt.Fprintf(w, "Port %s is not exposed on remote\n", ct.Port)
 	return nil
 }
 
