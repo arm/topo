@@ -17,9 +17,8 @@ func TestProbeHealthStatus(t *testing.T) {
 		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
 			return testutil.CmdWithOutput("connection refused", 1)
 		}
-
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn)
+		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 
 		assert.Error(t, ts.ConnectionError)
 		assert.ErrorContains(t, ts.ConnectionError, "exit status")
@@ -38,9 +37,8 @@ func TestProbeHealthStatus(t *testing.T) {
 				return testutil.CmdWithOutput("unexpected command: "+command, 1)
 			}
 		}
-
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn)
+		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 
 		want := health.HardwareProfile{RemoteCPU: []target.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}}
 		assert.NoError(t, ts.ConnectionError)
@@ -49,16 +47,13 @@ func TestProbeHealthStatus(t *testing.T) {
 
 	t.Run("probe succeeds when no remoteproc support", func(t *testing.T) {
 		mockExec := func(_ ssh.Destination, command string, _ []byte, _ ...string) *exec.Cmd {
-			switch command {
-			case "true":
+			if command == "true" {
 				return testutil.CmdWithOutput("", 0)
-			default:
-				return testutil.CmdWithOutput("no such directory", 1)
 			}
+			return testutil.CmdWithOutput("no such directory", 1)
 		}
-
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn)
+		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 
 		assert.NoError(t, ts.ConnectionError)
 		assert.Len(t, ts.Hardware.RemoteCPU, 0)
