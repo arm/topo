@@ -6,6 +6,6 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
-func NewDeploymentPs(composeFile string, dest ssh.Destination) goperation.Sequence {
+func NewListRunningServies(composeFile string, dest ssh.Destination) goperation.Sequence {
 	return goperation.Sequence{operation.NewDockerComposePs(composeFile, dest)}
 }

@@ -32,7 +32,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		dest := ssh.NewDestination(targetArg)
 
-		ps := docker.NewDeploymentPs(composeFile, dest)
+		ps := docker.NewListRunningServies(composeFile, dest)
 
 		return ps.Run(os.Stdout)
 	},
