@@ -128,7 +128,7 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
 	}
 
-	_, _ = fmt.Fprintf(w, "Port %s is not exposed to local network\n", ct.Port)
+	_, _ = fmt.Fprintf(w, "Port %s is not exposed on remote to local network\n", ct.Port)
 	return nil
 }
 
