@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/arm/topo/internal/deploy/docker"
@@ -24,11 +23,6 @@ Use --dry-run to see what commands would be executed without actually running th
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
 
-		dryRun, err := cmd.Flags().GetBool("dry-run")
-		if err != nil {
-			panic(fmt.Sprintf("internal error: dry-run flag not registered: %v", err))
-		}
-
 		targetArg, err := requireTarget(cmd)
 		if err != nil {
 			return err
@@ -42,9 +36,6 @@ Use --dry-run to see what commands would be executed without actually running th
 		dest := ssh.NewDestination(targetArg)
 
 		stop := docker.NewDeploymentStop(composeFile, dest)
-		if dryRun {
-			return stop.DryRun(os.Stdout)
-		}
 
 		return stop.Run(os.Stdout)
 	},
@@ -52,6 +43,5 @@ Use --dry-run to see what commands would be executed without actually running th
 
 func init() {
 	addTargetFlag(topoStopCmd)
-	addDryRunFlag(topoStopCmd)
 	rootCmd.AddCommand(topoStopCmd)
 }
