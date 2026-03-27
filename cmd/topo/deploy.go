@@ -112,7 +112,6 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		connectionOpts := target.ConnectionOptions{
 			Multiplex:      true,
-			WithLoginShell: true,
 			ConnectTimeout: sshConnectTimeout,
 		}
 		connection := target.NewConnection(deployOpts.TargetHost, connectionOpts)
