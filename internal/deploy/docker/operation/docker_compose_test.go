@@ -98,6 +98,28 @@ func TestNewDockerComposePull(t *testing.T) {
 	})
 }
 
+func TestNewDockerComposePs(t *testing.T) {
+	composeFilePath := "/path/to/compose.yaml"
+	remoteHost := ssh.NewDestination("user@remote")
+	op := operation.NewDockerComposePs(composeFilePath, remoteHost)
+
+	t.Run("Description", func(t *testing.T) {
+		got := op.Description()
+
+		assert.Equal(t, "List running services", got)
+	})
+
+	t.Run("DryRun", func(t *testing.T) {
+		var buf bytes.Buffer
+
+		err := op.DryRun(&buf)
+
+		require.NoError(t, err)
+		want := fmt.Sprintf("docker -H %s compose -f %s ps\n", remoteHost.AsURI(), composeFilePath)
+		assert.Equal(t, want, buf.String())
+	})
+}
+
 func TestNewDockerComposeRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	remoteHost := ssh.NewDestination("user@remote")

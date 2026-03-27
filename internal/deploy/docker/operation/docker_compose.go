@@ -58,6 +58,10 @@ func NewDockerComposeStop(composeFile string, h ssh.Destination) *DockerCompose 
 	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
 }
 
+func NewDockerComposePs(composeFile string, h ssh.Destination) *DockerCompose {
+	return NewDockerCompose("List running services", composeFile, h, []string{"ps"})
+}
+
 type RecreateMode int
 
 const (
