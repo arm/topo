@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/loader"
@@ -58,6 +59,85 @@ func CreateServiceByExtension(referencedComposeFilePath string, serviceName stri
 	}
 
 	return svc
+}
+
+func FilterResolvedBuildArgs(service map[string]any, resolvedArgs map[string]string) map[string]string {
+	if len(resolvedArgs) == 0 {
+		return nil
+	}
+
+	buildDefinition, hasBuild := service["build"]
+	if !hasBuild {
+		return nil
+	}
+
+	buildMap, ok := buildDefinition.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	argsDefinition, hasArgs := buildMap["args"]
+	if !hasArgs {
+		return nil
+	}
+
+	usedArgNames := extractBuildArgNames(argsDefinition)
+	if len(usedArgNames) == 0 {
+		return nil
+	}
+
+	filteredArgs := make(map[string]string)
+	for _, argName := range usedArgNames {
+		if value, exists := resolvedArgs[argName]; exists {
+			filteredArgs[argName] = value
+		}
+	}
+
+	if len(filteredArgs) == 0 {
+		return nil
+	}
+
+	return filteredArgs
+}
+
+func extractBuildArgNames(argsDefinition any) []string {
+	argNames := make(map[string]struct{})
+
+	switch args := argsDefinition.(type) {
+	case map[string]any:
+		for argName := range args {
+			argNames[argName] = struct{}{}
+		}
+	case []any:
+		for _, entry := range args {
+			argName, ok := parseBuildArgName(entry)
+			if ok {
+				argNames[argName] = struct{}{}
+			}
+		}
+	}
+
+	result := make([]string, 0, len(argNames))
+	for argName := range argNames {
+		result = append(result, argName)
+	}
+
+	return result
+}
+
+func parseBuildArgName(entry any) (string, bool) {
+	argText, ok := entry.(string)
+	if !ok {
+		return "", false
+	}
+
+	argName, _, _ := strings.Cut(argText, "=")
+	argName = strings.TrimSpace(argName)
+	if argName == "" {
+		return "", false
+	}
+
+	return argName, true
 }
 
 func convertArgs(resolvedArgs map[string]string) types.MappingWithEquals {

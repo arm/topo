@@ -118,10 +118,12 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 	if err != nil {
 		return logs, err
 	}
+	resolvedArgs := argsToMap(resolvedTemplate.Args)
 
 	extendedComposeFilePath := filepath.Join(copiedDirName, template.ComposeFilename)
 	for _, service := range resolvedTemplate.Services {
-		newSvc := compose.CreateServiceByExtension(extendedComposeFilePath, service.Name, argsToMap(resolvedTemplate.Args))
+		serviceArgs := compose.FilterResolvedBuildArgs(service.Data, resolvedArgs)
+		newSvc := compose.CreateServiceByExtension(extendedComposeFilePath, service.Name, serviceArgs)
 		logs = append(logs, logger.Entry{
 			Level:   logger.Info,
 			Message: fmt.Sprintf("adding service %q to project", newSvc.Name),

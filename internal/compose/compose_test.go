@@ -107,6 +107,54 @@ func TestCreateServiceByExtension(t *testing.T) {
 	})
 }
 
+func TestFilterResolvedBuildArgs(t *testing.T) {
+	t.Run("returns only args referenced by build args mapping", func(t *testing.T) {
+		service := map[string]any{
+			"build": map[string]any{
+				"args": map[string]any{
+					"GREETING": "${GREETING:-hello}",
+				},
+			},
+		}
+
+		resolved := map[string]string{
+			"GREETING": "Hello",
+			"PORT":     "8080",
+		}
+
+		got := compose.FilterResolvedBuildArgs(service, resolved)
+
+		assert.Equal(t, map[string]string{"GREETING": "Hello"}, got)
+	})
+
+	t.Run("returns only args referenced by build args sequence", func(t *testing.T) {
+		service := map[string]any{
+			"build": map[string]any{
+				"args": []any{"GREETING", "PORT=80"},
+			},
+		}
+
+		resolved := map[string]string{
+			"GREETING": "Hello",
+			"PORT":     "8080",
+			"UNUSED":   "value",
+		}
+
+		got := compose.FilterResolvedBuildArgs(service, resolved)
+
+		assert.Equal(t, map[string]string{"GREETING": "Hello", "PORT": "8080"}, got)
+	})
+
+	t.Run("returns empty when service has no build args", func(t *testing.T) {
+		service := map[string]any{"image": "nginx:alpine"}
+		resolved := map[string]string{"GREETING": "Hello"}
+
+		got := compose.FilterResolvedBuildArgs(service, resolved)
+
+		assert.Empty(t, got)
+	})
+}
+
 func TestRegisterVolumes(t *testing.T) {
 	t.Run("registers volumes", func(t *testing.T) {
 		project := &types.Project{
