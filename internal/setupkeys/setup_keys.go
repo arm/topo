@@ -23,7 +23,7 @@ func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType) (ope
 	conn := target.NewConnection(dest, target.ConnectionOptions{})
 	ops := []operation.Operation{
 		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", dest, string(keyType), privKeyPath, sshkeygen.SSHKeyGenOptions{}),
-		pubkeytransfer.NewPubKeyTransfer("Transfer public key to target and set it as an authorized key", privKeyPath, &conn),
+		pubkeytransfer.NewPubKeyTransfer(privKeyPath, &conn),
 	}
 	return operation.NewSequence(ops...), nil
 }

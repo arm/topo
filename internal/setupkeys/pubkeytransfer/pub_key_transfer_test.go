@@ -38,7 +38,7 @@ func TestPubKeyTransfer(t *testing.T) {
 				pubKeyContent,
 			).Return("ssh invoked", nil)
 
-			op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", privKeyPath, runner)
+			op := pubkeytransfer.NewPubKeyTransfer(privKeyPath, runner)
 
 			var buf bytes.Buffer
 			require.NoError(t, op.Run(&buf))

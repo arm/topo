@@ -15,21 +15,19 @@ type runner interface {
 }
 
 type PubKeyTransfer struct {
-	description string
-	pubKeyPath  string
-	runner      runner
+	pubKeyPath string
+	runner     runner
 }
 
-func NewPubKeyTransfer(description string, privKeyPath string, runner runner) *PubKeyTransfer {
+func NewPubKeyTransfer(privKeyPath string, runner runner) *PubKeyTransfer {
 	return &PubKeyTransfer{
-		description: description,
-		pubKeyPath:  privKeyPath + ".pub",
-		runner:      runner,
+		pubKeyPath: privKeyPath + ".pub",
+		runner:     runner,
 	}
 }
 
 func (kt *PubKeyTransfer) Description() string {
-	return kt.description
+	return "Transfer public key to target and set it as an authorized key"
 }
 
 func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
