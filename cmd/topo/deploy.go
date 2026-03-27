@@ -14,6 +14,7 @@ import (
 	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 
 	"github.com/spf13/cobra"
 )
@@ -107,6 +108,17 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 				Level:   logger.Warning,
 				Message: "registry transfer is not yet supported with this configuration. Falling back to direct transfer.",
 			})
+		}
+
+		connectionOpts := target.ConnectionOptions{
+			AcceptNewHostKeys: true,
+			Multiplex:         true,
+			WithLoginShell:    true,
+			ConnectTimeout:    sshConnectTimeout,
+		}
+		connection := target.NewConnection(deployOpts.TargetHost, connectionOpts)
+		if err := connection.ProbeAuthentication(); err != nil {
+			return fmt.Errorf("SSH authentication failed: %w", err)
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
