@@ -3,15 +3,23 @@ package pubkeytransfer_test
 import (
 	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
-	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/testutil"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type mockRunner struct {
+	mock.Mock
+}
+
+func (m *mockRunner) RunWithStdin(cmd string, stdin []byte) (string, error) {
+	args := m.Called(cmd, stdin)
+	return args.String(0), args.Error(1)
+}
 
 func TestPubKeyTransferRun(t *testing.T) {
 	tmp := t.TempDir()
@@ -20,29 +28,19 @@ func TestPubKeyTransferRun(t *testing.T) {
 	pubKeyContent := []byte("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAItestkey")
 	require.NoError(t, os.WriteFile(pubKeyPath, pubKeyContent, 0o600))
 
-	type call struct {
-		dest  ssh.Destination
-		cmd   string
-		stdin []byte
-		args  []string
-	}
-	var got call
+	runner := &mockRunner{}
+	runner.On(
+		"RunWithStdin",
+		mock.MatchedBy(func(cmd string) bool {
+			return strings.Contains(cmd, "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
+		}),
+		pubKeyContent,
+	).Return("ssh invoked", nil)
 
-	opts := pubkeytransfer.PubKeyTransferOptions{WithMockExec: func(d ssh.Destination, command string, stdin []byte, args ...string) *exec.Cmd {
-		got = call{dest: d, cmd: command, stdin: stdin, args: args}
-		cmd := testutil.CmdWithOutput("ssh invoked", 0)
-		if stdin != nil {
-			cmd.Stdin = bytes.NewReader(stdin)
-		}
-		return cmd
-	}}
-	op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", ssh.NewDestination("thing1@thing2.com"), privKeyPath, opts)
+	op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", privKeyPath, runner)
 
 	var buf bytes.Buffer
 	require.NoError(t, op.Run(&buf))
 	require.Contains(t, buf.String(), "ssh invoked")
-	require.Equal(t, ssh.NewDestination("thing1@thing2.com"), got.dest)
-	require.Contains(t, got.cmd, "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
-	require.Equal(t, pubKeyContent, got.stdin)
-	require.Empty(t, got.args)
+	runner.AssertExpectations(t)
 }

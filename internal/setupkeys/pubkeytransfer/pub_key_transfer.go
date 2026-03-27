@@ -6,40 +6,30 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/ssh"
-	target "github.com/arm/topo/internal/target"
 )
 
 const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
+type runner interface {
+	RunWithStdin(command string, stdin []byte) (string, error)
+}
+
 type PubKeyTransfer struct {
 	description string
-	dest        ssh.Destination
 	pubKeyPath  string
-	opts        PubKeyTransferOptions
+	runner      runner
 }
 
-type PubKeyTransferOptions struct {
-	WithMockExec target.ExecSSH
-}
-
-func NewPubKeyTransfer(description string, dest ssh.Destination, privKeyPath string, opts PubKeyTransferOptions) *PubKeyTransfer {
-	return &PubKeyTransfer{description: description, dest: dest, pubKeyPath: privKeyPath + ".pub", opts: opts}
+func NewPubKeyTransfer(description string, privKeyPath string, runner runner) *PubKeyTransfer {
+	return &PubKeyTransfer{
+		description: description,
+		pubKeyPath:  privKeyPath + ".pub",
+		runner:      runner,
+	}
 }
 
 func (kt *PubKeyTransfer) Description() string {
 	return kt.description
-}
-
-func (kt *PubKeyTransfer) buildTransferConnection() *target.Connection {
-	opts := target.ConnectionOptions{}
-	if kt.opts.WithMockExec != nil {
-		opts.WithMockExec = kt.opts.WithMockExec
-	}
-
-	conn := target.NewConnection(kt.dest, opts)
-
-	return &conn
 }
 
 func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
@@ -48,10 +38,9 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 		return fmt.Errorf("failed to read public key %s: %w", kt.pubKeyPath, err)
 	}
 
-	conn := kt.buildTransferConnection()
-	cmdOutput, err := conn.RunWithStdin(command.WrapInLoginShell(remoteAuthorizedKeysCommand), pubKey)
+	cmdOutput, err := kt.runner.RunWithStdin(command.WrapInLoginShell(remoteAuthorizedKeysCommand), pubKey)
 	if err != nil {
-		return fmt.Errorf("failed to transfer public key to target %s: %w", kt.dest, err)
+		return fmt.Errorf("failed to transfer public key to target: %w", err)
 	}
 	_, err = outputWriter.Write([]byte(cmdOutput))
 	return err
