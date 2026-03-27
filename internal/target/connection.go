@@ -3,13 +3,11 @@ package target
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -75,12 +73,6 @@ func (c *Connection) RunWithArgs(cmdStr string, sshArgs ...string) (string, erro
 		return string(out), ConnectionTimeoutError{Timeout: c.opts.ConnectTimeout}
 	}
 	return string(out), err
-}
-
-func (c *Connection) DryRun(cmdStr string, output io.Writer) error {
-	cmd := c.exec(c.SSHTarget, cmdStr, c.opts.WithStdin)
-	_, err := fmt.Fprintln(output, command.String(cmd))
-	return err
 }
 
 type ConnectionTimeoutError struct {

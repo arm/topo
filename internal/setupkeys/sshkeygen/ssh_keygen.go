@@ -60,8 +60,3 @@ func (kg *SSHKeyGen) Run(cmdOutput io.Writer) error {
 	cmd.Stderr = cmdOutput
 	return cmd.Run()
 }
-
-func (kg *SSHKeyGen) DryRun(output io.Writer) error {
-	_, err := fmt.Fprintln(output, command.String(kg.buildCommand()))
-	return err
-}

@@ -2,7 +2,6 @@ package operation_test
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker/operation"
@@ -24,33 +23,6 @@ func TestDocker(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, buf.String(), "Docker version")
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("prints command with multiple args and remote host", func(t *testing.T) {
-			var buf bytes.Buffer
-			remoteHost := ssh.NewDestination("user@remote")
-			op := operation.NewDocker("Test operation", remoteHost, []string{"ps", "-a", "--format", "json"})
-
-			err := op.DryRun(&buf)
-
-			require.NoError(t, err)
-			got := buf.String()
-			want := fmt.Sprintf("docker -H %s ps -a --format json\n", remoteHost.AsURI())
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("prints command for localhost without host flag", func(t *testing.T) {
-			var buf bytes.Buffer
-			op := operation.NewDocker("Test operation", ssh.PlainLocalhost, []string{"images", "-q"})
-
-			err := op.DryRun(&buf)
-
-			require.NoError(t, err)
-			got := buf.String()
-			want := "docker images -q\n"
-			assert.Equal(t, want, got)
 		})
 	})
 
@@ -76,16 +48,6 @@ func TestNewDockerPull(t *testing.T) {
 
 		assert.Equal(t, "Pull image nginx:latest", got)
 	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		err := op.DryRun(&buf)
-
-		require.NoError(t, err)
-		want := fmt.Sprintf("docker -H %s pull %s\n", remoteHost.AsURI(), image)
-		assert.Equal(t, want, buf.String())
-	})
 }
 
 func TestNewDockerStart(t *testing.T) {
@@ -97,16 +59,6 @@ func TestNewDockerStart(t *testing.T) {
 		got := op.Description()
 
 		assert.Equal(t, "Start container my-container", got)
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		err := op.DryRun(&buf)
-
-		require.NoError(t, err)
-		want := fmt.Sprintf("docker -H %s start %s\n", remoteHost.AsURI(), container)
-		assert.Equal(t, want, buf.String())
 	})
 }
 
@@ -121,29 +73,5 @@ func TestNewDockerRun(t *testing.T) {
 		got := op.Description()
 
 		assert.Equal(t, "Run image alpine:latest as container test-container", got)
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("with additional args", func(t *testing.T) {
-			var buf bytes.Buffer
-			op := operation.NewDockerRun(remoteHost, image, container, []string{"-d", "--restart", "always"})
-
-			err := op.DryRun(&buf)
-
-			require.NoError(t, err)
-			want := fmt.Sprintf("docker -H %s run -d --restart always --name %s %s\n", remoteHost.AsURI(), container, image)
-			assert.Equal(t, want, buf.String())
-		})
-
-		t.Run("with no additional args", func(t *testing.T) {
-			var buf bytes.Buffer
-			op := operation.NewDockerRun(remoteHost, image, container, []string{})
-
-			err := op.DryRun(&buf)
-
-			require.NoError(t, err)
-			want := fmt.Sprintf("docker -H %s run --name %s %s\n", remoteHost.AsURI(), container, image)
-			assert.Equal(t, want, buf.String())
-		})
 	})
 }

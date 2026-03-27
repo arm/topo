@@ -14,7 +14,6 @@ import (
 type Operation interface {
 	Description() string
 	Run(cmdOutput io.Writer) error
-	DryRun(output io.Writer) error
 }
 
 // SetupExitCleanup sets up a handler to run an operation once when the program exits due to an interrupt signal.

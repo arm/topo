@@ -26,16 +26,3 @@ func (s Sequence) Run(cmdOutput io.Writer) error {
 	}
 	return nil
 }
-
-func (s Sequence) DryRun(output io.Writer) error {
-	for _, op := range s {
-		err := term.PrintHeader(output, op.Description())
-		if err != nil {
-			return err
-		}
-		if err := op.DryRun(output); err != nil {
-			return err
-		}
-	}
-	return nil
-}

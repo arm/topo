@@ -1,7 +1,6 @@
 package docker_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -79,32 +78,6 @@ services:
 
 			require.NoError(t, err)
 			testutil.AssertContainersStopped(t, remoteDockerHost, composeFilePath)
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("prints stop command", func(t *testing.T) {
-			var buf bytes.Buffer
-			tmpDir := t.TempDir()
-			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-			composeFileContent := `
-services:
-  alpine:
-    image: alpine:latest
-`
-			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			dest := ssh.NewDestination("user@remote")
-			stop := docker.NewDeploymentStop(composeFilePath, dest)
-
-			err := stop.DryRun(&buf)
-
-			require.NoError(t, err)
-			got := buf.String()
-			want := fmt.Sprintf(`
-┌─ Stop services ───────────────────────────────────────
-docker -H ssh://user@remote compose -f %[1]s stop
-`, composeFilePath)
-			assert.Equal(t, want, got)
 		})
 	})
 }

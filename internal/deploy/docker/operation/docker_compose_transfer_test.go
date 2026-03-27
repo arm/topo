@@ -1,7 +1,6 @@
 package operation_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -61,35 +60,6 @@ services:
 
 			require.NoError(t, err)
 			testutil.RequireImageExists(t, h, imageName)
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("prints transfer commands", func(t *testing.T) {
-			// DryRun still shells out to `docker compose config --images`.
-			testutil.RequireDocker(t)
-			var buf bytes.Buffer
-			h := ssh.PlainLocalhost
-			tmpDir := t.TempDir()
-			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-			composeFileContent := `
-services:
-  alpine:
-    image: alpine:latest
-  nginx:
-    image: nginx:latest
-`
-			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, ssh.NewDestination("user@remote"))
-
-			err := transfer.DryRun(&buf)
-
-			require.NoError(t, err)
-			got := buf.String()
-			want := `docker save alpine:latest | docker -H ssh://user@remote load
-docker save nginx:latest | docker -H ssh://user@remote load
-`
-			assert.Equal(t, want, got)
 		})
 	})
 }

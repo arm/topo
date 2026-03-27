@@ -13,15 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSSHKeyGenDryRun(t *testing.T) {
-	keyPath := filepath.Join(t.TempDir(), "keys", "id_ed25519_test")
-	op := sshkeygen.NewSSHKeyGen("Generate SSH key pair", ssh.NewDestination("user@example.com"), "ed25519", keyPath, sshkeygen.SSHKeyGenOptions{})
-
-	var buf bytes.Buffer
-	require.NoError(t, op.DryRun(&buf))
-	require.Contains(t, buf.String(), "ssh-keygen -t ed25519 -f "+keyPath+" -C ssh://user@example.com")
-}
-
 func TestSSHKeyGenRun(t *testing.T) {
 	keyPath := filepath.Join(t.TempDir(), "keys", "id_ed25519_test")
 	opts := sshkeygen.SSHKeyGenOptions{

@@ -1,7 +1,6 @@
 package docker_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -170,44 +169,6 @@ services:
 
 			require.NoError(t, err)
 			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("prints all commands", func(t *testing.T) {
-			var buf bytes.Buffer
-			tmpDir := t.TempDir()
-			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-			composeFileContent := `
-services:
-  alpine:
-    image: alpine:latest
-  busybox:
-    image: busybox
-`
-			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination("user@remote")}
-			d, _ := docker.NewDeployment(composeFilePath, deployOpts)
-
-			err := d.DryRun(&buf)
-
-			require.NoError(t, err)
-			got := buf.String()
-			want := fmt.Sprintf(`
-┌─ Build images ────────────────────────────────────────
-docker compose -f %[1]s build
-
-┌─ Pull images ─────────────────────────────────────────
-docker compose -f %[1]s pull
-
-┌─ Transfer images ─────────────────────────────────────
-docker save alpine:latest | docker -H ssh://user@remote load
-docker save busybox | docker -H ssh://user@remote load
-
-┌─ Start services ──────────────────────────────────────
-docker -H ssh://user@remote compose -f %[1]s up -d --no-build --pull never
-`, composeFilePath)
-			assert.Equal(t, want, got)
 		})
 	})
 }

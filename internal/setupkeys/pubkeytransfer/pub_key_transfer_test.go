@@ -13,21 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPubKeyTransferDryRun(t *testing.T) {
-	tmp := t.TempDir()
-	privKeyPath := filepath.Join(tmp, "id_ed25519_testrun")
-	op := pubkeytransfer.NewPubKeyTransfer("Transfer public key", ssh.NewDestination("hola@chau"), privKeyPath, pubkeytransfer.PubKeyTransferOptions{})
-
-	var buf bytes.Buffer
-	require.NoError(t, op.DryRun(&buf))
-	output := buf.String()
-	require.Contains(t, output, "ssh -- ssh://hola@chau")
-	require.Contains(t, output, "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
-}
-
 func TestPubKeyTransferRun(t *testing.T) {
 	tmp := t.TempDir()
-	privKeyPath := filepath.Join(tmp, "id_ed25519_testdryrun")
+	privKeyPath := filepath.Join(tmp, "id_ed25519_testrun")
 	pubKeyPath := privKeyPath + ".pub"
 	pubKeyContent := []byte("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAItestkey")
 	require.NoError(t, os.WriteFile(pubKeyPath, pubKeyContent, 0o600))

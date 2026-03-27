@@ -34,12 +34,6 @@ func (d *Docker) Run(cmdOutput io.Writer) error {
 	return cmd.Run()
 }
 
-func (d *Docker) DryRun(output io.Writer) error {
-	cmd := d.buildCommand()
-	_, err := fmt.Fprintln(output, command.String(cmd))
-	return err
-}
-
 func (d *Docker) buildCommand() *exec.Cmd {
 	return command.Docker(d.host, d.args...)
 }

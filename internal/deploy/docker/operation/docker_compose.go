@@ -1,7 +1,6 @@
 package operation
 
 import (
-	"fmt"
 	"io"
 	"os/exec"
 
@@ -34,12 +33,6 @@ func (dc *DockerCompose) Run(cmdOutput io.Writer) error {
 	cmd.Stdout = cmdOutput
 	cmd.Stderr = cmdOutput
 	return cmd.Run()
-}
-
-func (dc *DockerCompose) DryRun(output io.Writer) error {
-	cmd := dc.buildCommand()
-	_, err := fmt.Fprintln(output, command.String(cmd))
-	return err
 }
 
 func (dc *DockerCompose) buildCommand() *exec.Cmd {

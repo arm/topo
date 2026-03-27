@@ -44,21 +44,6 @@ func (t *DockerComposePipeTransfer) Run(cmdOutput io.Writer) error {
 	return g.Wait()
 }
 
-func (t *DockerComposePipeTransfer) DryRun(output io.Writer) error {
-	images, err := t.getImagesFromCompose(output)
-	if err != nil {
-		return err
-	}
-	for _, image := range images {
-		saveCmd, loadCmd := t.buildTransferCommands(image)
-		_, err := fmt.Fprintf(output, "%s | %s\n", command.String(saveCmd), command.String(loadCmd))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (t *DockerComposePipeTransfer) buildTransferCommands(imageName string) (*exec.Cmd, *exec.Cmd) {
 	saveCmd := command.Docker(t.source, "save", imageName)
 	loadCmd := command.Docker(t.dest, "load")

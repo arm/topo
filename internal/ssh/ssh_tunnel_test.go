@@ -1,7 +1,6 @@
 package ssh_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -97,23 +96,6 @@ func TestSSHTunnelStart(t *testing.T) {
 		})
 	})
 
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("it outputs the ssh command", func(t *testing.T) {
-			var buf bytes.Buffer
-			dest := ssh.NewDestination("user@remote")
-			port := operation.DefaultRegistryPort
-
-			st := ssh.NewSSHTunnelStart(dest, port, true)
-			err := st.DryRun(&buf)
-			got := strings.TrimSpace(buf.String())
-
-			require.NoError(t, err)
-			wantSuffix := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s ssh://user@remote", ssh.ControlSocketPath(dest.String()), port, port)
-			assert.True(t, strings.HasSuffix(got, wantSuffix),
-				"DryRun output %q does not end with %q", got, wantSuffix)
-		})
-	})
-
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
 			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), operation.DefaultRegistryPort, true)
@@ -148,21 +130,6 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 		})
 	})
 
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("it outputs the curl command", func(t *testing.T) {
-			var buf bytes.Buffer
-			dest := ssh.NewDestination("user@remote")
-			port := operation.DefaultRegistryPort
-
-			cs := ssh.NewCheckSSHTunnelSecurity(dest, port)
-			err := cs.DryRun(&buf)
-			got := strings.TrimSpace(buf.String())
-			require.NoError(t, err)
-			want := fmt.Sprintf("curl remote:%s --max-time 1", port)
-			assert.Equal(t, want, got)
-		})
-	})
-
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns the expected string", func(t *testing.T) {
 			cs := ssh.NewCheckSSHTunnelSecurity(ssh.NewDestination("user@remote"), operation.DefaultRegistryPort)
@@ -184,22 +151,6 @@ func TestSSHTunnelStop(t *testing.T) {
 
 			want := fmt.Sprintf("ssh -S %s -O exit ssh://user@remote", ssh.ControlSocketPath(dest.String()))
 			assert.Equal(t, want, got)
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("generates the correct ssh command", func(t *testing.T) {
-			var buf bytes.Buffer
-			dest := ssh.NewDestination("user@remote")
-
-			st := ssh.NewSSHTunnelStop(dest)
-			err := st.DryRun(&buf)
-			got := strings.TrimSpace(buf.String())
-
-			require.NoError(t, err)
-			wantSuffix := fmt.Sprintf("ssh -S %s -O exit ssh://user@remote", ssh.ControlSocketPath(dest.String()))
-			assert.True(t, strings.HasSuffix(got, wantSuffix),
-				"DryRun output %q does not end with %q", got, wantSuffix)
 		})
 	})
 
@@ -257,70 +208,6 @@ func TestSSHTunnelProcessStop(t *testing.T) {
 
 				want := fmt.Sprintf("kill -9 %d", start.Process.Pid)
 				assert.Equal(t, want, got)
-			})
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("windows", func(t *testing.T) {
-			testutil.RequireOS(t, "windows")
-
-			t.Run("generates the correct kill command without target process", func(t *testing.T) {
-				var buf bytes.Buffer
-
-				st := ssh.NewSSHTunnelProcessStop(nil)
-				err := st.DryRun(&buf)
-				got := strings.TrimSpace(buf.String())
-
-				require.NoError(t, err)
-				wantSuffix := fmt.Sprintf("taskkill /PID %s /F", ssh.TunnelPIDPlaceholder)
-				assert.True(t, strings.HasSuffix(got, wantSuffix),
-					"DryRun output %q does not end with %q", got, wantSuffix)
-			})
-
-			t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-				var buf bytes.Buffer
-				start := &ssh.SSHTunnelStart{Process: &os.Process{Pid: 12345}}
-
-				st := ssh.NewSSHTunnelProcessStop(start)
-				err := st.DryRun(&buf)
-				got := strings.TrimSpace(buf.String())
-
-				require.NoError(t, err)
-				wantSuffix := fmt.Sprintf("taskkill /PID %d /F", start.Process.Pid)
-				assert.True(t, strings.HasSuffix(got, wantSuffix),
-					"DryRun output %q does not end with %q", got, wantSuffix)
-			})
-		})
-
-		t.Run("linux", func(t *testing.T) {
-			testutil.RequireOS(t, "linux")
-
-			t.Run("generates the correct kill command without target process", func(t *testing.T) {
-				var buf bytes.Buffer
-
-				st := ssh.NewSSHTunnelProcessStop(nil)
-				err := st.DryRun(&buf)
-				got := strings.TrimSpace(buf.String())
-
-				require.NoError(t, err)
-				wantSuffix := fmt.Sprintf("kill -9 %s", ssh.TunnelPIDPlaceholder)
-				assert.True(t, strings.HasSuffix(got, wantSuffix),
-					"DryRun output %q does not end with %q", got, wantSuffix)
-			})
-
-			t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-				var buf bytes.Buffer
-				start := &ssh.SSHTunnelStart{Process: &os.Process{Pid: 12345}}
-
-				st := ssh.NewSSHTunnelProcessStop(start)
-				err := st.DryRun(&buf)
-				got := strings.TrimSpace(buf.String())
-
-				require.NoError(t, err)
-				wantSuffix := fmt.Sprintf("kill -9 %d", start.Process.Pid)
-				assert.True(t, strings.HasSuffix(got, wantSuffix),
-					"DryRun output %q does not end with %q", got, wantSuffix)
 			})
 		})
 	})

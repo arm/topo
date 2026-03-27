@@ -2,7 +2,6 @@ package operation_test
 
 import (
 	"bytes"
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -35,23 +34,6 @@ services:
 			assert.Contains(t, buf.String(), "test-service")
 		})
 	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("prints command with multiple args and remote host", func(t *testing.T) {
-			var buf bytes.Buffer
-			tmpDir := t.TempDir()
-			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-			remoteHost := ssh.NewDestination("user@remote")
-			op := operation.NewDockerCompose("", composeFilePath, remoteHost, []string{"up", "-d", "--no-build"})
-
-			err := op.DryRun(&buf)
-
-			require.NoError(t, err)
-			got := buf.String()
-			want := fmt.Sprintf("docker -H %s compose -f %s up -d --no-build\n", remoteHost.AsURI(), composeFilePath)
-			assert.Equal(t, want, got)
-		})
-	})
 }
 
 func TestNewDockerComposeBuild(t *testing.T) {
@@ -64,16 +46,6 @@ func TestNewDockerComposeBuild(t *testing.T) {
 
 		assert.Equal(t, "Build images", got)
 	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		err := op.DryRun(&buf)
-
-		require.NoError(t, err)
-		want := fmt.Sprintf("docker -H %s compose -f %s build\n", remoteHost.AsURI(), composeFilePath)
-		assert.Equal(t, want, buf.String())
-	})
 }
 
 func TestNewDockerComposePull(t *testing.T) {
@@ -85,16 +57,6 @@ func TestNewDockerComposePull(t *testing.T) {
 		got := op.Description()
 
 		assert.Equal(t, "Pull images", got)
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		err := op.DryRun(&buf)
-
-		require.NoError(t, err)
-		want := fmt.Sprintf("docker -H %s compose -f %s pull\n", remoteHost.AsURI(), composeFilePath)
-		assert.Equal(t, want, buf.String())
 	})
 }
 
@@ -109,43 +71,11 @@ func TestNewDockerComposeRun(t *testing.T) {
 		assert.Equal(t, "Start services", got)
 	})
 
-	t.Run("DryRun", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		err := opDefault.DryRun(&buf)
-
-		require.NoError(t, err)
-		want := fmt.Sprintf("docker -H %s compose -f %s up -d --no-build --pull never\n", remoteHost.AsURI(), composeFilePath)
-		assert.Equal(t, want, buf.String())
-	})
-
 	opForce := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.RecreateModeForce)
 
 	t.Run("Description with --force-recreate", func(t *testing.T) {
 		got := opForce.Description()
 
 		assert.Equal(t, "Start services", got)
-	})
-
-	t.Run("DryRun with --force-recreate", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		err := opForce.DryRun(&buf)
-
-		require.NoError(t, err)
-		want := fmt.Sprintf("docker -H %s compose -f %s up -d --no-build --pull never --force-recreate\n", remoteHost.AsURI(), composeFilePath)
-		assert.Equal(t, want, buf.String())
-	})
-
-	opNoRecreate := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.RecreateModeNone)
-
-	t.Run("DryRun with --no-recreate", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		err := opNoRecreate.DryRun(&buf)
-
-		require.NoError(t, err)
-		want := fmt.Sprintf("docker -H %s compose -f %s up -d --no-build --pull never --no-recreate\n", remoteHost.AsURI(), composeFilePath)
-		assert.Equal(t, want, buf.String())
 	})
 }

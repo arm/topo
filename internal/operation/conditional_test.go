@@ -26,11 +26,6 @@ func (m *mockOperation) Run(cmdOutput io.Writer) error {
 	return args.Error(0)
 }
 
-func (m *mockOperation) DryRun(output io.Writer) error {
-	args := m.Called(output)
-	return args.Error(0)
-}
-
 type mockPredicate struct {
 	result bool
 }
@@ -90,62 +85,6 @@ func TestConditional(t *testing.T) {
 			op := operation.NewConditional(condition, new(mockOperation), ifFalse)
 
 			err := op.Run(&buf)
-
-			assert.Equal(t, expectedErr, err)
-			ifFalse.AssertExpectations(t)
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("executes ifTrue DryRun when condition is true", func(t *testing.T) {
-			ifTrue := new(mockOperation)
-			condition := &mockPredicate{result: true}
-			var buf bytes.Buffer
-			ifTrue.On("DryRun", &buf).Return(nil)
-			op := operation.NewConditional(condition, ifTrue, new(mockOperation))
-
-			err := op.DryRun(&buf)
-
-			require.NoError(t, err)
-			ifTrue.AssertExpectations(t)
-		})
-
-		t.Run("executes ifFalse DryRun when condition is false", func(t *testing.T) {
-			ifFalse := new(mockOperation)
-			condition := &mockPredicate{result: false}
-			var buf bytes.Buffer
-			ifFalse.On("DryRun", &buf).Return(nil)
-			op := operation.NewConditional(condition, new(mockOperation), ifFalse)
-
-			err := op.DryRun(&buf)
-
-			require.NoError(t, err)
-			ifFalse.AssertExpectations(t)
-		})
-
-		t.Run("returns error from ifTrue DryRun", func(t *testing.T) {
-			expectedErr := errors.New("ifTrue dryrun error")
-			ifTrue := new(mockOperation)
-			condition := &mockPredicate{result: true}
-			var buf bytes.Buffer
-			ifTrue.On("DryRun", &buf).Return(expectedErr)
-			op := operation.NewConditional(condition, ifTrue, new(mockOperation))
-
-			err := op.DryRun(&buf)
-
-			assert.Equal(t, expectedErr, err)
-			ifTrue.AssertExpectations(t)
-		})
-
-		t.Run("returns error from ifFalse DryRun", func(t *testing.T) {
-			expectedErr := errors.New("ifFalse dryrun error")
-			ifFalse := new(mockOperation)
-			condition := &mockPredicate{result: false}
-			var buf bytes.Buffer
-			ifFalse.On("DryRun", &buf).Return(expectedErr)
-			op := operation.NewConditional(condition, new(mockOperation), ifFalse)
-
-			err := op.DryRun(&buf)
 
 			assert.Equal(t, expectedErr, err)
 			ifFalse.AssertExpectations(t)

@@ -83,11 +83,6 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 	return nil
 }
 
-func (s *SSHTunnelStart) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
-	return nil
-}
-
 type CheckSSHTunnelSecurity struct {
 	TargetDest Destination
 	Port       string
@@ -132,14 +127,6 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 	return nil
 }
 
-func (ct *CheckSSHTunnelSecurity) DryRun(w io.Writer) error {
-	if ct.TargetDest.IsLocalhost() {
-		return nil
-	}
-	_, err := fmt.Fprintln(w, strings.Join(ct.Command().Args, " "))
-	return err
-}
-
 type SSHTunnelStop struct {
 	TargetDest Destination
 }
@@ -173,11 +160,6 @@ func (s *SSHTunnelStop) Run(w io.Writer) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to close SSH tunnel to %s: %w", s.TargetDest, err)
 	}
-	return nil
-}
-
-func (s *SSHTunnelStop) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
 	return nil
 }
 
@@ -217,10 +199,5 @@ func (s *SSHTunnelProcessStop) Run(w io.Writer) error {
 		return fmt.Errorf("failed to stop SSH tunnel process: %d", s.Start.Process.Pid)
 	}
 	s.Start.Process = nil
-	return nil
-}
-
-func (s *SSHTunnelProcessStop) DryRun(w io.Writer) error {
-	_, _ = fmt.Fprintln(w, strings.Join(s.Command().Args, " "))
 	return nil
 }

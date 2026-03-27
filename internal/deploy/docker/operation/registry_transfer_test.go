@@ -1,11 +1,9 @@
 package operation_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/command"
@@ -63,49 +61,6 @@ func TestRegistryTransfer(t *testing.T) {
 			got := transfer.Description()
 
 			assert.Equal(t, "Transfer via registry", got)
-		})
-	})
-
-	t.Run("DryRun", func(t *testing.T) {
-		t.Run("it prints registry transfer commands", func(t *testing.T) {
-			testutil.RequireDocker(t)
-			var buf bytes.Buffer
-			h := ssh.PlainLocalhost
-			port := operation.DefaultRegistryPort
-			tmpDir := t.TempDir()
-			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-			composeFileContent := `
-services:
-  alpine:
-    image: alpine:latest
-  nginx:
-    image: nginx:latest
-`
-			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			transfer := operation.NewRegistryTransfer(composeFilePath, h, ssh.NewDestination("user@remote"), port)
-
-			err := transfer.DryRun(&buf)
-
-			require.NoError(t, err)
-			got := buf.String()
-
-			alpineTag := fmt.Sprintf("localhost:%s/alpine:latest", port)
-			nginxTag := fmt.Sprintf("localhost:%s/nginx:latest", port)
-			alpineDigestRef := fmt.Sprintf("localhost:%s/alpine:latest@<digest>", port)
-			nginxDigestRef := fmt.Sprintf("localhost:%s/nginx:latest@<digest>", port)
-
-			expected := strings.TrimSpace(fmt.Sprintf(`
-docker tag alpine:latest %[1]s
-docker push %[1]s
-docker -H ssh://user@remote pull %[3]s
-docker -H ssh://user@remote tag %[3]s alpine:latest
-docker tag nginx:latest %[2]s
-docker push %[2]s
-docker -H ssh://user@remote pull %[4]s
-docker -H ssh://user@remote tag %[4]s nginx:latest
-`, alpineTag, nginxTag, alpineDigestRef, nginxDigestRef)) + "\n"
-
-			assert.Equal(t, expected, got)
 		})
 	})
 
