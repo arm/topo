@@ -92,23 +92,3 @@ func TestRun(t *testing.T) {
 		assert.False(t, strings.Contains(capturedArgs, "-o ControlPath"), "unexpected ControlPath argument")
 	})
 }
-
-func TestBinaryExists(t *testing.T) {
-	t.Run("when binary found returns nil", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithOutput("/foo/bar", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-
-		assert.NoError(t, conn.BinaryExists("bar"))
-	})
-
-	t.Run("invalid format returns an error", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithOutput("/foo/bar", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-
-		assert.Error(t, conn.BinaryExists("b a r"))
-	})
-}

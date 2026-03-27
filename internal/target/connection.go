@@ -22,7 +22,6 @@ type Connection struct {
 }
 
 type ConnectionOptions struct {
-	WithLoginShell bool
 	WithStdin      []byte
 	Multiplex      bool
 	WithMockExec   ExecSSH
@@ -43,10 +42,6 @@ func NewConnection(dest ssh.Destination, opts ConnectionOptions) Connection {
 }
 
 func (c *Connection) Run(cmdStr string) (string, error) {
-	if c.opts.WithLoginShell {
-		cmdStr = ssh.ShellCommand(cmdStr)
-	}
-
 	sshArgs := c.connectTimeoutArgs()
 	if c.opts.Multiplex && runtime.GOOS != "windows" {
 		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
@@ -83,24 +78,9 @@ func (c *Connection) RunWithArgs(cmdStr string, sshArgs ...string) (string, erro
 }
 
 func (c *Connection) DryRun(cmdStr string, output io.Writer) error {
-	if c.opts.WithLoginShell {
-		cmdStr = ssh.ShellCommand(cmdStr)
-	}
-
 	cmd := c.exec(c.SSHTarget, cmdStr, c.opts.WithStdin)
 	_, err := fmt.Fprintln(output, command.String(cmd))
 	return err
-}
-
-func (c *Connection) BinaryExists(bin string) error {
-	if err := command.ValidateBinaryName(bin); err != nil {
-		return err
-	}
-
-	if _, err := c.Run(fmt.Sprintf("command -v %s", bin)); err != nil {
-		return fmt.Errorf("%q executable file not found in $PATH", bin)
-	}
-	return nil
 }
 
 type ConnectionTimeoutError struct {

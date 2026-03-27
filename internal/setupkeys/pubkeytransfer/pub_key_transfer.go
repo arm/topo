@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 	target "github.com/arm/topo/internal/target"
 )
@@ -31,7 +32,7 @@ func (kt *PubKeyTransfer) Description() string {
 }
 
 func (kt *PubKeyTransfer) buildTransferConnection(stdin []byte) *target.Connection {
-	opts := target.ConnectionOptions{WithLoginShell: true, WithStdin: stdin}
+	opts := target.ConnectionOptions{WithStdin: stdin}
 
 	if kt.opts.WithMockExec != nil {
 		opts.WithMockExec = kt.opts.WithMockExec
@@ -49,7 +50,7 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 	}
 
 	conn := kt.buildTransferConnection(pubKey)
-	cmdOutput, err := conn.Run(remoteAuthorizedKeysCommand)
+	cmdOutput, err := conn.Run(command.WrapInLoginShell(remoteAuthorizedKeysCommand))
 	if err != nil {
 		return fmt.Errorf("failed to transfer public key to target %s: %w", kt.dest, err)
 	}
@@ -59,7 +60,7 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 
 func (kt *PubKeyTransfer) DryRun(output io.Writer) error {
 	conn := kt.buildTransferConnection(nil)
-	if err := conn.DryRun(remoteAuthorizedKeysCommand, output); err != nil {
+	if err := conn.DryRun(command.WrapInLoginShell(remoteAuthorizedKeysCommand), output); err != nil {
 		return fmt.Errorf("failed to write dry-run output for public key transfer to target %s: %w", kt.dest, err)
 	}
 	return nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -20,19 +21,14 @@ func (m *mockRunner) Run(cmd string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockRunner) BinaryExists(bin string) error {
-	args := m.Called(bin)
-	return args.Error(0)
-}
-
 func TestHardwareProbe(t *testing.T) {
 	t.Run("Probe", func(t *testing.T) {
 		t.Run("returns model name and features", func(t *testing.T) {
 			r := new(mockRunner)
-			r.On("BinaryExists", "lscpu").Return(nil)
-			r.On("Run", "lscpu --json").Return(testutil.LsCpuOutputRaw, nil)
-			r.On("Run", "ls /sys/class/remoteproc").Return("", nil)
-			r.On("Run", "cat /proc/meminfo").Return("MemTotal:       16384000 kB", nil)
+			r.On("Run", command.WrapInLoginShell("command -v lscpu")).Return("/usr/bin/lscpu", nil)
+			r.On("Run", command.WrapInLoginShell("lscpu --json")).Return(testutil.LsCpuOutputRaw, nil)
+			r.On("Run", command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("", nil)
+			r.On("Run", command.WrapInLoginShell("cat /proc/meminfo")).Return("MemTotal:       16384000 kB", nil)
 			probe := target.NewHardwareProbe(r)
 
 			got, err := probe.Probe()
@@ -54,7 +50,7 @@ func TestHardwareProbe(t *testing.T) {
 
 		t.Run("returns error when lscpu not found", func(t *testing.T) {
 			r := new(mockRunner)
-			r.On("BinaryExists", "lscpu").Return(fmt.Errorf("%q executable file not found in $PATH", "lscpu"))
+			r.On("Run", command.WrapInLoginShell("command -v lscpu")).Return("", fmt.Errorf("%q executable file not found in $PATH", "lscpu"))
 			probe := target.NewHardwareProbe(r)
 
 			_, err := probe.Probe()
@@ -65,8 +61,8 @@ func TestHardwareProbe(t *testing.T) {
 
 		t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
 			r := new(mockRunner)
-			r.On("BinaryExists", "lscpu").Return(nil)
-			r.On("Run", "lscpu --json").Return("not json", nil)
+			r.On("Run", command.WrapInLoginShell("command -v lscpu")).Return("/usr/bin/lscpu", nil)
+			r.On("Run", command.WrapInLoginShell("lscpu --json")).Return("not json", nil)
 			probe := target.NewHardwareProbe(r)
 
 			_, err := probe.Probe()

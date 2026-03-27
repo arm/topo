@@ -68,7 +68,6 @@ func CheckHost() HostReport {
 func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		Multiplex:      true,
-		WithLoginShell: true,
 		ConnectTimeout: connectTimeout,
 	}
 	conn := target.NewConnection(dest, opts)
