@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/testutil"
@@ -91,28 +90,5 @@ func TestRun(t *testing.T) {
 		assert.False(t, strings.Contains(capturedArgs, "-o ControlMaster"), "unexpected ControlMaster argument")
 		assert.False(t, strings.Contains(capturedArgs, "-o ControlPersist"), "unexpected ControlPersist argument")
 		assert.False(t, strings.Contains(capturedArgs, "-o ControlPath"), "unexpected ControlPath argument")
-	})
-}
-
-func TestBinaryExists(t *testing.T) {
-	t.Run("when binary found returns nil", func(t *testing.T) {
-		var capturedCmd string
-		mockExec := func(_ ssh.Destination, cmd string, _ []byte, _ ...string) *exec.Cmd {
-			capturedCmd = cmd
-			return testutil.CmdWithOutput("/foo/bar", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-
-		assert.NoError(t, conn.BinaryExists("bar"))
-		assert.Equal(t, command.WrapInLoginShell("command -v bar"), capturedCmd)
-	})
-
-	t.Run("invalid format returns an error", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithOutput("/foo/bar", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-
-		assert.Error(t, conn.BinaryExists("b a r"))
 	})
 }

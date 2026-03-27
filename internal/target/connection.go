@@ -83,17 +83,6 @@ func (c *Connection) DryRun(cmdStr string, output io.Writer) error {
 	return err
 }
 
-func (c *Connection) BinaryExists(bin string) error {
-	if err := command.ValidateBinaryName(bin); err != nil {
-		return err
-	}
-
-	if _, err := c.Run(command.WrapInLoginShell(fmt.Sprintf("command -v %s", bin))); err != nil {
-		return fmt.Errorf("%q executable file not found in $PATH", bin)
-	}
-	return nil
-}
-
 type ConnectionTimeoutError struct {
 	Timeout time.Duration
 }

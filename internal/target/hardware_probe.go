@@ -29,7 +29,6 @@ type HardwareProfile struct {
 
 type Runner interface {
 	Run(command string) (string, error)
-	BinaryExists(bin string) error
 }
 
 type HardwareProbe struct {
@@ -84,7 +83,7 @@ func (p *HardwareProbe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 }
 
 func (p *HardwareProbe) collectCPUInfo() ([]HostProcessor, error) {
-	if err := p.runner.BinaryExists("lscpu"); err != nil {
+	if _, err := p.runner.Run(command.UnsafeBinaryLookupCommand("lscpu")); err != nil {
 		return nil, err
 	}
 

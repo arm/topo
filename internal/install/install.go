@@ -57,7 +57,12 @@ func getHomeDir(targetDest ssh.Destination) (string, error) {
 
 func getExistingBinaryDir(targetDest ssh.Destination, binaryName string) (string, error) {
 	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
-	output, err := conn.Run(command.WrapInLoginShell(fmt.Sprintf("command -v %s", binaryName)))
+	checkCommand, err := command.BinaryLookupCommand(binaryName)
+	if err != nil {
+		return "", err
+	}
+
+	output, err := conn.Run(checkCommand)
 	if err != nil {
 		return "", nil
 	}
