@@ -286,8 +286,8 @@ func install(installPath string, targetDest ssh.Destination, binaries map[string
 		}
 
 		installCmd := fmt.Sprintf("install -D -m %s /dev/stdin %s/%s", mode, installPath, binaryName)
-		conn := target.NewConnection(targetDest, target.ConnectionOptions{WithStdin: binaryData})
-		output, err := conn.Run(command.WrapInLoginShell(installCmd))
+		conn := target.NewConnection(targetDest, target.ConnectionOptions{})
+		output, err := conn.RunWithStdin(command.WrapInLoginShell(installCmd), binaryData)
 		if err != nil {
 			if errors.Is(err, ssh.ErrSSH) {
 				return err

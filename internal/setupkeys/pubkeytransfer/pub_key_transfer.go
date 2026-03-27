@@ -31,9 +31,8 @@ func (kt *PubKeyTransfer) Description() string {
 	return kt.description
 }
 
-func (kt *PubKeyTransfer) buildTransferConnection(stdin []byte) *target.Connection {
-	opts := target.ConnectionOptions{WithStdin: stdin}
-
+func (kt *PubKeyTransfer) buildTransferConnection() *target.Connection {
+	opts := target.ConnectionOptions{}
 	if kt.opts.WithMockExec != nil {
 		opts.WithMockExec = kt.opts.WithMockExec
 	}
@@ -49,8 +48,8 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 		return fmt.Errorf("failed to read public key %s: %w", kt.pubKeyPath, err)
 	}
 
-	conn := kt.buildTransferConnection(pubKey)
-	cmdOutput, err := conn.Run(command.WrapInLoginShell(remoteAuthorizedKeysCommand))
+	conn := kt.buildTransferConnection()
+	cmdOutput, err := conn.RunWithStdin(command.WrapInLoginShell(remoteAuthorizedKeysCommand), pubKey)
 	if err != nil {
 		return fmt.Errorf("failed to transfer public key to target %s: %w", kt.dest, err)
 	}

@@ -20,7 +20,6 @@ type Connection struct {
 }
 
 type ConnectionOptions struct {
-	WithStdin      []byte
 	Multiplex      bool
 	WithMockExec   ExecSSH
 	ConnectTimeout time.Duration
@@ -40,12 +39,20 @@ func NewConnection(dest ssh.Destination, opts ConnectionOptions) Connection {
 }
 
 func (c *Connection) Run(cmdStr string) (string, error) {
+	return c.run(cmdStr, nil)
+}
+
+func (c *Connection) RunWithStdin(cmdStr string, stdin []byte) (string, error) {
+	return c.run(cmdStr, stdin)
+}
+
+func (c *Connection) run(cmdStr string, stdin []byte) (string, error) {
 	sshArgs := c.connectTimeoutArgs()
 	if c.opts.Multiplex && runtime.GOOS != "windows" {
 		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
 	}
 
-	cmd := c.exec(c.SSHTarget, cmdStr, c.opts.WithStdin, sshArgs...)
+	cmd := c.exec(c.SSHTarget, cmdStr, stdin, sshArgs...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf

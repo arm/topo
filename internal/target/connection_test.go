@@ -58,6 +58,21 @@ func TestRun(t *testing.T) {
 		assert.ErrorIs(t, err, ssh.ErrConnectionFailed)
 	})
 
+	t.Run("run with stdin passes stdin to command", func(t *testing.T) {
+		var gotStdin []byte
+		mockExec := func(_ ssh.Destination, _ string, stdin []byte, _ ...string) *exec.Cmd {
+			gotStdin = stdin
+			return testutil.CmdWithOutput("success", 0)
+		}
+		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+
+		out, err := conn.RunWithStdin("cat", []byte("payload"))
+
+		assert.NoError(t, err)
+		assert.Equal(t, "success", out)
+		assert.Equal(t, []byte("payload"), gotStdin)
+	})
+
 	t.Run("run with mutliplexing enabled includes Control args", func(t *testing.T) {
 		testutil.RequireOS(t, "linux")
 		var capturedArgs string
