@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
@@ -26,16 +27,17 @@ func SupportsSSHControlSockets(goos string) bool {
 }
 
 func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequence {
-	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, dest)}
+	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, command.NewHost(dest.String()))}
 }
 
 func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence, goperation.Operation) {
-	sourceHost := ssh.PlainLocalhost
+	sourceHost := command.NewLocalHost()
 	ops := []goperation.Operation{
 		operation.NewDockerComposeBuild(composeFile, sourceHost),
 		operation.NewDockerComposePull(composeFile, sourceHost),
 	}
 
+	targetHost := command.NewHost(opts.TargetHost.String())
 	var cleanup goperation.Operation
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry != nil {
@@ -44,12 +46,12 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 			ops = append(ops, operation.NewRunRegistry(opts.Registry.Port)...)
 			ops = append(ops, start)
 			ops = append(ops, securityCheck)
-			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, opts.TargetHost, opts.Registry.Port))
+			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, targetHost, opts.Registry.Port))
 			ops = append(ops, stop)
 		} else {
-			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, opts.TargetHost))
+			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, targetHost))
 		}
 	}
-	ops = append(ops, operation.NewDockerComposeUp(composeFile, opts.TargetHost, opts.RecreateMode))
+	ops = append(ops, operation.NewDockerComposeUp(composeFile, targetHost, opts.RecreateMode))
 	return goperation.NewSequence(ops...), cleanup
 }

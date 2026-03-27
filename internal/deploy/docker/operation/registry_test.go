@@ -9,7 +9,6 @@ import (
 	"github.com/arm/topo/internal/deploy/docker/testutil"
 	goperation "github.com/arm/topo/internal/operation"
 
-	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,12 +19,13 @@ func TestNewRunRegistry(t *testing.T) {
 
 		got := operation.NewRunRegistry(port)
 
+		localHost := command.NewLocalHost()
 		want := goperation.NewSequence(
-			operation.NewDockerPull(ssh.PlainLocalhost, "registry:2"),
+			operation.NewDockerPull(localHost, "registry:2"),
 			goperation.NewConditional(
-				operation.NewContainerExistsPredicate(ssh.PlainLocalhost, operation.RegistryContainerName),
-				operation.NewDockerStart(ssh.PlainLocalhost, operation.RegistryContainerName),
-				operation.NewRegistryRunWrapper(operation.NewDockerRun(ssh.PlainLocalhost, "registry:2", operation.RegistryContainerName,
+				operation.NewContainerExistsPredicate(localHost, operation.RegistryContainerName),
+				operation.NewDockerStart(localHost, operation.RegistryContainerName),
+				operation.NewRegistryRunWrapper(operation.NewDockerRun(localHost, "registry:2", operation.RegistryContainerName,
 					[]string{
 						"-d",
 						"--restart", "always",
@@ -43,15 +43,16 @@ func TestContainerExistsPredicate(t *testing.T) {
 		testutil.RequireLinuxDockerEngine(t)
 		containerName := testutil.TestContainerName(t)
 		imageName := testutil.TestImageName(t)
-		testutil.BuildMinimalImage(t, ssh.PlainLocalhost, imageName)
-		runCmd := command.Docker(ssh.PlainLocalhost, "run", "-d", "--name", containerName, imageName)
+		localhost := command.NewLocalHost()
+		testutil.BuildMinimalImage(t, localhost, imageName)
+		runCmd := command.Docker(localhost, "run", "-d", "--name", containerName, imageName)
 		require.NoError(t, runCmd.Run())
 		t.Cleanup(func() {
-			stopCmd := command.Docker(ssh.PlainLocalhost, "rm", "-f", containerName)
+			stopCmd := command.Docker(localhost, "rm", "-f", containerName)
 			_ = stopCmd.Run()
 		})
 
-		predicate := operation.NewContainerExistsPredicate(ssh.PlainLocalhost, containerName)
+		predicate := operation.NewContainerExistsPredicate(command.NewLocalHost(), containerName)
 		got := predicate.Eval()
 
 		assert.True(t, got)
@@ -61,7 +62,7 @@ func TestContainerExistsPredicate(t *testing.T) {
 		testutil.RequireDocker(t)
 		containerName := "non-existent-container-12345"
 
-		predicate := operation.NewContainerExistsPredicate(ssh.PlainLocalhost, containerName)
+		predicate := operation.NewContainerExistsPredicate(command.NewLocalHost(), containerName)
 		got := predicate.Eval()
 
 		assert.False(t, got)

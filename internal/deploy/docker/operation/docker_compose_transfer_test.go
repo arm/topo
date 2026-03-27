@@ -9,14 +9,13 @@ import (
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDockerComposePipeTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
-		h := ssh.PlainLocalhost
+		h := command.NewLocalHost()
 		tmpDir := t.TempDir()
 		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 		transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, h)
@@ -35,7 +34,7 @@ func TestDockerComposePipeTransfer(t *testing.T) {
 			// - Remove the image after save but before load (not feasible with current implementation).
 			// - Ensure test has access to two docker engines (expensive).
 			// As a compromise, this test verifies the operation completes without error and the image exists afterward.
-			h := ssh.PlainLocalhost
+			h := command.NewLocalHost()
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")

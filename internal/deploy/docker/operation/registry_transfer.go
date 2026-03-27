@@ -10,20 +10,19 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/ssh"
 )
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 
 type RegistryTransfer struct {
 	composeFile string
-	source      ssh.Destination
-	dest        ssh.Destination
+	source      command.Host
+	host        command.Host
 	port        string
 }
 
-func NewRegistryTransfer(composeFile string, sourceHost, dest ssh.Destination, port string) *RegistryTransfer {
-	return &RegistryTransfer{composeFile: composeFile, source: sourceHost, dest: dest, port: port}
+func NewRegistryTransfer(composeFile string, sourceHost, dest command.Host, port string) *RegistryTransfer {
+	return &RegistryTransfer{composeFile: composeFile, source: sourceHost, host: dest, port: port}
 }
 
 func (r *RegistryTransfer) Description() string {
@@ -81,12 +80,12 @@ func (r *RegistryTransfer) transferImage(w io.Writer, image string) error {
 	}
 
 	digestRef := fmt.Sprintf("localhost:%s/%s@%s", r.port, image, digest)
-	pullCmd := command.Docker(r.dest, "pull", digestRef)
+	pullCmd := command.Docker(r.host, "pull", digestRef)
 	if err := runCmd(pullCmd, w); err != nil {
 		return err
 	}
 
-	retagCmd := command.Docker(r.dest, "tag", digestRef, image)
+	retagCmd := command.Docker(r.host, "tag", digestRef, image)
 	if err := runCmd(retagCmd, w); err != nil {
 		return err
 	}
@@ -120,7 +119,7 @@ func ParseDigestFromPushOutput(output string) (string, error) {
 }
 
 func (r *RegistryTransfer) checkRegistryPortMismatch() string {
-	cmd := command.Docker(ssh.PlainLocalhost, "port", RegistryContainerName, "5000")
+	cmd := command.Docker(command.NewLocalHost(), "port", RegistryContainerName, "5000")
 	out, err := cmd.Output()
 	if err != nil {
 		return ""

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
@@ -19,9 +20,10 @@ func TestNewDeploymentStop(t *testing.T) {
 	composeFile := "compose.yaml"
 
 	t.Run("runs stop operation for remote host", func(t *testing.T) {
-		remoteHost := ssh.NewDestination("user@remote")
+		remoteDest := ssh.NewDestination("user@remote")
+		remoteHost := command.NewHost(remoteDest.String())
 
-		got := docker.NewDeploymentStop(composeFile, remoteHost)
+		got := docker.NewDeploymentStop(composeFile, remoteDest)
 
 		want := goperation.Sequence{
 			operation.NewDockerComposeStop(composeFile, remoteHost),
@@ -33,7 +35,7 @@ func TestNewDeploymentStop(t *testing.T) {
 		got := docker.NewDeploymentStop(composeFile, ssh.PlainLocalhost)
 
 		want := goperation.Sequence{
-			operation.NewDockerComposeStop(composeFile, ssh.PlainLocalhost),
+			operation.NewDockerComposeStop(composeFile, command.NewLocalHost()),
 		}
 		assert.Equal(t, want, got)
 	})
