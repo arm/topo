@@ -3,7 +3,6 @@ package sshconfig
 import (
 	"bytes"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"slices"
@@ -115,7 +114,8 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 func buildSSHConfigFragment(dest ssh.Destination, directives []SSHConfigDirective) []byte {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Host %s\n", dest.Host)
-	if dest.Host != "" && (dest.User != "" || net.ParseIP(dest.Host) != nil) {
+	sshConfig := ssh.NewConfig(dest)
+	if dest.Host != "" && (sshConfig.HostName == "" || strings.EqualFold(sshConfig.HostName, dest.Host)) {
 		fmt.Fprintf(&b, "  HostName %s\n", dest.Host)
 	}
 	if dest.User != "" {
