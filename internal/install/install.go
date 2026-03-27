@@ -34,8 +34,8 @@ type PathCandidate struct {
 }
 
 func getPathDirs(targetDest ssh.Destination) ([]string, error) {
-	conn := target.NewConnection(targetDest, target.ConnectionOptions{WithLoginShell: true})
-	output, err := conn.Run("echo $PATH")
+	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
+	output, err := conn.Run(ssh.ShellCommand("echo $PATH"))
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +47,8 @@ func getPathDirs(targetDest ssh.Destination) ([]string, error) {
 }
 
 func getHomeDir(targetDest ssh.Destination) (string, error) {
-	conn := target.NewConnection(targetDest, target.ConnectionOptions{WithLoginShell: true})
-	output, err := conn.Run("echo $HOME")
+	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
+	output, err := conn.Run(ssh.ShellCommand("echo $HOME"))
 	if err != nil {
 		return "", err
 	}
@@ -56,8 +56,8 @@ func getHomeDir(targetDest ssh.Destination) (string, error) {
 }
 
 func getExistingBinaryDir(targetDest ssh.Destination, binaryName string) (string, error) {
-	conn := target.NewConnection(targetDest, target.ConnectionOptions{WithLoginShell: true})
-	output, err := conn.Run(fmt.Sprintf("command -v %s", binaryName))
+	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
+	output, err := conn.Run(ssh.ShellCommand(fmt.Sprintf("command -v %s", binaryName)))
 	if err != nil {
 		return "", nil
 	}
@@ -281,8 +281,8 @@ func install(installPath string, targetDest ssh.Destination, binaries map[string
 		}
 
 		installCmd := fmt.Sprintf("install -D -m %s /dev/stdin %s/%s", mode, installPath, binaryName)
-		conn := target.NewConnection(targetDest, target.ConnectionOptions{WithLoginShell: true, WithStdin: binaryData})
-		output, err := conn.Run(installCmd)
+		conn := target.NewConnection(targetDest, target.ConnectionOptions{WithStdin: binaryData})
+		output, err := conn.Run(ssh.ShellCommand(installCmd))
 		if err != nil {
 			if errors.Is(err, ssh.ErrSSH) {
 				return err

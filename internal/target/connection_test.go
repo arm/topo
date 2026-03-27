@@ -95,12 +95,15 @@ func TestRun(t *testing.T) {
 
 func TestBinaryExists(t *testing.T) {
 	t.Run("when binary found returns nil", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
+		var capturedCmd string
+		mockExec := func(_ ssh.Destination, cmd string, _ []byte, _ ...string) *exec.Cmd {
+			capturedCmd = cmd
 			return testutil.CmdWithOutput("/foo/bar", 0)
 		}
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		assert.NoError(t, conn.BinaryExists("bar"))
+		assert.Equal(t, ssh.ShellCommand("command -v bar"), capturedCmd)
 	})
 
 	t.Run("invalid format returns an error", func(t *testing.T) {
