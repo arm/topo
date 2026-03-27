@@ -8,7 +8,6 @@ import (
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/ssh"
 )
 
 const (
@@ -18,12 +17,13 @@ const (
 )
 
 func NewRunRegistry(port string) operation.Sequence {
+	localHost := command.NewLocalHost()
 	return operation.NewSequence(
-		NewDockerPull(ssh.PlainLocalhost, registryImage),
+		NewDockerPull(localHost, registryImage),
 		operation.NewConditional(
-			NewContainerExistsPredicate(ssh.PlainLocalhost, RegistryContainerName),
-			NewDockerStart(ssh.PlainLocalhost, RegistryContainerName),
-			NewRegistryRunWrapper(NewDockerRun(ssh.PlainLocalhost, registryImage, RegistryContainerName,
+			NewContainerExistsPredicate(localHost, RegistryContainerName),
+			NewDockerStart(localHost, RegistryContainerName),
+			NewRegistryRunWrapper(NewDockerRun(localHost, registryImage, RegistryContainerName,
 				[]string{
 					"-d",
 					"--restart", "always",
@@ -55,11 +55,11 @@ func (r *RegistryRunWrapper) Run(w io.Writer) error {
 }
 
 type ContainerExistsPredicate struct {
-	host          ssh.Destination
+	host          command.Host
 	containerName string
 }
 
-func NewContainerExistsPredicate(host ssh.Destination, containerName string) *ContainerExistsPredicate {
+func NewContainerExistsPredicate(host command.Host, containerName string) *ContainerExistsPredicate {
 	return &ContainerExistsPredicate{host: host, containerName: containerName}
 }
 
