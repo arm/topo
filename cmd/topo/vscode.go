@@ -44,7 +44,7 @@ This will also update the main SSH config (~/.ssh/config) to include the topo-ma
 			return err
 		}
 
-		return sshconfig.CreateSSHConfig(targetArg, targetSlug)
+		return sshconfig.CreateSSHConfig(dest, targetSlug)
 	},
 }
 
