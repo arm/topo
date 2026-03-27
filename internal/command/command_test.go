@@ -29,3 +29,12 @@ func TestString(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 }
+
+func TestWrapInLoginShell(t *testing.T) {
+	t.Run("wraps command in login shell", func(t *testing.T) {
+		got := command.WrapInLoginShell("echo $PATH")
+
+		want := `/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"echo \\\$PATH\""`
+		assert.Equal(t, want, got)
+	})
+}

@@ -88,7 +88,7 @@ func (c *Connection) BinaryExists(bin string) error {
 		return err
 	}
 
-	if _, err := c.Run(ssh.ShellCommand(fmt.Sprintf("command -v %s", bin))); err != nil {
+	if _, err := c.Run(command.WrapInLoginShell(fmt.Sprintf("command -v %s", bin))); err != nil {
 		return fmt.Errorf("%q executable file not found in $PATH", bin)
 	}
 	return nil

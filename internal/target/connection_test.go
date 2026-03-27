@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/testutil"
@@ -103,7 +104,7 @@ func TestBinaryExists(t *testing.T) {
 		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
 
 		assert.NoError(t, conn.BinaryExists("bar"))
-		assert.Equal(t, ssh.ShellCommand("command -v bar"), capturedCmd)
+		assert.Equal(t, command.WrapInLoginShell("command -v bar"), capturedCmd)
 	})
 
 	t.Run("invalid format returns an error", func(t *testing.T) {

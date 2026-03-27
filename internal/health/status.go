@@ -1,6 +1,7 @@
 package health
 
 import (
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
@@ -39,7 +40,7 @@ func ProbeHealthStatus(c target.Connection, probeOpts target.SSHAuthenticationPr
 	status.Hardware.RemoteCPU = remoteprocs
 	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, status.Hardware.Capabilities())
 	status.Dependencies = PerformChecks(dependenciesToCheck, c.BinaryExists, func(fullCmd string) error {
-		_, err := c.Run(ssh.ShellCommand(fullCmd))
+		_, err := c.Run(command.WrapInLoginShell(fullCmd))
 		return err
 	})
 

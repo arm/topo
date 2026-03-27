@@ -2,28 +2,9 @@ package ssh
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 	"slices"
-	"strings"
 )
-
-func shellEscapeForDoubleQuotes(s string) string {
-	// Escape for TWO nested double-quoted shell layers- need three `\\\`.
-	// /bin/sh -c "exec ${SHELL} -l -c \"<command>\""
-	repl := strings.NewReplacer(
-		`\`, `\\\\`,
-		`"`, `\\\"`,
-		`$`, `\\\$`,
-		"`", `\\\`+"`",
-	)
-	return repl.Replace(s)
-}
-
-func ShellCommand(command string) string {
-	escaped := shellEscapeForDoubleQuotes(command)
-	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
-}
 
 // ExecCmd builds a command to be executed on the target host. If the target is localhost, it will run locally when executed.
 // Pass stdin data as optional parameter, or nil for no stdin.

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/command"
 )
 
 type HostProcessor struct {
@@ -66,12 +66,12 @@ func (p *HardwareProbe) Probe() (HardwareProfile, error) {
 
 func (p *HardwareProbe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
-	out, err := p.runner.Run(ssh.ShellCommand("ls /sys/class/remoteproc"))
+	out, err := p.runner.Run(command.WrapInLoginShell("ls /sys/class/remoteproc"))
 	if err != nil || out == "" {
 		return remoteProcs, nil
 	}
 
-	out, err = p.runner.Run(ssh.ShellCommand("cat /sys/class/remoteproc/*/name"))
+	out, err = p.runner.Run(command.WrapInLoginShell("cat /sys/class/remoteproc/*/name"))
 	if err != nil {
 		return remoteProcs, err
 	}
@@ -88,7 +88,7 @@ func (p *HardwareProbe) collectCPUInfo() ([]HostProcessor, error) {
 		return nil, err
 	}
 
-	out, err := p.runner.Run(ssh.ShellCommand("lscpu --json"))
+	out, err := p.runner.Run(command.WrapInLoginShell("lscpu --json"))
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (p *HardwareProbe) collectMemInfo() (int64, error) {
 	key := "MemTotal"
 	path := "/proc/meminfo"
 
-	out, err := p.runner.Run(ssh.ShellCommand(fmt.Sprintf("cat %s", path)))
+	out, err := p.runner.Run(command.WrapInLoginShell(fmt.Sprintf("cat %s", path)))
 	if err != nil {
 		return 0, err
 	}

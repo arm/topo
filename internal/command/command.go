@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -25,6 +26,21 @@ func SSHKeyGen(keyType string, keyPath string, targetHost string) *exec.Cmd {
 
 func String(cmd *exec.Cmd) string {
 	return strings.Join(cmd.Args, " ")
+}
+
+func WrapInLoginShell(cmd string) string {
+	escaped := shellEscapeForDoubleQuotes(cmd)
+	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
+}
+
+func shellEscapeForDoubleQuotes(s string) string {
+	repl := strings.NewReplacer(
+		`\`, `\\`,
+		`"`, `\\\"`,
+		`$`, `\\\$`,
+		"`", `\\\`+"`",
+	)
+	return repl.Replace(s)
 }
 
 func hostToArgs(h ssh.Destination) []string {
