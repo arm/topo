@@ -111,13 +111,13 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 		}
 
 		connectionOpts := target.ConnectionOptions{
-			AcceptNewHostKeys: true,
-			Multiplex:         true,
-			WithLoginShell:    true,
-			ConnectTimeout:    sshConnectTimeout,
+			Multiplex:      true,
+			WithLoginShell: true,
+			ConnectTimeout: sshConnectTimeout,
 		}
 		connection := target.NewConnection(deployOpts.TargetHost, connectionOpts)
-		if err := connection.ProbeAuthentication(); err != nil {
+		authProbe := target.NewSSHAuthenticationProbe(&connection, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+		if err := authProbe.Probe(); err != nil {
 			return fmt.Errorf("SSH authentication failed: %w", err)
 		}
 
