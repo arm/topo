@@ -8,14 +8,16 @@ import (
 )
 
 func TestNewConfigFromBytes(t *testing.T) {
-	t.Run("parses hostname", func(t *testing.T) {
+	t.Run("parses basic config fields", func(t *testing.T) {
 		input := []byte(`hostname springfield.nuclear.gov
+user homer
 `)
 
 		got := NewConfigFromBytes(input)
 
 		want := Config{
 			HostName: "springfield.nuclear.gov",
+			User:     "homer",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -30,6 +32,7 @@ user homer
 
 		want := Config{
 			HostName: "springfield.nuclear.gov",
+			User:     "homer",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -86,5 +89,45 @@ func TestConfigConnectTimeout(t *testing.T) {
 		config := Config{}
 
 		assert.Equal(t, fallback, config.ConnectTimeout(fallback))
+	})
+}
+
+func TestIsExplicitHostConfig(t *testing.T) {
+	t.Run("returns true for exact host matches in verbose ssh output", func(t *testing.T) {
+		config := []byte(`debug1: /tmp/config line 1: Applying options for Board,board-alt
+debug1: /tmp/config line 5: Applying options for *
+hostname springfield.nuclear.gov
+`)
+
+		got := isExplicitHostConfig("board", config)
+		assert.True(t, got)
+	})
+
+	t.Run("ignores negated host patterns", func(t *testing.T) {
+		config := []byte(`debug1: /tmp/config line 1: Applying options for Board,!skip,*.corp,te?t
+hostname springfield.nuclear.gov
+`)
+
+		got := isExplicitHostConfig("skip", config)
+		assert.False(t, got)
+	})
+
+	t.Run("returns false when the host is not in the effective host list", func(t *testing.T) {
+		config := []byte(`debug1: /tmp/config line 1: Applying options for board,board-alt
+hostname springfield.nuclear.gov
+`)
+
+		got := isExplicitHostConfig("other-board", config)
+		assert.False(t, got)
+	})
+
+	t.Run("ignores lines without an applying options marker", func(t *testing.T) {
+		config := []byte(`hostname springfield.nuclear.gov
+user homer
+debug1: /tmp/config line 5: Applying options for *
+`)
+
+		got := isExplicitHostConfig("board", config)
+		assert.False(t, got)
 	})
 }
