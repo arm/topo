@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 )
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)

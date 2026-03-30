@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 )
 
 type HostProcessor struct {

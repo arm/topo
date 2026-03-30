@@ -1,7 +1,7 @@
 package health
 
 import (
-	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
