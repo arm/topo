@@ -2,7 +2,6 @@ package health
 
 import (
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
 
@@ -22,21 +21,19 @@ func (h HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
 	return capabilities
 }
 
-type Status struct {
-	SSHTarget       ssh.Destination
-	ConnectionError error
-	Dependencies    []DependencyStatus
-	Hardware        HardwareProfile
+type HealthStatus struct {
+	Dependencies []DependencyStatus
+	Hardware     HardwareProfile
 }
 
-func ProbeHealthStatus(r runner) Status {
-	var status Status
+func ProbeHealthStatus(r runner) HealthStatus {
+	var hs HealthStatus
 
 	probe := target.NewHardwareProbe(r)
 	remoteprocs, _ := probe.ProbeRemoteproc()
-	status.Hardware.RemoteCPU = remoteprocs
+	hs.Hardware.RemoteCPU = remoteprocs
 
-	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, status.Hardware.Capabilities())
+	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, hs.Hardware.Capabilities())
 	binaryExists := func(bin string) error {
 		// We can use `UnsafeBinaryLookupCommand`, because the dependencies we're checking are hardcoded in the codebase
 		if _, err := r.Run(command.UnsafeBinaryLookupCommand(bin)); err != nil {
@@ -48,7 +45,7 @@ func ProbeHealthStatus(r runner) Status {
 		_, err := r.Run(command.WrapInLoginShell(fullCmd))
 		return err
 	}
-	status.Dependencies = PerformChecks(dependenciesToCheck, binaryExists, commandSuccessful)
+	hs.Dependencies = PerformChecks(dependenciesToCheck, binaryExists, commandSuccessful)
 
-	return status
+	return hs
 }

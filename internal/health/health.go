@@ -65,6 +65,17 @@ func CheckHost() HostReport {
 	return GenerateHostReport(dependencyStatuses)
 }
 
+type ConnectionStatus struct {
+	Destination ssh.Destination
+	Error       error
+}
+
+type Status struct {
+	Connection   ConnectionStatus
+	Dependencies []DependencyStatus
+	Hardware     HardwareProfile
+}
+
 func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		Multiplex:      true,
@@ -75,13 +86,17 @@ func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOp
 	if !dest.IsPlainLocalhost() {
 		authProbe := target.NewSSHAuthenticationProbe(&conn, probeOpts)
 		if err := authProbe.Probe(); err != nil {
-			status := Status{SSHTarget: dest, ConnectionError: err}
+			status := Status{Connection: ConnectionStatus{Destination: dest, Error: err}}
 			return GenerateTargetReport(status), nil
 		}
 	}
 
-	status := ProbeHealthStatus(&conn)
-	status.SSHTarget = dest
+	hs := ProbeHealthStatus(&conn)
+	status := Status{
+		Connection:   ConnectionStatus{Destination: dest},
+		Dependencies: hs.Dependencies,
+		Hardware:     hs.Hardware,
+	}
 	return GenerateTargetReport(status), nil
 }
 
@@ -94,7 +109,7 @@ func GenerateHostReport(statuses []DependencyStatus) HostReport {
 
 func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
-	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
+	report.IsLocalhost = targetStatus.Connection.Destination.IsPlainLocalhost()
 	report.Connectivity = connectivityCheck(targetStatus)
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
@@ -119,15 +134,15 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 func connectivityCheck(targetStatus Status) HealthCheck {
 	check := HealthCheck{
 		Name:   "Connectivity",
-		Status: NewCheckStatusFromError(targetStatus.ConnectionError),
+		Status: NewCheckStatusFromError(targetStatus.Connection.Error),
 	}
-	if targetStatus.ConnectionError == nil {
+	if targetStatus.Connection.Error == nil {
 		return check
 	}
 
-	check.Value = targetStatus.ConnectionError.Error()
-	if errors.Is(targetStatus.ConnectionError, target.ErrPasswordAuthentication) {
-		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` or manually setup SSH keys for the target", targetStatus.SSHTarget)
+	check.Value = targetStatus.Connection.Error.Error()
+	if errors.Is(targetStatus.Connection.Error, target.ErrPasswordAuthentication) {
+		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` or manually setup SSH keys for the target", targetStatus.Connection.Destination)
 	}
 	return check
 }

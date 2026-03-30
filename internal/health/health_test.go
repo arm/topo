@@ -58,7 +58,7 @@ func TestGenerateTargetReport(t *testing.T) {
 	})
 
 	t.Run("when the target has a connection error, Connectivity status reports error", func(t *testing.T) {
-		ts := health.Status{ConnectionError: assert.AnError}
+		ts := health.Status{Connection: health.ConnectionStatus{Error: assert.AnError}}
 
 		got := health.GenerateTargetReport(ts)
 
@@ -76,8 +76,10 @@ func TestGenerateTargetReport(t *testing.T) {
 
 	t.Run("when password authentication is required, Connectivity includes a setup-keys fix", func(t *testing.T) {
 		ts := health.Status{
-			SSHTarget:       ssh.NewDestination("user@my-target"),
-			ConnectionError: target.ErrPasswordAuthentication,
+			Connection: health.ConnectionStatus{
+				Destination: ssh.NewDestination("user@my-target"),
+				Error:       target.ErrPasswordAuthentication,
+			},
 		}
 
 		got := health.GenerateTargetReport(ts)
