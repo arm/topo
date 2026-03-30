@@ -17,7 +17,6 @@ import (
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/target"
 	"github.com/mholt/archives"
 )
 
@@ -332,7 +331,7 @@ type InstallResult struct {
 	Binary   string
 }
 
-func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string, binaryNames []string) ([]InstallResult, error) {
+func InstallBinariesFromGithubRelease(r runner, repoURL string, binaryNames []string) ([]InstallResult, error) {
 	for _, binaryName := range binaryNames {
 		if err := command.ValidateBinaryName(binaryName); err != nil {
 			return nil, err
@@ -344,13 +343,11 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 		return nil, fmt.Errorf("failed to fetch latest release binaries: %w", err)
 	}
 
-	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
-
 	existingBinaryPaths := make(map[string]string)
 	var binariesNotOnPath []string
 
 	for _, binaryName := range binaryNames {
-		existingPath, err := getExistingBinaryDir(&conn, binaryName)
+		existingPath, err := getExistingBinaryDir(r, binaryName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existing path for %s: %w", binaryName, err)
 		}
@@ -371,7 +368,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 		}
 
 		singleBinary := map[string][]byte{binaryName: binaryData}
-		err := install(dirPath, &conn, singleBinary)
+		err := install(dirPath, r, singleBinary)
 		if err != nil {
 			return nil, fmt.Errorf("failed to install %s to existing location %s: %w", binaryName, dirPath, err)
 		}
@@ -384,7 +381,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 
 	// if not already on path, find a good spot for them.
 	if len(binariesNotOnPath) > 0 {
-		paths, err := FindPathDirs(&conn)
+		paths, err := FindPathDirs(r)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find valid PATH directories: %w", err)
 		}
@@ -394,7 +391,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 			newBinariesMap[binaryName] = binaries[binaryName]
 		}
 
-		installLoc, installedBinaries, err := installToFirstWriteableDir(paths, &conn, newBinariesMap)
+		installLoc, installedBinaries, err := installToFirstWriteableDir(paths, r, newBinariesMap)
 		if err != nil {
 			return nil, fmt.Errorf("installation of new binaries failed: %w", err)
 		}
@@ -404,7 +401,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 		// Creating the directory during install means a new login shell will now
 		// include the path, even though it wasn't present during the earlier check.
 		if !installLoc.OnPath {
-			if pathDirs, pathErr := getPathDirs(&conn); pathErr == nil {
+			if pathDirs, pathErr := getPathDirs(r); pathErr == nil {
 				installLoc.OnPath = slices.Contains(pathDirs, installLoc.Path)
 			}
 		}
