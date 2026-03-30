@@ -20,6 +20,18 @@ func TestNewConfigFromBytes(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
+	t.Run("parses user", func(t *testing.T) {
+		input := []byte(`user homer
+`)
+
+		got := NewConfigFromBytes(input)
+
+		want := Config{
+			User: "homer",
+		}
+		assert.Equal(t, want, got)
+	})
+
 	t.Run("ignores unrecognised keys", func(t *testing.T) {
 		input := []byte(`hostname springfield.nuclear.gov
 identityfile ~/.ssh/id_ed25519
@@ -30,6 +42,7 @@ user homer
 
 		want := Config{
 			HostName: "springfield.nuclear.gov",
+			User:     "homer",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -70,6 +83,30 @@ connecttimeout none
 		got := NewConfigFromBytes(input)
 
 		assert.Equal(t, time.Duration(0), got.connectTimeout)
+	})
+
+	t.Run("records exact host matches from verbose ssh output", func(t *testing.T) {
+		input := []byte(`debug1: /tmp/config line 1: Applying options for board
+debug1: /tmp/config line 5: Applying options for *
+hostname springfield.nuclear.gov
+user homer
+`)
+
+		got := NewConfigFromBytes(input)
+
+		assert.True(t, got.HasExactHostMatch("board"))
+		assert.False(t, got.HasExactHostMatch("other-board"))
+	})
+
+	t.Run("splits matched host patterns while ignoring negations", func(t *testing.T) {
+		input := []byte(`debug1: /tmp/config line 1: Applying options for board,!skip,board-alt
+`)
+
+		got := NewConfigFromBytes(input)
+
+		assert.True(t, got.HasExactHostMatch("board"))
+		assert.True(t, got.HasExactHostMatch("board-alt"))
+		assert.False(t, got.HasExactHostMatch("skip"))
 	})
 }
 
