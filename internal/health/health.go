@@ -71,8 +71,18 @@ func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOp
 		ConnectTimeout: connectTimeout,
 	}
 	conn := target.NewConnection(dest, opts)
-	targetStatus := ProbeHealthStatus(conn, probeOpts)
-	return GenerateTargetReport(targetStatus), nil
+
+	if !dest.IsPlainLocalhost() {
+		authProbe := target.NewSSHAuthenticationProbe(&conn, probeOpts)
+		if err := authProbe.Probe(); err != nil {
+			status := Status{SSHTarget: dest, ConnectionError: err}
+			return GenerateTargetReport(status), nil
+		}
+	}
+
+	status := ProbeHealthStatus(&conn)
+	status.SSHTarget = dest
+	return GenerateTargetReport(status), nil
 }
 
 func GenerateHostReport(statuses []DependencyStatus) HostReport {

@@ -1,61 +1,51 @@
 package health_test
 
 import (
-	"os/exec"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
-	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeRunner struct {
+	run func(command string) (string, error)
+}
+
+func (f fakeRunner) Run(command string) (string, error) {
+	return f.run(command)
+}
+
 func TestProbeHealthStatus(t *testing.T) {
-	t.Run("probe fails connection", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithOutput("connection refused", 1)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+	t.Run("ProbeHealthStatus", func(t *testing.T) {
+		t.Run("finds remote CPUs", func(t *testing.T) {
+			r := fakeRunner{run: func(command string) (string, error) {
+				switch {
+				case strings.Contains(command, "ls /sys/class/remoteproc"):
+					return "remoteproc0\nremoteproc1", nil
+				case strings.Contains(command, "cat /sys/class/remoteproc"):
+					return "foo\nbar", nil
+				default:
+					return "", fmt.Errorf("unexpected command: %s", command)
+				}
+			}}
 
-		assert.Error(t, ts.ConnectionError)
-		assert.ErrorContains(t, ts.ConnectionError, "exit status")
-	})
+			ts := health.ProbeHealthStatus(r)
 
-	t.Run("probe finds remote CPUs", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, command string, _ []byte, _ ...string) *exec.Cmd {
-			switch {
-			case command == "true":
-				return testutil.CmdWithOutput("", 0)
-			case strings.Contains(command, "ls /sys/class/remoteproc"):
-				return testutil.CmdWithOutput("remoteproc0\nremoteproc1", 0)
-			case strings.Contains(command, "cat /sys/class/remoteproc"):
-				return testutil.CmdWithOutput("foo\nbar", 0)
-			default:
-				return testutil.CmdWithOutput("unexpected command: "+command, 1)
-			}
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+			want := health.HardwareProfile{RemoteCPU: []target.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}}
+			assert.Equal(t, want, ts.Hardware)
+		})
 
-		want := health.HardwareProfile{RemoteCPU: []target.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}}
-		assert.NoError(t, ts.ConnectionError)
-		assert.Equal(t, want, ts.Hardware)
-	})
+		t.Run("succeeds when no remoteproc support", func(t *testing.T) {
+			r := fakeRunner{run: func(command string) (string, error) {
+				return "", fmt.Errorf("no such directory")
+			}}
 
-	t.Run("probe succeeds when no remoteproc support", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, command string, _ []byte, _ ...string) *exec.Cmd {
-			if command == "true" {
-				return testutil.CmdWithOutput("", 0)
-			}
-			return testutil.CmdWithOutput("no such directory", 1)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-		ts := health.ProbeHealthStatus(conn, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+			ts := health.ProbeHealthStatus(r)
 
-		assert.NoError(t, ts.ConnectionError)
-		assert.Len(t, ts.Hardware.RemoteCPU, 0)
+			assert.Len(t, ts.Hardware.RemoteCPU, 0)
+		})
 	})
 }
