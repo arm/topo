@@ -28,14 +28,18 @@ const (
 
 var defaultCandidatePaths = []string{"/usr/local/bin", "/usr/bin", "~/bin"}
 
+type runner interface {
+	Run(command string) (string, error)
+	RunWithStdin(command string, stdin []byte) (string, error)
+}
+
 type PathCandidate struct {
 	Path   string
 	OnPath bool
 }
 
-func getPathDirs(targetDest ssh.Destination) ([]string, error) {
-	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
-	output, err := conn.Run(command.WrapInLoginShell("echo $PATH"))
+func getPathDirs(r runner) ([]string, error) {
+	output, err := r.Run(command.WrapInLoginShell("echo $PATH"))
 	if err != nil {
 		return nil, err
 	}
@@ -46,23 +50,21 @@ func getPathDirs(targetDest ssh.Destination) ([]string, error) {
 	return paths, nil
 }
 
-func getHomeDir(targetDest ssh.Destination) (string, error) {
-	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
-	output, err := conn.Run(command.WrapInLoginShell("echo $HOME"))
+func getHomeDir(r runner) (string, error) {
+	output, err := r.Run(command.WrapInLoginShell("echo $HOME"))
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(output), nil
 }
 
-func getExistingBinaryDir(targetDest ssh.Destination, binaryName string) (string, error) {
-	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
+func getExistingBinaryDir(r runner, binaryName string) (string, error) {
 	checkCommand, err := command.BinaryLookupCommand(binaryName)
 	if err != nil {
 		return "", err
 	}
 
-	output, err := conn.Run(checkCommand)
+	output, err := r.Run(checkCommand)
 	if err != nil {
 		return "", nil
 	}
@@ -80,13 +82,13 @@ func getExistingBinaryDir(targetDest ssh.Destination, binaryName string) (string
 	return fullPath[:lastSlash], nil
 }
 
-func FindPathDirs(targetDest ssh.Destination) ([]PathCandidate, error) {
-	pathDirs, err := getPathDirs(targetDest)
+func FindPathDirs(r runner) ([]PathCandidate, error) {
+	pathDirs, err := getPathDirs(r)
 	if err != nil {
 		return nil, err
 	}
 
-	homeDir, err := getHomeDir(targetDest)
+	homeDir, err := getHomeDir(r)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +279,7 @@ func FetchLatestReleaseBinaries(githubRepoSlug string, binaries []string) (map[s
 	return files, err
 }
 
-func install(installPath string, targetDest ssh.Destination, binaries map[string][]byte) error {
+func install(installPath string, r runner, binaries map[string][]byte) error {
 	mode := "0755"
 
 	for binaryName, binaryData := range binaries {
@@ -286,8 +288,7 @@ func install(installPath string, targetDest ssh.Destination, binaries map[string
 		}
 
 		installCmd := fmt.Sprintf("install -D -m %s /dev/stdin %s/%s", mode, installPath, binaryName)
-		conn := target.NewConnection(targetDest, target.ConnectionOptions{})
-		output, err := conn.RunWithStdin(command.WrapInLoginShell(installCmd), binaryData)
+		output, err := r.RunWithStdin(command.WrapInLoginShell(installCmd), binaryData)
 		if err != nil {
 			if errors.Is(err, ssh.ErrSSH) {
 				return err
@@ -304,14 +305,14 @@ func install(installPath string, targetDest ssh.Destination, binaries map[string
 // installToFirstWriteableDir attempts to install binaries to the highest preference path that the user has permissions for.
 // Silently ignores permission failures until the last path.
 // Returns the installation location and a list of installed binary names.
-func installToFirstWriteableDir(paths []PathCandidate, targetDest ssh.Destination, binaries map[string][]byte) (PathCandidate, []string, error) {
+func installToFirstWriteableDir(paths []PathCandidate, r runner, binaries map[string][]byte) (PathCandidate, []string, error) {
 	var binaryNames []string
 	for name := range binaries {
 		binaryNames = append(binaryNames, name)
 	}
 
 	for i, dir := range paths {
-		err := install(dir.Path, targetDest, binaries)
+		err := install(dir.Path, r, binaries)
 		if err == nil {
 			return paths[i], binaryNames, nil
 		}
@@ -343,11 +344,13 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 		return nil, fmt.Errorf("failed to fetch latest release binaries: %w", err)
 	}
 
+	conn := target.NewConnection(targetDest, target.ConnectionOptions{})
+
 	existingBinaryPaths := make(map[string]string)
 	var binariesNotOnPath []string
 
 	for _, binaryName := range binaryNames {
-		existingPath, err := getExistingBinaryDir(targetDest, binaryName)
+		existingPath, err := getExistingBinaryDir(&conn, binaryName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existing path for %s: %w", binaryName, err)
 		}
@@ -368,7 +371,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 		}
 
 		singleBinary := map[string][]byte{binaryName: binaryData}
-		err := install(dirPath, targetDest, singleBinary)
+		err := install(dirPath, &conn, singleBinary)
 		if err != nil {
 			return nil, fmt.Errorf("failed to install %s to existing location %s: %w", binaryName, dirPath, err)
 		}
@@ -381,7 +384,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 
 	// if not already on path, find a good spot for them.
 	if len(binariesNotOnPath) > 0 {
-		paths, err := FindPathDirs(targetDest)
+		paths, err := FindPathDirs(&conn)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find valid PATH directories: %w", err)
 		}
@@ -391,7 +394,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 			newBinariesMap[binaryName] = binaries[binaryName]
 		}
 
-		installLoc, installedBinaries, err := installToFirstWriteableDir(paths, targetDest, newBinariesMap)
+		installLoc, installedBinaries, err := installToFirstWriteableDir(paths, &conn, newBinariesMap)
 		if err != nil {
 			return nil, fmt.Errorf("installation of new binaries failed: %w", err)
 		}
@@ -401,7 +404,7 @@ func InstallBinariesFromGithubRelease(targetDest ssh.Destination, repoURL string
 		// Creating the directory during install means a new login shell will now
 		// include the path, even though it wasn't present during the earlier check.
 		if !installLoc.OnPath {
-			if pathDirs, pathErr := getPathDirs(targetDest); pathErr == nil {
+			if pathDirs, pathErr := getPathDirs(&conn); pathErr == nil {
 				installLoc.OnPath = slices.Contains(pathDirs, installLoc.Path)
 			}
 		}
