@@ -70,6 +70,10 @@ type ConnectionStatus struct {
 	Error       error
 }
 
+func (c ConnectionStatus) IsPlainLocalhost() bool {
+	return c.Destination.IsPlainLocalhost()
+}
+
 type Status struct {
 	Connection   ConnectionStatus
 	Dependencies []DependencyStatus
@@ -109,8 +113,8 @@ func GenerateHostReport(statuses []DependencyStatus) HostReport {
 
 func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
-	report.IsLocalhost = targetStatus.Connection.Destination.IsPlainLocalhost()
-	report.Connectivity = connectivityCheck(targetStatus)
+	report.IsLocalhost = targetStatus.Connection.IsPlainLocalhost()
+	report.Connectivity = connectivityCheck(targetStatus.Connection)
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
 	remoteCPUs := targetStatus.Hardware.RemoteCPU
@@ -131,18 +135,18 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	return report
 }
 
-func connectivityCheck(targetStatus Status) HealthCheck {
+func connectivityCheck(status ConnectionStatus) HealthCheck {
 	check := HealthCheck{
 		Name:   "Connectivity",
-		Status: NewCheckStatusFromError(targetStatus.Connection.Error),
+		Status: NewCheckStatusFromError(status.Error),
 	}
-	if targetStatus.Connection.Error == nil {
+	if status.Error == nil {
 		return check
 	}
 
-	check.Value = targetStatus.Connection.Error.Error()
-	if errors.Is(targetStatus.Connection.Error, target.ErrPasswordAuthentication) {
-		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` or manually setup SSH keys for the target", targetStatus.Connection.Destination)
+	check.Value = status.Error.Error()
+	if errors.Is(status.Error, target.ErrPasswordAuthentication) {
+		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` or manually setup SSH keys for the target", status.Destination)
 	}
 	return check
 }
