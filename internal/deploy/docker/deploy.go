@@ -27,7 +27,8 @@ func SupportsSSHControlSockets(goos string) bool {
 }
 
 func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequence {
-	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, command.NewHost(dest.String()))}
+	verifiedDest := ssh.NewDestination(dest.String())
+	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, command.NewHostFromDestination(verifiedDest))}
 }
 
 func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence, goperation.Operation) {
@@ -37,7 +38,7 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 		operation.NewDockerComposePull(composeFile, sourceHost),
 	}
 
-	targetHost := command.NewHost(opts.TargetHost.String())
+	targetHost := command.NewHostFromDestination(opts.TargetHost)
 	var cleanup goperation.Operation
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry != nil {

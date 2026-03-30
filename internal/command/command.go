@@ -54,8 +54,8 @@ func shellEscapeForDoubleQuotes(s string) string {
 }
 
 func hostToArgs(h Host) []string {
-	if h.IsPlainLocalhost() {
+	if h.value == "" {
 		return nil
 	}
-	return []string{"-H", h.Value}
+	return []string{"-H", h.value}
 }

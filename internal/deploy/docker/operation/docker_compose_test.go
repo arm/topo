@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,8 @@ services:
 
 func TestNewDockerComposeBuild(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	remoteHost := command.NewHost("ssh://user@remote")
+	verifiedDest := ssh.NewDestination("ssh://user@remote")
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	op := operation.NewDockerComposeBuild(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -51,7 +53,8 @@ func TestNewDockerComposeBuild(t *testing.T) {
 
 func TestNewDockerComposePull(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	remoteHost := command.NewHost("ssh://user@remote")
+	verifiedDest := ssh.NewDestination("ssh://user@remote")
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	op := operation.NewDockerComposePull(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -63,7 +66,8 @@ func TestNewDockerComposePull(t *testing.T) {
 
 func TestNewDockerComposeRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	remoteHost := command.NewHost("ssh://user@remote")
+	verifiedDest := ssh.NewDestination("ssh://user@remote")
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	opDefault := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.RecreateModeDefault)
 
 	t.Run("Description", func(t *testing.T) {

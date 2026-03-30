@@ -21,7 +21,7 @@ func TestNewDeploymentStop(t *testing.T) {
 
 	t.Run("runs stop operation for remote host", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		remoteHost := command.NewHost(remoteDest.String())
+		remoteHost := command.NewHostFromDestination(remoteDest)
 
 		got := docker.NewDeploymentStop(composeFile, remoteDest)
 

@@ -71,7 +71,8 @@ func ForceComposeDown(t *testing.T, composeFilePath string) {
 
 func AssertContainersRunning(t *testing.T, h ssh.Destination, composeFilePath string) {
 	t.Helper()
-	dockerCmd := command.DockerCompose(command.NewHost(h.String()), composeFilePath, "ps", "--format", "json")
+	verifiedDest := ssh.NewDestination(h.String())
+	dockerCmd := command.DockerCompose(command.NewHostFromDestination(verifiedDest), composeFilePath, "ps", "--format", "json")
 	output, err := dockerCmd.CombinedOutput()
 	require.NoError(t, err, string(output))
 
@@ -87,7 +88,8 @@ func AssertContainersRunning(t *testing.T, h ssh.Destination, composeFilePath st
 
 func AssertContainersStopped(t *testing.T, h ssh.Destination, composeFilePath string) {
 	t.Helper()
-	dockerCmd := command.DockerCompose(command.NewHost(h.String()), composeFilePath, "ps", "--format", "json", "--all")
+	verifiedDest := ssh.NewDestination(h.String())
+	dockerCmd := command.DockerCompose(command.NewHostFromDestination(verifiedDest), composeFilePath, "ps", "--format", "json", "--all")
 	output, err := dockerCmd.CombinedOutput()
 	require.NoError(t, err, string(output))
 

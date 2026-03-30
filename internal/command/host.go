@@ -1,17 +1,18 @@
 package command
 
+import "github.com/arm/topo/internal/ssh"
+
 type Host struct {
-	Value string
+	value string
 }
 
-func NewHost(value string) Host {
-	return Host{Value: value}
+func NewHostFromDestination(dest ssh.Destination) Host {
+	if dest.IsPlainLocalhost() {
+		return NewLocalHost()
+	}
+	return Host{value: dest.String()}
 }
 
 func NewLocalHost() Host {
-	return Host{Value: "ssh://localhost"}
-}
-
-func (h Host) IsPlainLocalhost() bool {
-	return h.Value == "ssh://localhost"
+	return Host{value: ""}
 }

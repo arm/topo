@@ -21,7 +21,7 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("includes transfer operation for remote host", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		remoteHost := command.NewHost(remoteDest.String())
+		remoteHost := command.NewHostFromDestination(remoteDest)
 		localhost := command.NewLocalHost()
 		deployOpts := docker.DeployOptions{TargetHost: remoteDest}
 		got, _ := docker.NewDeployment(composeFile, deployOpts)
@@ -37,7 +37,7 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		remoteHost := command.NewHost(remoteDest.String())
+		remoteHost := command.NewHostFromDestination(remoteDest)
 		localhost := command.NewLocalHost()
 		port := operation.DefaultRegistryPort
 		opts := docker.DeployOptions{TargetHost: remoteDest, Registry: &docker.RegistryConfig{Port: port, UseControlSockets: true}}
@@ -118,7 +118,7 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		remoteHost := command.NewHost(remoteDest.String())
+		remoteHost := command.NewHostFromDestination(remoteDest)
 		port := operation.DefaultRegistryPort
 		opts := docker.DeployOptions{TargetHost: remoteDest, Registry: &docker.RegistryConfig{Port: port, UseControlSockets: false}}
 		got, _ := docker.NewDeployment(composeFile, opts)
