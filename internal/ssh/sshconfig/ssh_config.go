@@ -69,7 +69,10 @@ func CreateOrModifySSHConfig(dest ssh.Destination, targetSlug string, directives
 
 	var fragmentToWrite []byte
 	if len(existingTopoContent) == 0 {
-		fragmentToWrite = buildSSHConfigFragment(dest, directives)
+		fragmentToWrite, err = buildSSHConfigFragment(dest, directives)
+		if err != nil {
+			return err
+		}
 	} else {
 		fragmentToWrite = mergeOwnedSSHConfigDirectives(existingTopoContent, directives)
 	}
@@ -112,11 +115,25 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 	return false
 }
 
-func buildSSHConfigFragment(dest ssh.Destination, directives []SSHConfigDirective) []byte {
+func buildSSHConfigFragment(dest ssh.Destination, directives []SSHConfigDirective) ([]byte, error) {
+	effectiveDest := dest
+	effectiveDest.User = ""
+	effectiveConfig := ssh.NewConfig(effectiveDest)
+	hasExactHostMatch := effectiveConfig.HasExactHostMatch(dest.Host)
+
+	if dest.User != "" && hasExactHostMatch && effectiveConfig.User != "" && effectiveConfig.User != dest.User {
+		return nil, fmt.Errorf("ssh host/alias %q is already associated with user %q; the same host/alias cannot be used for multiple users", dest.Host, effectiveConfig.User)
+	}
+
+	hostName := dest.Host
+	if !hasExactHostMatch && effectiveConfig.HostName != "" {
+		hostName = effectiveConfig.HostName
+	}
+
 	var b strings.Builder
 	fmt.Fprintf(&b, "Host %s\n", dest.Host)
-	if dest.Host != "" && (dest.User != "" || net.ParseIP(dest.Host) != nil) {
-		fmt.Fprintf(&b, "  HostName %s\n", dest.Host)
+	if !hasExactHostMatch && hostName != "" && (hostName != dest.Host || dest.User != "" || net.ParseIP(dest.Host) != nil) {
+		fmt.Fprintf(&b, "  HostName %s\n", hostName)
 	}
 	if dest.User != "" {
 		fmt.Fprintf(&b, "  User %s\n", dest.User)
@@ -128,7 +145,7 @@ func buildSSHConfigFragment(dest ssh.Destination, directives []SSHConfigDirectiv
 	for _, directive := range directives {
 		fmt.Fprintf(&b, "  %s\n", directive.String())
 	}
-	return []byte(b.String())
+	return []byte(b.String()), nil
 }
 
 func mergeOwnedSSHConfigDirectives(existing []byte, directives []SSHConfigDirective) []byte {
