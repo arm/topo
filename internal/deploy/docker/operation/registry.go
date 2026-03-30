@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
 	"github.com/arm/topo/internal/operation"
 )
 
@@ -17,7 +17,7 @@ const (
 )
 
 func NewRunRegistry(port string) operation.Sequence {
-	localHost := command.NewLocalHost()
+	localHost := dockercommand.NewLocalHost()
 	return operation.NewSequence(
 		NewDockerPull(localHost, registryImage),
 		operation.NewConditional(
@@ -55,16 +55,16 @@ func (r *RegistryRunWrapper) Run(w io.Writer) error {
 }
 
 type ContainerExistsPredicate struct {
-	host          command.Host
+	host          dockercommand.Host
 	containerName string
 }
 
-func NewContainerExistsPredicate(host command.Host, containerName string) *ContainerExistsPredicate {
+func NewContainerExistsPredicate(host dockercommand.Host, containerName string) *ContainerExistsPredicate {
 	return &ContainerExistsPredicate{host: host, containerName: containerName}
 }
 
 func (p *ContainerExistsPredicate) Eval() bool {
-	cmd := command.Docker(p.host, "inspect", p.containerName)
+	cmd := dockercommand.Docker(p.host, "inspect", p.containerName)
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	return cmd.Run() == nil

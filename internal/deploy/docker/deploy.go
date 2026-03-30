@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"github.com/arm/topo/internal/deploy/docker/command"
+	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
@@ -28,17 +28,17 @@ func SupportsSSHControlSockets(goos string) bool {
 
 func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequence {
 	verifiedDest := ssh.NewDestination(dest.String())
-	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, command.NewHostFromDestination(verifiedDest))}
+	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, dockercommand.NewHostFromDestination(verifiedDest))}
 }
 
 func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence, goperation.Operation) {
-	sourceHost := command.NewLocalHost()
+	sourceHost := dockercommand.NewLocalHost()
 	ops := []goperation.Operation{
 		operation.NewDockerComposeBuild(composeFile, sourceHost),
 		operation.NewDockerComposePull(composeFile, sourceHost),
 	}
 
-	targetHost := command.NewHostFromDestination(opts.TargetHost)
+	targetHost := dockercommand.NewHostFromDestination(opts.TargetHost)
 	var cleanup goperation.Operation
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry != nil {

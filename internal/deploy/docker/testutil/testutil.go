@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
 	"github.com/arm/topo/internal/ssh"
 	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -33,27 +33,27 @@ func TestProjectName(t *testing.T) string {
 	return "test-project-" + gtestutil.SanitiseTestName(t)
 }
 
-func RequireImageExists(t *testing.T, h command.Host, imageName string) {
+func RequireImageExists(t *testing.T, h dockercommand.Host, imageName string) {
 	t.Helper()
-	inspectCmd := command.Docker(h, "image", "inspect", imageName)
+	inspectCmd := dockercommand.Docker(h, "image", "inspect", imageName)
 	output, err := inspectCmd.CombinedOutput()
-	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, command.String(inspectCmd), string(output))
+	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, dockercommand.String(inspectCmd), string(output))
 }
 
-func BuildMinimalImage(t *testing.T, h command.Host, imageName string) {
+func BuildMinimalImage(t *testing.T, h dockercommand.Host, imageName string) {
 	t.Helper()
 	dockerfileContent := `
 FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `
-	buildCmd := command.Docker(h, "build", "-t", imageName, "-")
+	buildCmd := dockercommand.Docker(h, "build", "-t", imageName, "-")
 	buildCmd.Stdin = bytes.NewBufferString(dockerfileContent)
 	output, err := buildCmd.CombinedOutput()
-	require.NoError(t, err, "failed to build image %s: %s output: %s", imageName, command.String(buildCmd), string(output))
+	require.NoError(t, err, "failed to build image %s: %s output: %s", imageName, dockercommand.String(buildCmd), string(output))
 
 	RequireImageExists(t, h, imageName)
 	t.Cleanup(func() {
-		removeCmd := command.Docker(h, "image", "rm", "-f", imageName)
+		removeCmd := dockercommand.Docker(h, "image", "rm", "-f", imageName)
 		if err := removeCmd.Run(); err != nil {
 			t.Logf("failed to remove image %s: %v", imageName, err)
 		}
@@ -72,7 +72,7 @@ func ForceComposeDown(t *testing.T, composeFilePath string) {
 func AssertContainersRunning(t *testing.T, h ssh.Destination, composeFilePath string) {
 	t.Helper()
 	verifiedDest := ssh.NewDestination(h.String())
-	dockerCmd := command.DockerCompose(command.NewHostFromDestination(verifiedDest), composeFilePath, "ps", "--format", "json")
+	dockerCmd := dockercommand.DockerCompose(dockercommand.NewHostFromDestination(verifiedDest), composeFilePath, "ps", "--format", "json")
 	output, err := dockerCmd.CombinedOutput()
 	require.NoError(t, err, string(output))
 
@@ -89,7 +89,7 @@ func AssertContainersRunning(t *testing.T, h ssh.Destination, composeFilePath st
 func AssertContainersStopped(t *testing.T, h ssh.Destination, composeFilePath string) {
 	t.Helper()
 	verifiedDest := ssh.NewDestination(h.String())
-	dockerCmd := command.DockerCompose(command.NewHostFromDestination(verifiedDest), composeFilePath, "ps", "--format", "json", "--all")
+	dockerCmd := dockercommand.DockerCompose(dockercommand.NewHostFromDestination(verifiedDest), composeFilePath, "ps", "--format", "json", "--all")
 	output, err := dockerCmd.CombinedOutput()
 	require.NoError(t, err, string(output))
 

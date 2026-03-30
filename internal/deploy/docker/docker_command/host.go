@@ -1,4 +1,4 @@
-package command
+package dockercommand
 
 import "github.com/arm/topo/internal/ssh"
 

@@ -7,17 +7,17 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
 	"golang.org/x/sync/errgroup"
 )
 
 type DockerComposePipeTransfer struct {
 	composeFile string
-	source      command.Host
-	dest        command.Host
+	source      dockercommand.Host
+	dest        dockercommand.Host
 }
 
-func NewDockerComposePipeTransfer(composeFile string, source, dest command.Host) *DockerComposePipeTransfer {
+func NewDockerComposePipeTransfer(composeFile string, source, dest dockercommand.Host) *DockerComposePipeTransfer {
 	return &DockerComposePipeTransfer{
 		composeFile: composeFile,
 		source:      source,
@@ -44,13 +44,13 @@ func (t *DockerComposePipeTransfer) Run(cmdOutput io.Writer) error {
 }
 
 func (t *DockerComposePipeTransfer) buildTransferCommands(imageName string) (*exec.Cmd, *exec.Cmd) {
-	saveCmd := command.Docker(t.source, "save", imageName)
-	loadCmd := command.Docker(t.dest, "load")
+	saveCmd := dockercommand.Docker(t.source, "save", imageName)
+	loadCmd := dockercommand.Docker(t.dest, "load")
 	return saveCmd, loadCmd
 }
 
 func (t *DockerComposePipeTransfer) getImagesFromCompose(cmdOutput io.Writer) ([]string, error) {
-	cmd := command.DockerCompose(t.source, t.composeFile, "config", "--images")
+	cmd := dockercommand.DockerCompose(t.source, t.composeFile, "config", "--images")
 	cmd.Stderr = cmdOutput
 	output, err := cmd.Output()
 	if err != nil {

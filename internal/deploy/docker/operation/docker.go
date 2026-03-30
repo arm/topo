@@ -5,16 +5,16 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
 )
 
 type Docker struct {
 	description string
-	host        command.Host
+	host        dockercommand.Host
 	args        []string
 }
 
-func NewDocker(description string, h command.Host, args []string) *Docker {
+func NewDocker(description string, h dockercommand.Host, args []string) *Docker {
 	return &Docker{
 		description: description,
 		host:        h,
@@ -34,20 +34,20 @@ func (d *Docker) Run(cmdOutput io.Writer) error {
 }
 
 func (d *Docker) buildCommand() *exec.Cmd {
-	return command.Docker(d.host, d.args...)
+	return dockercommand.Docker(d.host, d.args...)
 }
 
-func NewDockerPull(host command.Host, image string) *Docker {
+func NewDockerPull(host dockercommand.Host, image string) *Docker {
 	description := fmt.Sprintf("Pull image %s", image)
 	return NewDocker(description, host, []string{"pull", image})
 }
 
-func NewDockerStart(host command.Host, container string) *Docker {
+func NewDockerStart(host dockercommand.Host, container string) *Docker {
 	description := fmt.Sprintf("Start container %s", container)
 	return NewDocker(description, host, []string{"start", container})
 }
 
-func NewDockerRun(host command.Host, image string, container string, dockerArgs []string) *Docker {
+func NewDockerRun(host dockercommand.Host, image string, container string, dockerArgs []string) *Docker {
 	description := fmt.Sprintf("Run image %s as container %s", image, container)
 	allArgs := []string{"run"}
 	allArgs = append(allArgs, dockerArgs...)

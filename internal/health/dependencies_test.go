@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/health"
 	"github.com/stretchr/testify/assert"
 )

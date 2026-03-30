@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
 	goperation "github.com/arm/topo/internal/operation"
@@ -19,7 +19,7 @@ func TestNewRunRegistry(t *testing.T) {
 
 		got := operation.NewRunRegistry(port)
 
-		localHost := command.NewLocalHost()
+		localHost := dockercommand.NewLocalHost()
 		want := goperation.NewSequence(
 			operation.NewDockerPull(localHost, "registry:2"),
 			goperation.NewConditional(
@@ -43,16 +43,16 @@ func TestContainerExistsPredicate(t *testing.T) {
 		testutil.RequireLinuxDockerEngine(t)
 		containerName := testutil.TestContainerName(t)
 		imageName := testutil.TestImageName(t)
-		localhost := command.NewLocalHost()
+		localhost := dockercommand.NewLocalHost()
 		testutil.BuildMinimalImage(t, localhost, imageName)
-		runCmd := command.Docker(localhost, "run", "-d", "--name", containerName, imageName)
+		runCmd := dockercommand.Docker(localhost, "run", "-d", "--name", containerName, imageName)
 		require.NoError(t, runCmd.Run())
 		t.Cleanup(func() {
-			stopCmd := command.Docker(localhost, "rm", "-f", containerName)
+			stopCmd := dockercommand.Docker(localhost, "rm", "-f", containerName)
 			_ = stopCmd.Run()
 		})
 
-		predicate := operation.NewContainerExistsPredicate(command.NewLocalHost(), containerName)
+		predicate := operation.NewContainerExistsPredicate(dockercommand.NewLocalHost(), containerName)
 		got := predicate.Eval()
 
 		assert.True(t, got)
@@ -62,7 +62,7 @@ func TestContainerExistsPredicate(t *testing.T) {
 		testutil.RequireDocker(t)
 		containerName := "non-existent-container-12345"
 
-		predicate := operation.NewContainerExistsPredicate(command.NewLocalHost(), containerName)
+		predicate := operation.NewContainerExistsPredicate(dockercommand.NewLocalHost(), containerName)
 		got := predicate.Eval()
 
 		assert.False(t, got)

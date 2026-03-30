@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +55,7 @@ latest: size: 1234`
 func TestRegistryTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
-			localhost := command.NewLocalHost()
+			localhost := dockercommand.NewLocalHost()
 			transfer := operation.NewRegistryTransfer("any.yaml", localhost, localhost, operation.DefaultRegistryPort)
 
 			got := transfer.Description()
@@ -67,7 +67,7 @@ func TestRegistryTransfer(t *testing.T) {
 	t.Run("Run", func(t *testing.T) {
 		t.Run("it transfers images via registry", func(t *testing.T) {
 			testutil.RequireLinuxDockerEngine(t)
-			h := command.NewLocalHost()
+			h := dockercommand.NewLocalHost()
 			port := operation.DefaultRegistryPort
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
@@ -83,21 +83,21 @@ services:
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			testutil.RequireWriteFile(t, dockerFilePath, dockerFileContent)
 
-			buildCmd := command.DockerCompose(h, composeFilePath, "build")
+			buildCmd := dockercommand.DockerCompose(h, composeFilePath, "build")
 			buildOut, err := buildCmd.CombinedOutput()
 			require.NoError(t, err, "build failed: %s", string(buildOut))
 
-			rmCmd := command.Docker(h, "rm", "-f", operation.RegistryContainerName)
+			rmCmd := dockercommand.Docker(h, "rm", "-f", operation.RegistryContainerName)
 			rmOut, rmErr := rmCmd.CombinedOutput()
 			if rmErr != nil {
 				t.Logf("registry container cleanup (expected if not running): %s", string(rmOut))
 			}
 
-			startReg := command.Docker(h, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", port), "--name", operation.RegistryContainerName, "registry:2")
+			startReg := dockercommand.Docker(h, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", port), "--name", operation.RegistryContainerName, "registry:2")
 			startOut, err := startReg.CombinedOutput()
 			require.NoError(t, err, "could not start registry for test: %s", string(startOut))
 			t.Cleanup(func() {
-				rmReg := command.Docker(h, "rm", "-f", operation.RegistryContainerName)
+				rmReg := dockercommand.Docker(h, "rm", "-f", operation.RegistryContainerName)
 				_ = rmReg.Run()
 			})
 
