@@ -17,7 +17,7 @@ func TestDocker(t *testing.T) {
 
 		t.Run("executes docker command with args", func(t *testing.T) {
 			var buf bytes.Buffer
-			op := operation.NewDocker("Test docker version", command.PlainLocalHost, []string{"--version"})
+			op := operation.NewDocker("Test docker version", command.PlainLocalHost, []string{})
 
 			err := op.Run(&buf)
 
@@ -29,7 +29,7 @@ func TestDocker(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("returns provided description", func(t *testing.T) {
 			description := "Custom docker operation"
-			op := operation.NewDocker(description, command.PlainLocalHost, []string{"info"})
+			op := operation.NewDocker(description, command.PlainLocalHost, []string{})
 
 			got := op.Description()
 
@@ -65,7 +65,7 @@ func TestNewDockerRun(t *testing.T) {
 	container := "test-container"
 
 	t.Run("Description", func(t *testing.T) {
-		op := operation.NewDockerRun(command.PlainLocalHost, image, container, []string{"-d"})
+		op := operation.NewDockerRun(command.PlainLocalHost, image, container, []string{})
 
 		got := op.Description()
 
