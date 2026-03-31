@@ -7,7 +7,6 @@ import (
 	"github.com/arm/topo/internal/deploy/docker/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,9 +40,7 @@ func TestDocker(t *testing.T) {
 
 func TestNewDockerPull(t *testing.T) {
 	image := "nginx:latest"
-	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := command.NewHostFromDestination(verifiedDest)
-	op := operation.NewDockerPull(remoteHost, image)
+	op := operation.NewDockerPull(command.PlainLocalHost, image)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()
@@ -54,9 +51,7 @@ func TestNewDockerPull(t *testing.T) {
 
 func TestNewDockerStart(t *testing.T) {
 	container := "my-container"
-	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := command.NewHostFromDestination(verifiedDest)
-	op := operation.NewDockerStart(remoteHost, container)
+	op := operation.NewDockerStart(command.PlainLocalHost, container)
 
 	t.Run("Description", func(t *testing.T) {
 		got := op.Description()
@@ -68,11 +63,9 @@ func TestNewDockerStart(t *testing.T) {
 func TestNewDockerRun(t *testing.T) {
 	image := "alpine:latest"
 	container := "test-container"
-	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := command.NewHostFromDestination(verifiedDest)
 
 	t.Run("Description", func(t *testing.T) {
-		op := operation.NewDockerRun(remoteHost, image, container, []string{"-d"})
+		op := operation.NewDockerRun(command.PlainLocalHost, image, container, []string{"-d"})
 
 		got := op.Description()
 
