@@ -65,20 +65,11 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 	return t, nil
 }
 
-func resolveOutput(cmd *cobra.Command) (term.Format, error) {
-	flagValue, err := cmd.Flags().GetString("output")
-	if err != nil {
-		panic(fmt.Sprintf("internal error: output flag not registered: %v", err))
-	}
-
+func resolveOutput(cmd *cobra.Command) term.Format {
+	flagValue, _ := cmd.Flags().GetString("output")
 	v := strings.TrimSpace(strings.ToLower(flagValue))
-	switch v {
-	case "plain":
-		return term.Plain, nil
-	case "json":
-		return term.JSON, nil
-	default:
-		err := fmt.Errorf("invalid output value %q: must be 'plain' or 'json'", flagValue)
-		return term.Plain, err
+	if v == "json" {
+		return term.JSON
 	}
+	return term.Plain
 }

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -67,7 +66,7 @@ services:
 `)
 		args := map[string]string{"FOO": "baz"}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -104,7 +103,7 @@ services:
 `)
 		args := map[string]string{"FOO": "baz"}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -136,7 +135,7 @@ services:
 `
 		project := yamlToNode(t, yamlContents)
 
-		_, err := compose.ApplyArgs(project, nil)
+		err := compose.ApplyArgs(project, nil)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -159,7 +158,7 @@ services:
 			"BAR": "new-bar",
 		}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -187,13 +186,9 @@ services:
 `)
 		args := map[string]string{"BAR": "baz"}
 
-		logs, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
-		assert.Contains(t, logs, logger.Entry{
-			Level:   logger.Warning,
-			Message: "arg \"BAR\" was resolved but not found in any service build args",
-		})
 	})
 
 	t.Run("when service has extends and no build injects build args", func(t *testing.T) {
@@ -209,7 +204,7 @@ services:
 			"REMOTEPROC": "m33",
 		}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -240,7 +235,7 @@ services:
 `)
 		args := map[string]string{"PLATFORM": "stm32mp257"}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -272,7 +267,7 @@ services:
 `)
 		args := map[string]string{"PLATFORM": "stm32mp257"}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -305,7 +300,7 @@ services:
 `)
 		args := map[string]string{"PLATFORM": "stm32mp257"}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -341,7 +336,7 @@ services:
 			"BAR": "new-bar",
 		}
 
-		_, err := compose.ApplyArgs(project, args)
+		err := compose.ApplyArgs(project, args)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)

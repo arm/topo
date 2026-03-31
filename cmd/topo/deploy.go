@@ -11,7 +11,6 @@ import (
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	goperation "github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
 
@@ -44,21 +43,9 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		outputFormat, err := resolveOutput(cmd)
-		if err != nil {
-			return err
-		}
-		c := console.NewLogger(os.Stderr, outputFormat)
-		if err != nil {
-			return err
-		}
-
 		portChanged := cmd.Flags().Changed("registry-port")
 		if portChanged && noRegistry {
-			c.Log(logger.Entry{
-				Level:   logger.Warning,
-				Message: "--registry-port has no effect when --no-registry is set. Define SSH port in your SSH config instead.",
-			})
+			logger.Warn("--registry-port has no effect when --no-registry is set. Define SSH port in your SSH config instead.")
 		}
 
 		targetArg, err := requireTarget(cmd)
@@ -103,19 +90,13 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 		}
 
 		if deployOpts.Registry == nil {
-			c.Log(logger.Entry{
-				Level:   logger.Warning,
-				Message: "registry transfer is not yet supported with this configuration. Falling back to direct transfer.",
-			})
+			logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
 		}
 
 		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
 		stop := goperation.SetupExitCleanup(os.Stdout, cleanup, os.Exit)
 
-		defer func() {
-			entries := stop()
-			c.Log(entries...)
-		}()
+		defer stop()
 
 		err = deployment.Run(os.Stdout)
 		if err != nil {

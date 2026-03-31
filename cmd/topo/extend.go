@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/template"
@@ -49,16 +48,6 @@ or interactively when prompted:
 		composeFilePath := args[0]
 		sourceArg := args[1]
 
-		outputFormat, err := resolveOutput(cmd)
-		if err != nil {
-			return err
-		}
-		c := console.NewLogger(os.Stderr, outputFormat)
-
-		if err != nil {
-			return err
-		}
-
 		src, err := template.NewSource(sourceArg)
 		if err != nil {
 			return err
@@ -82,10 +71,7 @@ or interactively when prompted:
 
 		argProvider := arguments.NewStrictProviderChain(providers...)
 
-		logs, err := project.Extend(composeFilePath, src, argProvider)
-
-		c.Log(logs...)
-		return err
+		return project.Extend(composeFilePath, src, argProvider)
 	},
 }
 

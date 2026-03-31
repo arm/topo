@@ -5,9 +5,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/describe"
-	"github.com/arm/topo/internal/output/console"
 	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
@@ -42,11 +40,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		c := console.NewLogger(os.Stderr, term.Plain)
-		c.Log(logger.Entry{
-			Level:   logger.Info,
-			Message: fmt.Sprintf("Target description written to %s", outputPath),
-		})
+		logger.Info(fmt.Sprintf("Target description written to %s", outputPath))
 
 		return nil
 	},

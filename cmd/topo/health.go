@@ -21,10 +21,7 @@ var healthCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		outputFormat, err := resolveOutput(cmd)
-		if err != nil {
-			return err
-		}
+		outputFormat := resolveOutput(cmd)
 
 		acceptNewHostKeys, err := cmd.Flags().GetBool(acceptNewHostFlag)
 		if err != nil {
