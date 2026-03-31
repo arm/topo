@@ -24,12 +24,12 @@ func TestGenerateTargetReport(t *testing.T) {
 		return health.GenerateTargetReport(health.Status{Dependencies: statuses}).Dependencies
 	})
 
-	t.Run("when no remoteproc devices are found, SubsystemDriver health check reports error", func(t *testing.T) {
+	t.Run("when no remoteproc devices are found, SubsystemDriver health check an info message", func(t *testing.T) {
 		ts := health.Status{}
 
 		got := health.GenerateTargetReport(ts)
 
-		assert.Equal(t, health.CheckStatusWarning, got.SubsystemDriver.Status)
+		assert.Equal(t, health.CheckStatusInfo, got.SubsystemDriver.Status)
 		assert.Equal(t, "no remoteproc devices found", got.SubsystemDriver.Value)
 	})
 
@@ -44,17 +44,6 @@ func TestGenerateTargetReport(t *testing.T) {
 
 		assert.Equal(t, health.CheckStatusOK, got.SubsystemDriver.Status)
 		assert.Equal(t, "m4_0, m4_1", got.SubsystemDriver.Value)
-	})
-
-	t.Run("when no remoteproc devices are found, SubsystemDriver status reports a warning", func(t *testing.T) {
-		ts := health.Status{
-			Hardware: health.HardwareProfile{RemoteCPU: nil},
-		}
-
-		got := health.GenerateTargetReport(ts)
-
-		assert.Equal(t, health.CheckStatusWarning, got.SubsystemDriver.Status)
-		assert.Equal(t, "no remoteproc devices found", got.SubsystemDriver.Value)
 	})
 
 	t.Run("when the target has a connection error, Connectivity status reports error", func(t *testing.T) {

@@ -53,6 +53,8 @@ func (r PrintableHealthReport) AsPlain(isTTY bool) (string, error) {
 			return " ✅"
 		case health.CheckStatusWarning:
 			return " ⚠️"
+		case health.CheckStatusInfo:
+			return " ℹ️"
 		default:
 			return " ❌"
 		}
