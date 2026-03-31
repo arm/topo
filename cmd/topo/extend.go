@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/output/console"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/template"
@@ -53,7 +53,7 @@ or interactively when prompted:
 		if err != nil {
 			return err
 		}
-		c := console.NewLogger(os.Stderr, outputFormat)
+		logger.SetOutputFormat(outputFormat)
 
 		if err != nil {
 			return err
@@ -82,10 +82,7 @@ or interactively when prompted:
 
 		argProvider := arguments.NewStrictProviderChain(providers...)
 
-		logs, err := project.Extend(composeFilePath, src, argProvider)
-
-		c.Log(logs...)
-		return err
+		return project.Extend(composeFilePath, src, argProvider)
 	},
 }
 

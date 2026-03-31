@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/output/console"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/template"
@@ -50,7 +50,7 @@ Some projects require build arguments. Supply them on the command line or answer
 		if err != nil {
 			return err
 		}
-		c := console.NewLogger(os.Stderr, outputFormat)
+		logger.SetOutputFormat(outputFormat)
 		cmd.SilenceUsage = true
 		src := args[0]
 
@@ -86,10 +86,7 @@ Some projects require build arguments. Supply them on the command line or answer
 
 		argProvider := arguments.NewStrictProviderChain(providers...)
 
-		logs, err := project.Clone(path, projectSource, argProvider)
-
-		c.Log(logs...)
-		return err
+		return project.Clone(path, projectSource, argProvider)
 	},
 }
 

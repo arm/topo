@@ -103,7 +103,7 @@ x-topo:
 `, sourceName)
 		argProvider := arguments.NewStrictProviderChain()
 
-		_, err := project.Extend(targetProjectFile, mockSource, argProvider)
+		err := project.Extend(targetProjectFile, mockSource, argProvider)
 		require.NoError(t, err)
 
 		data, err := os.ReadFile(targetProjectFile)
@@ -132,7 +132,7 @@ services:
 		mockSource := mockTemplateSourceWithErrorOnCopy(t, template.DestDirExistsError{Dir: destDir}, sourceName)
 		provider := arguments.NewStrictProviderChain()
 
-		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		err := project.Extend(targetProjectFile, mockSource, provider)
 
 		require.ErrorContains(t, err, "already exists", "expected error when directory exists")
 	})
@@ -153,7 +153,7 @@ x-topo:
 `, sourceName)
 		argProvider := arguments.NewStrictProviderChain()
 
-		_, err := project.Extend(targetProjectFile, mockSource, argProvider)
+		err := project.Extend(targetProjectFile, mockSource, argProvider)
 		require.NoError(t, err)
 
 		got, err := os.ReadFile(targetProjectFile)
@@ -194,7 +194,7 @@ x-topo:
 `, sourceName)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
 
-		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		err := project.Extend(targetProjectFile, mockSource, provider)
 		require.NoError(t, err)
 
 		got, err := os.ReadFile(targetProjectFile)
@@ -246,7 +246,7 @@ x-topo:
 			arguments.ResolvedArg{Name: "PORT", Value: "9090"},
 		)
 
-		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		err := project.Extend(targetProjectFile, mockSource, provider)
 		require.NoError(t, err)
 
 		got, err := os.ReadFile(targetProjectFile)
@@ -298,7 +298,7 @@ x-topo:
 `, sourceName)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "GREETING", Value: "Hello, World"})
 
-		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		err := project.Extend(targetProjectFile, mockSource, provider)
 		require.NoError(t, err)
 
 		got, err := os.ReadFile(targetProjectFile)
@@ -337,7 +337,7 @@ x-topo:
 `, sourceName)
 		provider := arguments.NewErrorProvider(errors.New("user cancelled"))
 
-		_, err := project.Extend(targetProjectFile, mockSource, provider)
+		err := project.Extend(targetProjectFile, mockSource, provider)
 
 		assert.EqualError(t, err, "user cancelled")
 		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), sourceName)
@@ -351,7 +351,7 @@ func TestResolveAndApplyArgs(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
 		argProvider := arguments.NewStrictProviderChain()
 
-		_, err := project.ResolveAndApplyArgs(invalidPath, argProvider)
+		err := project.ResolveAndApplyArgs(invalidPath, argProvider)
 
 		require.ErrorContains(t, err, "can't read compose file")
 	})
@@ -379,7 +379,7 @@ x-topo:
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
 		argProvider := arguments.NewStrictProviderChain(provider)
 
-		_, err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
+		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
 		require.NoError(t, err)
 
 		want := `

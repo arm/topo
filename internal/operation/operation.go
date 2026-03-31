@@ -17,25 +17,20 @@ type Operation interface {
 }
 
 // SetupExitCleanup sets up a handler to run an operation once when the program exits due to an interrupt signal.
-func SetupExitCleanup(w io.Writer, operation Operation, exit func(int)) func() []logger.Entry {
+func SetupExitCleanup(w io.Writer, operation Operation, exit func(int)) func() {
 	var once sync.Once
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	doCleanupOnce := func() []logger.Entry {
-		entries := []logger.Entry{}
+	doCleanupOnce := func() {
 		once.Do(func() {
 			if operation != nil {
 				if err := operation.Run(w); err != nil {
-					entries = append(entries, logger.Entry{
-						Level:   logger.Warning,
-						Message: fmt.Sprintf(": failed to cleanup on exit: %v\n", err),
-					})
+					logger.Warn(fmt.Sprintf(": failed to cleanup on exit: %v\n", err))
 				}
 			}
 			signal.Stop(sigChan)
 			close(sigChan)
 		})
-		return entries
 	}
 	go func() {
 		sig, ok := <-sigChan
