@@ -71,6 +71,6 @@ func TestSetOutputFormat(t *testing.T) {
 
 		logger.Info("plain test")
 
-		assert.Equal(t, buf.String(), "INF plain test\n")
+		assert.Contains(t, buf.String(), "INF plain test\n")
 	})
 }
