@@ -3,7 +3,6 @@ package target
 import (
 	"bytes"
 	"fmt"
-	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -11,29 +10,20 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
-type ExecSSH func(target ssh.Destination, cmdStr string, stdin []byte, sshArgs ...string) *exec.Cmd
-
 type Connection struct {
 	SSHTarget ssh.Destination
-	exec      ExecSSH
 	opts      ConnectionOptions
 }
 
 type ConnectionOptions struct {
 	Multiplex      bool
-	WithMockExec   ExecSSH
 	ConnectTimeout time.Duration
 }
 
 func NewConnection(dest ssh.Destination, opts ConnectionOptions) Connection {
-	execFn := ssh.ExecCmd
-	if opts.WithMockExec != nil {
-		execFn = opts.WithMockExec
-	}
 	opts.ConnectTimeout = ssh.NewConfig(dest).ConnectTimeout(opts.ConnectTimeout)
 	return Connection{
 		SSHTarget: dest,
-		exec:      execFn,
 		opts:      opts,
 	}
 }
@@ -47,7 +37,7 @@ func (c *Connection) RunWithStdin(cmdStr string, stdin []byte) (string, error) {
 }
 
 func (c *Connection) run(cmdStr string, stdin []byte) (string, error) {
-	cmd := c.exec(c.SSHTarget, cmdStr, stdin, c.opts.SSHArgs()...)
+	cmd := ssh.ExecCmd(c.SSHTarget, cmdStr, stdin, c.opts.SSHArgs()...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
@@ -65,7 +55,7 @@ func (c *Connection) run(cmdStr string, stdin []byte) (string, error) {
 
 func (c *Connection) RunWithArgs(cmdStr string, sshArgs ...string) (string, error) {
 	allArgs := append(c.opts.SSHArgs(), sshArgs...)
-	cmd := c.exec(c.SSHTarget, cmdStr, nil, allArgs...)
+	cmd := ssh.ExecCmd(c.SSHTarget, cmdStr, nil, allArgs...)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return string(out), nil
