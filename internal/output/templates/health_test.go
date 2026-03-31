@@ -80,6 +80,29 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "no remoteproc devices found")
 		})
 
+		t.Run("it renders an info icon for info checks", func(t *testing.T) {
+			toPrint := templates.PrintableHealthReport{
+				Target: &health.TargetReport{
+					Connectivity: health.HealthCheck{
+						Name:   "Connected",
+						Status: health.CheckStatusOK,
+					},
+					SubsystemDriver: health.HealthCheck{
+						Name:   "Subsystem Driver (remoteproc)",
+						Status: health.CheckStatusInfo,
+						Value:  "no remoteproc devices found",
+					},
+				},
+			}
+			var out bytes.Buffer
+
+			err := printable.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "ℹ️")
+			assert.Contains(t, out.String(), "no remoteproc devices found")
+		})
+
 		t.Run("it renders connection failures", func(t *testing.T) {
 			toPrint := templates.PrintableHealthReport{
 				Target: &health.TargetReport{

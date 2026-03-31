@@ -24,6 +24,7 @@ const (
 	CheckStatusOK      CheckStatus = "ok"
 	CheckStatusWarning CheckStatus = "warning"
 	CheckStatusError   CheckStatus = "error"
+	CheckStatusInfo    CheckStatus = "info"
 )
 
 type HealthCheck struct {
@@ -97,7 +98,7 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 		report.SubsystemDriver.Status = CheckStatusOK
 		report.SubsystemDriver.Value = strings.Join(names, ", ")
 	} else {
-		report.SubsystemDriver.Status = CheckStatusWarning
+		report.SubsystemDriver.Status = CheckStatusInfo
 		report.SubsystemDriver.Value = "no remoteproc devices found"
 	}
 
