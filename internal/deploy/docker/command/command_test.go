@@ -11,8 +11,8 @@ import (
 func TestString(t *testing.T) {
 	t.Run("converts docker command to string", func(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
-		h := command.NewHostFromDestination(dest)
-		cmd := command.Docker(h, "save", "alpine:latest")
+		remoteHost := command.NewHostFromDestination(dest)
+		cmd := command.Docker(remoteHost, "save", "alpine:latest")
 
 		got := command.String(cmd)
 
@@ -22,8 +22,8 @@ func TestString(t *testing.T) {
 
 	t.Run("converts docker compose command to string", func(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
-		h := command.NewHostFromDestination(dest)
-		cmd := command.DockerCompose(h, "/path/to/compose.yaml", "up", "-d")
+		remoteHost := command.NewHostFromDestination(dest)
+		cmd := command.DockerCompose(remoteHost, "/path/to/compose.yaml", "up", "-d")
 
 		got := command.String(cmd)
 
