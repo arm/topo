@@ -22,7 +22,7 @@ func TestNewDeployment(t *testing.T) {
 	t.Run("includes transfer operation for remote host", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
 		remoteHost := command.NewHostFromDestination(remoteDest)
-		localhost := command.NewLocalHost()
+		localhost := command.PlainLocalHost
 		deployOpts := docker.DeployOptions{TargetHost: remoteDest}
 		got, _ := docker.NewDeployment(composeFile, deployOpts)
 
@@ -38,7 +38,7 @@ func TestNewDeployment(t *testing.T) {
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
 		remoteHost := command.NewHostFromDestination(remoteDest)
-		localhost := command.NewLocalHost()
+		localhost := command.PlainLocalHost
 		port := operation.DefaultRegistryPort
 		opts := docker.DeployOptions{TargetHost: remoteDest, Registry: &docker.RegistryConfig{Port: port, UseControlSockets: true}}
 		got, _ := docker.NewDeployment(composeFile, opts)
@@ -86,7 +86,7 @@ func TestNewDeployment(t *testing.T) {
 				}
 				got, _ := docker.NewDeployment(composeFile, deployOpts)
 
-				localhost := command.NewLocalHost()
+				localhost := command.PlainLocalHost
 				want := goperation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, localhost),
 					operation.NewDockerComposePull(composeFile, localhost),
@@ -124,7 +124,7 @@ func TestNewDeployment(t *testing.T) {
 		got, _ := docker.NewDeployment(composeFile, opts)
 
 		wantTunnelStart, wantSecurityCheck, wantTunnelEnd := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
-		localhost := command.NewLocalHost()
+		localhost := command.PlainLocalHost
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, localhost),
 			operation.NewDockerComposePull(composeFile, localhost),

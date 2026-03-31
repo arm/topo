@@ -55,7 +55,7 @@ latest: size: 1234`
 func TestRegistryTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
-			localhost := command.NewLocalHost()
+			localhost := command.PlainLocalHost
 			transfer := operation.NewRegistryTransfer("any.yaml", localhost, localhost, operation.DefaultRegistryPort)
 
 			got := transfer.Description()
@@ -67,7 +67,7 @@ func TestRegistryTransfer(t *testing.T) {
 	t.Run("Run", func(t *testing.T) {
 		t.Run("it transfers images via registry", func(t *testing.T) {
 			testutil.RequireLinuxDockerEngine(t)
-			h := command.NewLocalHost()
+			h := command.PlainLocalHost
 			port := operation.DefaultRegistryPort
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")

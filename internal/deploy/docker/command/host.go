@@ -8,11 +8,9 @@ type Host struct {
 
 func NewHostFromDestination(dest ssh.Destination) Host {
 	if dest.IsPlainLocalhost() {
-		return NewLocalHost()
+		return PlainLocalHost
 	}
 	return Host{value: dest.String()}
 }
 
-func NewLocalHost() Host {
-	return Host{value: ""}
-}
+var PlainLocalHost = Host{value: ""}

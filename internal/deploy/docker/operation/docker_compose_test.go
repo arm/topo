@@ -27,7 +27,7 @@ services:
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			var buf bytes.Buffer
-			op := operation.NewDockerCompose("", composeFilePath, command.NewLocalHost(), []string{"config", "--services"})
+			op := operation.NewDockerCompose("", composeFilePath, command.PlainLocalHost, []string{"config", "--services"})
 
 			err := op.Run(&buf)
 
