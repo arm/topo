@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/template"
@@ -46,11 +45,6 @@ Some projects require build arguments. Supply them on the command line or answer
 `,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		outputFormat, err := resolveOutput(cmd)
-		if err != nil {
-			return err
-		}
-		logger.SetOutputFormat(outputFormat)
 		cmd.SilenceUsage = true
 		src := args[0]
 

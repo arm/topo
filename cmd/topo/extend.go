@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/template"
@@ -48,16 +47,6 @@ or interactively when prompted:
 		cmd.SilenceUsage = true
 		composeFilePath := args[0]
 		sourceArg := args[1]
-
-		outputFormat, err := resolveOutput(cmd)
-		if err != nil {
-			return err
-		}
-		logger.SetOutputFormat(outputFormat)
-
-		if err != nil {
-			return err
-		}
 
 		src, err := template.NewSource(sourceArg)
 		if err != nil {

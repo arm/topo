@@ -43,15 +43,6 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		outputFormat, err := resolveOutput(cmd)
-		if err != nil {
-			return err
-		}
-		logger.SetOutputFormat(outputFormat)
-		if err != nil {
-			return err
-		}
-
 		portChanged := cmd.Flags().Changed("registry-port")
 		if portChanged && noRegistry {
 			logger.Warn("--registry-port has no effect when --no-registry is set. Define SSH port in your SSH config instead.")
