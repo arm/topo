@@ -9,19 +9,19 @@ import (
 	"sort"
 	"strings"
 
-	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 )
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 
 type RegistryTransfer struct {
 	composeFile string
-	source      dockercommand.Host
-	host        dockercommand.Host
+	source      command.Host
+	host        command.Host
 	port        string
 }
 
-func NewRegistryTransfer(composeFile string, sourceHost, dest dockercommand.Host, port string) *RegistryTransfer {
+func NewRegistryTransfer(composeFile string, sourceHost, dest command.Host, port string) *RegistryTransfer {
 	return &RegistryTransfer{composeFile: composeFile, source: sourceHost, host: dest, port: port}
 }
 
@@ -43,7 +43,7 @@ func (r *RegistryTransfer) Run(w io.Writer) error {
 }
 
 func (r *RegistryTransfer) getImagesFromCompose(w io.Writer) ([]string, error) {
-	cmd := dockercommand.DockerCompose(r.source, r.composeFile, "config", "--images")
+	cmd := command.DockerCompose(r.source, r.composeFile, "config", "--images")
 	cmd.Stderr = w
 	out, err := cmd.Output()
 	if err != nil {
@@ -60,12 +60,12 @@ func (r *RegistryTransfer) getImagesFromCompose(w io.Writer) ([]string, error) {
 func (r *RegistryTransfer) transferImage(w io.Writer, image string) error {
 	tag := fmt.Sprintf("localhost:%s/%s", r.port, image)
 
-	tagCmd := dockercommand.Docker(r.source, "tag", image, tag)
+	tagCmd := command.Docker(r.source, "tag", image, tag)
 	if err := runCmd(tagCmd, w); err != nil {
 		return err
 	}
 
-	pushCmd := dockercommand.Docker(r.source, "push", tag)
+	pushCmd := command.Docker(r.source, "push", tag)
 	pushOutput, err := runCmdCaptureOutput(pushCmd, w)
 	if err != nil {
 		if hint := r.checkRegistryPortMismatch(); hint != "" {
@@ -80,12 +80,12 @@ func (r *RegistryTransfer) transferImage(w io.Writer, image string) error {
 	}
 
 	digestRef := fmt.Sprintf("localhost:%s/%s@%s", r.port, image, digest)
-	pullCmd := dockercommand.Docker(r.host, "pull", digestRef)
+	pullCmd := command.Docker(r.host, "pull", digestRef)
 	if err := runCmd(pullCmd, w); err != nil {
 		return err
 	}
 
-	retagCmd := dockercommand.Docker(r.host, "tag", digestRef, image)
+	retagCmd := command.Docker(r.host, "tag", digestRef, image)
 	if err := runCmd(retagCmd, w); err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func ParseDigestFromPushOutput(output string) (string, error) {
 }
 
 func (r *RegistryTransfer) checkRegistryPortMismatch() string {
-	cmd := dockercommand.Docker(dockercommand.NewLocalHost(), "port", RegistryContainerName, "5000")
+	cmd := command.Docker(command.NewLocalHost(), "port", RegistryContainerName, "5000")
 	out, err := cmd.Output()
 	if err != nil {
 		return ""

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +15,7 @@ import (
 
 func TestDockerComposePipeTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
-		h := dockercommand.NewLocalHost()
+		h := command.NewLocalHost()
 		tmpDir := t.TempDir()
 		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 		transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, h)
@@ -34,7 +34,7 @@ func TestDockerComposePipeTransfer(t *testing.T) {
 			// - Remove the image after save but before load (not feasible with current implementation).
 			// - Ensure test has access to two docker engines (expensive).
 			// As a compromise, this test verifies the operation completes without error and the image exists afterward.
-			h := dockercommand.NewLocalHost()
+			h := command.NewLocalHost()
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
@@ -49,7 +49,7 @@ services:
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			testutil.RequireWriteFile(t, dockerFilePath, dockerFileContent)
 
-			buildCmd := dockercommand.DockerCompose(h, composeFilePath, "build")
+			buildCmd := command.DockerCompose(h, composeFilePath, "build")
 			buildOutput, err := buildCmd.CombinedOutput()
 			require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 

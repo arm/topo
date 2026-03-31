@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker"
-	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
 	goperation "github.com/arm/topo/internal/operation"
@@ -21,8 +21,8 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("includes transfer operation for remote host", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		remoteHost := dockercommand.NewHostFromDestination(remoteDest)
-		localhost := dockercommand.NewLocalHost()
+		remoteHost := command.NewHostFromDestination(remoteDest)
+		localhost := command.NewLocalHost()
 		deployOpts := docker.DeployOptions{TargetHost: remoteDest}
 		got, _ := docker.NewDeployment(composeFile, deployOpts)
 
@@ -37,8 +37,8 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		remoteHost := dockercommand.NewHostFromDestination(remoteDest)
-		localhost := dockercommand.NewLocalHost()
+		remoteHost := command.NewHostFromDestination(remoteDest)
+		localhost := command.NewLocalHost()
 		port := operation.DefaultRegistryPort
 		opts := docker.DeployOptions{TargetHost: remoteDest, Registry: &docker.RegistryConfig{Port: port, UseControlSockets: true}}
 		got, _ := docker.NewDeployment(composeFile, opts)
@@ -86,7 +86,7 @@ func TestNewDeployment(t *testing.T) {
 				}
 				got, _ := docker.NewDeployment(composeFile, deployOpts)
 
-				localhost := dockercommand.NewLocalHost()
+				localhost := command.NewLocalHost()
 				want := goperation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, localhost),
 					operation.NewDockerComposePull(composeFile, localhost),
@@ -118,13 +118,13 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		remoteHost := dockercommand.NewHostFromDestination(remoteDest)
+		remoteHost := command.NewHostFromDestination(remoteDest)
 		port := operation.DefaultRegistryPort
 		opts := docker.DeployOptions{TargetHost: remoteDest, Registry: &docker.RegistryConfig{Port: port, UseControlSockets: false}}
 		got, _ := docker.NewDeployment(composeFile, opts)
 
 		wantTunnelStart, wantSecurityCheck, wantTunnelEnd := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
-		localhost := dockercommand.NewLocalHost()
+		localhost := command.NewLocalHost()
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, localhost),
 			operation.NewDockerComposePull(composeFile, localhost),

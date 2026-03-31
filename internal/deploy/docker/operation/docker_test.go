@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
 	"github.com/arm/topo/internal/ssh"
@@ -18,7 +18,7 @@ func TestDocker(t *testing.T) {
 
 		t.Run("executes docker command with args", func(t *testing.T) {
 			var buf bytes.Buffer
-			op := operation.NewDocker("Test docker version", dockercommand.NewLocalHost(), []string{"--version"})
+			op := operation.NewDocker("Test docker version", command.NewLocalHost(), []string{"--version"})
 
 			err := op.Run(&buf)
 
@@ -30,7 +30,7 @@ func TestDocker(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("returns provided description", func(t *testing.T) {
 			description := "Custom docker operation"
-			op := operation.NewDocker(description, dockercommand.NewLocalHost(), []string{"info"})
+			op := operation.NewDocker(description, command.NewLocalHost(), []string{"info"})
 
 			got := op.Description()
 
@@ -42,7 +42,7 @@ func TestDocker(t *testing.T) {
 func TestNewDockerPull(t *testing.T) {
 	image := "nginx:latest"
 	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := dockercommand.NewHostFromDestination(verifiedDest)
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	op := operation.NewDockerPull(remoteHost, image)
 
 	t.Run("Description", func(t *testing.T) {
@@ -55,7 +55,7 @@ func TestNewDockerPull(t *testing.T) {
 func TestNewDockerStart(t *testing.T) {
 	container := "my-container"
 	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := dockercommand.NewHostFromDestination(verifiedDest)
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	op := operation.NewDockerStart(remoteHost, container)
 
 	t.Run("Description", func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestNewDockerRun(t *testing.T) {
 	image := "alpine:latest"
 	container := "test-container"
 	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := dockercommand.NewHostFromDestination(verifiedDest)
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 
 	t.Run("Description", func(t *testing.T) {
 		op := operation.NewDockerRun(remoteHost, image, container, []string{"-d"})

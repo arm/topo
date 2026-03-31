@@ -4,17 +4,17 @@ import (
 	"io"
 	"os/exec"
 
-	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 )
 
 type DockerCompose struct {
 	description string
 	composeFile string
-	host        dockercommand.Host
+	host        command.Host
 	args        []string
 }
 
-func NewDockerCompose(description string, composeFile string, h dockercommand.Host, args []string) *DockerCompose {
+func NewDockerCompose(description string, composeFile string, h command.Host, args []string) *DockerCompose {
 	return &DockerCompose{
 		description: description,
 		composeFile: composeFile,
@@ -35,18 +35,18 @@ func (dc *DockerCompose) Run(cmdOutput io.Writer) error {
 }
 
 func (dc *DockerCompose) buildCommand() *exec.Cmd {
-	return dockercommand.DockerCompose(dc.host, dc.composeFile, dc.args...)
+	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
 }
 
-func NewDockerComposeBuild(composeFile string, h dockercommand.Host) *DockerCompose {
+func NewDockerComposeBuild(composeFile string, h command.Host) *DockerCompose {
 	return NewDockerCompose("Build images", composeFile, h, []string{"build"})
 }
 
-func NewDockerComposePull(composeFile string, h dockercommand.Host) *DockerCompose {
+func NewDockerComposePull(composeFile string, h command.Host) *DockerCompose {
 	return NewDockerCompose("Pull images", composeFile, h, []string{"pull"})
 }
 
-func NewDockerComposeStop(composeFile string, h dockercommand.Host) *DockerCompose {
+func NewDockerComposeStop(composeFile string, h command.Host) *DockerCompose {
 	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
 }
 
@@ -58,7 +58,7 @@ const (
 	RecreateModeNone
 )
 
-func NewDockerComposeUp(composeFile string, h dockercommand.Host, mode RecreateMode) *DockerCompose {
+func NewDockerComposeUp(composeFile string, h command.Host, mode RecreateMode) *DockerCompose {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
 	switch mode {
 	case RecreateModeForce:

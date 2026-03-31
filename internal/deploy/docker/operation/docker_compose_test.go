@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	dockercommand "github.com/arm/topo/internal/deploy/docker/docker_command"
+	"github.com/arm/topo/internal/deploy/docker/command"
 	"github.com/arm/topo/internal/deploy/docker/operation"
 	"github.com/arm/topo/internal/deploy/docker/testutil"
 	"github.com/arm/topo/internal/ssh"
@@ -27,7 +27,7 @@ services:
 `
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			var buf bytes.Buffer
-			op := operation.NewDockerCompose("", composeFilePath, dockercommand.NewLocalHost(), []string{"config", "--services"})
+			op := operation.NewDockerCompose("", composeFilePath, command.NewLocalHost(), []string{"config", "--services"})
 
 			err := op.Run(&buf)
 
@@ -40,7 +40,7 @@ services:
 func TestNewDockerComposeBuild(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := dockercommand.NewHostFromDestination(verifiedDest)
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	op := operation.NewDockerComposeBuild(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -53,7 +53,7 @@ func TestNewDockerComposeBuild(t *testing.T) {
 func TestNewDockerComposePull(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := dockercommand.NewHostFromDestination(verifiedDest)
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	op := operation.NewDockerComposePull(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -66,7 +66,7 @@ func TestNewDockerComposePull(t *testing.T) {
 func TestNewDockerComposeRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
 	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := dockercommand.NewHostFromDestination(verifiedDest)
+	remoteHost := command.NewHostFromDestination(verifiedDest)
 	opDefault := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.RecreateModeDefault)
 
 	t.Run("Description", func(t *testing.T) {
