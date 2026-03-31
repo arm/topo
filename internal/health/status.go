@@ -2,9 +2,12 @@ package health
 
 import (
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
+
+type runner interface {
+	Run(command string) (string, error)
+}
 
 type HardwareProfile struct {
 	RemoteCPU []target.RemoteprocCPU
@@ -18,40 +21,31 @@ func (h HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
 	return capabilities
 }
 
-type Status struct {
-	SSHTarget       ssh.Destination
-	ConnectionError error
-	Dependencies    []DependencyStatus
-	Hardware        HardwareProfile
+type HealthStatus struct {
+	Dependencies []DependencyStatus
+	Hardware     HardwareProfile
 }
 
-func ProbeHealthStatus(c target.Connection, probeOpts target.SSHAuthenticationProbeOptions) Status {
-	var status Status
-	status.SSHTarget = c.SSHTarget
+func ProbeHealthStatus(r runner) HealthStatus {
+	var hs HealthStatus
 
-	authProbe := target.NewSSHAuthenticationProbe(&c, probeOpts)
-	if err := authProbe.Probe(); err != nil {
-		status.ConnectionError = err
-		return status
-	}
-
-	probe := target.NewHardwareProbe(&c)
+	probe := target.NewHardwareProbe(r)
 	remoteprocs, _ := probe.ProbeRemoteproc()
-	status.Hardware.RemoteCPU = remoteprocs
+	hs.Hardware.RemoteCPU = remoteprocs
 
-	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, status.Hardware.Capabilities())
+	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, hs.Hardware.Capabilities())
 	binaryExists := func(bin string) error {
 		// We can use `UnsafeBinaryLookupCommand`, because the dependencies we're checking are hardcoded in the codebase
-		if _, err := c.Run(command.UnsafeBinaryLookupCommand(bin)); err != nil {
+		if _, err := r.Run(command.UnsafeBinaryLookupCommand(bin)); err != nil {
 			return err
 		}
 		return nil
 	}
 	commandSuccessful := func(fullCmd string) error {
-		_, err := c.Run(command.WrapInLoginShell(fullCmd))
+		_, err := r.Run(command.WrapInLoginShell(fullCmd))
 		return err
 	}
-	status.Dependencies = PerformChecks(dependenciesToCheck, binaryExists, commandSuccessful)
+	hs.Dependencies = PerformChecks(dependenciesToCheck, binaryExists, commandSuccessful)
 
-	return status
+	return hs
 }
