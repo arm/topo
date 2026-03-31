@@ -1,109 +1,50 @@
 package target_test
 
 import (
-	"os/exec"
-	"strings"
 	"testing"
+	"time"
 
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRun(t *testing.T) {
-	t.Run("run executes command successfully", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithOutput("success", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+func TestConnectionOptions(t *testing.T) {
+	t.Run("SSHArgs", func(t *testing.T) {
+		t.Run("with multiplexing enabled on non-windows includes Control args", func(t *testing.T) {
+			testutil.RequireOS(t, "linux")
+			opts := target.ConnectionOptions{Multiplex: true}
 
-		out, err := conn.Run("ls")
+			assert.Equal(t, []string{
+				"-o", "ControlMaster=auto",
+				"-o", "ControlPersist=10s",
+				"-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p",
+			}, opts.SSHArgs())
+		})
 
-		assert.NoError(t, err)
-		assert.Equal(t, "success", out)
-	})
+		t.Run("with multiplexing enabled on windows includes no Control args", func(t *testing.T) {
+			testutil.RequireOS(t, "windows")
+			opts := target.ConnectionOptions{Multiplex: true}
 
-	t.Run("run returns error", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithOutput("", 1)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+			assert.Nil(t, opts.SSHArgs())
+		})
 
-		out, err := conn.Run("ls")
+		t.Run("with multiplexing disabled includes no Control args", func(t *testing.T) {
+			opts := target.ConnectionOptions{Multiplex: false}
 
-		assert.Error(t, err)
-		assert.Empty(t, out)
-	})
+			assert.Nil(t, opts.SSHArgs())
+		})
 
-	t.Run("returns ErrAuthFailed when stderr contains auth failure", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithStderr("Permission denied (publickey)", 1)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
+		t.Run("with connect timeout includes ConnectTimeout arg", func(t *testing.T) {
+			opts := target.ConnectionOptions{ConnectTimeout: 10 * time.Second}
 
-		_, err := conn.Run("ls")
+			assert.Equal(t, []string{"-o", "ConnectTimeout=10"}, opts.SSHArgs())
+		})
 
-		assert.ErrorIs(t, err, ssh.ErrAuthFailed)
-	})
+		t.Run("with no timeout includes no ConnectTimeout arg", func(t *testing.T) {
+			opts := target.ConnectionOptions{}
 
-	t.Run("returns ErrConnectionFailed when stderr contains connection refused", func(t *testing.T) {
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, _ ...string) *exec.Cmd {
-			return testutil.CmdWithStderr("ssh: connect to host foo port 22: Connection refused", 1)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-
-		_, err := conn.Run("ls")
-
-		assert.ErrorIs(t, err, ssh.ErrConnectionFailed)
-	})
-
-	t.Run("run with stdin passes stdin to command", func(t *testing.T) {
-		var gotStdin []byte
-		mockExec := func(_ ssh.Destination, _ string, stdin []byte, _ ...string) *exec.Cmd {
-			gotStdin = stdin
-			return testutil.CmdWithOutput("success", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{WithMockExec: mockExec})
-
-		out, err := conn.RunWithStdin("cat", []byte("payload"))
-
-		assert.NoError(t, err)
-		assert.Equal(t, "success", out)
-		assert.Equal(t, []byte("payload"), gotStdin)
-	})
-
-	t.Run("run with mutliplexing enabled includes Control args", func(t *testing.T) {
-		testutil.RequireOS(t, "linux")
-		var capturedArgs string
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
-			capturedArgs = strings.Join(sshArgs, " ")
-			return testutil.CmdWithOutput("success", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
-
-		_, err := conn.Run("ls")
-
-		assert.NoError(t, err)
-		assert.True(t, strings.Contains(capturedArgs, "-o ControlMaster"), "missing ControlMaster argument")
-		assert.True(t, strings.Contains(capturedArgs, "-o ControlPersist"), "missing ControlPersist argument")
-		assert.True(t, strings.Contains(capturedArgs, "-o ControlPath"), "missing ControlPath argument")
-	})
-
-	t.Run("run with mutliplexing enabled does not include Control args on windows", func(t *testing.T) {
-		testutil.RequireOS(t, "windows")
-		var capturedArgs string
-		mockExec := func(_ ssh.Destination, _ string, _ []byte, sshArgs ...string) *exec.Cmd {
-			capturedArgs = strings.Join(sshArgs, " ")
-			return testutil.CmdWithOutput("success", 0)
-		}
-		conn := target.NewConnection(ssh.NewDestination("hostname"), target.ConnectionOptions{Multiplex: true, WithMockExec: mockExec})
-
-		_, err := conn.Run("ls")
-
-		assert.NoError(t, err)
-		assert.False(t, strings.Contains(capturedArgs, "-o ControlMaster"), "unexpected ControlMaster argument")
-		assert.False(t, strings.Contains(capturedArgs, "-o ControlPersist"), "unexpected ControlPersist argument")
-		assert.False(t, strings.Contains(capturedArgs, "-o ControlPath"), "unexpected ControlPath argument")
+			assert.Nil(t, opts.SSHArgs())
+		})
 	})
 }

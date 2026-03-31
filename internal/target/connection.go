@@ -47,12 +47,7 @@ func (c *Connection) RunWithStdin(cmdStr string, stdin []byte) (string, error) {
 }
 
 func (c *Connection) run(cmdStr string, stdin []byte) (string, error) {
-	sshArgs := c.connectTimeoutArgs()
-	if c.opts.Multiplex && runtime.GOOS != "windows" {
-		sshArgs = append(sshArgs, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
-	}
-
-	cmd := c.exec(c.SSHTarget, cmdStr, stdin, sshArgs...)
+	cmd := c.exec(c.SSHTarget, cmdStr, stdin, c.opts.SSHArgs()...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
@@ -69,7 +64,7 @@ func (c *Connection) run(cmdStr string, stdin []byte) (string, error) {
 }
 
 func (c *Connection) RunWithArgs(cmdStr string, sshArgs ...string) (string, error) {
-	allArgs := append(c.connectTimeoutArgs(), sshArgs...)
+	allArgs := append(c.opts.SSHArgs(), sshArgs...)
 	cmd := c.exec(c.SSHTarget, cmdStr, nil, allArgs...)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
@@ -93,9 +88,13 @@ func (e ConnectionTimeoutError) Error() string {
 	return "ssh connection timed out"
 }
 
-func (c *Connection) connectTimeoutArgs() []string {
-	if c.opts.ConnectTimeout <= 0 {
-		return nil
+func (opts ConnectionOptions) SSHArgs() []string {
+	var args []string
+	if opts.ConnectTimeout > 0 {
+		args = append(args, "-o", fmt.Sprintf("ConnectTimeout=%d", int(opts.ConnectTimeout.Seconds())))
 	}
-	return []string{"-o", fmt.Sprintf("ConnectTimeout=%d", int(c.opts.ConnectTimeout.Seconds()))}
+	if opts.Multiplex && runtime.GOOS != "windows" {
+		args = append(args, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
+	}
+	return args
 }
