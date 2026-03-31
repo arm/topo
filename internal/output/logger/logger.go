@@ -35,7 +35,6 @@ func new(o Options) *slog.Logger {
 			NoColor:    !term.IsTTY(o.Output),
 		}))
 	}
-
 }
 
 func Debug(msg string, args ...any) {
