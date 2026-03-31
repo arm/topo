@@ -14,7 +14,7 @@ type Destination struct {
 }
 
 func NewDestination(destStr string) Destination {
-	user, host, port := SplitUserHostPort(destStr)
+	user, host, port := splitUserHostPort(destStr)
 	return Destination{User: user, Host: host, Port: port}
 }
 
@@ -64,7 +64,7 @@ func (d Destination) Slugify() string {
 	return b.String()
 }
 
-func SplitUserHostPort(raw string) (user, host, port string) {
+func splitUserHostPort(raw string) (user, host, port string) {
 	raw = strings.TrimPrefix(raw, "ssh://")
 	hostPart := raw
 	if at := strings.LastIndex(raw, "@"); at != -1 {

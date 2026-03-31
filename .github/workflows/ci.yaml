@@ -9,7 +9,7 @@ on:
 
 jobs:
   lint:
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ ubuntu-24.04-arm ]
 
     steps:
       - name: Checkout repository
@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: 
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest, ubuntu-24.04-arm, windows-latest ]
         include:
           - os: windows-latest
             docker_host: ssh://test@localhost:2222

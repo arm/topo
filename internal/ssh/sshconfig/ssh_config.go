@@ -3,6 +3,7 @@ package sshconfig
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,11 +35,11 @@ func NewDirective(key, value string) SSHConfigDirective {
 	}
 }
 
-func CreateSSHConfig(targetHost string, targetSlug string) error {
-	return CreateOrModifySSHConfig(targetHost, targetSlug, nil)
+func CreateSSHConfig(dest ssh.Destination, targetSlug string) error {
+	return CreateOrModifySSHConfig(dest, targetSlug, nil)
 }
 
-func CreateOrModifySSHConfig(targetHost string, targetSlug string, directives []SSHConfigDirective) error {
+func CreateOrModifySSHConfig(dest ssh.Destination, targetSlug string, directives []SSHConfigDirective) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)
@@ -68,7 +69,7 @@ func CreateOrModifySSHConfig(targetHost string, targetSlug string, directives []
 
 	var fragmentToWrite []byte
 	if len(existingTopoContent) == 0 {
-		fragmentToWrite = buildSSHConfigFragment(targetHost, directives)
+		fragmentToWrite = buildSSHConfigFragment(dest, directives)
 	} else {
 		fragmentToWrite = mergeOwnedSSHConfigDirectives(existingTopoContent, directives)
 	}
@@ -111,23 +112,17 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 	return false
 }
 
-func buildSSHConfigFragment(targetHost string, directives []SSHConfigDirective) []byte {
-	user, host, port := ssh.SplitUserHostPort(targetHost)
-	hostAlias := host
-	if hostAlias == "" {
-		hostAlias = targetHost
-	}
-
+func buildSSHConfigFragment(dest ssh.Destination, directives []SSHConfigDirective) []byte {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Host %s\n", hostAlias)
-	if host != "" && (strings.Contains(targetHost, "@") || strings.Contains(targetHost, ":")) {
-		fmt.Fprintf(&b, "  HostName %s\n", host)
+	fmt.Fprintf(&b, "Host %s\n", dest.Host)
+	if dest.Host != "" && (dest.User != "" || net.ParseIP(dest.Host) != nil) {
+		fmt.Fprintf(&b, "  HostName %s\n", dest.Host)
 	}
-	if user != "" {
-		fmt.Fprintf(&b, "  User %s\n", user)
+	if dest.User != "" {
+		fmt.Fprintf(&b, "  User %s\n", dest.User)
 	}
-	if port != "" {
-		fmt.Fprintf(&b, "  Port %s\n", port)
+	if dest.Port != "" {
+		fmt.Fprintf(&b, "  Port %s\n", dest.Port)
 	}
 
 	for _, directive := range directives {

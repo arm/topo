@@ -1,4 +1,6 @@
-# Topo CLI
+# Topo
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/arm/topo)](https://goreportcard.com/report/github.com/arm/topo)
 
 Discover what your Arm hardware can do and deploy workloads that use it to its full potential.
 
@@ -82,10 +84,16 @@ Target
 Connectivity: ✅
 Container Engine: ✅ (docker)
 Hardware Info: ✅ (lscpu)
-Subsystem Driver (remoteproc): ⚠️ (no remoteproc devices found)
+Remoteproc Runtime: ⚠️ (remoteproc-runtime not found on path)
+  → run `topo install remoteproc-runtime`
+Remoteproc Shim: ⚠️ (containerd-shim-remoteproc-v1 not found on path)
+  → run `topo install remoteproc-runtime`
+Subsystem Driver (remoteproc): ✅ (m4_0)
 ```
 
-Resolve any ❌ before continuing. A ⚠️ is informational and won't block the core workflow.
+- ❌ must be resolved before continuing.
+- ⚠️ can be resolved to unlock full functionality.
+- ℹ️ are informational and won't block the core workflow.
 
 ### 2. Describe your target hardware
 

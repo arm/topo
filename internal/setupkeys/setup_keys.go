@@ -9,6 +9,7 @@ import (
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/target"
 )
 
 type KeyType string
@@ -18,10 +19,11 @@ const (
 	KeyTypeRSA     KeyType = "rsa"
 )
 
-func NewKeySetup(target ssh.Destination, privKeyPath string, keyType KeyType) (operation.Sequence, error) {
+func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType) (operation.Sequence, error) {
+	conn := target.NewConnection(dest, target.ConnectionOptions{})
 	ops := []operation.Operation{
-		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", target, string(keyType), privKeyPath, sshkeygen.SSHKeyGenOptions{}),
-		pubkeytransfer.NewPubKeyTransfer("Transfer public key to target and set it as an authorized key", target, privKeyPath, pubkeytransfer.PubKeyTransferOptions{}),
+		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", dest, string(keyType), privKeyPath, sshkeygen.SSHKeyGenOptions{}),
+		pubkeytransfer.NewPubKeyTransfer(privKeyPath, &conn),
 	}
 	return operation.NewSequence(ops...), nil
 }

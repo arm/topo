@@ -22,7 +22,7 @@ func TestTemplates(t *testing.T) {
 		output := string(out)
 
 		assert.Contains(t, output, "topo-welcome")
-		assert.Contains(t, output, "git@github.com:")
+		assert.Contains(t, output, "https://github.com/")
 		assert.Contains(t, output, "Features:")
 	})
 

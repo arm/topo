@@ -24,6 +24,7 @@ const (
 	CheckStatusOK      CheckStatus = "ok"
 	CheckStatusWarning CheckStatus = "warning"
 	CheckStatusError   CheckStatus = "error"
+	CheckStatusInfo    CheckStatus = "info"
 )
 
 type HealthCheck struct {
@@ -65,14 +66,43 @@ func CheckHost() HostReport {
 	return GenerateHostReport(dependencyStatuses)
 }
 
+type ConnectionStatus struct {
+	Destination ssh.Destination
+	Error       error
+}
+
+func (c ConnectionStatus) IsPlainLocalhost() bool {
+	return c.Destination.IsPlainLocalhost()
+}
+
+type Status struct {
+	Connection   ConnectionStatus
+	Dependencies []DependencyStatus
+	Hardware     HardwareProfile
+}
+
 func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (TargetReport, error) {
 	opts := target.ConnectionOptions{
 		Multiplex:      true,
 		ConnectTimeout: connectTimeout,
 	}
 	conn := target.NewConnection(dest, opts)
-	targetStatus := ProbeHealthStatus(conn, probeOpts)
-	return GenerateTargetReport(targetStatus), nil
+
+	if !dest.IsPlainLocalhost() {
+		authProbe := target.NewSSHAuthenticationProbe(&conn, probeOpts)
+		if err := authProbe.Probe(); err != nil {
+			status := Status{Connection: ConnectionStatus{Destination: dest, Error: err}}
+			return GenerateTargetReport(status), nil
+		}
+	}
+
+	hs := ProbeHealthStatus(&conn)
+	status := Status{
+		Connection:   ConnectionStatus{Destination: dest},
+		Dependencies: hs.Dependencies,
+		Hardware:     hs.Hardware,
+	}
+	return GenerateTargetReport(status), nil
 }
 
 func GenerateHostReport(statuses []DependencyStatus) HostReport {
@@ -84,8 +114,8 @@ func GenerateHostReport(statuses []DependencyStatus) HostReport {
 
 func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
-	report.IsLocalhost = targetStatus.SSHTarget.IsPlainLocalhost()
-	report.Connectivity = connectivityCheck(targetStatus)
+	report.IsLocalhost = targetStatus.Connection.IsPlainLocalhost()
+	report.Connectivity = connectivityCheck(targetStatus.Connection)
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
 	remoteCPUs := targetStatus.Hardware.RemoteCPU
@@ -97,7 +127,7 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 		report.SubsystemDriver.Status = CheckStatusOK
 		report.SubsystemDriver.Value = strings.Join(names, ", ")
 	} else {
-		report.SubsystemDriver.Status = CheckStatusWarning
+		report.SubsystemDriver.Status = CheckStatusInfo
 		report.SubsystemDriver.Value = "no remoteproc devices found"
 	}
 
@@ -106,18 +136,18 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	return report
 }
 
-func connectivityCheck(targetStatus Status) HealthCheck {
+func connectivityCheck(status ConnectionStatus) HealthCheck {
 	check := HealthCheck{
 		Name:   "Connectivity",
-		Status: NewCheckStatusFromError(targetStatus.ConnectionError),
+		Status: NewCheckStatusFromError(status.Error),
 	}
-	if targetStatus.ConnectionError == nil {
+	if status.Error == nil {
 		return check
 	}
 
-	check.Value = targetStatus.ConnectionError.Error()
-	if errors.Is(targetStatus.ConnectionError, target.ErrPasswordAuthentication) {
-		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` or manually setup SSH keys for the target", targetStatus.SSHTarget)
+	check.Value = status.Error.Error()
+	if errors.Is(status.Error, target.ErrPasswordAuthentication) {
+		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` or manually setup SSH keys for the target", status.Destination)
 	}
 	return check
 }

@@ -114,12 +114,24 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 	resolvedArgs := argsToMap(resolvedTemplate.Args)
 
 	extendedComposeFilePath := filepath.Join(copiedDirName, template.ComposeFilename)
+	usedArgs := map[string]bool{}
 	for _, service := range resolvedTemplate.Services {
 		serviceArgs := compose.FilterResolvedBuildArgs(service.Data, resolvedArgs)
+		for k := range serviceArgs {
+			usedArgs[k] = true
+		}
 		newSvc := compose.CreateServiceByExtension(extendedComposeFilePath, service.Name, serviceArgs)
 		logger.Info(fmt.Sprintf("adding service %q to project", newSvc.Name))
 		if err := compose.InsertService(project, newSvc); err != nil {
 			return err
+		}
+	}
+	for argName := range resolvedArgs {
+		if !usedArgs[argName] {
+			logs = append(logs, logger.Entry{
+				Level:   logger.Warning,
+				Message: fmt.Sprintf("arg %q was resolved but not found in any service build args", argName),
+			})
 		}
 	}
 

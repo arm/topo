@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/ssh/sshconfig"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,7 @@ func TestModifySSHConfig(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 
-		targetHost := "user@example.com:2222"
+		targetHost := ssh.NewDestination("user@example.com:2222")
 		targetFileName := "user_example_com_2222"
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 
@@ -46,7 +47,7 @@ func TestModifySSHConfig(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 
-		targetHost := "user@example.com:2222"
+		targetHost := ssh.NewDestination("user@example.com:2222")
 		targetFileName := "user_example_com_2222"
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 		fragmentPath := filepath.Join(tmp, ".ssh", "topo_config", fmt.Sprintf("topo_%s.conf", targetFileName))
@@ -82,7 +83,7 @@ func TestModifySSHConfig(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 
-		targetHost := "user@example.com:2222"
+		targetHost := ssh.NewDestination("user@example.com:2222")
 		targetFileName := "user_example_com_2222"
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 		fragmentPath := filepath.Join(tmp, ".ssh", "topo_config", fmt.Sprintf("topo_%s.conf", targetFileName))
@@ -120,7 +121,7 @@ func TestModifySSHConfig(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 
-		targetHost := "user@example.com:2222"
+		targetHost := ssh.NewDestination("user@example.com:2222")
 		targetFileName := "user_example_com_2222"
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 		fragmentPath := filepath.Join(tmp, ".ssh", "topo_config", fmt.Sprintf("topo_%s.conf", targetFileName))
@@ -159,7 +160,7 @@ func TestCreateSSHConfig(t *testing.T) {
 	t.Run("handles creation of new ssh config file", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
-		targetHost := "user@example.com:2222"
+		targetHost := ssh.NewDestination("user@example.com:2222")
 		targetFileName := "user_example_com_2222"
 		fragmentPath := filepath.Join(tmp, ".ssh", "topo_config", fmt.Sprintf("topo_%s.conf", targetFileName))
 		mainConfigPath := filepath.Join(tmp, ".ssh", "config")
