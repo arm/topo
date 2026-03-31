@@ -39,8 +39,8 @@ services:
 
 func TestNewDockerComposeBuild(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := command.NewHostFromDestination(verifiedDest)
+	dest := ssh.NewDestination("ssh://user@remote")
+	remoteHost := command.NewHostFromDestination(dest)
 	op := operation.NewDockerComposeBuild(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -52,8 +52,8 @@ func TestNewDockerComposeBuild(t *testing.T) {
 
 func TestNewDockerComposePull(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := command.NewHostFromDestination(verifiedDest)
+	dest := ssh.NewDestination("ssh://user@remote")
+	remoteHost := command.NewHostFromDestination(dest)
 	op := operation.NewDockerComposePull(composeFilePath, remoteHost)
 
 	t.Run("Description", func(t *testing.T) {
@@ -65,8 +65,8 @@ func TestNewDockerComposePull(t *testing.T) {
 
 func TestNewDockerComposeRun(t *testing.T) {
 	composeFilePath := "/path/to/compose.yaml"
-	verifiedDest := ssh.NewDestination("ssh://user@remote")
-	remoteHost := command.NewHostFromDestination(verifiedDest)
+	dest := ssh.NewDestination("ssh://user@remote")
+	remoteHost := command.NewHostFromDestination(dest)
 	opDefault := operation.NewDockerComposeUp(composeFilePath, remoteHost, operation.RecreateModeDefault)
 
 	t.Run("Description", func(t *testing.T) {
