@@ -8,7 +8,7 @@ import (
 
 func main() {
 	outputFormat := resolveOutput(rootCmd)
-	logger.SetOutputFormat(outputFormat)
+	logger.SetOptions(logger.Options{Format: outputFormat})
 
 	if err := rootCmd.Execute(); err != nil {
 		logger.Error(err.Error())

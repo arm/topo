@@ -3,7 +3,6 @@ package logger_test
 import (
 	"bytes"
 	"encoding/json"
-	"os"
 	"testing"
 
 	"github.com/arm/topo/internal/output/logger"
@@ -14,11 +13,9 @@ import (
 func setupTestLogOutputBuffer(t *testing.T, format term.Format) *bytes.Buffer {
 	t.Helper()
 	var buf bytes.Buffer
-	logger.SetOutput(&buf)
-	logger.SetOutputFormat(format)
+	logger.SetOptions(logger.Options{Output: &buf, Format: format})
 	t.Cleanup(func() {
-		logger.SetOutput(os.Stderr)
-		logger.SetOutputFormat(term.Plain)
+		logger.SetOptions(logger.Options{})
 	})
 	return &buf
 }

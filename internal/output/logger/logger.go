@@ -10,30 +10,32 @@ import (
 	"github.com/lmittmann/tint"
 )
 
-var (
-	output = io.Writer(os.Stderr)
-	logger = newPlainLogger()
-)
-
-func newPlainLogger() *slog.Logger {
-	return slog.New(tint.NewHandler(output, &tint.Options{
-		TimeFormat: time.TimeOnly,
-		NoColor:    !term.IsTTY(output),
-	}))
+type Options struct {
+	Output io.Writer
+	Format term.Format
 }
 
-func SetOutput(w io.Writer) {
-	output = w
-	logger = newPlainLogger()
+var logger = new(Options{})
+
+func SetOptions(o Options) {
+	logger = new(o)
 }
 
-func SetOutputFormat(format term.Format) {
-	switch format {
-	case term.Plain:
-		logger = newPlainLogger()
-	case term.JSON:
-		logger = slog.New(slog.NewJSONHandler(output, nil))
+func new(o Options) *slog.Logger {
+	if o.Output == nil {
+		o.Output = io.Writer(os.Stderr)
 	}
+
+	switch o.Format {
+	case term.JSON:
+		return slog.New(slog.NewJSONHandler(o.Output, nil))
+	default:
+		return slog.New(tint.NewHandler(o.Output, &tint.Options{
+			TimeFormat: time.TimeOnly,
+			NoColor:    !term.IsTTY(o.Output),
+		}))
+	}
+
 }
 
 func Debug(msg string, args ...any) {
