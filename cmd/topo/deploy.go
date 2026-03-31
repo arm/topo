@@ -119,7 +119,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		err = deployment.Run(os.Stdout)
 		if err != nil {
-			return fmt.Errorf("deployment failed. Ensure `topo health` is passing: %w", err)
+			return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
 		}
 		return nil
 	},
