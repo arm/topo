@@ -43,12 +43,12 @@ func TestContainerExistsPredicate(t *testing.T) {
 		testutil.RequireLinuxDockerEngine(t)
 		containerName := testutil.TestContainerName(t)
 		imageName := testutil.TestImageName(t)
-		localhost := command.PlainLocalHost
-		testutil.BuildMinimalImage(t, localhost, imageName)
-		runCmd := command.Docker(localhost, "run", "-d", "--name", containerName, imageName)
+		localHost := command.PlainLocalHost
+		testutil.BuildMinimalImage(t, localHost, imageName)
+		runCmd := command.Docker(localHost, "run", "-d", "--name", containerName, imageName)
 		require.NoError(t, runCmd.Run())
 		t.Cleanup(func() {
-			stopCmd := command.Docker(localhost, "rm", "-f", containerName)
+			stopCmd := command.Docker(localHost, "rm", "-f", containerName)
 			_ = stopCmd.Run()
 		})
 

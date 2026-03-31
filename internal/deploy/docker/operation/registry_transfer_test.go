@@ -55,8 +55,8 @@ latest: size: 1234`
 func TestRegistryTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
-			localhost := command.PlainLocalHost
-			transfer := operation.NewRegistryTransfer("any.yaml", localhost, localhost, operation.DefaultRegistryPort)
+			localHost := command.PlainLocalHost
+			transfer := operation.NewRegistryTransfer("any.yaml", localHost, localHost, operation.DefaultRegistryPort)
 
 			got := transfer.Description()
 
