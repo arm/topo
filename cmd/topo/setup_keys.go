@@ -6,7 +6,6 @@ import (
 
 	"github.com/arm/topo/internal/setupkeys"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/ssh/sshconfig"
 	"github.com/spf13/cobra"
 )
 
@@ -56,12 +55,12 @@ var setupKeysCmd = &cobra.Command{
 			return err
 		}
 
-		directives := []sshconfig.SSHConfigDirective{
-			sshconfig.NewDirectiveIdentityFile(privateKeyPath),
-			sshconfig.NewDirective("IdentitiesOnly", "yes"),
+		directives := []ssh.SSHConfigDirective{
+			ssh.NewDirectiveIdentityFile(privateKeyPath),
+			ssh.NewDirective("IdentitiesOnly", "yes"),
 		}
 
-		return sshconfig.CreateOrModifySSHConfig(dest, targetSlug, directives)
+		return ssh.CreateOrModifySSHConfig(dest, targetSlug, directives)
 	},
 }
 

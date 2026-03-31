@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/ssh/sshconfig"
 	"github.com/arm/topo/internal/vscode"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +43,7 @@ This will also update the main SSH config (~/.ssh/config) to include the topo-ma
 			return err
 		}
 
-		return sshconfig.CreateSSHConfig(dest, targetSlug)
+		return ssh.CreateSSHConfig(dest, targetSlug)
 	},
 }
 
