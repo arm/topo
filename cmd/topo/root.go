@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/version"
 	"github.com/spf13/cobra"
@@ -17,6 +18,10 @@ var rootCmd = &cobra.Command{
 	Version:       fmt.Sprintf("%s (commit: %s)", version.Version, version.GitCommit),
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		outputFormat := resolveOutput(cmd)
+		logger.SetOptions(logger.Options{Format: outputFormat})
+	},
 }
 
 func init() {
