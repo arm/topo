@@ -31,7 +31,7 @@ func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequ
 }
 
 func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence, goperation.Operation) {
-	sourceHost := command.PlainLocalHost
+	sourceHost := command.LocalHost
 	ops := []goperation.Operation{
 		operation.NewDockerComposeBuild(composeFile, sourceHost),
 		operation.NewDockerComposePull(composeFile, sourceHost),

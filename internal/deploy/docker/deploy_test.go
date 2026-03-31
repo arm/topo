@@ -26,7 +26,7 @@ func TestNewDeployment(t *testing.T) {
 		got, _ := docker.NewDeployment(composeFile, deployOpts)
 
 		remoteHost := command.NewHostFromDestination(remoteDest)
-		localHost := command.PlainLocalHost
+		localHost := command.LocalHost
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, localHost),
 			operation.NewDockerComposePull(composeFile, localHost),
@@ -44,7 +44,7 @@ func TestNewDeployment(t *testing.T) {
 		got, _ := docker.NewDeployment(composeFile, opts)
 
 		remoteHost := command.NewHostFromDestination(remoteDest)
-		localHost := command.PlainLocalHost
+		localHost := command.LocalHost
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, localHost),
 			operation.NewDockerComposePull(composeFile, localHost),
@@ -88,7 +88,7 @@ func TestNewDeployment(t *testing.T) {
 
 				got, _ := docker.NewDeployment(composeFile, deployOpts)
 
-				localHost := command.PlainLocalHost
+				localHost := command.LocalHost
 				want := goperation.Sequence{
 					operation.NewDockerComposeBuild(composeFile, localHost),
 					operation.NewDockerComposePull(composeFile, localHost),
@@ -127,7 +127,7 @@ func TestNewDeployment(t *testing.T) {
 		got, _ := docker.NewDeployment(composeFile, opts)
 
 		wantTunnelStart, wantSecurityCheck, wantTunnelEnd := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
-		localHost := command.PlainLocalHost
+		localHost := command.LocalHost
 		remoteHost := command.NewHostFromDestination(remoteDest)
 		want := goperation.Sequence{
 			operation.NewDockerComposeBuild(composeFile, localHost),

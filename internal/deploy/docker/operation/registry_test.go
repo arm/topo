@@ -19,7 +19,7 @@ func TestNewRunRegistry(t *testing.T) {
 
 		got := operation.NewRunRegistry(port)
 
-		localHost := command.PlainLocalHost
+		localHost := command.LocalHost
 		want := goperation.NewSequence(
 			operation.NewDockerPull(localHost, "registry:2"),
 			goperation.NewConditional(
@@ -43,7 +43,7 @@ func TestContainerExistsPredicate(t *testing.T) {
 		testutil.RequireLinuxDockerEngine(t)
 		containerName := testutil.TestContainerName(t)
 		imageName := testutil.TestImageName(t)
-		localHost := command.PlainLocalHost
+		localHost := command.LocalHost
 		testutil.BuildMinimalImage(t, localHost, imageName)
 		runCmd := command.Docker(localHost, "run", "-d", "--name", containerName, imageName)
 		require.NoError(t, runCmd.Run())
@@ -52,7 +52,7 @@ func TestContainerExistsPredicate(t *testing.T) {
 			_ = stopCmd.Run()
 		})
 
-		predicate := operation.NewContainerExistsPredicate(command.PlainLocalHost, containerName)
+		predicate := operation.NewContainerExistsPredicate(command.LocalHost, containerName)
 		got := predicate.Eval()
 
 		assert.True(t, got)
@@ -62,7 +62,7 @@ func TestContainerExistsPredicate(t *testing.T) {
 		testutil.RequireDocker(t)
 		containerName := "non-existent-container-12345"
 
-		predicate := operation.NewContainerExistsPredicate(command.PlainLocalHost, containerName)
+		predicate := operation.NewContainerExistsPredicate(command.LocalHost, containerName)
 		got := predicate.Eval()
 
 		assert.False(t, got)

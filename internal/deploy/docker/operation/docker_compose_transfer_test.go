@@ -15,7 +15,7 @@ import (
 
 func TestDockerComposePipeTransfer(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
-		h := command.PlainLocalHost
+		h := command.LocalHost
 		tmpDir := t.TempDir()
 		composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 		transfer := operation.NewDockerComposePipeTransfer(composeFilePath, h, h)
@@ -34,7 +34,7 @@ func TestDockerComposePipeTransfer(t *testing.T) {
 			// - Remove the image after save but before load (not feasible with current implementation).
 			// - Ensure test has access to two docker engines (expensive).
 			// As a compromise, this test verifies the operation completes without error and the image exists afterward.
-			h := command.PlainLocalHost
+			h := command.LocalHost
 			tmpDir := t.TempDir()
 			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
 			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")

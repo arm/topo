@@ -119,7 +119,7 @@ func ParseDigestFromPushOutput(output string) (string, error) {
 }
 
 func (r *RegistryTransfer) checkRegistryPortMismatch() string {
-	cmd := command.Docker(command.PlainLocalHost, "port", RegistryContainerName, "5000")
+	cmd := command.Docker(command.LocalHost, "port", RegistryContainerName, "5000")
 	out, err := cmd.Output()
 	if err != nil {
 		return ""

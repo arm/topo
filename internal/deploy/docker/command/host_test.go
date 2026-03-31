@@ -14,14 +14,14 @@ func TestNewHostFromDestination(t *testing.T) {
 
 		got := command.NewHostFromDestination(dest)
 
-		dontwant := command.PlainLocalHost
+		dontwant := command.LocalHost
 		assert.NotEqual(t, dontwant, got)
 	})
 
 	t.Run("gets localhost when given localhost Destination", func(t *testing.T) {
 		got := command.NewHostFromDestination(ssh.PlainLocalhost)
 
-		want := command.PlainLocalHost
+		want := command.LocalHost
 		assert.Equal(t, want, got)
 	})
 }

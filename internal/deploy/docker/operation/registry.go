@@ -17,7 +17,7 @@ const (
 )
 
 func NewRunRegistry(port string) operation.Sequence {
-	localHost := command.PlainLocalHost
+	localHost := command.LocalHost
 	return operation.NewSequence(
 		NewDockerPull(localHost, registryImage),
 		operation.NewConditional(

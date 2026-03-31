@@ -35,7 +35,7 @@ func TestNewDeploymentStop(t *testing.T) {
 		got := docker.NewDeploymentStop(composeFile, ssh.PlainLocalhost)
 
 		want := goperation.Sequence{
-			operation.NewDockerComposeStop(composeFile, command.PlainLocalHost),
+			operation.NewDockerComposeStop(composeFile, command.LocalHost),
 		}
 		assert.Equal(t, want, got)
 	})
