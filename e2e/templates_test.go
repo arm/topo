@@ -1,11 +1,13 @@
 package e2e
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,6 +61,17 @@ totalmemory_kb: 4194304
 			require.NoError(t, err, output)
 			assert.Contains(t, output, "✅ topo-welcome")
 		})
+	})
+
+	t.Run("outputs JSON when specified", func(t *testing.T) {
+		cmd := exec.Command(bin, "templates", "--output", "json")
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err)
+
+		assert.NoError(t, err)
+		var entry templates.RepoCollection
+		err = json.Unmarshal(out, &entry)
+		assert.NoError(t, err)
 	})
 }
 
