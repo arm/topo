@@ -32,8 +32,7 @@ var (
 	ErrAuthenticationFailure  = errors.New("ssh authentication failed")
 )
 
-// SSHRunner runs a command on a pre-configured SSH target with additional SSH client arguments.
-type SSHRunner interface {
+type runner interface {
 	RunWithArgs(command string, sshArgs ...string) (string, error)
 }
 
@@ -42,12 +41,12 @@ type SSHAuthenticationProbeOptions struct {
 }
 
 type SSHAuthenticationProbe struct {
-	runner SSHRunner
+	runner runner
 	opts   SSHAuthenticationProbeOptions
 }
 
-func NewSSHAuthenticationProbe(runner SSHRunner, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
-	return SSHAuthenticationProbe{runner: runner, opts: opts}
+func NewSSHAuthenticationProbe(r runner, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
+	return SSHAuthenticationProbe{runner: r, opts: opts}
 }
 
 func (p SSHAuthenticationProbe) Probe() error {
