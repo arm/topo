@@ -1,4 +1,4 @@
-# Topo CLI
+# Topo
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/arm/topo)](https://goreportcard.com/report/github.com/arm/topo)
 
