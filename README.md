@@ -1,4 +1,6 @@
-# Topo CLI
+# Topo
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/arm/topo)](https://goreportcard.com/report/github.com/arm/topo)
 
 Discover what your Arm hardware can do and deploy workloads that use it to its full potential.
 
