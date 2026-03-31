@@ -1,5 +1,7 @@
 # Topo CLI
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/arm/topo)](https://goreportcard.com/report/github.com/arm/topo)
+
 Discover what your Arm hardware can do and deploy workloads that use it to its full potential.
 
 Every Arm system has a different mix of architecture features, and many include additional specialized processors alongside the main CPU. Topo connects to your target over SSH, probes its capabilities, and matches it to ready-made containerized workloads that fully leverage your specific hardware. Where a system has multiple processors, Topo can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) to extend container workloads across all of them.
