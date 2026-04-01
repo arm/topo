@@ -36,6 +36,20 @@ func (c *Connection) RunWithStdin(cmdStr string, stdin []byte) (string, error) {
 	return c.run(cmdStr, stdin)
 }
 
+func (c *Connection) RunWithArgs(cmdStr string, sshArgs ...string) (string, error) {
+	allArgs := append(c.opts.SSHArgs(), sshArgs...)
+	cmd := ssh.ExecCmd(c.SSHTarget, cmdStr, nil, allArgs...)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return string(out), nil
+	}
+	output := strings.ToLower(string(out))
+	if strings.Contains(output, "timed out") || strings.Contains(output, "connection timeout") || strings.Contains(output, "did not properly respond after a period of time") {
+		return string(out), ConnectionTimeoutError{Timeout: c.opts.ConnectTimeout}
+	}
+	return string(out), err
+}
+
 func (c *Connection) run(cmdStr string, stdin []byte) (string, error) {
 	cmd := ssh.ExecCmd(c.SSHTarget, cmdStr, stdin, c.opts.SSHArgs()...)
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -51,20 +65,6 @@ func (c *Connection) run(cmdStr string, stdin []byte) (string, error) {
 		return stdoutBuf.String() + stderr, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", c.SSHTarget, err, stderr)
 	}
 	return stdoutBuf.String(), nil
-}
-
-func (c *Connection) RunWithArgs(cmdStr string, sshArgs ...string) (string, error) {
-	allArgs := append(c.opts.SSHArgs(), sshArgs...)
-	cmd := ssh.ExecCmd(c.SSHTarget, cmdStr, nil, allArgs...)
-	out, err := cmd.CombinedOutput()
-	if err == nil {
-		return string(out), nil
-	}
-	output := strings.ToLower(string(out))
-	if strings.Contains(output, "timed out") || strings.Contains(output, "connection timeout") || strings.Contains(output, "did not properly respond after a period of time") {
-		return string(out), ConnectionTimeoutError{Timeout: c.opts.ConnectTimeout}
-	}
-	return string(out), err
 }
 
 type ConnectionTimeoutError struct {

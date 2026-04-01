@@ -8,6 +8,7 @@ formatters:
 linters:
   enable:
     - gosec
+    - funcorder
 
   settings:
     gosec:
@@ -15,6 +16,12 @@ linters:
         - G304
       severity: high
       confidence: medium
+
+    funcorder:
+      constructor: true
+      struct-method: true
+      alphabetical: false
+
   exclusions:
     rules:
       - path: (.+)_test.go

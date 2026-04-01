@@ -17,10 +17,6 @@ type SSHConfigDirective struct {
 	Value string
 }
 
-func (d SSHConfigDirective) String() string {
-	return fmt.Sprintf("%s %s", d.Key, d.Value)
-}
-
 func NewDirectiveIdentityFile(path string) SSHConfigDirective {
 	return SSHConfigDirective{
 		Key:   "IdentityFile",
@@ -33,6 +29,10 @@ func NewDirective(key, value string) SSHConfigDirective {
 		Key:   key,
 		Value: value,
 	}
+}
+
+func (d SSHConfigDirective) String() string {
+	return fmt.Sprintf("%s %s", d.Key, d.Value)
 }
 
 func CreateSSHConfig(dest ssh.Destination, targetSlug string) error {

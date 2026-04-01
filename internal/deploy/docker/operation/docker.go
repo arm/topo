@@ -22,21 +22,6 @@ func NewDocker(description string, h command.Host, args []string) *Docker {
 	}
 }
 
-func (d *Docker) Description() string {
-	return d.description
-}
-
-func (d *Docker) Run(cmdOutput io.Writer) error {
-	cmd := d.buildCommand()
-	cmd.Stdout = cmdOutput
-	cmd.Stderr = cmdOutput
-	return cmd.Run()
-}
-
-func (d *Docker) buildCommand() *exec.Cmd {
-	return command.Docker(d.host, d.args...)
-}
-
 func NewDockerPull(host command.Host, image string) *Docker {
 	description := fmt.Sprintf("Pull image %s", image)
 	return NewDocker(description, host, []string{"pull", image})
@@ -54,4 +39,19 @@ func NewDockerRun(host command.Host, image string, container string, dockerArgs 
 	allArgs = append(allArgs, "--name", container)
 	allArgs = append(allArgs, image)
 	return NewDocker(description, host, allArgs)
+}
+
+func (d *Docker) Description() string {
+	return d.description
+}
+
+func (d *Docker) Run(cmdOutput io.Writer) error {
+	cmd := d.buildCommand()
+	cmd.Stdout = cmdOutput
+	cmd.Stderr = cmdOutput
+	return cmd.Run()
+}
+
+func (d *Docker) buildCommand() *exec.Cmd {
+	return command.Docker(d.host, d.args...)
 }

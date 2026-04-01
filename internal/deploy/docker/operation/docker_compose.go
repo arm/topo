@@ -23,6 +23,29 @@ func NewDockerCompose(description string, composeFile string, h command.Host, ar
 	}
 }
 
+func NewDockerComposeBuild(composeFile string, h command.Host) *DockerCompose {
+	return NewDockerCompose("Build images", composeFile, h, []string{"build"})
+}
+
+func NewDockerComposePull(composeFile string, h command.Host) *DockerCompose {
+	return NewDockerCompose("Pull images", composeFile, h, []string{"pull"})
+}
+
+func NewDockerComposeStop(composeFile string, h command.Host) *DockerCompose {
+	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
+}
+
+func NewDockerComposeUp(composeFile string, h command.Host, mode RecreateMode) *DockerCompose {
+	args := []string{"up", "-d", "--no-build", "--pull", "never"}
+	switch mode {
+	case RecreateModeForce:
+		args = append(args, "--force-recreate")
+	case RecreateModeNone:
+		args = append(args, "--no-recreate")
+	}
+	return NewDockerCompose("Start services", composeFile, h, args)
+}
+
 func (dc *DockerCompose) Description() string {
 	return dc.description
 }
@@ -38,18 +61,6 @@ func (dc *DockerCompose) buildCommand() *exec.Cmd {
 	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
 }
 
-func NewDockerComposeBuild(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("Build images", composeFile, h, []string{"build"})
-}
-
-func NewDockerComposePull(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("Pull images", composeFile, h, []string{"pull"})
-}
-
-func NewDockerComposeStop(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
-}
-
 type RecreateMode int
 
 const (
@@ -57,14 +68,3 @@ const (
 	RecreateModeForce
 	RecreateModeNone
 )
-
-func NewDockerComposeUp(composeFile string, h command.Host, mode RecreateMode) *DockerCompose {
-	args := []string{"up", "-d", "--no-build", "--pull", "never"}
-	switch mode {
-	case RecreateModeForce:
-		args = append(args, "--force-recreate")
-	case RecreateModeNone:
-		args = append(args, "--no-recreate")
-	}
-	return NewDockerCompose("Start services", composeFile, h, args)
-}
