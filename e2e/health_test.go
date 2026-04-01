@@ -37,10 +37,17 @@ func TestHealthCheck(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, out, "Connectivity: ❌")
 	})
+
+	t.Run("outputs JSON when specified", func(t *testing.T) {
+		out, err := runCheckHealth(topo, target, "--output", "json")
+
+		assert.NoError(t, err)
+		testutil.AssertJsonGoldenFile(t, out, "testdata/TestHealthCheckJson.golden")
+	})
 }
 
-func runCheckHealth(topo string, target *testutil.TargetContainer) (string, error) {
-	args := []string{"health", "--target", target.SSHDestination}
+func runCheckHealth(topo string, target *testutil.TargetContainer, args ...string) (string, error) {
+	args = append([]string{"health", "--target", target.SSHDestination}, args...)
 	healthCmd := exec.Command(topo, args...)
 
 	out, err := healthCmd.CombinedOutput()

@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,6 +60,28 @@ totalmemory_kb: 4194304
 			require.NoError(t, err, output)
 			assert.Contains(t, output, "✅ topo-welcome")
 		})
+	})
+
+	t.Run("outputs JSON when specified", func(t *testing.T) {
+		cmd := exec.Command(bin, "templates", "--output", "json")
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err)
+
+		testutil.AssertJsonGoldenFile(t, string(out), "testdata/TestTemplatesJson.golden")
+	})
+
+	t.Run("outputs errors as JSON when specified", func(t *testing.T) {
+		cmd := exec.Command(bin, "templates", "--output", "json", "--target", "invalid-target")
+		out, err := cmd.CombinedOutput()
+		require.Error(t, err)
+
+		var entry map[string]interface{}
+		err = json.Unmarshal(out, &entry)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERROR", entry["level"])
+		_, ok := entry["msg"].(string)
+		assert.True(t, ok, "msg field should be a string")
+		assert.NotNil(t, entry["time"])
 	})
 }
 

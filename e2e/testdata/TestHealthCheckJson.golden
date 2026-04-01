@@ -1,0 +1,41 @@
+{
+  "host": {
+    "dependencies": [
+      {
+        "name": "SSH",
+        "status": "ok",
+        "value": "ssh"
+      },
+      {
+        "name": "Container Engine",
+        "status": "ok",
+        "value": "docker"
+      }
+    ]
+  },
+  "target": {
+    "isLocalhost": false,
+    "connectivity": {
+      "name": "Connectivity",
+      "status": "ok",
+      "value": ""
+    },
+    "dependencies": [
+      {
+        "name": "Container Engine",
+        "status": "ok",
+        "value": "docker"
+      },
+      {
+        "name": "Hardware Info",
+        "status": "ok",
+        "value": "lscpu"
+      }
+    ],
+    "subsystemDriver": {
+      "name": "Subsystem Driver (remoteproc)",
+      "status": "info",
+      "value": "no remoteproc devices found"
+    }
+  }
+}

@@ -103,3 +103,19 @@ func AssertFileContents(t *testing.T, wantContents string, path string) {
 	require.NoError(t, err)
 	require.Equal(t, wantContents, string(got))
 }
+
+func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string) {
+	t.Helper()
+
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		err := os.WriteFile(goldenPath, []byte(got), 0o644)
+		require.NoError(t, err)
+		return
+	}
+
+	wantBytes, err := os.ReadFile(goldenPath)
+	require.NoError(t, err)
+	want := string(wantBytes)
+
+	require.JSONEq(t, want, got, "output did not match golden file %s", goldenPath)
+}
