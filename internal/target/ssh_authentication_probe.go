@@ -39,8 +39,6 @@ type sshRunnerWithExtraArgs interface {
 	RunWithArgs(command string, sshArgs ...string) (string, error)
 }
 
-// SSHProbeRunner implements sshRunnerWithExtraArgs by creating a fresh runner.SSH
-// per call with the given sshArgs merged into SSHOptions.ExtraArgs.
 type SSHProbeRunner struct {
 	dest ssh.Destination
 	opts runner.SSHOptions

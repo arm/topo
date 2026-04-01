@@ -2,7 +2,7 @@ package runner
 
 import "github.com/stretchr/testify/mock"
 
-// Mock implements Runner and StdinRunner using testify/mock.
+// Mock implements Runner.
 // Use it in tests to stub runner behaviour without rolling a custom fake.
 type Mock struct {
 	mock.Mock
