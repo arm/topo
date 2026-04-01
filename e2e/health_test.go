@@ -42,7 +42,7 @@ func TestHealthCheck(t *testing.T) {
 		out, err := runCheckHealth(topo, target, "--output", "json")
 
 		assert.NoError(t, err)
-		testutil.AssertGoldenFile(t, out, "testdata/TestHealthCheckJson.golden")
+		testutil.AssertJsonGoldenFile(t, out, "testdata/TestHealthCheckJson.golden")
 	})
 }
 

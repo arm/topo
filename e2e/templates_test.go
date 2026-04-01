@@ -67,7 +67,7 @@ totalmemory_kb: 4194304
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err)
 
-		testutil.AssertGoldenFile(t, string(out), "testdata/TestTemplatesJson.golden")
+		testutil.AssertJsonGoldenFile(t, string(out), "testdata/TestTemplatesJson.golden")
 	})
 
 	t.Run("outputs errors as JSON when specified", func(t *testing.T) {
