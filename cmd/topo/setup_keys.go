@@ -60,7 +60,7 @@ var setupKeysCmd = &cobra.Command{
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		}
 
-		return ssh.CreateOrModifyConfig(dest, targetSlug, directives)
+		return ssh.CreateOrModifyConfigFile(dest, targetSlug, directives)
 	},
 }
 

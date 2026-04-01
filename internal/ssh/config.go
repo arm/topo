@@ -138,11 +138,11 @@ func (d ConfigDirective) String() string {
 	return fmt.Sprintf("%s %s", d.Key, d.Value)
 }
 
-func CreateConfig(dest Destination, targetSlug string) error {
-	return CreateOrModifyConfig(dest, targetSlug, nil)
+func CreateConfigFile(dest Destination, targetSlug string) error {
+	return CreateOrModifyConfigFile(dest, targetSlug, nil)
 }
 
-func CreateOrModifyConfig(dest Destination, targetSlug string, directives []ConfigDirective) error {
+func CreateOrModifyConfigFile(dest Destination, targetSlug string, directives []ConfigDirective) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)
@@ -172,7 +172,7 @@ func CreateOrModifyConfig(dest Destination, targetSlug string, directives []Conf
 
 	var fragmentToWrite []byte
 	if len(existingTopoContent) == 0 {
-		fragmentToWrite = buildConfigFragment(dest, directives)
+		fragmentToWrite = buildConfigFileFragment(dest, directives)
 	} else {
 		fragmentToWrite = mergeOwnedConfigDirectives(existingTopoContent, directives)
 	}
@@ -219,7 +219,7 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 	return false
 }
 
-func buildConfigFragment(dest Destination, directives []ConfigDirective) []byte {
+func buildConfigFileFragment(dest Destination, directives []ConfigDirective) []byte {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Host %s\n", dest.Host)
 	if dest.Host != "" && (dest.User != "" || net.ParseIP(dest.Host) != nil) {
