@@ -171,7 +171,7 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 
 		err := ssh.CreateOrModifyConfigFile(targetHost, targetFileName, []ssh.ConfigDirective{
-			ssh.NewDirectiveIdentityFile(privKeyPath),
+			ssh.NewConfigDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)
@@ -213,7 +213,7 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		require.NoError(t, err)
 
 		err = ssh.CreateOrModifyConfigFile(targetHost, targetFileName, []ssh.ConfigDirective{
-			ssh.NewDirectiveIdentityFile(privKeyPath),
+			ssh.NewConfigDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)
@@ -251,7 +251,7 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		require.NoError(t, err)
 
 		err = ssh.CreateOrModifyConfigFile(targetHost, targetFileName, []ssh.ConfigDirective{
-			ssh.NewDirectiveIdentityFile(privKeyPath),
+			ssh.NewConfigDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)
@@ -289,7 +289,7 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		require.NoError(t, err)
 
 		err = ssh.CreateOrModifyConfigFile(targetHost, targetFileName, []ssh.ConfigDirective{
-			ssh.NewDirectiveIdentityFile(privKeyPath),
+			ssh.NewConfigDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
 		require.NoError(t, err)

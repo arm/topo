@@ -120,7 +120,7 @@ func IsExplicitHostConfig(host string, config []byte) bool {
 	return false
 }
 
-func NewDirectiveIdentityFile(path string) ConfigDirective {
+func NewConfigDirectiveIdentityFile(path string) ConfigDirective {
 	return ConfigDirective{
 		Key:   "IdentityFile",
 		Value: filepath.ToSlash(path), // needs to be this way even on Windows to work with ssh config parsing, which generally accepts forward slashes
