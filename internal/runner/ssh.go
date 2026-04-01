@@ -11,6 +11,7 @@ import (
 type SSHOptions struct {
 	Multiplex      bool
 	ConnectTimeout time.Duration
+	ExtraArgs      []string
 }
 
 func (opts SSHOptions) SSHArgs() []string {
@@ -21,6 +22,7 @@ func (opts SSHOptions) SSHArgs() []string {
 	if opts.Multiplex && runtime.GOOS != "windows" {
 		args = append(args, "-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p")
 	}
+	args = append(args, opts.ExtraArgs...)
 	return args
 }
 
@@ -42,10 +44,7 @@ func (r *SSH) RunWithStdin(cmdStr string, stdin []byte) (string, error) {
 	return r.exec(cmdStr, stdin)
 }
 
-func (r *SSH) RunWithArgs(cmdStr string, sshArgs ...string) (string, error) {
-	return r.exec(cmdStr, nil, sshArgs...)
-}
 
-func (r *SSH) exec(cmdStr string, stdin []byte, sshArgs ...string) (string, error) {
-	return ssh.RunCommand(r.dest, cmdStr, stdin, append(r.opts.SSHArgs(), sshArgs...)...)
+func (r *SSH) exec(cmdStr string, stdin []byte) (string, error) {
+	return ssh.RunCommand(r.dest, cmdStr, stdin, r.opts.SSHArgs()...)
 }

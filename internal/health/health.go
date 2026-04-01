@@ -98,12 +98,13 @@ func prepareRunner(dest ssh.Destination, probeOpts target.SSHAuthenticationProbe
 		local := runner.NewLocal()
 		return &local, nil
 	}
-	sshRunner := runner.NewSSH(dest, runner.SSHOptions{Multiplex: true, ConnectTimeout: connectTimeout})
-	authProbe := target.NewSSHAuthenticationProbe(&sshRunner, probeOpts)
+	sshOpts := runner.SSHOptions{Multiplex: true, ConnectTimeout: connectTimeout}
+	authProbe := target.NewSSHAuthenticationProbe(target.NewSSHProbeRunner(dest, sshOpts), probeOpts)
 	if err := authProbe.Probe(); err != nil {
 		return nil, err
 	}
-	return &sshRunner, nil
+	r := runner.NewSSH(dest, sshOpts)
+	return &r, nil
 }
 
 func GenerateHostReport(statuses []DependencyStatus) HostReport {

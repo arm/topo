@@ -4,6 +4,9 @@ import (
 	"errors"
 	"slices"
 	"strings"
+
+	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/ssh"
 )
 
 var (
@@ -32,8 +35,26 @@ var (
 	ErrAuthenticationFailure  = errors.New("ssh authentication failed")
 )
 
-type sshRunner interface {
+type sshRunnerWithExtraArgs interface {
 	RunWithArgs(command string, sshArgs ...string) (string, error)
+}
+
+// SSHProbeRunner implements sshRunnerWithExtraArgs by creating a fresh runner.SSH
+// per call with the given sshArgs merged into SSHOptions.ExtraArgs.
+type SSHProbeRunner struct {
+	dest ssh.Destination
+	opts runner.SSHOptions
+}
+
+func NewSSHProbeRunner(dest ssh.Destination, opts runner.SSHOptions) *SSHProbeRunner {
+	return &SSHProbeRunner{dest: dest, opts: opts}
+}
+
+func (s *SSHProbeRunner) RunWithArgs(command string, sshArgs ...string) (string, error) {
+	opts := s.opts
+	opts.ExtraArgs = sshArgs
+	r := runner.NewSSH(s.dest, opts)
+	return r.Run(command)
 }
 
 type SSHAuthenticationProbeOptions struct {
@@ -41,11 +62,11 @@ type SSHAuthenticationProbeOptions struct {
 }
 
 type SSHAuthenticationProbe struct {
-	runner sshRunner
+	runner sshRunnerWithExtraArgs
 	opts   SSHAuthenticationProbeOptions
 }
 
-func NewSSHAuthenticationProbe(r sshRunner, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
+func NewSSHAuthenticationProbe(r sshRunnerWithExtraArgs, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
 	return SSHAuthenticationProbe{runner: r, opts: opts}
 }
 
