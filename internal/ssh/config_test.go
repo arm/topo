@@ -150,7 +150,7 @@ func TestModifySSHConfig(t *testing.T) {
 		targetFileName := "user_example_com_2222"
 		privKeyPath := filepath.Join(tmp, ".ssh", fmt.Sprintf("id_ed25519_topo_%s", targetFileName))
 
-		err := ssh.CreateOrModifySSHConfig(targetHost, targetFileName, []ssh.SSHConfigDirective{
+		err := ssh.CreateOrModifyConfig(targetHost, targetFileName, []ssh.ConfigDirective{
 			ssh.NewDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
@@ -192,7 +192,7 @@ func TestModifySSHConfig(t *testing.T) {
 		err = os.WriteFile(fragmentPath, []byte(existing), 0o600)
 		require.NoError(t, err)
 
-		err = ssh.CreateOrModifySSHConfig(targetHost, targetFileName, []ssh.SSHConfigDirective{
+		err = ssh.CreateOrModifyConfig(targetHost, targetFileName, []ssh.ConfigDirective{
 			ssh.NewDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
@@ -230,7 +230,7 @@ func TestModifySSHConfig(t *testing.T) {
 		err = os.WriteFile(fragmentPath, []byte(existing), 0o600)
 		require.NoError(t, err)
 
-		err = ssh.CreateOrModifySSHConfig(targetHost, targetFileName, []ssh.SSHConfigDirective{
+		err = ssh.CreateOrModifyConfig(targetHost, targetFileName, []ssh.ConfigDirective{
 			ssh.NewDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
@@ -268,7 +268,7 @@ func TestModifySSHConfig(t *testing.T) {
 		err = os.WriteFile(fragmentPath, []byte(existing), 0o600)
 		require.NoError(t, err)
 
-		err = ssh.CreateOrModifySSHConfig(targetHost, targetFileName, []ssh.SSHConfigDirective{
+		err = ssh.CreateOrModifyConfig(targetHost, targetFileName, []ssh.ConfigDirective{
 			ssh.NewDirectiveIdentityFile(privKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		})
@@ -285,7 +285,7 @@ func TestModifySSHConfig(t *testing.T) {
 	})
 }
 
-func TestCreateSSHConfig(t *testing.T) {
+func TestCreateConfig(t *testing.T) {
 	t.Run("handles creation of new ssh config file", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
@@ -294,7 +294,7 @@ func TestCreateSSHConfig(t *testing.T) {
 		fragmentPath := filepath.Join(tmp, ".ssh", "topo_config", fmt.Sprintf("topo_%s.conf", targetFileName))
 		mainConfigPath := filepath.Join(tmp, ".ssh", "config")
 
-		err := ssh.CreateSSHConfig(targetHost, targetFileName)
+		err := ssh.CreateConfig(targetHost, targetFileName)
 
 		require.NoError(t, err)
 		wantFragmentContents := "Host example.com\n  HostName example.com\n  User user\n  Port 2222\n"

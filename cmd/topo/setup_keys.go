@@ -55,12 +55,12 @@ var setupKeysCmd = &cobra.Command{
 			return err
 		}
 
-		directives := []ssh.SSHConfigDirective{
+		directives := []ssh.ConfigDirective{
 			ssh.NewDirectiveIdentityFile(privateKeyPath),
 			ssh.NewDirective("IdentitiesOnly", "yes"),
 		}
 
-		return ssh.CreateOrModifySSHConfig(dest, targetSlug, directives)
+		return ssh.CreateOrModifyConfig(dest, targetSlug, directives)
 	},
 }
 

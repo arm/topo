@@ -20,7 +20,7 @@ type Config struct {
 	connectTimeout time.Duration
 }
 
-type SSHConfigDirective struct {
+type ConfigDirective struct {
 	Key   string
 	Value string
 }
@@ -124,47 +124,47 @@ func IsExplicitHostConfig(host string, config []byte) bool {
 	return false
 }
 
-func NewDirectiveIdentityFile(path string) SSHConfigDirective {
-	return SSHConfigDirective{
+func NewDirectiveIdentityFile(path string) ConfigDirective {
+	return ConfigDirective{
 		Key:   "IdentityFile",
 		Value: filepath.ToSlash(path), // needs to be this way even on Windows to work with ssh config parsing, which generally accepts forward slashes
 	}
 }
 
-func NewDirective(key, value string) SSHConfigDirective {
-	return SSHConfigDirective{
+func NewDirective(key, value string) ConfigDirective {
+	return ConfigDirective{
 		Key:   key,
 		Value: value,
 	}
 }
 
-func (d SSHConfigDirective) String() string {
+func (d ConfigDirective) String() string {
 	return fmt.Sprintf("%s %s", d.Key, d.Value)
 }
 
-func CreateSSHConfig(dest Destination, targetSlug string) error {
-	return CreateOrModifySSHConfig(dest, targetSlug, nil)
+func CreateConfig(dest Destination, targetSlug string) error {
+	return CreateOrModifyConfig(dest, targetSlug, nil)
 }
 
-func CreateOrModifySSHConfig(dest Destination, targetSlug string, directives []SSHConfigDirective) error {
+func CreateOrModifyConfig(dest Destination, targetSlug string, directives []ConfigDirective) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)
 	}
 
-	sshTopoConfigDir := filepath.Join(home, ".ssh", "topo_config")
-	sshTopoConfigPath := filepath.Join(sshTopoConfigDir, fmt.Sprintf("topo_%s.conf", targetSlug))
+	topoConfigDir := filepath.Join(home, ".ssh", "topo_config")
+	topoConfigPath := filepath.Join(topoConfigDir, fmt.Sprintf("topo_%s.conf", targetSlug))
 
 	mainConfigPath := filepath.Join(home, ".ssh", "config")
 
 	// ssh config parsing expects forward slashes (even on Windows)
-	includeLine := fmt.Sprintf("Include %s", filepath.ToSlash(sshTopoConfigDir+"/*.conf"))
+	includeLine := fmt.Sprintf("Include %s", filepath.ToSlash(topoConfigDir+"/*.conf"))
 
-	if err := os.MkdirAll(sshTopoConfigDir, 0o700); err != nil {
-		return fmt.Errorf("failed to create %s: %w", sshTopoConfigDir, err)
+	if err := os.MkdirAll(topoConfigDir, 0o700); err != nil {
+		return fmt.Errorf("failed to create %s: %w", topoConfigDir, err)
 	}
 
-	existingTopoContent, errTopo := getFileContents(sshTopoConfigPath)
+	existingTopoContent, errTopo := getFileContents(topoConfigPath)
 	if errTopo != nil {
 		return errTopo
 	}
@@ -176,14 +176,14 @@ func CreateOrModifySSHConfig(dest Destination, targetSlug string, directives []S
 
 	var fragmentToWrite []byte
 	if len(existingTopoContent) == 0 {
-		fragmentToWrite = buildSSHConfigFragment(dest, directives)
+		fragmentToWrite = buildConfigFragment(dest, directives)
 	} else {
-		fragmentToWrite = mergeOwnedSSHConfigDirectives(existingTopoContent, directives)
+		fragmentToWrite = mergeOwnedConfigDirectives(existingTopoContent, directives)
 	}
 
 	if !bytes.Equal(existingTopoContent, fragmentToWrite) {
-		if err := os.WriteFile(sshTopoConfigPath, fragmentToWrite, 0o600); err != nil {
-			return fmt.Errorf("failed to write %s: %w", sshTopoConfigPath, err)
+		if err := os.WriteFile(topoConfigPath, fragmentToWrite, 0o600); err != nil {
+			return fmt.Errorf("failed to write %s: %w", topoConfigPath, err)
 		}
 	}
 
@@ -219,7 +219,7 @@ func hasIncludeLine(data []byte, includeLine string) bool {
 	return false
 }
 
-func buildSSHConfigFragment(dest Destination, directives []SSHConfigDirective) []byte {
+func buildConfigFragment(dest Destination, directives []ConfigDirective) []byte {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Host %s\n", dest.Host)
 	if dest.Host != "" && (dest.User != "" || net.ParseIP(dest.Host) != nil) {
@@ -238,7 +238,7 @@ func buildSSHConfigFragment(dest Destination, directives []SSHConfigDirective) [
 	return []byte(b.String())
 }
 
-func mergeOwnedSSHConfigDirectives(existing []byte, directives []SSHConfigDirective) []byte {
+func mergeOwnedConfigDirectives(existing []byte, directives []ConfigDirective) []byte {
 	var merged [][]byte
 	directiveKeys := make(map[string]bool)
 	for _, d := range directives {
@@ -247,7 +247,7 @@ func mergeOwnedSSHConfigDirectives(existing []byte, directives []SSHConfigDirect
 
 	for line := range bytes.SplitSeq(bytes.TrimRight(existing, "\n"), []byte("\n")) {
 		trimmed := bytes.TrimSpace(line)
-		key := extractSSHConfigKey(trimmed)
+		key := extractConfigKey(trimmed)
 
 		if directiveKeys[key] {
 			continue
@@ -262,7 +262,7 @@ func mergeOwnedSSHConfigDirectives(existing []byte, directives []SSHConfigDirect
 	return append(bytes.Join(merged, []byte("\n")), '\n')
 }
 
-func extractSSHConfigKey(line []byte) string {
+func extractConfigKey(line []byte) string {
 	parts := bytes.Fields(line)
 	if len(parts) == 0 {
 		return ""

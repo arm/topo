@@ -43,7 +43,7 @@ This will also update the main SSH config (~/.ssh/config) to include the topo-ma
 			return err
 		}
 
-		return ssh.CreateSSHConfig(dest, targetSlug)
+		return ssh.CreateConfig(dest, targetSlug)
 	},
 }
 
