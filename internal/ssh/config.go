@@ -25,10 +25,6 @@ type ConfigDirective struct {
 	Value string
 }
 
-func readConfig(dest Destination) ([]byte, error) {
-	return exec.Command("ssh", "-v", "-G", dest.String()).CombinedOutput()
-}
-
 func NewConfig(dest Destination) Config {
 	output, err := readConfig(dest)
 	if err != nil {
@@ -193,6 +189,10 @@ func CreateOrModifyConfig(dest Destination, targetSlug string, directives []Conf
 	}
 
 	return nil
+}
+
+func readConfig(dest Destination) ([]byte, error) {
+	return exec.Command("ssh", "-v", "-G", dest.String()).CombinedOutput()
 }
 
 func getFileContents(filePath string) ([]byte, error) {
