@@ -42,5 +42,11 @@ func TestSSHOptions(t *testing.T) {
 		t.Run("with no timeout includes no ConnectTimeout arg", func(t *testing.T) {
 			assert.Nil(t, runner.SSHOptions{}.SSHArgs())
 		})
+
+		t.Run("appends any extra args", func(t *testing.T) {
+			opts := runner.SSHOptions{ExtraArgs: []string{"-o", "Hat=Boat"}}
+
+			assert.Equal(t, []string{"-o", "Hat=Boat"}, opts.SSHArgs())
+		})
 	})
 }
