@@ -5,7 +5,7 @@ import (
 	"github.com/arm/topo/internal/target"
 )
 
-type runner interface {
+type commandRunner interface {
 	Run(command string) (string, error)
 }
 
@@ -26,7 +26,7 @@ type HealthStatus struct {
 	Hardware     HardwareProfile
 }
 
-func ProbeHealthStatus(r runner) HealthStatus {
+func ProbeHealthStatus(r commandRunner) HealthStatus {
 	var hs HealthStatus
 
 	probe := target.NewHardwareProbe(r)

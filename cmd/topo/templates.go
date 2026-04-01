@@ -7,6 +7,7 @@ import (
 	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
@@ -35,9 +36,8 @@ var templatesCmd = &cobra.Command{
 		} else {
 			targetArg, exists := lookupTarget(cmd)
 			if exists {
-				dest := ssh.NewDestination(targetArg)
-				conn := target.NewConnection(dest, target.ConnectionOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
-				probe := target.NewHardwareProbe(&conn)
+				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+				probe := target.NewHardwareProbe(r)
 				hwProfile, err := probe.Probe()
 				if err != nil {
 					return err

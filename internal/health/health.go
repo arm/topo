@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
 )
@@ -82,27 +83,27 @@ type Status struct {
 }
 
 func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (TargetReport, error) {
-	opts := target.ConnectionOptions{
-		Multiplex:      true,
-		ConnectTimeout: connectTimeout,
-	}
-	conn := target.NewConnection(dest, opts)
-
-	if !dest.IsPlainLocalhost() {
-		authProbe := target.NewSSHAuthenticationProbe(&conn, probeOpts)
-		if err := authProbe.Probe(); err != nil {
-			status := Status{Connection: ConnectionStatus{Destination: dest, Error: err}}
-			return GenerateTargetReport(status), nil
-		}
-	}
-
-	hs := ProbeHealthStatus(&conn)
-	status := Status{
-		Connection:   ConnectionStatus{Destination: dest},
-		Dependencies: hs.Dependencies,
-		Hardware:     hs.Hardware,
+	r, connErr := prepareRunner(dest, probeOpts, connectTimeout)
+	status := Status{Connection: ConnectionStatus{Destination: dest, Error: connErr}}
+	if connErr == nil {
+		hs := ProbeHealthStatus(r)
+		status.Dependencies = hs.Dependencies
+		status.Hardware = hs.Hardware
 	}
 	return GenerateTargetReport(status), nil
+}
+
+func prepareRunner(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (commandRunner, error) {
+	if dest.IsPlainLocalhost() {
+		local := runner.NewLocal()
+		return &local, nil
+	}
+	sshRunner := runner.NewSSH(dest, runner.SSHOptions{Multiplex: true, ConnectTimeout: connectTimeout})
+	authProbe := target.NewSSHAuthenticationProbe(&sshRunner, probeOpts)
+	if err := authProbe.Probe(); err != nil {
+		return nil, err
+	}
+	return &sshRunner, nil
 }
 
 func GenerateHostReport(statuses []DependencyStatus) HostReport {
