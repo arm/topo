@@ -32,7 +32,7 @@ var (
 	ErrAuthenticationFailure  = errors.New("ssh authentication failed")
 )
 
-type runner interface {
+type sshRunner interface {
 	RunWithArgs(command string, sshArgs ...string) (string, error)
 }
 
@@ -41,11 +41,11 @@ type SSHAuthenticationProbeOptions struct {
 }
 
 type SSHAuthenticationProbe struct {
-	runner runner
+	runner sshRunner
 	opts   SSHAuthenticationProbeOptions
 }
 
-func NewSSHAuthenticationProbe(r runner, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
+func NewSSHAuthenticationProbe(r sshRunner, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
 	return SSHAuthenticationProbe{runner: r, opts: opts}
 }
 

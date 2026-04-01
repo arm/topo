@@ -93,7 +93,7 @@ func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOp
 	return GenerateTargetReport(status), nil
 }
 
-func prepareRunner(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (commandRunner, error) {
+func prepareRunner(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (runner.Runner, error) {
 	if dest.IsPlainLocalhost() {
 		local := runner.NewLocal()
 		return &local, nil

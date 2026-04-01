@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/runner"
 )
 
 type HostProcessor struct {
@@ -27,15 +28,11 @@ type HardwareProfile struct {
 	TotalMemoryKb int64           `yaml:"totalmemory_kb"`
 }
 
-type Runner interface {
-	Run(command string) (string, error)
-}
-
 type HardwareProbe struct {
-	runner Runner
+	runner runner.Runner
 }
 
-func NewHardwareProbe(r Runner) HardwareProbe {
+func NewHardwareProbe(r runner.Runner) HardwareProbe {
 	return HardwareProbe{runner: r}
 }
 
