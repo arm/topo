@@ -4,10 +4,12 @@ go 1.26.1
 
 require (
 	github.com/compose-spec/compose-go/v2 v2.10.1
+	github.com/lmittmann/tint v1.1.3
 	github.com/mholt/archives v0.1.5
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sync v0.19.0
+	go.yaml.in/yaml/v4 v4.0.0-rc.3
+	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -27,7 +29,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
-	github.com/lmittmann/tint v1.1.3 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
 	github.com/minio/minlz v1.0.1 // indirect
@@ -43,7 +44,6 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
-	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
