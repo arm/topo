@@ -80,14 +80,14 @@ func LookupExplicitHostConfig(host, port string) (Config, error) {
 		return Config{}, err
 	}
 
-	if !isExplicitHostConfig(host, output) {
+	if !IsExplicitHostConfig(host, output) {
 		return Config{}, fmt.Errorf("no explicit host config found for %s", host)
 	}
 
 	return NewConfigFromBytes(output), nil
 }
 
-func isExplicitHostConfig(host string, config []byte) bool {
+func IsExplicitHostConfig(host string, config []byte) bool {
 	const marker = ": Applying options for "
 
 	scanner := bufio.NewScanner(bytes.NewReader(config))
