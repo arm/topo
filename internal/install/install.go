@@ -33,7 +33,7 @@ type PathCandidate struct {
 	OnPath bool
 }
 
-func getPathDirs(r runner.Executor) ([]string, error) {
+func getPathDirs(r runner.Runner) ([]string, error) {
 	output, err := r.Run(command.WrapInLoginShell("echo $PATH"))
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func getPathDirs(r runner.Executor) ([]string, error) {
 	return paths, nil
 }
 
-func getHomeDir(r runner.Executor) (string, error) {
+func getHomeDir(r runner.Runner) (string, error) {
 	output, err := r.Run(command.WrapInLoginShell("echo $HOME"))
 	if err != nil {
 		return "", err
@@ -53,7 +53,7 @@ func getHomeDir(r runner.Executor) (string, error) {
 	return strings.TrimSpace(output), nil
 }
 
-func getExistingBinaryDir(r runner.Executor, binaryName string) (string, error) {
+func getExistingBinaryDir(r runner.Runner, binaryName string) (string, error) {
 	checkCommand, err := command.BinaryLookupCommand(binaryName)
 	if err != nil {
 		return "", err
@@ -77,7 +77,7 @@ func getExistingBinaryDir(r runner.Executor, binaryName string) (string, error) 
 	return fullPath[:lastSlash], nil
 }
 
-func FindPathDirs(r runner.Executor) ([]PathCandidate, error) {
+func FindPathDirs(r runner.Runner) ([]PathCandidate, error) {
 	pathDirs, err := getPathDirs(r)
 	if err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func FetchLatestReleaseBinaries(githubRepoSlug string, binaries []string) (map[s
 	return files, err
 }
 
-func install(installPath string, r runner.Executor, binaries map[string][]byte) error {
+func install(installPath string, r runner.Runner, binaries map[string][]byte) error {
 	mode := "0755"
 
 	for binaryName, binaryData := range binaries {
@@ -300,7 +300,7 @@ func install(installPath string, r runner.Executor, binaries map[string][]byte) 
 // installToFirstWriteableDir attempts to install binaries to the highest preference path that the user has permissions for.
 // Silently ignores permission failures until the last path.
 // Returns the installation location and a list of installed binary names.
-func installToFirstWriteableDir(paths []PathCandidate, r runner.Executor, binaries map[string][]byte) (PathCandidate, []string, error) {
+func installToFirstWriteableDir(paths []PathCandidate, r runner.Runner, binaries map[string][]byte) (PathCandidate, []string, error) {
 	var binaryNames []string
 	for name := range binaries {
 		binaryNames = append(binaryNames, name)
@@ -327,7 +327,7 @@ type InstallResult struct {
 	Binary   string
 }
 
-func InstallBinariesFromGithubRelease(r runner.Executor, repoURL string, binaryNames []string) ([]InstallResult, error) {
+func InstallBinariesFromGithubRelease(r runner.Runner, repoURL string, binaryNames []string) ([]InstallResult, error) {
 	for _, binaryName := range binaryNames {
 		if err := command.ValidateBinaryName(binaryName); err != nil {
 			return nil, err

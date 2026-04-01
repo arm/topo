@@ -13,10 +13,10 @@ const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat 
 
 type PubKeyTransfer struct {
 	pubKeyPath string
-	r          runner.StdinRunner
+	r          runner.Runner
 }
 
-func NewPubKeyTransfer(privKeyPath string, r runner.StdinRunner) *PubKeyTransfer {
+func NewPubKeyTransfer(privKeyPath string, r runner.Runner) *PubKeyTransfer {
 	return &PubKeyTransfer{
 		pubKeyPath: privKeyPath + ".pub",
 		r:          r,
