@@ -44,7 +44,6 @@ func (r *SSH) RunWithStdin(cmdStr string, stdin []byte) (string, error) {
 	return r.exec(cmdStr, stdin)
 }
 
-
 func (r *SSH) exec(cmdStr string, stdin []byte) (string, error) {
 	return ssh.RunCommand(r.dest, cmdStr, stdin, r.opts.SSHArgs()...)
 }
