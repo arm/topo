@@ -34,23 +34,7 @@ jobs:
           cache: false
       - name: Calculate next version
         id: version
-        run: |
-          latest_release=$(gh release list --limit 100 --json tagName --jq '[.[].tagName | gsub("^v"; "") | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+"))] | sort_by(split("-")[0] | split(".") | map(tonumber)) | reverse | .[0] // empty')
-          if [ -z "$latest_release" ]; then
-            base="0.0.0"
-          else
-            base=${latest_release%%-*}
-          fi
-          IFS='.' read -r major minor patch <<< "$base"
-          case "${{ inputs.release-type }}" in
-            Major) new="$((major+1)).0.0";;
-            Minor) new="$major.$((minor+1)).0";;
-            Patch) new="$major.$minor.$((patch+1))";;
-            Pre-release) new="$base-$(date +%Y-%m-%d-%H-%M-%S)";;
-            *) echo "invalid release type"; exit 1;;
-          esac
-          echo "version=$new" >> $GITHUB_OUTPUT
-          echo "Next version: $new"
+        run: python3 scripts/release/calculate_version_action.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Set git config
@@ -60,8 +44,8 @@ jobs:
 
       - name: Create tag
         run: |
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
+          git tag -a "v${{ steps.version.outputs.next_version }}" -m "Release v${{ steps.version.outputs.next_version }}"
+          git push origin "v${{ steps.version.outputs.next_version }}"
 
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
@@ -76,7 +60,7 @@ jobs:
           args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
+          GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.next_version }}
 
       - name: delete the build folders now the archives are there
         run: find dist -maxdepth 1 -type d -name 'topo_*_*_v*' -exec rm -rf {} +
@@ -99,7 +83,7 @@ jobs:
       - name: Upload unsigned macOS artifact
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
+          name: topo-v${{ steps.version.outputs.next_version }}-macos-unsigned
           path: |
             dist/topo_darwin_amd64
             dist/topo_darwin_arm64
@@ -108,7 +92,7 @@ jobs:
       - name: Upload unsigned Windows artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.version.outputs.version }}-windows-unsigned
+          name: topo-v${{ steps.version.outputs.next_version }}-windows-unsigned
           path: |
             dist/topo_windows_amd64
             dist/topo_windows_arm64
@@ -117,7 +101,7 @@ jobs:
       - name: Upload linux artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.version.outputs.version }}-linux
+          name: topo-v${{ steps.version.outputs.next_version }}-linux
           path: |
             dist/topo_linux_amd64
             dist/topo_linux_arm64
@@ -126,7 +110,7 @@ jobs:
       - name: Create draft GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.next_version }}
         run: |
           gh release create "v${VERSION}" \
             --draft \
