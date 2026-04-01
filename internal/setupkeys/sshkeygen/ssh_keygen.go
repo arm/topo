@@ -44,10 +44,6 @@ func (kg *SSHKeyGen) Description() string {
 	return kg.description
 }
 
-func (kg *SSHKeyGen) buildCommand() *exec.Cmd {
-	return kg.exec(kg.keyType, kg.keyPath, kg.dest.String())
-}
-
 func (kg *SSHKeyGen) Run(cmdOutput io.Writer) error {
 	dir := filepath.Dir(kg.keyPath)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -59,4 +55,8 @@ func (kg *SSHKeyGen) Run(cmdOutput io.Writer) error {
 	cmd.Stdout = cmdOutput
 	cmd.Stderr = cmdOutput
 	return cmd.Run()
+}
+
+func (kg *SSHKeyGen) buildCommand() *exec.Cmd {
+	return kg.exec(kg.keyType, kg.keyPath, kg.dest.String())
 }

@@ -42,12 +42,12 @@ type SSHTunnelStart struct {
 	Process           *os.Process
 }
 
-func (s *SSHTunnelStart) Description() string {
-	return "Open registry SSH tunnel"
-}
-
 func NewSSHTunnelStart(targetDest Destination, port string, useControlSockets bool) *SSHTunnelStart {
 	return &SSHTunnelStart{TargetDest: targetDest, Port: port, UseControlSockets: useControlSockets}
+}
+
+func (s *SSHTunnelStart) Description() string {
+	return "Open registry SSH tunnel"
 }
 
 func (s *SSHTunnelStart) Command() *exec.Cmd {
@@ -88,12 +88,12 @@ type CheckSSHTunnelSecurity struct {
 	Port       string
 }
 
-func (ct *CheckSSHTunnelSecurity) Description() string {
-	return "Check SSH tunnel security"
-}
-
 func NewCheckSSHTunnelSecurity(targetDest Destination, port string) *CheckSSHTunnelSecurity {
 	return &CheckSSHTunnelSecurity{TargetDest: targetDest, Port: port}
+}
+
+func (ct *CheckSSHTunnelSecurity) Description() string {
+	return "Check SSH tunnel security"
 }
 
 func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
@@ -131,12 +131,12 @@ type SSHTunnelStop struct {
 	TargetDest Destination
 }
 
-func (s *SSHTunnelStop) Description() string {
-	return "Close registry SSH tunnel"
-}
-
 func NewSSHTunnelStop(targetDest Destination) *SSHTunnelStop {
 	return &SSHTunnelStop{TargetDest: targetDest}
+}
+
+func (s *SSHTunnelStop) Description() string {
+	return "Close registry SSH tunnel"
 }
 
 func (s *SSHTunnelStop) Command() *exec.Cmd {
@@ -167,12 +167,12 @@ type SSHTunnelProcessStop struct {
 	Start *SSHTunnelStart
 }
 
-func (s *SSHTunnelProcessStop) Description() string {
-	return "Close registry SSH tunnel"
-}
-
 func NewSSHTunnelProcessStop(start *SSHTunnelStart) *SSHTunnelProcessStop {
 	return &SSHTunnelProcessStop{Start: start}
+}
+
+func (s *SSHTunnelProcessStop) Description() string {
+	return "Close registry SSH tunnel"
 }
 
 func (s *SSHTunnelProcessStop) Command() *exec.Cmd {
