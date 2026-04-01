@@ -2,6 +2,8 @@ import json
 import os
 import sys
 
+from check_commit import check_commit_message 
+
 def main() -> int:
     event_path = os.environ.get("GITHUB_EVENT_PATH")
     assert event_path, "GITHUB_EVENT_PATH is not set"
