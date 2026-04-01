@@ -15,7 +15,7 @@ import (
 func TestHardwareProbe(t *testing.T) {
 	t.Run("Probe", func(t *testing.T) {
 		t.Run("returns model name and features", func(t *testing.T) {
-			r := new(runner.Mock)
+			r := &runner.Mock{}
 			r.On("Run", command.WrapInLoginShell("command -v lscpu")).Return("/usr/bin/lscpu", nil)
 			r.On("Run", command.WrapInLoginShell("lscpu --json")).Return(testutil.LsCpuOutputRaw, nil)
 			r.On("Run", command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("", nil)
@@ -40,7 +40,7 @@ func TestHardwareProbe(t *testing.T) {
 		})
 
 		t.Run("returns error when lscpu not found", func(t *testing.T) {
-			r := new(runner.Mock)
+			r := &runner.Mock{}
 			r.On("Run", command.WrapInLoginShell("command -v lscpu")).Return("", fmt.Errorf("%q executable file not found in $PATH", "lscpu"))
 			probe := target.NewHardwareProbe(r)
 
@@ -51,7 +51,7 @@ func TestHardwareProbe(t *testing.T) {
 		})
 
 		t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-			r := new(runner.Mock)
+			r := &runner.Mock{}
 			r.On("Run", command.WrapInLoginShell("command -v lscpu")).Return("/usr/bin/lscpu", nil)
 			r.On("Run", command.WrapInLoginShell("lscpu --json")).Return("not json", nil)
 			probe := target.NewHardwareProbe(r)
