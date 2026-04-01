@@ -135,7 +135,7 @@ jobs:
 
       - name: Create GitHub App token for signer
         id: signer-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
           private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
