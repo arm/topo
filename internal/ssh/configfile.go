@@ -73,6 +73,10 @@ func addOrReplaceDirective(host *sshconfig.Host, directive ConfigDirective) {
 			host.Nodes[i] = &directive
 			return
 		}
+
+		if include, ok := node.(*sshconfig.Include); ok && include.String() == directive.String() {
+			return
+		}
 	}
 
 	host.Nodes = append(host.Nodes, &sshconfig.KV{
@@ -114,14 +118,15 @@ func CreateOrModifyConfigFile(dest Destination, directives []ConfigDirective) er
 	}
 
 	topoConfigPath := filepath.Join(home, ".ssh", "topo_config")
-	updateConfigFile(topoConfigPath, dest.Host, directives)
+	if err := updateConfigFile(topoConfigPath, dest.Host, directives); err != nil {
+		return err
+	}
 
 	defaultConfigPath := filepath.Join(home, ".ssh", "config")
-	updateConfigFile(defaultConfigPath, "", []ConfigDirective{
+	return updateConfigFile(defaultConfigPath, "", []ConfigDirective{
 		NewConfigDirectivePath("Include", topoConfigPath),
 	})
 
-	return nil
 }
 
 func CheckForLegacyConfigEntries() error {
