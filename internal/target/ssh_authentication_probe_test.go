@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockSSHProbeRunner struct {
+type mockSSHRunnerWithExtraArgs struct {
 	mock.Mock
 }
 
-func (m *mockSSHProbeRunner) RunWithArgs(command string, sshArgs ...string) (string, error) {
+func (m *mockSSHRunnerWithExtraArgs) RunWithArgs(command string, sshArgs ...string) (string, error) {
 	ret := m.Called(command, sshArgs)
 	return ret.String(0), ret.Error(1)
 }
@@ -37,7 +37,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	errSSH := errors.New("ssh failed")
 
 	t.Run("does not require password when public key succeeds", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", publicKeyMode).Return("", nil)
 
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
@@ -50,7 +50,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("returns host key verification error for public key probe", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", publicKeyMode).Return("Host key verification failed", errSSH)
 
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
@@ -61,7 +61,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("returns host key verification error for password probe", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		r.On("RunWithArgs", "true", passwordMode).Return("Host key verification failed", errSSH)
 
@@ -73,7 +73,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("returns password-only auth error when auth fails", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		r.On("RunWithArgs", "true", passwordMode).Return("Authentication failed", errSSH)
 
@@ -84,7 +84,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("does not require password when password probe succeeds", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		r.On("RunWithArgs", "true", passwordMode).Return("", nil)
 
@@ -96,7 +96,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("returns error on non-auth failure for password probe", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", publicKeyMode).Return("Permission denied", errSSH)
 		r.On("RunWithArgs", "true", passwordMode).Return("Some other error", errSSH)
 
@@ -107,7 +107,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("ensures known host when not accepting new host keys", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", knownHostMode).Return("Permission denied", errSSH)
 		r.On("RunWithArgs", "true", publicKeyMode).Return("", nil)
 
@@ -120,7 +120,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("returns host key verification error when known host fails", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", knownHostMode).Return("HOST KEY VERIFICATION FAILED", errSSH)
 
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
@@ -131,7 +131,7 @@ func TestSSHAuthenticationProbe(t *testing.T) {
 	})
 
 	t.Run("returns error when known host fails with other error", func(t *testing.T) {
-		r := &mockSSHProbeRunner{}
+		r := &mockSSHRunnerWithExtraArgs{}
 		r.On("RunWithArgs", "true", knownHostMode).Return("dial tcp: lookup host: no such host", errSSH)
 
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
