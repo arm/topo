@@ -34,7 +34,6 @@ func readConfigFile(path string) (*sshconfig.Config, error) {
 			cfgFile = strings.NewReader("")
 		} else {
 			return nil, fmt.Errorf("failed to open topo ssh config file: %w", err)
-
 		}
 	}
 
@@ -126,7 +125,6 @@ func CreateOrModifyConfigFile(dest Destination, directives []ConfigDirective) er
 	return updateConfigFile(defaultConfigPath, "", []ConfigDirective{
 		NewConfigDirectivePath("Include", topoConfigPath),
 	})
-
 }
 
 func CheckForLegacyConfigEntries() error {
