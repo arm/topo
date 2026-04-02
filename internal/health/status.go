@@ -2,12 +2,9 @@ package health
 
 import (
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/target"
 )
-
-type runner interface {
-	Run(command string) (string, error)
-}
 
 type HardwareProfile struct {
 	RemoteCPU []target.RemoteprocCPU
@@ -26,7 +23,7 @@ type HealthStatus struct {
 	Hardware     HardwareProfile
 }
 
-func ProbeHealthStatus(r runner) HealthStatus {
+func ProbeHealthStatus(r runner.Runner) HealthStatus {
 	var hs HealthStatus
 
 	probe := target.NewHardwareProbe(r)

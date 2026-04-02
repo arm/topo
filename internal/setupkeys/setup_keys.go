@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 
 	"github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/target"
 )
 
 type KeyType string
@@ -20,10 +20,10 @@ const (
 )
 
 func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType) (operation.Sequence, error) {
-	conn := target.NewConnection(dest, target.ConnectionOptions{})
+	sshRunner := runner.NewSSH(dest, runner.SSHOptions{})
 	ops := []operation.Operation{
 		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", dest, string(keyType), privKeyPath, sshkeygen.SSHKeyGenOptions{}),
-		pubkeytransfer.NewPubKeyTransfer(privKeyPath, &conn),
+		pubkeytransfer.NewPubKeyTransfer(privKeyPath, sshRunner),
 	}
 	return operation.NewSequence(ops...), nil
 }
