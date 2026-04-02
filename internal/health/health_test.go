@@ -76,6 +76,20 @@ func TestGenerateTargetReport(t *testing.T) {
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
 		assert.Contains(t, got.Connectivity.Fix, "topo setup-keys --target ssh://user@my-target")
 	})
+
+	t.Run("when host key verification fails, Connectivity includes an accept-new-host-keys fix", func(t *testing.T) {
+		ts := health.Status{
+			Connection: health.ConnectionStatus{
+				Destination: ssh.NewDestination("user@my-target"),
+				Error:       target.ErrHostKeyVerification,
+			},
+		}
+
+		got := health.GenerateTargetReport(ts)
+
+		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
+		assert.Equal(t, "run `topo health --target ssh://user@my-target --accept-new-host-keys` to trust the target's identity", got.Connectivity.Fix)
+	})
 }
 
 func TestHostReport(t *testing.T) {
