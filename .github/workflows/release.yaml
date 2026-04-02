@@ -43,8 +43,8 @@ jobs:
 
       - name: Create tag
         run: |
-          git tag -a "v${{ steps.calculate_next_version.outputs.next_version }}" -m "Release v${{ steps.calculate_next_version.outputs.next_version }}"
-          git push origin "v${{ steps.calculate_next_version.outputs.next_version }}"
+          git tag -a "${{ steps.calculate_next_version.outputs.next_version }}" -m "Release ${{ steps.calculate_next_version.outputs.next_version }}"
+          git push origin "${{ steps.calculate_next_version.outputs.next_version }}"
 
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
@@ -59,7 +59,7 @@ jobs:
           args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: v${{ steps.calculate_next_version.outputs.next_version }}
+          GORELEASER_CURRENT_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
 
       - name: delete the build folders now the archives are there
         run: find dist -maxdepth 1 -type d -name 'topo_*_*_v*' -exec rm -rf {} +
@@ -82,7 +82,7 @@ jobs:
       - name: Upload unsigned macOS artifact
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.calculate_next_version.outputs.next_version }}-macos-unsigned
+          name: topo-${{ steps.calculate_next_version.outputs.next_version }}-macos-unsigned
           path: |
             dist/topo_darwin_amd64
             dist/topo_darwin_arm64
@@ -91,7 +91,7 @@ jobs:
       - name: Upload unsigned Windows artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.calculate_next_version.outputs.next_version }}-windows-unsigned
+          name: topo-${{ steps.calculate_next_version.outputs.next_version }}-windows-unsigned
           path: |
             dist/topo_windows_amd64
             dist/topo_windows_arm64
@@ -100,7 +100,7 @@ jobs:
       - name: Upload linux artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.calculate_next_version.outputs.next_version }}-linux
+          name: topo-${{ steps.calculate_next_version.outputs.next_version }}-linux
           path: |
             dist/topo_linux_amd64
             dist/topo_linux_arm64
@@ -111,10 +111,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
-          gh release create "v${VERSION}" \
+          gh release create "${VERSION}" \
             --draft \
-            --title "v${VERSION}" \
-            --notes "Release v${VERSION} - signing in progress..."
+            --title "${VERSION}" \
+            --notes "Release ${VERSION} - signing in progress..."
 
       - name: Create GitHub App token for signer
         id: signer-token
@@ -135,4 +135,4 @@ jobs:
             --ref v2 \
             --field run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
-            --field release-tag=v${VERSION} \
+            --field release-tag=${VERSION} \
