@@ -4,9 +4,6 @@ import (
 	"errors"
 	"slices"
 	"strings"
-
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
 )
 
 var (
@@ -37,22 +34,6 @@ var (
 
 type sshRunnerWithExtraArgs interface {
 	RunWithArgs(command string, sshArgs ...string) (string, error)
-}
-
-type SSHProbeRunner struct {
-	dest ssh.Destination
-	opts runner.SSHOptions
-}
-
-func NewSSHProbeRunner(dest ssh.Destination, opts runner.SSHOptions) *SSHProbeRunner {
-	return &SSHProbeRunner{dest: dest, opts: opts}
-}
-
-func (s *SSHProbeRunner) RunWithArgs(command string, sshArgs ...string) (string, error) {
-	opts := s.opts
-	opts.ExtraArgs = sshArgs
-	r := runner.NewSSH(s.dest, opts)
-	return r.Run(command)
 }
 
 type SSHAuthenticationProbeOptions struct {

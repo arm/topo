@@ -8,8 +8,8 @@ import (
 
 type Local struct{}
 
-func NewLocal() Local {
-	return Local{}
+func NewLocal() *Local {
+	return &Local{}
 }
 
 func (r *Local) Run(cmdStr string) (string, error) {

@@ -9,9 +9,7 @@ type Runner interface {
 
 func For(dest ssh.Destination, opts SSHOptions) Runner {
 	if dest.IsPlainLocalhost() {
-		local := NewLocal()
-		return &local
+		return NewLocal()
 	}
-	r := NewSSH(dest, opts)
-	return &r
+	return NewSSH(dest, opts)
 }

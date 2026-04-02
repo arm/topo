@@ -95,16 +95,14 @@ func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOp
 
 func prepareRunner(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (runner.Runner, error) {
 	if dest.IsPlainLocalhost() {
-		local := runner.NewLocal()
-		return &local, nil
+		return runner.NewLocal(), nil
 	}
 	sshOpts := runner.SSHOptions{Multiplex: true, ConnectTimeout: connectTimeout}
-	authProbe := target.NewSSHAuthenticationProbe(target.NewSSHProbeRunner(dest, sshOpts), probeOpts)
+	authProbe := target.NewSSHAuthenticationProbe(runner.NewSSH(dest, sshOpts), probeOpts)
 	if err := authProbe.Probe(); err != nil {
 		return nil, err
 	}
-	r := runner.NewSSH(dest, sshOpts)
-	return &r, nil
+	return runner.NewSSH(dest, sshOpts), nil
 }
 
 func GenerateHostReport(statuses []DependencyStatus) HostReport {
