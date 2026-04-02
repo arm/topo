@@ -138,10 +138,6 @@ func (d ConfigDirective) String() string {
 	return fmt.Sprintf("%s %s", d.Key, d.Value)
 }
 
-func CreateConfigFile(dest Destination, targetSlug string) error {
-	return CreateOrModifyConfigFile(dest, targetSlug, nil)
-}
-
 func CreateOrModifyConfigFile(dest Destination, targetSlug string, directives []ConfigDirective) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
