@@ -2,17 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      release-type:
-        description: One of 'Major', 'Minor', 'Patch', or 'Pre-release'.
-        required: true
-        type: choice
-        default: Pre-release
-        options:
-          - Major
-          - Minor
-          - Patch
-          - Pre-release
 
 permissions:
   contents: write
@@ -32,27 +21,21 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: false
-      - name: Calculate next version
-        id: version
+
+      - name: Install svu
         run: |
-          latest_release=$(gh release list --limit 100 --json tagName --jq '[.[].tagName | gsub("^v"; "") | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+"))] | sort_by(split("-")[0] | split(".") | map(tonumber)) | reverse | .[0] // empty')
-          if [ -z "$latest_release" ]; then
-            base="0.0.0"
-          else
-            base=${latest_release%%-*}
+          go install github.com/caarlos0/svu/v3@9324add
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Calculate next version
+        id: calculate_next_version
+        run: |
+          if ! next="$(svu next)"; then
+            echo "svu failed" >&2
+            exit 1
           fi
-          IFS='.' read -r major minor patch <<< "$base"
-          case "${{ inputs.release-type }}" in
-            Major) new="$((major+1)).0.0";;
-            Minor) new="$major.$((minor+1)).0";;
-            Patch) new="$major.$minor.$((patch+1))";;
-            Pre-release) new="$base-$(date +%Y-%m-%d-%H-%M-%S)";;
-            *) echo "invalid release type"; exit 1;;
-          esac
-          echo "version=$new" >> $GITHUB_OUTPUT
-          echo "Next version: $new"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "next_version=$next" >> "$GITHUB_OUTPUT"
+
       - name: Set git config
         run: |
           git config --global user.email "topo-release@users.noreply.github.com"
@@ -60,8 +43,8 @@ jobs:
 
       - name: Create tag
         run: |
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
+          git tag -a "${{ steps.calculate_next_version.outputs.next_version }}" -m "Release ${{ steps.calculate_next_version.outputs.next_version }}"
+          git push origin "${{ steps.calculate_next_version.outputs.next_version }}"
 
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
@@ -76,7 +59,7 @@ jobs:
           args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: v${{ steps.version.outputs.version }}
+          GORELEASER_CURRENT_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
 
       - name: delete the build folders now the archives are there
         run: find dist -maxdepth 1 -type d -name 'topo_*_*_v*' -exec rm -rf {} +
@@ -99,7 +82,7 @@ jobs:
       - name: Upload unsigned macOS artifact
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.version.outputs.version }}-macos-unsigned
+          name: topo-${{ steps.calculate_next_version.outputs.next_version }}-macos-unsigned
           path: |
             dist/topo_darwin_amd64
             dist/topo_darwin_arm64
@@ -108,7 +91,7 @@ jobs:
       - name: Upload unsigned Windows artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.version.outputs.version }}-windows-unsigned
+          name: topo-${{ steps.calculate_next_version.outputs.next_version }}-windows-unsigned
           path: |
             dist/topo_windows_amd64
             dist/topo_windows_arm64
@@ -117,7 +100,7 @@ jobs:
       - name: Upload linux artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: topo-v${{ steps.version.outputs.version }}-linux
+          name: topo-${{ steps.calculate_next_version.outputs.next_version }}-linux
           path: |
             dist/topo_linux_amd64
             dist/topo_linux_arm64
@@ -126,12 +109,12 @@ jobs:
       - name: Create draft GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
-          gh release create "v${VERSION}" \
+          gh release create "${VERSION}" \
             --draft \
-            --title "v${VERSION}" \
-            --notes "Release v${VERSION} - signing in progress..."
+            --title "${VERSION}" \
+            --notes "Release ${VERSION} - signing in progress..."
 
       - name: Create GitHub App token for signer
         id: signer-token
@@ -145,11 +128,11 @@ jobs:
       - name: Trigger sign-and-release
         env:
           GH_TOKEN: ${{ steps.signer-token.outputs.token }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/signer \
-            --ref v2 \
+            --ref v3 \
             --field run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
-            --field release-tag=v${VERSION} \
+            --field release-tag=${VERSION} \
