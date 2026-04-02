@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/setupkeys"
+	"github.com/arm/topo/internal/setupkeys/identityfilefragment"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 	"github.com/arm/topo/internal/ssh"
@@ -13,40 +14,48 @@ import (
 )
 
 func TestNewKeySetup(t *testing.T) {
-	t.Run("NewKeySetup returns SSHKeyGen then PubKeyTransfer for supported key types", func(t *testing.T) {
+	t.Run("NewKeySetup returns SSHKeyGen then IdentityFileFragmentWrite then PubKeyTransfer for supported key types", func(t *testing.T) {
 		t.Run("ed25519 with empty private key path", func(t *testing.T) {
-			got, err := setupkeys.NewKeySetup(ssh.NewDestination("user@some1thing.com"), "", setupkeys.KeyTypeED25519)
+			dest := ssh.NewDestination("user@some1thing.com")
+			got, err := setupkeys.NewKeySetup(dest, "", setupkeys.KeyTypeED25519, dest.Slugify())
 
 			require.NoError(t, err)
-			require.Len(t, got, 2)
+			require.Len(t, got, 3)
 			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
-			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+			require.IsType(t, &identityfilefragment.IdentityFileFragmentWrite{}, got[1])
+			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[2])
 		})
 
 		t.Run("ed25519 with custom private key path", func(t *testing.T) {
+			dest := ssh.NewDestination("user@some1thing.com")
 			got, err := setupkeys.NewKeySetup(
-				ssh.NewDestination("user@some1thing.com"),
+				dest,
 				filepath.Join(t.TempDir(), "id_ed25519_custom"),
 				setupkeys.KeyTypeED25519,
+				dest.Slugify(),
 			)
 
 			require.NoError(t, err)
-			require.Len(t, got, 2)
+			require.Len(t, got, 3)
 			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
-			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+			require.IsType(t, &identityfilefragment.IdentityFileFragmentWrite{}, got[1])
+			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[2])
 		})
 
 		t.Run("rsa with custom private key path", func(t *testing.T) {
+			dest := ssh.NewDestination("user@some2thing.com")
 			got, err := setupkeys.NewKeySetup(
-				ssh.NewDestination("user@some2thing.com"),
+				dest,
 				filepath.Join(t.TempDir(), "id_rsa_custom"),
 				setupkeys.KeyTypeRSA,
+				dest.Slugify(),
 			)
 
 			require.NoError(t, err)
-			require.Len(t, got, 2)
+			require.Len(t, got, 3)
 			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
-			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+			require.IsType(t, &identityfilefragment.IdentityFileFragmentWrite{}, got[1])
+			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[2])
 		})
 	})
 }

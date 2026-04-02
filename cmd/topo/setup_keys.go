@@ -45,22 +45,12 @@ var setupKeysCmd = &cobra.Command{
 			return fmt.Errorf("%w; note: a per user SSH config entry should be created  when setting up keys", err)
 		}
 
-		seq, err := setupkeys.NewKeySetup(dest, privateKeyPath, parsedKeyType)
+		seq, err := setupkeys.NewKeySetup(dest, privateKeyPath, parsedKeyType, targetSlug)
 		if err != nil {
 			return err
 		}
 
-		err = seq.Run(os.Stdout)
-		if err != nil {
-			return err
-		}
-
-		directives := []ssh.ConfigDirective{
-			ssh.NewConfigDirectiveIdentityFile(privateKeyPath),
-			ssh.NewDirective("IdentitiesOnly", "yes"),
-		}
-
-		return ssh.CreateOrModifyConfigFile(dest, targetSlug, directives)
+		return seq.Run(os.Stdout)
 	},
 }
 

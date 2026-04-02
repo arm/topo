@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/internal/setupkeys/identityfilefragment"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 	"github.com/arm/topo/internal/ssh"
@@ -19,10 +20,11 @@ const (
 	KeyTypeRSA     KeyType = "rsa"
 )
 
-func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType) (operation.Sequence, error) {
+func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType, targetSlug string) (operation.Sequence, error) {
 	conn := target.NewConnection(dest, target.ConnectionOptions{})
 	ops := []operation.Operation{
 		sshkeygen.NewSSHKeyGen("Generate SSH key pair for target", dest, string(keyType), privKeyPath, sshkeygen.SSHKeyGenOptions{}),
+		identityfilefragment.NewIdentityFileFragmentWrite(privKeyPath, targetSlug, dest),
 		pubkeytransfer.NewPubKeyTransfer(privKeyPath, &conn),
 	}
 	return operation.NewSequence(ops...), nil
