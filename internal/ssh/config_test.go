@@ -141,26 +141,6 @@ debug1: /tmp/config line 5: Applying options for *
 	})
 }
 
-func TestCreateConfigFile(t *testing.T) {
-	t.Run("handles creation of new ssh config file", func(t *testing.T) {
-		tmp := t.TempDir()
-		testutil.SetHomeDir(t, tmp)
-		targetHost := ssh.NewDestination("user@example.com:2222")
-		targetFileName := "user_example_com_2222"
-		fragmentPath := filepath.Join(tmp, ".ssh", "topo_config", fmt.Sprintf("topo_%s.conf", targetFileName))
-		mainConfigPath := filepath.Join(tmp, ".ssh", "config")
-
-		err := ssh.CreateConfigFile(targetHost, targetFileName)
-
-		require.NoError(t, err)
-		wantFragmentContents := "Host example.com\n  HostName example.com\n  User user\n  Port 2222\n"
-		wantIncludedFragmentPath := filepath.ToSlash(filepath.Join(tmp, ".ssh", "topo_config", "*.conf"))
-		wantConfigContents := fmt.Sprintf("Include %s\n\n", wantIncludedFragmentPath)
-		testutil.AssertFileContents(t, wantFragmentContents, fragmentPath)
-		testutil.AssertFileContents(t, wantConfigContents, mainConfigPath)
-	})
-}
-
 func TestCreateOrModifyConfigFile(t *testing.T) {
 	t.Run("writes include and fragment", func(t *testing.T) {
 		tmp := t.TempDir()
