@@ -39,4 +39,20 @@ checksum:
   name_template: "checksums.txt"
 
 changelog:
-  disable: true
+  use: git
+  sort: asc
+  abbrev: -1
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+  groups:
+    - title: Breaking Changes
+      regexp: '^.*?!:.*$|^.*BREAKING CHANGE:.*$'
+      order: 0
+    - title: Features / Enhancements
+      regexp: '^.*?feat(\([[:word:]]+\))??:.*$'
+      order: 1
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??:.*$'
+      order: 2
