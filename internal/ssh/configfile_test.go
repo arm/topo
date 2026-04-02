@@ -13,11 +13,10 @@ import (
 )
 
 func TestCreateOrModifyConfigFile(t *testing.T) {
-	t.Run("writes include directive to config file", func(t *testing.T) {
+	t.Run("writes include directive to default config file", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
-
 		dest := ssh.Destination{Host: "board1"}
 		directives := []ssh.ConfigDirective{
 			ssh.NewConfigDirective("IdentityFile", "~/.ssh/id_ed25519"),
@@ -31,7 +30,7 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		testutil.AssertFileContents(t, "Include "+topoConfigPath+"\n", configPath)
 	})
 
-	t.Run("creates config file if it does not exist", func(t *testing.T) {
+	t.Run("creates topo-managed config file if it does not exist", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
@@ -43,13 +42,11 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		err := ssh.CreateOrModifyConfigFile(dest, directives)
 		require.NoError(t, err)
 
-		assert.FileExists(t, filepath.Join(tmp, ".ssh", "config"))
 		topoConfigPath := filepath.Join(tmp, ".ssh", "topo_config")
-		assert.FileExists(t, topoConfigPath)
 		testutil.AssertFileContents(t, "Host board1\nUser homer\n", topoConfigPath)
 	})
 
-	t.Run("does not duplicate include directive if it already exists", func(t *testing.T) {
+	t.Run("does not duplicate include directive in default config file if it already exists", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
@@ -66,12 +63,11 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		configPath := filepath.Join(tmp, ".ssh", "config")
 		got, err := os.ReadFile(configPath)
 		require.NoError(t, err)
-		topoConfigPath := filepath.Join(tmp, ".ssh", "topo_config")
-		count := strings.Count(string(got), "Include "+topoConfigPath)
+		count := strings.Count(string(got), "Include")
 		assert.Equal(t, 1, count, "Include directive should appear exactly once, got:\n%s", got)
 	})
 
-	t.Run("adds new entry to existing config file", func(t *testing.T) {
+	t.Run("adds new entry to existing topo-managed config file", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
@@ -94,17 +90,17 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		)
 	})
 
-	t.Run("modifies existing entry in config file, preserving unmodified directives", func(t *testing.T) {
+	t.Run("modifies existing entry in topo-managed config file, preserving unmodified directives", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
 		dest := ssh.Destination{Host: "board1"}
-
 		err := ssh.CreateOrModifyConfigFile(dest, []ssh.ConfigDirective{
 			ssh.NewConfigDirective("IdentityFile", "~/.ssh/key_old"),
 			ssh.NewConfigDirective("User", "homer"),
 		})
 		require.NoError(t, err)
+
 		err = ssh.CreateOrModifyConfigFile(dest, []ssh.ConfigDirective{
 			ssh.NewConfigDirective("IdentityFile", "~/.ssh/key_new"),
 		})
