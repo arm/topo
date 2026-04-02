@@ -17,6 +17,7 @@ var (
 		"-o", "NumberOfPasswordPrompts=0",
 	}
 	knownHostProbeArgs = []string{
+		"-o", "StrictHostKeyChecking=yes",
 		"-o", "PreferredAuthentications=publickey",
 		"-o", "PasswordAuthentication=no",
 		"-o", "NumberOfPasswordPrompts=0",
