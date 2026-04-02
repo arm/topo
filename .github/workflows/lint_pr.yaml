@@ -2,10 +2,8 @@ name: 'Lint PR'
 
 on:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - edited
+    branches: [ main ]
+    types: [opened, reopened, edited, synchronize]
 
 jobs:
   main:
