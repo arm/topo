@@ -132,7 +132,7 @@ jobs:
         run: |
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/signer \
-            --ref v2 \
+            --ref remove-v \
             --field run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
             --field release-tag=${VERSION} \
