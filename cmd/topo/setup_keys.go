@@ -26,6 +26,10 @@ var setupKeysCmd = &cobra.Command{
 			return err
 		}
 
+		if err := ssh.CheckForLegacyConfigEntries(); err != nil {
+			return err
+		}
+
 		dest := ssh.NewDestination(targetArg)
 		targetSlug := dest.Slugify()
 		if privateKeyPath == "" {
@@ -56,11 +60,11 @@ var setupKeysCmd = &cobra.Command{
 		}
 
 		directives := []ssh.ConfigDirective{
-			ssh.NewConfigDirectiveIdentityFile(privateKeyPath),
-			ssh.NewDirective("IdentitiesOnly", "yes"),
+			ssh.NewConfigDirectivePath("IdentityFile", privateKeyPath),
+			ssh.NewConfigDirective("IdentitiesOnly", "yes"),
 		}
 
-		return ssh.CreateOrModifyConfigFile(dest, targetSlug, directives)
+		return ssh.CreateOrModifyConfigFile(dest, directives)
 	},
 }
 
