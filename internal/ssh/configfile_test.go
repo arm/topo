@@ -26,7 +26,7 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		require.NoError(t, err)
 
 		configPath := filepath.Join(tmp, ".ssh", "config")
-		topoConfigPath := filepath.Join(tmp, ".ssh", "topo_config")
+		topoConfigPath := filepath.ToSlash(filepath.Join(tmp, ".ssh", "topo_config"))
 		testutil.AssertFileContents(t, "Include "+topoConfigPath+"\n", configPath)
 	})
 

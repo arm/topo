@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/arm/topo/internal/output/logger"
 	sshconfig "github.com/kevinburke/ssh_config"
 )
 
@@ -27,17 +28,25 @@ func NewConfigDirective(key, value string) ConfigDirective {
 }
 
 func readConfigFile(path string) (*sshconfig.Config, error) {
-	var cfgFile io.Reader
+	var cfgReader io.Reader
 	cfgFile, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			cfgFile = strings.NewReader("")
+			cfgReader = strings.NewReader("")
 		} else {
 			return nil, fmt.Errorf("failed to open topo ssh config file: %w", err)
 		}
+	} else {
+		defer func() {
+			err := cfgFile.Close()
+			if err != nil {
+				logger.Error("faled to close topo ssh config file", "error", err)
+			}
+		}()
+		cfgReader = cfgFile
 	}
 
-	cfg, err := sshconfig.Decode(cfgFile)
+	cfg, err := sshconfig.Decode(cfgReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode topo ssh config file: %w", err)
 	}
@@ -105,7 +114,7 @@ func updateConfigFile(path string, host string, directives []ConfigDirective) er
 	}
 
 	if err := os.WriteFile(path, cfgBytes, 0o600); err != nil {
-		return fmt.Errorf("failed to write %s: %w", path, err)
+		return fmt.Errorf("failed to write to %s: %w", path, err)
 	}
 	return nil
 }
