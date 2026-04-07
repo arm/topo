@@ -125,7 +125,7 @@ func findOrCreateHostBlock(cfg *sshconfig.Config, alias string) (*sshconfig.Host
 
 func directiveMatches(node sshconfig.Node, directive sshconfig.KV) bool {
 	if kv, ok := node.(*sshconfig.KV); ok {
-		return kv.Key == directive.Key && kv.Value == directive.Value
+		return kv.Key == directive.Key
 	}
 
 	if include, ok := node.(*sshconfig.Include); ok {
