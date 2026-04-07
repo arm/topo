@@ -24,6 +24,9 @@ builds:
       - -X github.com/arm/topo/internal/version.Version={{ .Version }}
       - -X github.com/arm/topo/internal/version.GitCommit={{ .Commit }}
 
+release:
+  skip_upload: true
+
 archives:
   - id: archive
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
