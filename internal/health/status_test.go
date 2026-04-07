@@ -27,6 +27,21 @@ func TestProbeHealthStatus(t *testing.T) {
 		r.AssertExpectations(t)
 	})
 
+	t.Run("reports binary name when lookup fails", func(t *testing.T) {
+		r := &runner.Mock{}
+		r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("", fmt.Errorf("not found"))
+		r.On("Run", context.Background(), command.UnsafeBinaryLookupCommand("docker")).Return("", fmt.Errorf("exit status 127"))
+		r.On("Run", context.Background(), command.UnsafeBinaryLookupCommand("lscpu")).Return("", fmt.Errorf("exit status 127"))
+
+		ts := health.ProbeHealthStatus(context.Background(), r)
+
+		for _, dep := range ts.Dependencies {
+			if dep.Error != nil {
+				assert.Contains(t, dep.Error.Error(), fmt.Sprintf("%q", dep.Dependency.Binary))
+			}
+		}
+	})
+
 	t.Run("succeeds when no remoteproc support", func(t *testing.T) {
 		r := &runner.Mock{}
 		r.On("Run", context.Background(), mock.AnythingOfType("string")).Return("", fmt.Errorf("no such directory"))
