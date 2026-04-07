@@ -20,7 +20,7 @@ func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {
 	}
 
 	return Template{
-		Name:        slugifyTemplateName(metadata.Name),
+		Name:        metadata.Name,
 		Description: metadata.Description,
 		Features:    metadata.Features,
 		URL:         repoURL,
