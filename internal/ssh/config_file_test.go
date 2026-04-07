@@ -27,7 +27,8 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 
 		configPath := filepath.Join(tmp, ".ssh", "config")
 		topoConfigPath := filepath.ToSlash(filepath.Join(tmp, ".ssh", "topo_config"))
-		testutil.AssertFileContents(t, "Include "+topoConfigPath+"\n", configPath)
+		testutil.AssertFileContents(t, `Include `+topoConfigPath+`
+`, configPath)
 	})
 
 	t.Run("creates topo-managed config file if it does not exist", func(t *testing.T) {
@@ -43,7 +44,9 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		require.NoError(t, err)
 
 		topoConfigPath := filepath.Join(tmp, ".ssh", "topo_config")
-		testutil.AssertFileContents(t, "Host board1\nUser homer\n", topoConfigPath)
+		testutil.AssertFileContents(t, `Host board1
+User homer
+`, topoConfigPath)
 	})
 
 	t.Run("does not duplicate include directive in default config file if it already exists", func(t *testing.T) {
@@ -54,17 +57,17 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		directives := []ssh.ConfigDirective{
 			ssh.NewConfigDirective("IdentityFile", "~/.ssh/id_ed25519"),
 		}
-
 		err := ssh.CreateOrModifyConfigFile(dest, directives)
 		require.NoError(t, err)
-		err = ssh.CreateOrModifyConfigFile(dest, directives)
-		require.NoError(t, err)
 
-		configPath := filepath.Join(tmp, ".ssh", "config")
-		got, err := os.ReadFile(configPath)
+		err = ssh.CreateOrModifyConfigFile(dest, directives)
+
+		require.NoError(t, err)
+		got, err := os.ReadFile(filepath.Join(tmp, ".ssh", "config"))
 		require.NoError(t, err)
 		count := strings.Count(string(got), "Include")
-		assert.Equal(t, 1, count, "Include directive should appear exactly once, got:\n%s", got)
+		assert.Equal(t, 1, count, `Include directive should appear exactly once, got:
+%s`, got)
 	})
 
 	t.Run("adds new entry to existing topo-managed config file", func(t *testing.T) {
@@ -85,7 +88,11 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 
 		topoConfigPath := filepath.Join(tmp, ".ssh", "topo_config")
 		testutil.AssertFileContents(t,
-			"Host board1\nIdentityFile ~/.ssh/key1\nHost board2\nIdentityFile ~/.ssh/key2\n",
+			`Host board1
+IdentityFile ~/.ssh/key1
+Host board2
+IdentityFile ~/.ssh/key2
+`,
 			topoConfigPath,
 		)
 	})
@@ -108,7 +115,10 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 
 		topoConfigPath := filepath.Join(tmp, ".ssh", "topo_config")
 		testutil.AssertFileContents(t,
-			"Host board1\nIdentityFile ~/.ssh/key_new\nUser homer\n",
+			`Host board1
+IdentityFile ~/.ssh/key_new
+User homer
+`,
 			topoConfigPath,
 		)
 	})
