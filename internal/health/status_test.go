@@ -1,6 +1,7 @@
 package health_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -15,11 +16,11 @@ import (
 func TestProbeHealthStatus(t *testing.T) {
 	t.Run("finds remote CPUs", func(t *testing.T) {
 		r := &runner.Mock{}
-		r.On("Run", command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("remoteproc0\nremoteproc1", nil)
-		r.On("Run", command.WrapInLoginShell("cat /sys/class/remoteproc/*/name")).Return("foo\nbar", nil)
-		r.On("Run", mock.AnythingOfType("string")).Maybe().Return("", fmt.Errorf("not found"))
+		r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("remoteproc0\nremoteproc1", nil)
+		r.On("Run", context.Background(), command.WrapInLoginShell("cat /sys/class/remoteproc/*/name")).Return("foo\nbar", nil)
+		r.On("Run", context.Background(), mock.AnythingOfType("string")).Maybe().Return("", fmt.Errorf("not found"))
 
-		ts := health.ProbeHealthStatus(r)
+		ts := health.ProbeHealthStatus(context.Background(), r)
 
 		want := health.HardwareProfile{RemoteCPU: []target.RemoteprocCPU{{Name: "foo"}, {Name: "bar"}}}
 		assert.Equal(t, want, ts.Hardware)
@@ -28,9 +29,9 @@ func TestProbeHealthStatus(t *testing.T) {
 
 	t.Run("succeeds when no remoteproc support", func(t *testing.T) {
 		r := &runner.Mock{}
-		r.On("Run", mock.AnythingOfType("string")).Return("", fmt.Errorf("no such directory"))
+		r.On("Run", context.Background(), mock.AnythingOfType("string")).Return("", fmt.Errorf("no such directory"))
 
-		ts := health.ProbeHealthStatus(r)
+		ts := health.ProbeHealthStatus(context.Background(), r)
 
 		assert.Len(t, ts.Hardware.RemoteCPU, 0)
 		r.AssertExpectations(t)

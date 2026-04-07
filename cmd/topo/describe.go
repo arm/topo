@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -24,9 +25,9 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+		r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 		probe := target.NewHardwareProbe(r)
-		hwProfile, err := probe.Probe()
+		hwProfile, err := probe.Probe(context.Background())
 		if err != nil {
 			return err
 		}

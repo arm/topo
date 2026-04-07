@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/arm/topo/internal/catalog"
@@ -36,9 +37,9 @@ var templatesCmd = &cobra.Command{
 		} else {
 			targetArg, exists := lookupTarget(cmd)
 			if exists {
-				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 				probe := target.NewHardwareProbe(r)
-				hwProfile, err := probe.Probe()
+				hwProfile, err := probe.Probe(context.Background())
 				if err != nil {
 					return err
 				}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -39,7 +40,7 @@ var healthCmd = &cobra.Command{
 		}
 
 		if targetArg, ok := lookupTarget(cmd); ok {
-			targetReport, err := health.CheckTarget(ssh.NewDestination(targetArg), probeOpts, sshConnectTimeout)
+			targetReport, err := health.CheckTarget(context.Background(), ssh.NewDestination(targetArg), probeOpts)
 			if err != nil {
 				if spinner != nil {
 					spinner.Stop()
