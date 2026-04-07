@@ -28,22 +28,21 @@ func NewConfigDirective(key, value string) ConfigDirective {
 }
 
 func readConfigFile(path string) (*sshconfig.Config, error) {
-	var cfgReader io.Reader
 	cfgFile, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			cfgReader = strings.NewReader("")
-		} else {
-			return nil, fmt.Errorf("failed to open topo ssh config file: %w", err)
-		}
-	} else {
-		defer func() {
-			err := cfgFile.Close()
-			if err != nil {
-				logger.Error("faled to close topo ssh config file", "error", err)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("failed to open topo ssh config file: %w", err)
+	}
+	defer func() {
+		if cfgFile != nil {
+			if err := cfgFile.Close(); err != nil {
+				logger.Error("failed to close topo ssh config file", "error", err)
 			}
-		}()
-		cfgReader = cfgFile
+		}
+	}()
+
+	cfgReader := io.Reader(cfgFile)
+	if cfgFile == nil {
+		cfgReader = strings.NewReader("")
 	}
 
 	cfg, err := sshconfig.Decode(cfgReader)
