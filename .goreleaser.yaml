@@ -39,7 +39,7 @@ checksum:
   name_template: "checksums.txt"
 
 changelog:
-  use: git
+  use: github
   sort: asc
   abbrev: -1
   filters:
