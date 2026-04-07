@@ -47,6 +47,11 @@ func (r *SSH) RunWithArgs(cmdStr string, args ...string) (string, error) {
 	return ssh.RunCommand(r.dest, cmdStr, nil, args...)
 }
 
+func (r *SSH) RunWithStdinAndArgs(cmdStr string, stdin []byte, args ...string) (string, error) {
+	args = append(args, r.opts.SSHArgs()...)
+	return ssh.RunCommand(r.dest, cmdStr, stdin, args...)
+}
+
 func (r *SSH) exec(cmdStr string, stdin []byte, extraSSHArgs []string) (string, error) {
 	return ssh.RunCommand(r.dest, cmdStr, stdin, extraSSHArgs...)
 }

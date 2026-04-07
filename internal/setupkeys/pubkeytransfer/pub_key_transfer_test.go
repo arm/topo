@@ -23,11 +23,13 @@ func TestPubKeyTransfer(t *testing.T) {
 
 			r := &runner.Mock{}
 			r.On(
-				"RunWithStdin",
+				"RunWithStdinAndArgs",
 				mock.MatchedBy(func(cmd string) bool {
 					return strings.Contains(cmd, "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
 				}),
 				pubKeyContent,
+				"-o",
+				"PreferredAuthentications=password",
 			).Return("ssh invoked", nil)
 
 			op := pubkeytransfer.NewPubKeyTransfer(privKeyPath, r)
