@@ -18,11 +18,11 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
 		dest := ssh.Destination{Host: "board1"}
-		directives := []ssh.ConfigDirective{
-			ssh.NewConfigDirective("IdentityFile", "~/.ssh/id_ed25519"),
+		modifiers := []ssh.ConfigDirectiveModifier{
+			ssh.NewEnsureConfigDirective("IdentityFile", "~/.ssh/id_ed25519"),
 		}
 
-		err := ssh.CreateOrModifyConfigFile(dest, directives)
+		err := ssh.CreateOrModifyConfigFile(dest, modifiers)
 		require.NoError(t, err)
 
 		configPath := filepath.Join(tmp, ".ssh", "config")
@@ -36,11 +36,11 @@ func TestCreateOrModifyConfigFile(t *testing.T) {
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
 		dest := ssh.Destination{Host: "board1"}
-		directives := []ssh.ConfigDirective{
-			ssh.NewConfigDirective("User", "homer"),
+		modifiers := []ssh.ConfigDirectiveModifier{
+			ssh.NewEnsureConfigDirective("User", "homer"),
 		}
 
-		err := ssh.CreateOrModifyConfigFile(dest, directives)
+		err := ssh.CreateOrModifyConfigFile(dest, modifiers)
 		require.NoError(t, err)
 
 		topoConfigPath := filepath.Join(tmp, ".ssh", "topo_config")
@@ -54,13 +54,13 @@ User homer
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
 		dest := ssh.Destination{Host: "board1"}
-		directives := []ssh.ConfigDirective{
-			ssh.NewConfigDirective("IdentityFile", "~/.ssh/id_ed25519"),
+		modifiers := []ssh.ConfigDirectiveModifier{
+			ssh.NewEnsureConfigDirective("IdentityFile", "~/.ssh/id_ed25519"),
 		}
-		err := ssh.CreateOrModifyConfigFile(dest, directives)
+		err := ssh.CreateOrModifyConfigFile(dest, modifiers)
 		require.NoError(t, err)
 
-		err = ssh.CreateOrModifyConfigFile(dest, directives)
+		err = ssh.CreateOrModifyConfigFile(dest, modifiers)
 
 		require.NoError(t, err)
 		got, err := os.ReadFile(filepath.Join(tmp, ".ssh", "config"))
@@ -76,13 +76,13 @@ User homer
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
 		err := ssh.CreateOrModifyConfigFile(
 			ssh.Destination{Host: "board1"},
-			[]ssh.ConfigDirective{ssh.NewConfigDirective("IdentityFile", "~/.ssh/key1")},
+			[]ssh.ConfigDirectiveModifier{ssh.NewEnsureConfigDirective("IdentityFile", "~/.ssh/key1")},
 		)
 		require.NoError(t, err)
 
 		err = ssh.CreateOrModifyConfigFile(
 			ssh.Destination{Host: "board2"},
-			[]ssh.ConfigDirective{ssh.NewConfigDirective("IdentityFile", "~/.ssh/key2")},
+			[]ssh.ConfigDirectiveModifier{ssh.NewEnsureConfigDirective("IdentityFile", "~/.ssh/key2")},
 		)
 		require.NoError(t, err)
 
@@ -102,14 +102,14 @@ IdentityFile ~/.ssh/key2
 		testutil.SetHomeDir(t, tmp)
 		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh"), 0o700))
 		dest := ssh.Destination{Host: "board1"}
-		err := ssh.CreateOrModifyConfigFile(dest, []ssh.ConfigDirective{
-			ssh.NewConfigDirective("IdentityFile", "~/.ssh/key_old"),
-			ssh.NewConfigDirective("User", "homer"),
+		err := ssh.CreateOrModifyConfigFile(dest, []ssh.ConfigDirectiveModifier{
+			ssh.NewEnsureConfigDirective("IdentityFile", "~/.ssh/key_old"),
+			ssh.NewEnsureConfigDirective("User", "homer"),
 		})
 		require.NoError(t, err)
 
-		err = ssh.CreateOrModifyConfigFile(dest, []ssh.ConfigDirective{
-			ssh.NewConfigDirective("IdentityFile", "~/.ssh/key_new"),
+		err = ssh.CreateOrModifyConfigFile(dest, []ssh.ConfigDirectiveModifier{
+			ssh.NewEnsureConfigDirective("IdentityFile", "~/.ssh/key_new"),
 		})
 		require.NoError(t, err)
 
@@ -146,5 +146,80 @@ func TestCheckForLegacyConfigEntries(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "legacy topo ssh config")
+	})
+}
+
+func TestMigrateLegacyConfig(t *testing.T) {
+	t.Run("returns error when no legacy topo config directory exists", func(t *testing.T) {
+		tmp := t.TempDir()
+		testutil.SetHomeDir(t, tmp)
+
+		err := ssh.MigrateLegacyTopoConfig()
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "nothing to migrate")
+	})
+
+	t.Run("returns error when legacy directory has no conf files", func(t *testing.T) {
+		tmp := t.TempDir()
+		testutil.SetHomeDir(t, tmp)
+		require.NoError(t, os.MkdirAll(filepath.Join(tmp, ".ssh", "topo_config"), 0o700))
+
+		err := ssh.MigrateLegacyTopoConfig()
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no .conf files")
+	})
+
+	t.Run("concatenates conf files into unified config and removes directory", func(t *testing.T) {
+		tmp := t.TempDir()
+		testutil.SetHomeDir(t, tmp)
+		legacyDir := filepath.Join(tmp, ".ssh", "topo_config")
+		require.NoError(t, os.MkdirAll(legacyDir, 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(legacyDir, "topo_board1.conf"), []byte(`Host board1
+  IdentityFile ~/.ssh/key1
+`), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(legacyDir, "topo_board2.conf"), []byte(`Host board2
+  IdentityFile ~/.ssh/key2
+`), 0o600))
+		topoConfigSlash := filepath.ToSlash(legacyDir)
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, ".ssh", "config"),
+			[]byte(`Include `+topoConfigSlash+`/*.conf
+
+Host *
+`), 0o600))
+
+		err := ssh.MigrateLegacyTopoConfig()
+
+		require.NoError(t, err)
+		info, err := os.Stat(filepath.Join(tmp, ".ssh", "topo_config"))
+		require.NoError(t, err)
+		assert.False(t, info.IsDir())
+		content, err := os.ReadFile(filepath.Join(tmp, ".ssh", "topo_config"))
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "Host board1")
+		assert.Contains(t, string(content), "Host board2")
+		sshConfig, err := os.ReadFile(filepath.Join(tmp, ".ssh", "config"))
+		require.NoError(t, err)
+		assert.Contains(t, string(sshConfig), "Include "+topoConfigSlash+`
+`)
+		assert.NotContains(t, string(sshConfig), "*.conf")
+	})
+
+	t.Run("adds include directive if ssh config does not exist", func(t *testing.T) {
+		tmp := t.TempDir()
+		testutil.SetHomeDir(t, tmp)
+		legacyDir := filepath.Join(tmp, ".ssh", "topo_config")
+		require.NoError(t, os.MkdirAll(legacyDir, 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(legacyDir, "topo_board1.conf"), []byte(`Host board1
+  IdentityFile ~/.ssh/key1
+`), 0o600))
+
+		err := ssh.MigrateLegacyTopoConfig()
+
+		require.NoError(t, err)
+		sshConfig, err := os.ReadFile(filepath.Join(tmp, ".ssh", "config"))
+		require.NoError(t, err)
+		assert.Contains(t, string(sshConfig), "Include")
 	})
 }

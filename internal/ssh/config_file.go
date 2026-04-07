@@ -11,19 +11,64 @@ import (
 	sshconfig "github.com/kevinburke/ssh_config"
 )
 
-type ConfigDirective = sshconfig.KV
+var errLegacyConfigEntries = fmt.Errorf("legacy topo ssh config entries found; run 'topo migrate-ssh' to migrate to the new single-file format")
 
-func NewConfigDirectivePath(key, path string) ConfigDirective {
-	return ConfigDirective{
-		Key:   key,
-		Value: filepath.ToSlash(path),
+type ConfigDirectiveModifier interface {
+	Apply(host *sshconfig.Host)
+}
+
+type EnsureConfigDirective struct {
+	sshconfig.KV
+}
+
+func NewEnsureConfigDirective(key, value string) EnsureConfigDirective {
+	return EnsureConfigDirective{
+		KV: sshconfig.KV{
+			Key:   key,
+			Value: value,
+		},
 	}
 }
 
-func NewConfigDirective(key, value string) ConfigDirective {
-	return ConfigDirective{
-		Key:   key,
-		Value: value,
+func NewEnsureConfigDirectivePath(key, path string) EnsureConfigDirective {
+	return EnsureConfigDirective{
+		KV: sshconfig.KV{
+			Key:   key,
+			Value: filepath.ToSlash(path),
+		},
+	}
+}
+
+func (d EnsureConfigDirective) Apply(host *sshconfig.Host) {
+	for i, node := range host.Nodes {
+		if directiveMatches(node, d.KV) {
+			host.Nodes[i] = &d
+			return
+		}
+	}
+
+	host.Nodes = append(host.Nodes, &d)
+}
+
+type RemoveConfigDirective struct {
+	sshconfig.KV
+}
+
+func NewRemoveConfigDirectivePath(key, value string) RemoveConfigDirective {
+	return RemoveConfigDirective{
+		KV: sshconfig.KV{
+			Key:   key,
+			Value: filepath.ToSlash(value),
+		},
+	}
+}
+
+func (d RemoveConfigDirective) Apply(host *sshconfig.Host) {
+	for i, node := range host.Nodes {
+		if directiveMatches(node, d.KV) {
+			host.Nodes = append(host.Nodes[:i], host.Nodes[i+1:]...)
+			return
+		}
 	}
 }
 
@@ -78,25 +123,19 @@ func findOrCreateHostBlock(cfg *sshconfig.Config, alias string) (*sshconfig.Host
 	return newHost, nil
 }
 
-func addOrReplaceDirective(host *sshconfig.Host, directive ConfigDirective) {
-	for i, node := range host.Nodes {
-		if kv, ok := node.(*sshconfig.KV); ok && kv.Key == directive.Key {
-			host.Nodes[i] = &directive
-			return
-		}
-
-		if include, ok := node.(*sshconfig.Include); ok && include.String() == directive.String() {
-			return
-		}
+func directiveMatches(node sshconfig.Node, directive sshconfig.KV) bool {
+	if kv, ok := node.(*sshconfig.KV); ok {
+		return kv.Key == directive.Key && kv.Value == directive.Value
 	}
 
-	host.Nodes = append(host.Nodes, &sshconfig.KV{
-		Key:   directive.Key,
-		Value: directive.Value,
-	})
+	if include, ok := node.(*sshconfig.Include); ok {
+		return include.String() == directive.String()
+	}
+
+	return false
 }
 
-func updateConfigFile(path string, host string, directives []ConfigDirective) error {
+func updateConfigFile(path string, host string, modifiers []ConfigDirectiveModifier) error {
 	cfg, err := readConfigFile(path)
 	if err != nil {
 		return err
@@ -107,8 +146,8 @@ func updateConfigFile(path string, host string, directives []ConfigDirective) er
 		return fmt.Errorf("failed to find or create host block: %w", err)
 	}
 
-	for _, directive := range directives {
-		addOrReplaceDirective(hostBlock, directive)
+	for _, modifier := range modifiers {
+		modifier.Apply(hostBlock)
 	}
 
 	cfgBytes, err := cfg.MarshalText()
@@ -122,20 +161,20 @@ func updateConfigFile(path string, host string, directives []ConfigDirective) er
 	return nil
 }
 
-func CreateOrModifyConfigFile(dest Destination, directives []ConfigDirective) error {
+func CreateOrModifyConfigFile(dest Destination, modifiers []ConfigDirectiveModifier) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)
 	}
 
 	topoConfigPath := filepath.Join(home, ".ssh", "topo_config")
-	if err := updateConfigFile(topoConfigPath, dest.Host, directives); err != nil {
+	if err := updateConfigFile(topoConfigPath, dest.Host, modifiers); err != nil {
 		return err
 	}
 
 	defaultConfigPath := filepath.Join(home, ".ssh", "config")
-	return updateConfigFile(defaultConfigPath, "", []ConfigDirective{
-		NewConfigDirectivePath("Include", topoConfigPath),
+	return updateConfigFile(defaultConfigPath, "", []ConfigDirectiveModifier{
+		NewEnsureConfigDirectivePath("Include", topoConfigPath),
 	})
 }
 
@@ -155,8 +194,62 @@ func CheckForLegacyTopoConfigEntries() error {
 	}
 
 	if info.IsDir() {
-		return fmt.Errorf("legacy topo ssh config found at %s; please delete the directory and the corresponding Include directive from your ssh config to proceed. note: you will need to re-run topo setup-keys for any affected targets", topoConfigPath)
+		return errLegacyConfigEntries
 	}
 
 	return nil
+}
+
+func MigrateLegacyTopoConfig() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)
+	}
+
+	legacyDir := filepath.Join(home, ".ssh", "topo_config")
+	if err := CheckForLegacyTopoConfigEntries(); err != errLegacyConfigEntries {
+		if err == nil {
+			return fmt.Errorf("legacy topo ssh config directory not found at %s; nothing to migrate", legacyDir)
+		}
+		return err
+	}
+
+	legacyGlob := filepath.Join(legacyDir, "*.conf")
+	confFiles, err := filepath.Glob(legacyGlob)
+	if err != nil {
+		return fmt.Errorf("failed to list config files in %s: %w", legacyDir, err)
+	}
+
+	if len(confFiles) == 0 {
+		return fmt.Errorf("no .conf files found in %s; nothing to migrate", legacyDir)
+	}
+
+	var combined []byte
+	for _, confFile := range confFiles {
+		content, err := os.ReadFile(confFile)
+		if err != nil {
+			return fmt.Errorf("failed to read %s: %w", confFile, err)
+		}
+		combined = append(combined, content...)
+	}
+
+	unifiedPath := legacyDir + ".new"
+	// #nosec G703 -- ssh config is always stored in the user's home directory
+	if err := os.WriteFile(unifiedPath, combined, 0o600); err != nil {
+		return fmt.Errorf("failed to write unified config to %s: %w", unifiedPath, err)
+	}
+
+	if err := os.RemoveAll(legacyDir); err != nil {
+		return fmt.Errorf("failed to remove legacy config directory %s: %w", legacyDir, err)
+	}
+
+	if err := os.Rename(unifiedPath, legacyDir); err != nil {
+		return fmt.Errorf("failed to move migrated config to %s: %w", legacyDir, err)
+	}
+
+	defaultConfigPath := filepath.Join(home, ".ssh", "config")
+	return updateConfigFile(defaultConfigPath, "", []ConfigDirectiveModifier{
+		NewRemoveConfigDirectivePath("Include", legacyGlob),
+		NewEnsureConfigDirectivePath("Include", legacyDir),
+	})
 }
