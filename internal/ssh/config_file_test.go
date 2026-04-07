@@ -129,7 +129,7 @@ func TestCheckForLegacyConfigEntries(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 
-		err := ssh.CheckForLegacyConfigEntries()
+		err := ssh.CheckForLegacyTopoConfigEntries()
 
 		assert.NoError(t, err)
 	})
@@ -142,7 +142,7 @@ func TestCheckForLegacyConfigEntries(t *testing.T) {
 		err = os.Mkdir(filepath.Join(tmp, ".ssh", "topo_config"), 0o600)
 		require.NoError(t, err)
 
-		err = ssh.CheckForLegacyConfigEntries()
+		err = ssh.CheckForLegacyTopoConfigEntries()
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "legacy topo ssh config")

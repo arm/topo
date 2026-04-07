@@ -139,7 +139,7 @@ func CreateOrModifyConfigFile(dest Destination, directives []ConfigDirective) er
 	})
 }
 
-func CheckForLegacyConfigEntries() error {
+func CheckForLegacyTopoConfigEntries() error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to determine home directory for SSH config: %w", err)

@@ -26,7 +26,7 @@ var setupKeysCmd = &cobra.Command{
 			return err
 		}
 
-		if err := ssh.CheckForLegacyConfigEntries(); err != nil {
+		if err := ssh.CheckForLegacyTopoConfigEntries(); err != nil {
 			return err
 		}
 
