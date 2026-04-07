@@ -54,7 +54,6 @@ user homer
 		}
 		assert.Equal(t, want, got)
 	})
-
 }
 
 func TestIsExplicitHostConfig(t *testing.T) {

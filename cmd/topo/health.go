@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -40,7 +39,9 @@ var healthCmd = &cobra.Command{
 		}
 
 		if targetArg, ok := lookupTarget(cmd); ok {
-			targetReport, err := health.CheckTarget(context.Background(), ssh.NewDestination(targetArg), probeOpts)
+			ctx, cancel := contextWithTimeout(cmd)
+			defer cancel()
+			targetReport, err := health.CheckTarget(ctx, ssh.NewDestination(targetArg), probeOpts)
 			if err != nil {
 				if spinner != nil {
 					spinner.Stop()
@@ -62,6 +63,7 @@ var healthCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(healthCmd)
+	addTimeoutFlag(healthCmd, defaultTimeout)
 	healthCmd.Flags().Bool(acceptNewHostFlag, false, "Automatically trust and add new SSH host keys for the target")
 	rootCmd.AddCommand(healthCmd)
 }

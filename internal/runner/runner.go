@@ -8,7 +8,7 @@ import (
 )
 
 // ErrTimeout is returned when a command fails due to context cancellation or deadline.
-var ErrTimeout = errors.New("command timed out")
+var ErrTimeout = errors.New("timed out")
 
 type Runner interface {
 	Run(ctx context.Context, command string) (string, error)

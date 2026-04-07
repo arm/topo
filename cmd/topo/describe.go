@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -27,7 +26,9 @@ var describeCmd = &cobra.Command{
 
 		r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 		probe := target.NewHardwareProbe(r)
-		hwProfile, err := probe.Probe(context.Background())
+		ctx, cancel := contextWithTimeout(cmd)
+		defer cancel()
+		hwProfile, err := probe.Probe(ctx)
 		if err != nil {
 			return err
 		}
@@ -50,5 +51,6 @@ var describeCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(describeCmd)
+	addTimeoutFlag(describeCmd, defaultTimeout)
 	rootCmd.AddCommand(describeCmd)
 }

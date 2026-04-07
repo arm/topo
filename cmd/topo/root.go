@@ -36,7 +36,6 @@ func init() {
 
 const targetEnvVar = "TOPO_TARGET"
 
-
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
 		"target", "t", "",
@@ -69,6 +68,8 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 	}
 	return t, nil
 }
+
+const defaultTimeout = 30 * time.Second
 
 func addTimeoutFlag(cmd *cobra.Command, defaultTimeout time.Duration) {
 	cmd.Flags().Duration("timeout", defaultTimeout, "Maximum time to wait for the command to complete (0 to disable)")

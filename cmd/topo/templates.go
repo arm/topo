@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 
 	"github.com/arm/topo/internal/catalog"
@@ -39,7 +38,9 @@ var templatesCmd = &cobra.Command{
 			if exists {
 				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 				probe := target.NewHardwareProbe(r)
-				hwProfile, err := probe.Probe(context.Background())
+				ctx, cancel := contextWithTimeout(cmd)
+				defer cancel()
+				hwProfile, err := probe.Probe(ctx)
 				if err != nil {
 					return err
 				}
@@ -54,6 +55,7 @@ var templatesCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(templatesCmd)
+	addTimeoutFlag(templatesCmd, defaultTimeout)
 	templatesCmd.Flags().StringVar(
 		&targetDescriptionPath,
 		"target-description",
