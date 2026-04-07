@@ -5,8 +5,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/setupkeys"
-	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
-	"github.com/arm/topo/internal/setupkeys/sshkeygen"
+	"github.com/arm/topo/internal/setupkeys/operations"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
@@ -19,8 +18,8 @@ func TestNewKeySetup(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Len(t, got, 2)
-			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
-			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+			require.IsType(t, &operations.SSHKeyGen{}, got[0])
+			require.IsType(t, &operations.PubKeyTransfer{}, got[1])
 		})
 
 		t.Run("ed25519 with custom private key path", func(t *testing.T) {
@@ -32,8 +31,8 @@ func TestNewKeySetup(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Len(t, got, 2)
-			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
-			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+			require.IsType(t, &operations.SSHKeyGen{}, got[0])
+			require.IsType(t, &operations.PubKeyTransfer{}, got[1])
 		})
 
 		t.Run("rsa with custom private key path", func(t *testing.T) {
@@ -45,8 +44,8 @@ func TestNewKeySetup(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Len(t, got, 2)
-			require.IsType(t, &sshkeygen.SSHKeyGen{}, got[0])
-			require.IsType(t, &pubkeytransfer.PubKeyTransfer{}, got[1])
+			require.IsType(t, &operations.SSHKeyGen{}, got[0])
+			require.IsType(t, &operations.PubKeyTransfer{}, got[1])
 		})
 	})
 }

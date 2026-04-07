@@ -1,4 +1,4 @@
-package sshkeygen
+package operations
 
 import (
 	"fmt"
