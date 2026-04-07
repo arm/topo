@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/arm/topo/internal/catalog"
 )
 
 type DestDirExistsError struct {
@@ -26,10 +24,10 @@ type Source interface {
 }
 
 func NewSource(source string) (Source, error) {
-	if strings.HasPrefix(source, "template:") || strings.HasPrefix(source, "git:") || strings.HasPrefix(source, "dir:") {
+	if strings.HasPrefix(source, "git:") || strings.HasPrefix(source, "dir:") {
 		parts := strings.SplitN(source, ":", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)
+			return nil, fmt.Errorf("invalid source format: %s (check --help for expected format)", source)
 		}
 
 		sourceType := parts[0]
@@ -40,14 +38,12 @@ func NewSource(source string) (Source, error) {
 		}
 
 		switch sourceType {
-		case "template":
-			return TemplateNameSource(sourceValue), nil
 		case "git":
 			return NewGitSource(sourceValue), nil
 		case "dir":
 			return DirSource{Path: sourceValue}, nil
 		default:
-			return nil, fmt.Errorf("unsupported source type: %s (supported: template:, git:, dir:)", sourceType)
+			return nil, fmt.Errorf("unsupported source type: %s (supported: git:, dir:)", sourceType)
 		}
 	}
 
@@ -57,10 +53,10 @@ func NewSource(source string) (Source, error) {
 
 	sourceType, _, hasType := strings.Cut(source, ":")
 	if hasType {
-		return nil, fmt.Errorf("unsupported source type: %s (supported: template:, git:, dir:)", sourceType)
+		return nil, fmt.Errorf("unsupported source type: %s (supported: git:, dir:)", sourceType)
 	}
 
-	return nil, fmt.Errorf("invalid source format: %s (expected format: <type>:<value>, e.g., template:hello-world or git:https://github.com/user/repo.git)", source)
+	return nil, fmt.Errorf("invalid source format: %s (check --help for expected formats)", source)
 }
 
 func isGitURL(source string) bool {
@@ -69,36 +65,6 @@ func isGitURL(source string) bool {
 		strings.HasPrefix(source, "https://") ||
 		strings.HasPrefix(source, "http://") ||
 		strings.HasPrefix(source, "git://")
-}
-
-type TemplateNameSource string
-
-func (t TemplateNameSource) CopyTo(destDir string) error {
-	templateRepo, err := catalog.GetTemplateRepo(string(t))
-	if err != nil {
-		return err
-	}
-	gitSource := GitSource{
-		URL: templateRepo.URL,
-		Ref: templateRepo.Ref,
-	}
-	return gitSource.CopyTo(destDir)
-}
-
-func (t TemplateNameSource) String() string {
-	return fmt.Sprintf("template:%s", string(t))
-}
-
-func (t TemplateNameSource) GetName() (string, error) {
-	templateRepo, err := catalog.GetTemplateRepo(string(t))
-	if err != nil {
-		return "", err
-	}
-	gitSource := GitSource{
-		URL: templateRepo.URL,
-		Ref: templateRepo.Ref,
-	}
-	return gitSource.GetName()
 }
 
 type GitSource struct {

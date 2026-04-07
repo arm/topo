@@ -13,14 +13,6 @@ import (
 )
 
 func TestNewSource(t *testing.T) {
-	t.Run("template source", func(t *testing.T) {
-		got, err := template.NewSource("template:hello")
-
-		require.NoError(t, err)
-		want := template.TemplateNameSource("hello")
-		assert.Equal(t, want, got)
-	})
-
 	t.Run("dir source", func(t *testing.T) {
 		tests := []struct {
 			name  string
@@ -148,11 +140,6 @@ func TestNewSource(t *testing.T) {
 				errorContains: "invalid source format",
 			},
 			{
-				name:          "empty value",
-				input:         "template:",
-				errorContains: "source value cannot be empty",
-			},
-			{
 				name:          "empty source",
 				input:         "",
 				errorContains: "invalid source format",
@@ -171,15 +158,6 @@ func TestNewSource(t *testing.T) {
 				assert.ErrorContains(t, err, tt.errorContains)
 			})
 		}
-	})
-}
-
-func TestTemplateIdSource(t *testing.T) {
-	t.Run("String", func(t *testing.T) {
-		t.Run("returns template name in correct format", func(t *testing.T) {
-			src := template.TemplateNameSource("hello-world")
-			assert.Equal(t, "template:hello-world", src.String())
-		})
 	})
 }
 
