@@ -1,6 +1,5 @@
 package health
 
-
 type CheckKind int
 
 const (
@@ -199,4 +198,3 @@ func hasAnyInstalledPrerequisite(required []SoftwareDependency, installed map[So
 	}
 	return false
 }
-
