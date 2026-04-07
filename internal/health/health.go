@@ -66,7 +66,7 @@ func (r TargetReport) MarshalJSON() ([]byte, error) {
 func CheckHost() HostReport {
 	r := runner.NewLocal()
 	commandSuccessful := func(fullCmd string) error {
-		_, err := r.Run(command.WrapInLoginShell(fullCmd))
+		_, err := r.Run(context.Background(), command.WrapInLoginShell(fullCmd))
 		return err
 	}
 	dependencyStatuses := PerformChecks(HostRequiredDependencies, r.BinaryExists, commandSuccessful)
