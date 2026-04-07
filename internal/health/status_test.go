@@ -19,6 +19,7 @@ func TestProbeHealthStatus(t *testing.T) {
 		r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("remoteproc0\nremoteproc1", nil)
 		r.On("Run", context.Background(), command.WrapInLoginShell("cat /sys/class/remoteproc/*/name")).Return("foo\nbar", nil)
 		r.On("Run", context.Background(), mock.AnythingOfType("string")).Maybe().Return("", fmt.Errorf("not found"))
+		r.On("BinaryExists", mock.AnythingOfType("string")).Maybe().Return(fmt.Errorf("not found"))
 
 		ts := health.ProbeHealthStatus(context.Background(), r)
 
@@ -30,8 +31,8 @@ func TestProbeHealthStatus(t *testing.T) {
 	t.Run("reports binary name when lookup fails", func(t *testing.T) {
 		r := &runner.Mock{}
 		r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("", fmt.Errorf("not found"))
-		r.On("Run", context.Background(), command.UnsafeBinaryLookupCommand("docker")).Return("", fmt.Errorf("exit status 127"))
-		r.On("Run", context.Background(), command.UnsafeBinaryLookupCommand("lscpu")).Return("", fmt.Errorf("exit status 127"))
+		r.On("BinaryExists", "docker").Return(fmt.Errorf(`"docker" not found in $PATH`))
+		r.On("BinaryExists", "lscpu").Return(fmt.Errorf(`"lscpu" not found in $PATH`))
 
 		ts := health.ProbeHealthStatus(context.Background(), r)
 
@@ -45,6 +46,7 @@ func TestProbeHealthStatus(t *testing.T) {
 	t.Run("succeeds when no remoteproc support", func(t *testing.T) {
 		r := &runner.Mock{}
 		r.On("Run", context.Background(), mock.AnythingOfType("string")).Return("", fmt.Errorf("no such directory"))
+		r.On("BinaryExists", mock.AnythingOfType("string")).Maybe().Return(fmt.Errorf("not found"))
 
 		ts := health.ProbeHealthStatus(context.Background(), r)
 

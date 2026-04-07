@@ -2,7 +2,6 @@ package health
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
@@ -35,11 +34,7 @@ func ProbeHealthStatus(ctx context.Context, r runner.Runner) HealthStatus {
 
 	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, hs.Hardware.Capabilities())
 	binaryExists := func(bin string) error {
-		// We can use `UnsafeBinaryLookupCommand`, because the dependencies we're checking are hardcoded in the codebase
-		if _, err := r.Run(ctx, command.UnsafeBinaryLookupCommand(bin)); err != nil {
-			return fmt.Errorf("%q not found in $PATH", bin)
-		}
-		return nil
+		return r.BinaryExists(bin)
 	}
 	commandSuccessful := func(fullCmd string) error {
 		_, err := r.Run(ctx, command.WrapInLoginShell(fullCmd))

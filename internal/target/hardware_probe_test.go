@@ -17,7 +17,7 @@ func TestHardwareProbe(t *testing.T) {
 	t.Run("Probe", func(t *testing.T) {
 		t.Run("returns model name and features", func(t *testing.T) {
 			r := &runner.Mock{}
-			r.On("Run", context.Background(), command.WrapInLoginShell("command -v lscpu")).Return("/usr/bin/lscpu", nil)
+			r.On("BinaryExists", "lscpu").Return(nil)
 			r.On("Run", context.Background(), command.WrapInLoginShell("lscpu --json")).Return(testutil.LsCpuOutputRaw, nil)
 			r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("", nil)
 			r.On("Run", context.Background(), command.WrapInLoginShell("cat /proc/meminfo")).Return("MemTotal:       16384000 kB", nil)
@@ -42,18 +42,18 @@ func TestHardwareProbe(t *testing.T) {
 
 		t.Run("returns error when lscpu not found", func(t *testing.T) {
 			r := &runner.Mock{}
-			r.On("Run", context.Background(), command.WrapInLoginShell("command -v lscpu")).Return("", fmt.Errorf("%q executable file not found in $PATH", "lscpu"))
+			r.On("BinaryExists", "lscpu").Return(fmt.Errorf(`"lscpu" not found in $PATH`))
 			probe := target.NewHardwareProbe(r)
 
 			_, err := probe.Probe(context.Background())
 
-			assert.ErrorContains(t, err, `"lscpu" executable file not found in $PATH`)
+			assert.ErrorContains(t, err, `"lscpu" not found in $PATH`)
 			r.AssertExpectations(t)
 		})
 
 		t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
 			r := &runner.Mock{}
-			r.On("Run", context.Background(), command.WrapInLoginShell("command -v lscpu")).Return("/usr/bin/lscpu", nil)
+			r.On("BinaryExists", "lscpu").Return(nil)
 			r.On("Run", context.Background(), command.WrapInLoginShell("lscpu --json")).Return("not json", nil)
 			probe := target.NewHardwareProbe(r)
 

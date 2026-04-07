@@ -81,7 +81,7 @@ func (p *HardwareProbe) ProbeRemoteproc(ctx context.Context) ([]RemoteprocCPU, e
 }
 
 func (p *HardwareProbe) collectCPUInfo(ctx context.Context) ([]HostProcessor, error) {
-	if _, err := p.runner.Run(ctx, command.UnsafeBinaryLookupCommand("lscpu")); err != nil {
+	if err := p.runner.BinaryExists("lscpu"); err != nil {
 		return nil, err
 	}
 

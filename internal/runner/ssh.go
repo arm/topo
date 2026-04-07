@@ -2,8 +2,10 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -52,6 +54,13 @@ func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []by
 		return "", ErrTimeout
 	}
 	return out, err
+}
+
+func (r *SSH) BinaryExists(bin string) error {
+	if _, err := r.Run(context.Background(), command.UnsafeBinaryLookupCommand(bin)); err != nil {
+		return fmt.Errorf("%q not found on remote target's $PATH", bin)
+	}
+	return nil
 }
 
 func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArgs []string) (string, error) {

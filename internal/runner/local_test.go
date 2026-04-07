@@ -40,3 +40,19 @@ func TestLocal(t *testing.T) {
 		assert.Equal(t, "hello && echo world\n", got)
 	})
 }
+
+func TestLocalBinaryExists(t *testing.T) {
+	r := runner.NewLocal()
+
+	t.Run("returns nil for a binary that exists", func(t *testing.T) {
+		err := r.BinaryExists("sh")
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("returns error mentioning binary name when not found", func(t *testing.T) {
+		err := r.BinaryExists("definitely-not-a-real-binary")
+
+		assert.EqualError(t, err, `"definitely-not-a-real-binary" not found in $PATH`)
+	})
+}
