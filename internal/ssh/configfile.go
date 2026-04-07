@@ -54,9 +54,13 @@ func readConfigFile(path string) (*sshconfig.Config, error) {
 }
 
 func findOrCreateHostBlock(cfg *sshconfig.Config, alias string) (*sshconfig.Host, error) {
-	for _, host := range cfg.Hosts {
-		hostStr := host.String()
-		if hostStr == alias || (host.Matches(alias) && hostStr != "") {
+	// all configs start with a default 'Host *' declaration
+	if alias == "" {
+		return cfg.Hosts[0], nil
+	}
+
+	for _, host := range cfg.Hosts[1:] {
+		if host.Matches(alias) {
 			return host, nil
 		}
 	}
