@@ -1,12 +1,5 @@
 package health
 
-import (
-	"fmt"
-	"os/exec"
-	"strings"
-
-	"github.com/arm/topo/internal/command"
-)
 
 type CheckKind int
 
@@ -207,21 +200,3 @@ func hasAnyInstalledPrerequisite(required []SoftwareDependency, installed map[So
 	return false
 }
 
-func BinaryExistsLocally(bin string) error {
-	if err := command.ValidateBinaryName(bin); err != nil {
-		return err
-	}
-	if _, err := exec.LookPath(bin); err != nil {
-		return fmt.Errorf("%q executable file not found in $PATH", bin)
-	}
-	return nil
-}
-
-func CommandSuccessfulLocally(fullCmd string) error {
-	cmdParts := strings.Fields(fullCmd)
-	execCmd := exec.Command(cmdParts[0], cmdParts[1:]...)
-	if err := execCmd.Run(); err != nil {
-		return fmt.Errorf("failed to run `%s`: %w", fullCmd, err)
-	}
-	return nil
-}
