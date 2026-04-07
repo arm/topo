@@ -29,7 +29,8 @@ var (
 
 var (
 	ErrPasswordAuthentication = errors.New("key-based SSH authentication is not setup")
-	ErrHostKeyVerification    = errors.New("ssh host key verification failed")
+	ErrHostKeyNew             = errors.New("ssh host key is not known")
+	ErrHostKeyChanged         = errors.New("ssh host key has changed")
 	ErrAuthenticationFailure  = errors.New("ssh authentication failed")
 )
 
@@ -110,7 +111,10 @@ func (p SSHAuthenticationProbe) runAuthenticationProbe(sshArgs []string) error {
 	}
 	output := strings.ToLower(out)
 	if strings.Contains(output, "host key verification failed") {
-		return ErrHostKeyVerification
+		if strings.Contains(output, "has changed") {
+			return ErrHostKeyChanged
+		}
+		return ErrHostKeyNew
 	}
 	if strings.Contains(output, "permission denied") || strings.Contains(output, "authentication failed") || strings.Contains(output, "password") {
 		return ErrAuthenticationFailure
