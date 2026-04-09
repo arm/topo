@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestListRepos(t *testing.T) {
 	t.Run("parses valid JSON successfully", func(t *testing.T) {
 		jsonData := []byte(`[
