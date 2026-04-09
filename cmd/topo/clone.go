@@ -34,11 +34,11 @@ Local directory (must contain a Topo template):
 Some projects require build arguments. Supply them on the command line or answer prompts:
 
   # Will prompt for required args
-  topo clone dir:topo-welcome
+  topo clone https://github.com/Arm-Examples/topo-welcome.git
   # Provide args explicitly
-  topo clone dir:topo-welcome GREETING_NAME="World"
+  topo clone https://github.com/Arm-Examples/topo-welcome.git GREETING_NAME="World"
   # With an explicit path
-  topo clone dir:topo-welcome my-demo GREETING_NAME="World"
+  topo clone https://github.com/Arm-Examples/topo-welcome.git my-demo GREETING_NAME="World"
 `,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
