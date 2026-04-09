@@ -57,6 +57,12 @@ func RequireWriteFile(t testing.TB, path, content string) {
 	require.NoError(t, err)
 }
 
+func RequireMkdirAll(t testing.TB, path string) {
+	t.Helper()
+	err := os.MkdirAll(path, 0o700)
+	require.NoError(t, err)
+}
+
 func SanitiseTestName(t testing.TB) string {
 	name := strings.ToLower(t.Name())
 	name = strings.ReplaceAll(name, "/", "-")
