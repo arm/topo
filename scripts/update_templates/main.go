@@ -45,7 +45,7 @@ func main() {
 			continue
 		}
 
-		repoURL := fmt.Sprintf("git@github.com:%s.git", repo)
+		repoURL := fmt.Sprintf("https://github.com/%s.git", repo)
 
 		tmpl, err := BuildTemplate(repoURL, composeBytes)
 		if err != nil {
