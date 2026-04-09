@@ -46,7 +46,7 @@ totalmemory_kb: 4194304
 
 			require.NoError(t, err, output)
 			assert.Contains(t, output, "✅ Hello World")
-			assert.Contains(t, output, "❌ Lightbulb moment")
+			assert.Contains(t, output, "❌ Lightbulb Moment")
 		})
 
 		t.Run("correctly handles the --target flag when no target description is provided", func(t *testing.T) {
