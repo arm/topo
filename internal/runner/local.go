@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+
+	"github.com/google/shlex"
 )
 
 type Local struct{}
@@ -22,8 +24,12 @@ func (r *Local) RunWithStdin(ctx context.Context, cmdStr string, stdin []byte) (
 }
 
 func (r *Local) exec(ctx context.Context, cmdStr string, stdin []byte) (string, error) {
+	args, err := shlex.Split(cmdStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse command: %w", err)
+	}
 	// #nosec G204 -- command should be validated by callers
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", cmdStr)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
@@ -31,7 +37,7 @@ func (r *Local) exec(ctx context.Context, cmdStr string, stdin []byte) (string, 
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		if ctx.Err() != nil {
 			return "", ErrTimeout
