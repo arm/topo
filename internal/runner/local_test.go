@@ -40,7 +40,6 @@ func TestLocal(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "hello && echo world\n", got)
 		})
-
 	})
 
 	t.Run("BinaryExists", func(t *testing.T) {
