@@ -46,9 +46,10 @@ changelog:
   sort: asc
   abbrev: -1
   filters:
-    exclude:
-      - "^docs:"
-      - "^chore:"
+    include:
+      - '^(feat|fix|perf|security|breaking|build)(\\([^)]+\\))?(!)?: .*$'
+      - '^.*!:.*$'
+      - '^.*BREAKING CHANGE:.*$'
   groups:
     - title: Breaking Changes
       regexp: '^.*?!:.*$|^.*BREAKING CHANGE:.*$'
