@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"github.com/arm/topo/internal/runner"
 )
 
 var (
@@ -12,20 +14,16 @@ var (
 	ErrAuthenticationFailure = errors.New("ssh authentication failed")
 )
 
-type sshRunnerWithExtraArgs interface {
-	RunWithArgs(ctx context.Context, command string, sshArgs ...string) (string, error)
-}
-
 type SSHAuthenticationProbeOptions struct {
 	AcceptNewHostKeys bool
 }
 
-func NewSSHAuthenticationProbe(r sshRunnerWithExtraArgs, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
+func NewSSHAuthenticationProbe(r *runner.SSH, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
 	return SSHAuthenticationProbe{runner: r, opts: opts}
 }
 
 type SSHAuthenticationProbe struct {
-	runner sshRunnerWithExtraArgs
+	runner *runner.SSH
 	opts   SSHAuthenticationProbeOptions
 }
 
