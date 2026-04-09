@@ -47,7 +47,7 @@ func TestLocal(t *testing.T) {
 		t.Run("returns nil for a binary that exists", func(t *testing.T) {
 			r := runner.NewLocal()
 
-			err := r.BinaryExists("sh")
+			err := r.BinaryExists("ls")
 
 			assert.NoError(t, err)
 		})
