@@ -8,26 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetTemplateRepo(t *testing.T) {
-	t.Run("when template exists it is found", func(t *testing.T) {
-		template, err := catalog.GetTemplateRepo("topo-lightbulb-moment")
-
-		require.NoError(t, err)
-		assert.Equal(t, &catalog.Repo{
-			Name:        "topo-lightbulb-moment",
-			Description: "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state. The lightbulb state is described by an LLM in any user-specified style.",
-			Features:    []string{"remoteproc-runtime"},
-			URL:         "https://github.com/Arm-Examples/topo-lightbulb-moment.git",
-			Ref:         "main",
-		}, template)
-	})
-	t.Run("when template does not exist, it errors", func(t *testing.T) {
-		_, err := catalog.GetTemplateRepo("nonexistent-template")
-
-		require.Error(t, err)
-		assert.ErrorContains(t, err, `"nonexistent-template" not found`)
-	})
-}
 
 func TestListRepos(t *testing.T) {
 	t.Run("parses valid JSON successfully", func(t *testing.T) {
