@@ -72,7 +72,7 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 const defaultTimeout = 5 * time.Second
 
 func addTimeoutFlag(cmd *cobra.Command, defaultTimeout time.Duration) {
-	cmd.Flags().Duration("timeout", defaultTimeout, "Maximum time to wait for the command to complete (0 to disable)")
+	cmd.Flags().Duration("timeout", defaultTimeout, "Maximum time to wait for the command to complete (0 to disable timeout)")
 }
 
 func contextWithTimeout(cmd *cobra.Command) (context.Context, context.CancelFunc) {
