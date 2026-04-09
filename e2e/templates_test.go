@@ -22,8 +22,8 @@ func TestTemplates(t *testing.T) {
 
 		output := string(out)
 
-		assert.Contains(t, output, "topo-welcome")
-		assert.Contains(t, output, "https://github.com/")
+		assert.Contains(t, output, "Hello World")
+		assert.Contains(t, output, "https://github.com")
 		assert.Contains(t, output, "Features:")
 	})
 
@@ -45,8 +45,8 @@ totalmemory_kb: 4194304
 			output := string(out)
 
 			require.NoError(t, err, output)
-			assert.Contains(t, output, "✅ topo-welcome")
-			assert.Contains(t, output, "❌ topo-lightbulb-moment")
+			assert.Contains(t, output, "✅ Hello World")
+			assert.Contains(t, output, "❌ Lightbulb moment")
 		})
 
 		t.Run("correctly handles the --target flag when no target description is provided", func(t *testing.T) {
@@ -58,7 +58,7 @@ totalmemory_kb: 4194304
 			output := string(out)
 
 			require.NoError(t, err, output)
-			assert.Contains(t, output, "✅ topo-welcome")
+			assert.Contains(t, output, "✅ Hello World")
 		})
 	})
 

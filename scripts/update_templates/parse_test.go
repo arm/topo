@@ -23,7 +23,7 @@ func TestBuildTemplate(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, Template{
-			Name:        "Example-Template",
+			Name:        "Example Template",
 			Description: "Example description",
 			Features:    []string{"SME", "NEON"},
 			URL:         "git@github.com:Arm-Debug/example.git",

@@ -3,7 +3,7 @@
     "name": "Hello World",
     "description": "A minimal \"Hello, World\" web app for validating a Topo setup and deployment.\nIt runs a single service that exposes a web page on the target,\nwith the greeting text customizable via the GREETING_NAME parameter.\n",
     "features": null,
-    "url": "git@github.com:Arm-Examples/topo-welcome.git",
+    "url": "https://github.com/Arm-Examples/topo-welcome.git",
     "ref": "main"
   },
   {
@@ -12,7 +12,7 @@
     "features": [
       "remoteproc-runtime"
     ],
-    "url": "git@github.com:Arm-Examples/topo-lightbulb-moment.git",
+    "url": "https://github.com/Arm-Examples/topo-lightbulb-moment.git",
     "ref": "main"
   },
   {
@@ -22,7 +22,7 @@
       "SVE",
       "NEON"
     ],
-    "url": "git@github.com:Arm-Examples/topo-cpu-ai-chat.git",
+    "url": "https://github.com/Arm-Examples/topo-cpu-ai-chat.git",
     "ref": "main"
   },
   {
@@ -32,7 +32,7 @@
       "NEON",
       "SVE"
     ],
-    "url": "git@github.com:Arm-Examples/topo-simd-visual-benchmark.git",
+    "url": "https://github.com/Arm-Examples/topo-simd-visual-benchmark.git",
     "ref": "main"
   }
 ]
