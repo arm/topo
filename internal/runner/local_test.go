@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/runner"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,5 +30,13 @@ func TestLocal(t *testing.T) {
 		_, err := r.Run(ctx, "sleep 10")
 
 		require.ErrorIs(t, err, runner.ErrTimeout)
+	})
+
+	t.Run("executes binary directly without shell interpretation", func(t *testing.T) {
+		r := runner.NewLocal()
+		got, err := r.Run(context.Background(), "echo hello && echo world")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "hello && echo world\n", got)
 	})
 }
