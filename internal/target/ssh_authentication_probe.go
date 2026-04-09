@@ -7,10 +7,9 @@ import (
 )
 
 var (
-	ErrPasswordAuthentication = errors.New("key-based SSH authentication is not setup")
-	ErrHostKeyNew             = errors.New("ssh host key is not known")
-	ErrHostKeyChanged         = errors.New("ssh host key has changed")
-	ErrAuthenticationFailure  = errors.New("ssh authentication failed")
+	ErrHostKeyNew            = errors.New("ssh host key is not known")
+	ErrHostKeyChanged        = errors.New("ssh host key has changed")
+	ErrAuthenticationFailure = errors.New("ssh authentication failed")
 )
 
 type sshRunnerWithExtraArgs interface {
@@ -30,87 +29,26 @@ type SSHAuthenticationProbe struct {
 	opts   SSHAuthenticationProbeOptions
 }
 
+// Probe verifies SSH connectivity by attempting public key authentication.
+// Returns ErrAuthenticationFailure if keys are not configured, or a host key
+// error if the target's identity cannot be verified.
 func (p SSHAuthenticationProbe) Probe(ctx context.Context) error {
-	if err := p.verifyKnownHost(ctx); err != nil {
-		return err
-	}
-
-	if err := p.authenticateUsingPublicKey(ctx); err == nil {
-		return nil
-	} else if !errors.Is(err, ErrAuthenticationFailure) {
-		return err
-	}
-
-	if err := p.authenticateUsingPassword(ctx); err == nil {
-		return nil
-	} else if errors.Is(err, ErrAuthenticationFailure) {
-		return ErrPasswordAuthentication
-	} else {
-		return err
-	}
-}
-
-func (p SSHAuthenticationProbe) verifyKnownHost(ctx context.Context) error {
-	if p.opts.AcceptNewHostKeys {
-		return nil
-	}
-
-	err := p.runAuthenticationProbe(ctx, BuildProbeArgs(KnownHost, false))
-	if err == nil || errors.Is(err, ErrAuthenticationFailure) {
-		return nil
-	}
-
-	return err
-}
-
-func (p SSHAuthenticationProbe) authenticateUsingPublicKey(ctx context.Context) error {
-	return p.runAuthenticationProbe(ctx, BuildProbeArgs(PublicKey, p.opts.AcceptNewHostKeys))
-}
-
-func (p SSHAuthenticationProbe) authenticateUsingPassword(ctx context.Context) error {
-	return p.runAuthenticationProbe(ctx, BuildProbeArgs(Password, p.opts.AcceptNewHostKeys))
-}
-
-// All SSH authentication probes run the command "true" to check if the authentication method works.
-// All sshArgs should be hardcoded SSH options, not user-provided arguments.
-func (p SSHAuthenticationProbe) runAuthenticationProbe(ctx context.Context, sshArgs []string) error {
-	out, err := p.runner.RunWithArgs(ctx, "true", sshArgs...)
+	out, err := p.runner.RunWithArgs(ctx, "true", BuildProbeArgs(p.opts.AcceptNewHostKeys)...)
 	return ClassifySSHOutput(out, err)
 }
 
-type ProbeMethod int
-
-const (
-	PublicKey ProbeMethod = iota
-	Password
-	KnownHost
-)
-
-// BuildProbeArgs returns the SSH arguments for a given probe method.
-func BuildProbeArgs(method ProbeMethod, acceptNewHostKeys bool) []string {
-	var args []string
-	switch method {
-	case PublicKey:
-		args = []string{
-			"-o", "BatchMode=yes",
-			"-o", "PreferredAuthentications=publickey",
-		}
-	case Password:
-		args = []string{
-			"-o", "BatchMode=yes",
-			"-o", "PreferredAuthentications=password",
-			"-o", "NumberOfPasswordPrompts=0",
-		}
-	case KnownHost:
-		args = []string{
-			"-o", "StrictHostKeyChecking=yes",
-			"-o", "PreferredAuthentications=publickey",
-			"-o", "PasswordAuthentication=no",
-			"-o", "NumberOfPasswordPrompts=0",
-		}
+// BuildProbeArgs returns SSH arguments for a public key authentication probe.
+func BuildProbeArgs(acceptNewHostKeys bool) []string {
+	args := []string{
+		"-o", "BatchMode=yes",
+		"-o", "PreferredAuthentications=publickey",
+		"-o", "PasswordAuthentication=no",
+		"-o", "NumberOfPasswordPrompts=0",
 	}
 	if acceptNewHostKeys {
 		args = append(args, "-o", "StrictHostKeyChecking=accept-new")
+	} else {
+		args = append(args, "-o", "StrictHostKeyChecking=yes")
 	}
 	return args
 }

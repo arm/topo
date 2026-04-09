@@ -63,11 +63,11 @@ func TestGenerateTargetReport(t *testing.T) {
 		assert.Equal(t, health.CheckStatusOK, got.Connectivity.Status)
 	})
 
-	t.Run("when password authentication is required, Connectivity includes a setup-keys fix", func(t *testing.T) {
+	t.Run("when authentication fails, Connectivity includes a setup-keys fix", func(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{
 				Destination: ssh.NewDestination("user@my-target"),
-				Error:       target.ErrPasswordAuthentication,
+				Error:       target.ErrAuthenticationFailure,
 			},
 		}
 
