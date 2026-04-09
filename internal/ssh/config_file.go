@@ -166,7 +166,7 @@ func updateConfigFile(path string, host string, modifiers []ConfigDirectiveModif
 	return nil
 }
 
-func getSshConfigFilePath(name string) (string, error) {
+func getConfigFilePath(name string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to determine home directory for SSH config: %w", err)
@@ -176,7 +176,7 @@ func getSshConfigFilePath(name string) (string, error) {
 }
 
 func CreateOrModifyConfigFile(dest Destination, modifiers []ConfigDirectiveModifier) error {
-	topoConfigPath, err := getSshConfigFilePath(topoConfigFileName)
+	topoConfigPath, err := getConfigFilePath(topoConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func CreateOrModifyConfigFile(dest Destination, modifiers []ConfigDirectiveModif
 		return err
 	}
 
-	defaultConfigPath, err := getSshConfigFilePath(defaultConfigFileName)
+	defaultConfigPath, err := getConfigFilePath(defaultConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func CreateOrModifyConfigFile(dest Destination, modifiers []ConfigDirectiveModif
 }
 
 func CheckForLegacyTopoConfigEntries() error {
-	topoConfigPath, err := getSshConfigFilePath(topoConfigFileName)
+	topoConfigPath, err := getConfigFilePath(topoConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func CheckForLegacyTopoConfigEntries() error {
 }
 
 func MigrateLegacyTopoConfig() error {
-	legacyDir, err := getSshConfigFilePath(topoConfigFileName)
+	legacyDir, err := getConfigFilePath(topoConfigFileName)
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func MigrateLegacyTopoConfig() error {
 		return fmt.Errorf("failed to move migrated config to %s: %w", legacyDir, err)
 	}
 
-	defaultConfigPath, err := getSshConfigFilePath(defaultConfigFileName)
+	defaultConfigPath, err := getConfigFilePath(defaultConfigFileName)
 	if err != nil {
 		return err
 	}
