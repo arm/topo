@@ -43,7 +43,7 @@ func NewSource(source string) (Source, error) {
 		case "dir":
 			return DirSource{Path: sourceValue}, nil
 		default:
-			return nil, fmt.Errorf("unsupported source type: %s (supported: git:, dir:)", sourceType)
+			return nil, fmt.Errorf("unsupported source type: %s (check --help for expected format)", sourceType)
 		}
 	}
 
@@ -53,7 +53,7 @@ func NewSource(source string) (Source, error) {
 
 	sourceType, _, hasType := strings.Cut(source, ":")
 	if hasType {
-		return nil, fmt.Errorf("unsupported source type: %s (supported: git:, dir:)", sourceType)
+		return nil, fmt.Errorf("unsupported source type: %s (check --help for expected format)", sourceType)
 	}
 
 	return nil, fmt.Errorf("invalid source format: %s (check --help for expected formats)", source)
