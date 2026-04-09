@@ -3,182 +3,295 @@ package target_test
 import (
 	"context"
 	"errors"
-	"slices"
 	"testing"
 
 	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-type mockSSHRunnerWithExtraArgs struct {
-	mock.Mock
+type probeResult struct {
+	output string
+	err    error
 }
 
-func (m *mockSSHRunnerWithExtraArgs) RunWithArgs(ctx context.Context, command string, sshArgs ...string) (string, error) {
-	ret := m.Called(ctx, command, sshArgs)
-	return ret.String(0), ret.Error(1)
+type stubRunner struct {
+	calls   [][]string
+	results []probeResult
 }
 
-var (
-	newHostKeyOutput = `No ED25519 host key is known for 10.2.4.68 and you have requested strict checking.
-Host key verification failed.`
-	changedHostKeyOutput = `Host key for 10.2.4.68 has changed and you have requested strict checking.
-Host key verification failed.`
-)
+func (s *stubRunner) RunWithArgs(_ context.Context, _ string, sshArgs ...string) (string, error) {
+	i := len(s.calls)
+	s.calls = append(s.calls, sshArgs)
+	return s.results[i].output, s.results[i].err
+}
 
-var (
-	publicKeyMode = mock.MatchedBy(func(args []string) bool {
-		return slices.Contains(args, "PreferredAuthentications=publickey") &&
-			!slices.Contains(args, "PasswordAuthentication=no")
-	})
-	passwordMode = mock.MatchedBy(func(args []string) bool {
-		return slices.Contains(args, "PreferredAuthentications=password")
-	})
-	knownHostMode = mock.MatchedBy(func(args []string) bool {
-		return slices.Contains(args, "PasswordAuthentication=no")
-	})
-)
+func TestClassifySSHOutput(t *testing.T) {
+	errSSH := errors.New("ssh failed")
+
+	tests := []struct {
+		name   string
+		output string
+		err    error
+		want   error
+	}{
+		{
+			name: "returns nil when no error",
+			err:  nil,
+			want: nil,
+		},
+		{
+			name:   "returns ErrHostKeyNew for generic host key verification failure",
+			output: "Host key verification failed.",
+			err:    errSSH,
+			want:   target.ErrHostKeyNew,
+		},
+		{
+			name:   "returns ErrHostKeyNew for unknown host key",
+			output: "No ED25519 host key is known for 10.2.4.68 and you have requested strict checking.\nHost key verification failed.",
+			err:    errSSH,
+			want:   target.ErrHostKeyNew,
+		},
+		{
+			name:   "returns ErrHostKeyChanged when host key has changed",
+			output: "Host key for 10.2.4.68 has changed and you have requested strict checking.\nHost key verification failed.",
+			err:    errSSH,
+			want:   target.ErrHostKeyChanged,
+		},
+		{
+			name:   "returns ErrAuthenticationFailure for permission denied",
+			output: "Permission denied",
+			err:    errSSH,
+			want:   target.ErrAuthenticationFailure,
+		},
+		{
+			name:   "returns ErrAuthenticationFailure for authentication failed",
+			output: "Authentication failed",
+			err:    errSSH,
+			want:   target.ErrAuthenticationFailure,
+		},
+		{
+			name:   "returns ErrAuthenticationFailure for password prompt",
+			output: "password:",
+			err:    errSSH,
+			want:   target.ErrAuthenticationFailure,
+		},
+		{
+			name:   "is case insensitive",
+			output: "HOST KEY VERIFICATION FAILED",
+			err:    errSSH,
+			want:   target.ErrHostKeyNew,
+		},
+		{
+			name:   "returns original error for unrecognized output",
+			output: "dial tcp: lookup host: no such host",
+			err:    errSSH,
+			want:   errSSH,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := target.ClassifySSHOutput(tt.output, tt.err)
+
+			if tt.want == nil {
+				require.NoError(t, got)
+			} else {
+				require.ErrorIs(t, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildProbeArgs(t *testing.T) {
+	tests := []struct {
+		name              string
+		method            target.ProbeMethod
+		acceptNewHostKeys bool
+		want              []string
+	}{
+		{
+			name:   "public key probe",
+			method: target.PublicKey,
+			want: []string{
+				"-o", "BatchMode=yes",
+				"-o", "PreferredAuthentications=publickey",
+			},
+		},
+		{
+			name:              "public key probe with accept new host keys",
+			method:            target.PublicKey,
+			acceptNewHostKeys: true,
+			want: []string{
+				"-o", "BatchMode=yes",
+				"-o", "PreferredAuthentications=publickey",
+				"-o", "StrictHostKeyChecking=accept-new",
+			},
+		},
+		{
+			name:   "password probe",
+			method: target.Password,
+			want: []string{
+				"-o", "BatchMode=yes",
+				"-o", "PreferredAuthentications=password",
+				"-o", "NumberOfPasswordPrompts=0",
+			},
+		},
+		{
+			name:              "password probe with accept new host keys",
+			method:            target.Password,
+			acceptNewHostKeys: true,
+			want: []string{
+				"-o", "BatchMode=yes",
+				"-o", "PreferredAuthentications=password",
+				"-o", "NumberOfPasswordPrompts=0",
+				"-o", "StrictHostKeyChecking=accept-new",
+			},
+		},
+		{
+			name:   "known host probe",
+			method: target.KnownHost,
+			want: []string{
+				"-o", "StrictHostKeyChecking=yes",
+				"-o", "PreferredAuthentications=publickey",
+				"-o", "PasswordAuthentication=no",
+				"-o", "NumberOfPasswordPrompts=0",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := target.BuildProbeArgs(tt.method, tt.acceptNewHostKeys)
+
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
 
 func TestSSHAuthenticationProbe(t *testing.T) {
 	errSSH := errors.New("ssh failed")
+	authDenied := probeResult{output: "Permission denied", err: errSSH}
+	success := probeResult{}
+	hostKeyNew := probeResult{output: "Host key verification failed", err: errSSH}
+	hostKeyChanged := probeResult{output: "Host key for 10.2.4.68 has changed.\nHost key verification failed.", err: errSSH}
+	unknownFailure := probeResult{output: "connection reset", err: errSSH}
 
-	t.Run("does not require password when public key succeeds", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return("", nil)
-
+	t.Run("succeeds when public key authenticates", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{success}}
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+
 		err := probe.Probe(context.Background())
 
 		require.NoError(t, err)
-		r.AssertExpectations(t)
-		call := r.Calls[0]
-		assert.Contains(t, call.Arguments[2], "StrictHostKeyChecking=accept-new")
+		assert.Len(t, r.calls, 1)
 	})
 
-	t.Run("returns new host key error when host key is unknown", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return(newHostKeyOutput, errSSH)
-
+	t.Run("falls back to password when public key fails auth", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{authDenied, success}}
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+
 		err := probe.Probe(context.Background())
 
-		require.ErrorIs(t, err, target.ErrHostKeyNew)
-		r.AssertNumberOfCalls(t, "RunWithArgs", 1)
+		require.NoError(t, err)
+		assert.Len(t, r.calls, 2)
 	})
 
-	t.Run("returns changed host key error when host key has changed", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return(changedHostKeyOutput, errSSH)
-
+	t.Run("returns ErrPasswordAuthentication when both auth methods fail", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{authDenied, authDenied}}
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
-		err := probe.Probe(context.Background())
 
-		require.ErrorIs(t, err, target.ErrHostKeyChanged)
-		r.AssertNumberOfCalls(t, "RunWithArgs", 1)
-	})
-
-	t.Run("returns new host key error for generic host key verification failure", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return("Host key verification failed", errSSH)
-
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
-		err := probe.Probe(context.Background())
-
-		require.ErrorIs(t, err, target.ErrHostKeyNew)
-		r.AssertNumberOfCalls(t, "RunWithArgs", 1)
-	})
-
-	t.Run("returns changed host key error for password probe", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return("Permission denied", errSSH)
-		r.On("RunWithArgs", context.Background(), "true", passwordMode).Return(changedHostKeyOutput, errSSH)
-
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
-		err := probe.Probe(context.Background())
-
-		require.ErrorIs(t, err, target.ErrHostKeyChanged)
-		r.AssertNumberOfCalls(t, "RunWithArgs", 2)
-	})
-
-	t.Run("returns password-only auth error when auth fails", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return("Permission denied", errSSH)
-		r.On("RunWithArgs", context.Background(), "true", passwordMode).Return("Authentication failed", errSSH)
-
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 		err := probe.Probe(context.Background())
 
 		require.ErrorIs(t, err, target.ErrPasswordAuthentication)
 	})
 
-	t.Run("does not require password when password probe succeeds", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return("Permission denied", errSSH)
-		r.On("RunWithArgs", context.Background(), "true", passwordMode).Return("", nil)
-
+	t.Run("stops at public key when error is not auth failure", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{hostKeyNew}}
 		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
-		err := probe.Probe(context.Background())
 
-		require.NoError(t, err)
-		r.AssertExpectations(t)
-	})
-
-	t.Run("returns error on non-auth failure for password probe", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return("Permission denied", errSSH)
-		r.On("RunWithArgs", context.Background(), "true", passwordMode).Return("Some other error", errSSH)
-
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
-		err := probe.Probe(context.Background())
-
-		require.ErrorIs(t, err, errSSH)
-	})
-
-	t.Run("ensures known host when not accepting new host keys", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", knownHostMode).Return("Permission denied", errSSH)
-		r.On("RunWithArgs", context.Background(), "true", publicKeyMode).Return("", nil)
-
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
-		err := probe.Probe(context.Background())
-
-		require.NoError(t, err)
-		r.AssertExpectations(t)
-		assert.Contains(t, r.Calls[0].Arguments[2], "PasswordAuthentication=no")
-	})
-
-	t.Run("returns new host key error when known host check fails", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", knownHostMode).Return("HOST KEY VERIFICATION FAILED", errSSH)
-
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
 		err := probe.Probe(context.Background())
 
 		require.ErrorIs(t, err, target.ErrHostKeyNew)
-		r.AssertNumberOfCalls(t, "RunWithArgs", 1)
+		assert.Len(t, r.calls, 1)
 	})
 
-	t.Run("returns changed host key error when known host check detects changed key", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", knownHostMode).Return(changedHostKeyOutput, errSSH)
+	t.Run("returns password probe error when it is not auth failure", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{authDenied, unknownFailure}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
 
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
-		err := probe.Probe(context.Background())
-
-		require.ErrorIs(t, err, target.ErrHostKeyChanged)
-		r.AssertNumberOfCalls(t, "RunWithArgs", 1)
-	})
-
-	t.Run("returns error when known host fails with other error", func(t *testing.T) {
-		r := &mockSSHRunnerWithExtraArgs{}
-		r.On("RunWithArgs", context.Background(), "true", knownHostMode).Return("dial tcp: lookup host: no such host", errSSH)
-
-		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
 		err := probe.Probe(context.Background())
 
 		require.ErrorIs(t, err, errSSH)
-		r.AssertNumberOfCalls(t, "RunWithArgs", 1)
+	})
+
+	t.Run("returns host key error from password probe", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{authDenied, hostKeyChanged}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+
+		err := probe.Probe(context.Background())
+
+		require.ErrorIs(t, err, target.ErrHostKeyChanged)
+	})
+
+	t.Run("skips known host check when accepting new host keys", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{success}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{AcceptNewHostKeys: true})
+
+		err := probe.Probe(context.Background())
+
+		require.NoError(t, err)
+		assert.Len(t, r.calls, 1)
+	})
+
+	t.Run("runs known host check first when not accepting new host keys", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{authDenied, success}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
+
+		err := probe.Probe(context.Background())
+
+		require.NoError(t, err)
+		assert.Len(t, r.calls, 2)
+		assert.Contains(t, r.calls[0], "PasswordAuthentication=no")
+	})
+
+	t.Run("stops at known host check when host key is unknown", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{hostKeyNew}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
+
+		err := probe.Probe(context.Background())
+
+		require.ErrorIs(t, err, target.ErrHostKeyNew)
+		assert.Len(t, r.calls, 1)
+	})
+
+	t.Run("stops at known host check when host key changed", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{hostKeyChanged}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
+
+		err := probe.Probe(context.Background())
+
+		require.ErrorIs(t, err, target.ErrHostKeyChanged)
+		assert.Len(t, r.calls, 1)
+	})
+
+	t.Run("returns non-auth error from known host check", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{unknownFailure}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
+
+		err := probe.Probe(context.Background())
+
+		require.ErrorIs(t, err, errSSH)
+		assert.Len(t, r.calls, 1)
+	})
+
+	t.Run("continues past known host check when auth is denied", func(t *testing.T) {
+		r := &stubRunner{results: []probeResult{authDenied, success}}
+		probe := target.NewSSHAuthenticationProbe(r, target.SSHAuthenticationProbeOptions{})
+
+		err := probe.Probe(context.Background())
+
+		require.NoError(t, err)
+		assert.Len(t, r.calls, 2)
 	})
 }
