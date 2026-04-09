@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"encoding/json"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -88,7 +87,6 @@ totalmemory_kb: 4194304
 func writeTargetDescription(t *testing.T, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "target-description.yaml")
-
-	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+	testutil.RequireWriteFile(t, path, content)
 	return path
 }

@@ -49,10 +49,9 @@ func TestInit(t *testing.T) {
 		require.NoError(t, project.Init(dir))
 
 		composeFile := filepath.Join(dir, template.ComposeFilename)
-		data, err := os.ReadFile(composeFile)
-		require.NoError(t, err)
+		data := testutil.RequireReadFile(t, composeFile)
 		var p types.Project
-		require.NoError(t, yaml.Unmarshal(data, &p))
+		require.NoError(t, yaml.Unmarshal([]byte(data), &p))
 		assert.Empty(t, p.Services)
 	})
 }
@@ -61,8 +60,8 @@ func mockTemplateSourceWithContent(t *testing.T, content, sourceName string) *mo
 	mockSource := &mockTemplateSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
-		require.NoError(t, os.MkdirAll(destDir, 0o755))
-		require.NoError(t, os.WriteFile(filepath.Join(destDir, template.ComposeFilename), []byte(content), 0o644))
+		testutil.RequireMkdirAll(t, destDir)
+		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
 	})
 	mockSource.On("GetName").Return(sourceName, nil)
 	t.Cleanup(func() {
@@ -106,8 +105,7 @@ x-topo:
 		err := project.Extend(targetProjectFile, mockSource, argProvider)
 		require.NoError(t, err)
 
-		data, err := os.ReadFile(targetProjectFile)
-		require.NoError(t, err, "failed to read compose file")
+		data := testutil.RequireReadFile(t, targetProjectFile)
 		sourcePath := filepath.Join(sourceName, "compose.yaml")
 		wantYAML := fmt.Sprintf(`
 name: example-project
@@ -121,7 +119,7 @@ services:
       file: %[1]s
       service: app2
 `, sourcePath)
-		assert.YAMLEq(t, wantYAML, string(data))
+		assert.YAMLEq(t, wantYAML, data)
 	})
 
 	t.Run("errors when directory exists", func(t *testing.T) {
@@ -156,8 +154,7 @@ x-topo:
 		err := project.Extend(targetProjectFile, mockSource, argProvider)
 		require.NoError(t, err)
 
-		got, err := os.ReadFile(targetProjectFile)
-		require.NoError(t, err)
+		got := testutil.RequireReadFile(t, targetProjectFile)
 		sourcePath := filepath.Join(sourceName, "compose.yaml")
 		want := fmt.Sprintf(`
 name: example-project
@@ -169,7 +166,7 @@ services:
 volumes:
   pretty_data: {}
 `, sourcePath)
-		assert.YAMLEq(t, want, string(got))
+		assert.YAMLEq(t, want, got)
 	})
 
 	t.Run("collects and injects build arguments", func(t *testing.T) {
@@ -197,8 +194,7 @@ x-topo:
 		err := project.Extend(targetProjectFile, mockSource, provider)
 		require.NoError(t, err)
 
-		got, err := os.ReadFile(targetProjectFile)
-		require.NoError(t, err)
+		got := testutil.RequireReadFile(t, targetProjectFile)
 		sourcePath := filepath.Join(sourceName, "compose.yaml")
 		want := fmt.Sprintf(`
 name: example-project
@@ -211,7 +207,7 @@ services:
       args:
         GREETING: "Hello, World"
 `, sourcePath)
-		assert.YAMLEq(t, want, string(got))
+		assert.YAMLEq(t, want, got)
 	})
 
 	t.Run("injects arguments only into services that declare them", func(t *testing.T) {
@@ -249,8 +245,7 @@ x-topo:
 		err := project.Extend(targetProjectFile, mockSource, provider)
 		require.NoError(t, err)
 
-		got, err := os.ReadFile(targetProjectFile)
-		require.NoError(t, err)
+		got := testutil.RequireReadFile(t, targetProjectFile)
 		sourcePath := filepath.Join(sourceName, "compose.yaml")
 		want := fmt.Sprintf(`
 name: example-project
@@ -270,7 +265,7 @@ services:
       args:
         PORT: "9090"
 `, sourcePath, sourcePath)
-		assert.YAMLEq(t, want, string(got))
+		assert.YAMLEq(t, want, got)
 	})
 
 	t.Run("does not collect optional arguments into x-topo", func(t *testing.T) {
@@ -301,8 +296,7 @@ x-topo:
 		err := project.Extend(targetProjectFile, mockSource, provider)
 		require.NoError(t, err)
 
-		got, err := os.ReadFile(targetProjectFile)
-		require.NoError(t, err)
+		got := testutil.RequireReadFile(t, targetProjectFile)
 		sourcePath := filepath.Join(sourceName, "compose.yaml")
 		want := fmt.Sprintf(`
 name: example-project
@@ -315,7 +309,7 @@ services:
       args:
         GREETING: "Hello, World"
 `, sourcePath)
-		assert.YAMLEq(t, want, string(got))
+		assert.YAMLEq(t, want, got)
 	})
 
 	t.Run("cleans up service directory when argument collection fails ", func(t *testing.T) {
@@ -398,10 +392,9 @@ x-topo:
       required: true
       example: bar
 `
-		got, err := os.ReadFile(composeFilePath)
-		require.NoError(t, err)
+		got := testutil.RequireReadFile(t, composeFilePath)
 
-		assert.YAMLEq(t, want, string(got))
+		assert.YAMLEq(t, want, got)
 	})
 }
 
@@ -418,12 +411,11 @@ services:
 
 		require.NoError(t, project.RemoveService(targetProjectFile, "removeMe"))
 
-		data, err := os.ReadFile(targetProjectFile)
-		require.NoError(t, err)
+		data := testutil.RequireReadFile(t, targetProjectFile)
 		want := `name: example-project
 services: {}
 `
-		assert.YAMLEq(t, want, string(data))
+		assert.YAMLEq(t, want, data)
 	})
 
 	t.Run("preserves comments when a service is removed", func(t *testing.T) {
@@ -442,8 +434,7 @@ services:
 
 		require.NoError(t, project.RemoveService(targetProjectFile, "removeMe"))
 
-		data, err := os.ReadFile(targetProjectFile)
-		require.NoError(t, err)
+		data := testutil.RequireReadFile(t, targetProjectFile)
 		want := `name: example-project
 services:
   # This is a comment that should be preserved
@@ -451,6 +442,6 @@ services:
     build:
       context: ./keepMe
 `
-		assert.Equal(t, want, string(data))
+		assert.Equal(t, want, data)
 	})
 }

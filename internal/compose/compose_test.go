@@ -1,7 +1,6 @@
 package compose_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -234,8 +233,7 @@ services:
         BAR: new-bar
 `
 		temporaryComposeFilePath := filepath.Join(t.TempDir(), "expected-compose.yml")
-		err := os.WriteFile(temporaryComposeFilePath, []byte(composeFileContents), 0o644)
-		require.NoError(t, err)
+		testutil.RequireWriteFile(t, temporaryComposeFilePath, composeFileContents)
 		proj, err := compose.ReadProject(temporaryComposeFilePath)
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(t.TempDir(), "test-compose.yml")
@@ -243,9 +241,8 @@ services:
 		err = compose.WriteProject(proj, composeFilePath)
 		require.NoError(t, err)
 
-		got, err := os.ReadFile(composeFilePath)
-		require.NoError(t, err)
-		assert.YAMLEq(t, composeFileContents, string(got))
+		got := testutil.RequireReadFile(t, composeFilePath)
+		assert.YAMLEq(t, composeFileContents, got)
 	})
 }
 

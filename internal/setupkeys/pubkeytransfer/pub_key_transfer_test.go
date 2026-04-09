@@ -2,13 +2,13 @@ package pubkeytransfer_test
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +19,7 @@ func TestPubKeyTransfer(t *testing.T) {
 			tmp := t.TempDir()
 			privKeyPath := filepath.Join(tmp, "id_ed25519_testrun")
 			pubKeyContent := []byte("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAItestkey")
-			require.NoError(t, os.WriteFile(privKeyPath+".pub", pubKeyContent, 0o600))
+			testutil.RequireWriteFile(t, privKeyPath+".pub", string(pubKeyContent))
 
 			r := &runner.Mock{}
 			r.On(

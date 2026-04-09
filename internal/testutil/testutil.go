@@ -102,6 +102,13 @@ func CmdWithOutput(output string, exitCode int) *exec.Cmd {
 	return exec.Command("sh", "-c", fmt.Sprintf("printf %%s \"$1\"; exit %d", exitCode), "sh", output)
 }
 
+func RequireReadFile(t testing.TB, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return string(data)
+}
+
 func AssertFileContents(t *testing.T, wantContents string, path string) {
 	t.Helper()
 
