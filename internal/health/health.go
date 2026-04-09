@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
@@ -66,7 +65,7 @@ func (r TargetReport) MarshalJSON() ([]byte, error) {
 func CheckHost() HostReport {
 	r := runner.NewLocal()
 	commandSuccessful := func(fullCmd string) error {
-		_, err := r.Run(context.Background(), command.WrapInLoginShell(fullCmd))
+		_, err := r.Run(context.Background(), fullCmd)
 		return err
 	}
 	dependencyStatuses := PerformChecks(HostRequiredDependencies, r.BinaryExists, commandSuccessful)
