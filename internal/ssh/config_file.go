@@ -11,8 +11,6 @@ import (
 	sshconfig "github.com/kevinburke/ssh_config"
 )
 
-var errLegacyConfigEntries = fmt.Errorf("legacy topo ssh config entries found; run 'topo migrate-ssh' to migrate to the new single-file format")
-
 const (
 	defaultConfigFileName = "config"
 	topoConfigFileName    = "topo_config"
@@ -193,25 +191,25 @@ func CreateOrModifyConfigFile(dest Destination, modifiers []ConfigDirectiveModif
 	})
 }
 
-func CheckForLegacyTopoConfigEntries() error {
+func LegacyTopoConfigDirectoryExists() (bool, error) {
 	topoConfigPath, err := getConfigFilePath(topoConfigFileName)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	info, err := os.Stat(topoConfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return false, nil
 		}
-		return fmt.Errorf("failed to check for legacy topo ssh config file: %w", err)
+		return false, fmt.Errorf("failed to check for legacy topo ssh config file: %w", err)
 	}
 
 	if info.IsDir() {
-		return errLegacyConfigEntries
+		return true, nil
 	}
 
-	return nil
+	return false, nil
 }
 
 func MigrateLegacyTopoConfig() error {
@@ -220,11 +218,10 @@ func MigrateLegacyTopoConfig() error {
 		return err
 	}
 
-	if err := CheckForLegacyTopoConfigEntries(); err != errLegacyConfigEntries {
-		if err == nil {
-			return fmt.Errorf("legacy topo ssh config directory not found at %s; nothing to migrate", legacyDir)
-		}
+	if exists, err := LegacyTopoConfigDirectoryExists(); err != nil {
 		return err
+	} else if !exists {
+		return fmt.Errorf("legacy topo ssh config directory not found at %s; nothing to migrate", legacyDir)
 	}
 
 	legacyGlob := filepath.Join(legacyDir, "*.conf")

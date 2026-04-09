@@ -122,24 +122,25 @@ User homer
 }
 
 func TestCheckForLegacyConfigEntries(t *testing.T) {
-	t.Run("returns nil if no legacy config file exists", func(t *testing.T) {
+	t.Run("detects if legacy config directory does not exist", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 
-		err := ssh.CheckForLegacyTopoConfigEntries()
+		exists, err := ssh.LegacyTopoConfigDirectoryExists()
 
 		assert.NoError(t, err)
+		assert.False(t, exists)
 	})
 
-	t.Run("returns error if legacy config directory exists", func(t *testing.T) {
+	t.Run("detects if legacy config directory exists", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)
 		testutil.RequireMkdirAll(t, filepath.Join(tmp, ".ssh", "topo_config"))
 
-		err := ssh.CheckForLegacyTopoConfigEntries()
+		exists, err := ssh.LegacyTopoConfigDirectoryExists()
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "legacy topo ssh config")
+		assert.NoError(t, err)
+		assert.True(t, exists)
 	})
 }
 
