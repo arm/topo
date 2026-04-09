@@ -13,7 +13,7 @@ var ErrTimeout = errors.New("timed out")
 type Runner interface {
 	Run(ctx context.Context, command string) (string, error)
 	RunWithStdin(ctx context.Context, command string, stdin []byte) (string, error)
-	BinaryExists(bin string) error
+	BinaryExists(ctx context.Context, bin string) error
 }
 
 func For(dest ssh.Destination, opts SSHOptions) Runner {

@@ -18,7 +18,7 @@ func TestProbeHealthStatus(t *testing.T) {
 		r := &runner.Mock{}
 		r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("remoteproc0\nremoteproc1", nil)
 		r.On("Run", context.Background(), command.WrapInLoginShell("cat /sys/class/remoteproc/*/name")).Return("foo\nbar", nil)
-		r.On("BinaryExists", mock.AnythingOfType("string")).Maybe().Return(fmt.Errorf("not found"))
+		r.On("BinaryExists", context.Background(), mock.AnythingOfType("string")).Maybe().Return(fmt.Errorf("not found"))
 
 		ts := health.ProbeHealthStatus(context.Background(), r)
 
@@ -30,7 +30,7 @@ func TestProbeHealthStatus(t *testing.T) {
 	t.Run("succeeds when no remoteproc support", func(t *testing.T) {
 		r := &runner.Mock{}
 		r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("", fmt.Errorf("no such directory"))
-		r.On("BinaryExists", mock.AnythingOfType("string")).Maybe().Return(fmt.Errorf("not found"))
+		r.On("BinaryExists", context.Background(), mock.AnythingOfType("string")).Maybe().Return(fmt.Errorf("not found"))
 
 		ts := health.ProbeHealthStatus(context.Background(), r)
 

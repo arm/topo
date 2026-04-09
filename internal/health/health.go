@@ -68,7 +68,7 @@ func CheckHost() HostReport {
 		_, err := r.Run(context.Background(), fullCmd)
 		return err
 	}
-	dependencyStatuses := PerformChecks(HostRequiredDependencies, r.BinaryExists, commandSuccessful)
+	dependencyStatuses := PerformChecks(context.Background(), HostRequiredDependencies, r.BinaryExists, commandSuccessful)
 	return GenerateHostReport(dependencyStatuses)
 }
 

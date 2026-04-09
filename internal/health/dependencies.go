@@ -1,5 +1,7 @@
 package health
 
+import "context"
+
 type CheckKind int
 
 const (
@@ -147,11 +149,11 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 }
 
 type (
-	BinaryExistsFn      = func(bin string) error
+	BinaryExistsFn      = func(ctx context.Context, bin string) error
 	CommandSuccessfulFn = func(fullCmd string) error
 )
 
-func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn, commandSuccessful CommandSuccessfulFn) []DependencyStatus {
+func PerformChecks(ctx context.Context, dependencies []Dependency, binaryExists BinaryExistsFn, commandSuccessful CommandSuccessfulFn) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
 
@@ -165,7 +167,7 @@ func PerformChecks(dependencies []Dependency, binaryExists BinaryExistsFn, comma
 		for _, check := range dep.Checks {
 			switch check.Kind {
 			case CheckBinaryExists:
-				err = binaryExists(dep.Binary)
+				err = binaryExists(ctx, dep.Binary)
 				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 					installed[dep.SoftwareEnumID] = struct{}{}
 				}

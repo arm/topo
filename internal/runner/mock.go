@@ -31,7 +31,7 @@ func (m *Mock) RunWithStdinAndArgs(ctx context.Context, command string, stdin []
 	return args.String(0), args.Error(1)
 }
 
-func (m *Mock) BinaryExists(bin string) error {
-	args := m.Called(bin)
+func (m *Mock) BinaryExists(ctx context.Context, bin string) error {
+	args := m.Called(ctx, bin)
 	return args.Error(0)
 }

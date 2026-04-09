@@ -23,7 +23,7 @@ func (r *Local) RunWithStdin(ctx context.Context, cmdStr string, stdin []byte) (
 	return r.exec(ctx, cmdStr, stdin)
 }
 
-func (r *Local) BinaryExists(bin string) error {
+func (r *Local) BinaryExists(_ context.Context, bin string) error {
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf("%q not found in $PATH", bin)
 	}
