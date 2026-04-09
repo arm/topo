@@ -155,17 +155,6 @@ func TestMigrateLegacyConfig(t *testing.T) {
 		assert.Contains(t, err.Error(), "nothing to migrate")
 	})
 
-	t.Run("returns error when legacy directory has no conf files", func(t *testing.T) {
-		tmp := t.TempDir()
-		testutil.SetHomeDir(t, tmp)
-		testutil.RequireMkdirAll(t, filepath.Join(tmp, ".ssh", "topo_config"))
-
-		err := ssh.MigrateLegacyTopoConfig()
-
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "no .conf files")
-	})
-
 	t.Run("concatenates conf files into unified config and removes directory", func(t *testing.T) {
 		tmp := t.TempDir()
 		testutil.SetHomeDir(t, tmp)

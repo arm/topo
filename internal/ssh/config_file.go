@@ -230,10 +230,6 @@ func MigrateLegacyTopoConfig() error {
 		return fmt.Errorf("failed to list config files in %s: %w", legacyDir, err)
 	}
 
-	if len(confFiles) == 0 {
-		return fmt.Errorf("no .conf files found in %s; nothing to migrate", legacyDir)
-	}
-
 	var combined []byte
 	for _, confFile := range confFiles {
 		content, err := os.ReadFile(confFile)
