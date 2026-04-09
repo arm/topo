@@ -19,10 +19,6 @@ type Repo struct {
 	Ref         string   `json:"ref"`
 }
 
-func GetTemplateRepo(name string) (*Repo, error) {
-	return GetRepo(name, TemplatesJSON)
-}
-
 func ParseRepos(b []byte) ([]Repo, error) {
 	var templates []Repo
 	dec := json.NewDecoder(bytes.NewReader(b))

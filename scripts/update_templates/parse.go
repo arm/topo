@@ -35,11 +35,3 @@ func parseRepoSpec(spec string) (repo, ref string) {
 	}
 	return
 }
-
-func slugifyTemplateName(name string) string {
-	parts := strings.Fields(name)
-	if len(parts) == 0 {
-		return ""
-	}
-	return strings.Join(parts, "-")
-}
