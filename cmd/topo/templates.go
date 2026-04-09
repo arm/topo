@@ -36,9 +36,11 @@ var templatesCmd = &cobra.Command{
 		} else {
 			targetArg, exists := lookupTarget(cmd)
 			if exists {
-				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 				probe := target.NewHardwareProbe(r)
-				hwProfile, err := probe.Probe()
+				ctx, cancel := contextWithTimeout(cmd)
+				defer cancel()
+				hwProfile, err := probe.Probe(ctx)
 				if err != nil {
 					return err
 				}
@@ -53,6 +55,7 @@ var templatesCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(templatesCmd)
+	addTimeoutFlag(templatesCmd, defaultTimeout)
 	templatesCmd.Flags().StringVar(
 		&targetDescriptionPath,
 		"target-description",

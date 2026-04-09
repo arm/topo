@@ -2,7 +2,6 @@ package ssh_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
@@ -54,45 +53,6 @@ user homer
 			HostName: "kwik.e.mart",
 		}
 		assert.Equal(t, want, got)
-	})
-
-	t.Run("parses connecttimeout as duration", func(t *testing.T) {
-		input := []byte(`hostname springfield.nuclear.gov
-connecttimeout 30
-`)
-
-		got := ssh.NewConfigFromBytes(input)
-
-		assert.Equal(t, 30*time.Second, got.ConnectTimeout(0))
-	})
-
-	t.Run("ignores non-numeric connecttimeout", func(t *testing.T) {
-		input := []byte(`hostname springfield.nuclear.gov
-connecttimeout none
-`)
-
-		got := ssh.NewConfigFromBytes(input)
-
-		assert.Equal(t, time.Duration(0), got.ConnectTimeout(0))
-	})
-}
-
-func TestConfigConnectTimeout(t *testing.T) {
-	const fallback = 5 * time.Second
-
-	t.Run("returns user config value when set", func(t *testing.T) {
-		configContent := []byte(`connecttimeout 30
-hostname springfield.nuclear.gov
-`)
-		config := ssh.NewConfigFromBytes(configContent)
-
-		assert.Equal(t, 30*time.Second, config.ConnectTimeout(fallback))
-	})
-
-	t.Run("returns fallback when not set in config", func(t *testing.T) {
-		config := ssh.Config{}
-
-		assert.Equal(t, fallback, config.ConnectTimeout(fallback))
 	})
 }
 

@@ -2,6 +2,7 @@ package target
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,22 +37,22 @@ func NewHardwareProbe(r runner.Runner) HardwareProbe {
 	return HardwareProbe{runner: r}
 }
 
-func (p *HardwareProbe) Probe() (HardwareProfile, error) {
+func (p *HardwareProbe) Probe(ctx context.Context) (HardwareProfile, error) {
 	var hp HardwareProfile
 
-	cpuProfile, err := p.collectCPUInfo()
+	cpuProfile, err := p.collectCPUInfo(ctx)
 	if err != nil {
 		return hp, fmt.Errorf("collecting CPU info: %w", err)
 	}
 	hp.HostProcessor = cpuProfile
 
-	cpus, err := p.ProbeRemoteproc()
+	cpus, err := p.ProbeRemoteproc(ctx)
 	if err != nil {
 		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
 	}
 	hp.RemoteCPU = cpus
 
-	memTotal, err := p.collectMemInfo()
+	memTotal, err := p.collectMemInfo(ctx)
 	if err != nil {
 		return hp, fmt.Errorf("collecting memory info: %w", err)
 	}
@@ -60,14 +61,14 @@ func (p *HardwareProbe) Probe() (HardwareProfile, error) {
 	return hp, nil
 }
 
-func (p *HardwareProbe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
+func (p *HardwareProbe) ProbeRemoteproc(ctx context.Context) ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
-	out, err := p.runner.Run(command.WrapInLoginShell("ls /sys/class/remoteproc"))
+	out, err := p.runner.Run(ctx, command.WrapInLoginShell("ls /sys/class/remoteproc"))
 	if err != nil || out == "" {
 		return remoteProcs, nil
 	}
 
-	out, err = p.runner.Run(command.WrapInLoginShell("cat /sys/class/remoteproc/*/name"))
+	out, err = p.runner.Run(ctx, command.WrapInLoginShell("cat /sys/class/remoteproc/*/name"))
 	if err != nil {
 		return remoteProcs, err
 	}
@@ -79,12 +80,12 @@ func (p *HardwareProbe) ProbeRemoteproc() ([]RemoteprocCPU, error) {
 	return remoteProcs, nil
 }
 
-func (p *HardwareProbe) collectCPUInfo() ([]HostProcessor, error) {
-	if _, err := p.runner.Run(command.UnsafeBinaryLookupCommand("lscpu")); err != nil {
+func (p *HardwareProbe) collectCPUInfo(ctx context.Context) ([]HostProcessor, error) {
+	if _, err := p.runner.Run(ctx, command.UnsafeBinaryLookupCommand("lscpu")); err != nil {
 		return nil, err
 	}
 
-	out, err := p.runner.Run(command.WrapInLoginShell("lscpu --json"))
+	out, err := p.runner.Run(ctx, command.WrapInLoginShell("lscpu --json"))
 	if err != nil {
 		return nil, err
 	}
@@ -98,11 +99,11 @@ func (p *HardwareProbe) collectCPUInfo() ([]HostProcessor, error) {
 	return CreateCPUProfile(lscpuOutput.Lscpu)
 }
 
-func (p *HardwareProbe) collectMemInfo() (int64, error) {
+func (p *HardwareProbe) collectMemInfo(ctx context.Context) (int64, error) {
 	key := "MemTotal"
 	path := "/proc/meminfo"
 
-	out, err := p.runner.Run(command.WrapInLoginShell(fmt.Sprintf("cat %s", path)))
+	out, err := p.runner.Run(ctx, command.WrapInLoginShell(fmt.Sprintf("cat %s", path)))
 	if err != nil {
 		return 0, err
 	}

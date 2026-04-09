@@ -2,7 +2,6 @@ package runner_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/testutil"
@@ -33,13 +32,7 @@ func TestSSHOptions(t *testing.T) {
 			assert.Nil(t, runner.SSHOptions{Multiplex: false}.SSHArgs())
 		})
 
-		t.Run("with connect timeout includes ConnectTimeout arg", func(t *testing.T) {
-			opts := runner.SSHOptions{ConnectTimeout: 10 * time.Second}
-
-			assert.Equal(t, []string{"-o", "ConnectTimeout=10"}, opts.SSHArgs())
-		})
-
-		t.Run("with no timeout includes no ConnectTimeout arg", func(t *testing.T) {
+		t.Run("without multiplexing returns nil", func(t *testing.T) {
 			assert.Nil(t, runner.SSHOptions{}.SSHArgs())
 		})
 	})

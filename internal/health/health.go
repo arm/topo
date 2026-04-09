@@ -1,11 +1,11 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
@@ -82,24 +82,24 @@ type Status struct {
 	Hardware     HardwareProfile
 }
 
-func CheckTarget(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (TargetReport, error) {
-	r, connErr := prepareRunner(dest, probeOpts, connectTimeout)
+func CheckTarget(ctx context.Context, dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions) (TargetReport, error) {
+	r, connErr := prepareRunner(ctx, dest, probeOpts)
 	status := Status{Connection: ConnectionStatus{Destination: dest, Error: connErr}}
 	if connErr == nil {
-		hs := ProbeHealthStatus(r)
+		hs := ProbeHealthStatus(ctx, r)
 		status.Dependencies = hs.Dependencies
 		status.Hardware = hs.Hardware
 	}
 	return GenerateTargetReport(status), nil
 }
 
-func prepareRunner(dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions, connectTimeout time.Duration) (runner.Runner, error) {
+func prepareRunner(ctx context.Context, dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions) (runner.Runner, error) {
 	if dest.IsPlainLocalhost() {
 		return runner.NewLocal(), nil
 	}
-	sshOpts := runner.SSHOptions{Multiplex: true, ConnectTimeout: connectTimeout}
+	sshOpts := runner.SSHOptions{Multiplex: true}
 	authProbe := target.NewSSHAuthenticationProbe(runner.NewSSH(dest, sshOpts), probeOpts)
-	if err := authProbe.Probe(); err != nil {
+	if err := authProbe.Probe(ctx); err != nil {
 		return nil, err
 	}
 	return runner.NewSSH(dest, sshOpts), nil

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -35,8 +36,6 @@ func init() {
 
 const targetEnvVar = "TOPO_TARGET"
 
-const sshConnectTimeout = 5 * time.Second
-
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
 		"target", "t", "",
@@ -68,6 +67,23 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 		return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
 	}
 	return t, nil
+}
+
+const defaultTimeout = 5 * time.Second
+
+func addTimeoutFlag(cmd *cobra.Command, defaultTimeout time.Duration) {
+	cmd.Flags().Duration("timeout", defaultTimeout, "Maximum time to wait for the command to complete (0 to disable timeout)")
+}
+
+func contextWithTimeout(cmd *cobra.Command) (context.Context, context.CancelFunc) {
+	timeout, err := cmd.Flags().GetDuration("timeout")
+	if err != nil {
+		panic(fmt.Sprintf("internal error: timeout flag not registered: %v", err))
+	}
+	if timeout == 0 {
+		return context.Background(), func() {}
+	}
+	return context.WithTimeout(context.Background(), timeout)
 }
 
 func resolveOutput(cmd *cobra.Command) term.Format {

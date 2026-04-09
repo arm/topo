@@ -5,15 +5,12 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"strconv"
 	"strings"
-	"time"
 )
 
 type Config struct {
-	HostName       string
-	User           string
-	connectTimeout time.Duration
+	HostName string
+	User     string
 }
 
 func NewConfig(dest Destination) Config {
@@ -39,21 +36,9 @@ func NewConfigFromBytes(data []byte) Config {
 			config.HostName = fields[1]
 		case "user":
 			config.User = fields[1]
-		case "connecttimeout":
-			if secs, err := strconv.Atoi(fields[1]); err == nil {
-				config.connectTimeout = time.Duration(secs) * time.Second
-			}
 		}
 	}
 	return config
-}
-
-// ConnectTimeout returns the user's configured ConnectTimeout if set, otherwise the fallback.
-func (c Config) ConnectTimeout(fallback time.Duration) time.Duration {
-	if c.connectTimeout > 0 {
-		return c.connectTimeout
-	}
-	return fallback
 }
 
 func IsDestinationAlreadyConfiguredWithAnotherUser(dest Destination) error {

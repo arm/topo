@@ -24,9 +24,11 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true, ConnectTimeout: sshConnectTimeout})
+		r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 		probe := target.NewHardwareProbe(r)
-		hwProfile, err := probe.Probe()
+		ctx, cancel := contextWithTimeout(cmd)
+		defer cancel()
+		hwProfile, err := probe.Probe(ctx)
 		if err != nil {
 			return err
 		}
@@ -49,5 +51,6 @@ var describeCmd = &cobra.Command{
 
 func init() {
 	addTargetFlag(describeCmd)
+	addTimeoutFlag(describeCmd, defaultTimeout)
 	rootCmd.AddCommand(describeCmd)
 }

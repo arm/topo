@@ -1,6 +1,7 @@
 package target
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"strings"
@@ -35,7 +36,7 @@ var (
 )
 
 type sshRunnerWithExtraArgs interface {
-	RunWithArgs(command string, sshArgs ...string) (string, error)
+	RunWithArgs(ctx context.Context, command string, sshArgs ...string) (string, error)
 }
 
 type SSHAuthenticationProbeOptions struct {
@@ -51,18 +52,18 @@ func NewSSHAuthenticationProbe(r sshRunnerWithExtraArgs, opts SSHAuthenticationP
 	return SSHAuthenticationProbe{runner: r, opts: opts}
 }
 
-func (p SSHAuthenticationProbe) Probe() error {
-	if err := p.verifyKnownHost(); err != nil {
+func (p SSHAuthenticationProbe) Probe(ctx context.Context) error {
+	if err := p.verifyKnownHost(ctx); err != nil {
 		return err
 	}
 
-	if err := p.authenticateUsingPublicKey(); err == nil {
+	if err := p.authenticateUsingPublicKey(ctx); err == nil {
 		return nil
 	} else if !errors.Is(err, ErrAuthenticationFailure) {
 		return err
 	}
 
-	if err := p.authenticateUsingPassword(); err == nil {
+	if err := p.authenticateUsingPassword(ctx); err == nil {
 		return nil
 	} else if errors.Is(err, ErrAuthenticationFailure) {
 		return ErrPasswordAuthentication
@@ -71,12 +72,12 @@ func (p SSHAuthenticationProbe) Probe() error {
 	}
 }
 
-func (p SSHAuthenticationProbe) verifyKnownHost() error {
+func (p SSHAuthenticationProbe) verifyKnownHost(ctx context.Context) error {
 	if p.opts.AcceptNewHostKeys {
 		return nil
 	}
 
-	err := p.runAuthenticationProbe(knownHostProbeArgs)
+	err := p.runAuthenticationProbe(ctx, knownHostProbeArgs)
 	if err == nil || errors.Is(err, ErrAuthenticationFailure) {
 		return nil
 	}
@@ -84,28 +85,28 @@ func (p SSHAuthenticationProbe) verifyKnownHost() error {
 	return err
 }
 
-func (p SSHAuthenticationProbe) authenticateUsingPublicKey() error {
+func (p SSHAuthenticationProbe) authenticateUsingPublicKey(ctx context.Context) error {
 	publicKeyArgs := slices.Clone(publicKeyProbeArgs)
 	if p.opts.AcceptNewHostKeys {
 		publicKeyArgs = slices.Concat(publicKeyArgs, acceptNewHostKeyArgs)
 	}
 
-	return p.runAuthenticationProbe(publicKeyArgs)
+	return p.runAuthenticationProbe(ctx, publicKeyArgs)
 }
 
-func (p SSHAuthenticationProbe) authenticateUsingPassword() error {
+func (p SSHAuthenticationProbe) authenticateUsingPassword(ctx context.Context) error {
 	passwordArgs := slices.Clone(passwordProbeArgs)
 	if p.opts.AcceptNewHostKeys {
 		passwordArgs = slices.Concat(passwordArgs, acceptNewHostKeyArgs)
 	}
 
-	return p.runAuthenticationProbe(passwordArgs)
+	return p.runAuthenticationProbe(ctx, passwordArgs)
 }
 
 // All SSH authentication probes run the command "true" to check if the authentication method works.
 // All sshArgs should be hardcoded SSH options, not user-provided arguments.
-func (p SSHAuthenticationProbe) runAuthenticationProbe(sshArgs []string) error {
-	out, err := p.runner.RunWithArgs("true", sshArgs...)
+func (p SSHAuthenticationProbe) runAuthenticationProbe(ctx context.Context, sshArgs []string) error {
+	out, err := p.runner.RunWithArgs(ctx, "true", sshArgs...)
 	if err == nil {
 		return nil
 	}
