@@ -18,13 +18,13 @@ type SSHAuthenticationProbeOptions struct {
 	AcceptNewHostKeys bool
 }
 
-func NewSSHAuthenticationProbe(r *runner.SSH, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
-	return SSHAuthenticationProbe{runner: r, opts: opts}
-}
-
 type SSHAuthenticationProbe struct {
 	runner *runner.SSH
 	opts   SSHAuthenticationProbeOptions
+}
+
+func NewSSHAuthenticationProbe(r *runner.SSH, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
+	return SSHAuthenticationProbe{runner: r, opts: opts}
 }
 
 // Probe verifies SSH connectivity by attempting public key authentication.
