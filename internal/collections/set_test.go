@@ -7,66 +7,69 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewSet(t *testing.T) {
-	t.Run("creates a set containing the provided items", func(t *testing.T) {
-		set := collections.NewSet("a", "b", "c")
+func TestSet(t *testing.T) {
+	t.Run("NewSet", func(t *testing.T) {
+		t.Run("creates a set containing the provided items", func(t *testing.T) {
+			set := collections.NewSet("a", "b", "c")
 
-		assert.True(t, set.Contains("a"))
-		assert.True(t, set.Contains("b"))
-		assert.True(t, set.Contains("c"))
+			assert.True(t, set.Contains("a"))
+			assert.True(t, set.Contains("b"))
+			assert.True(t, set.Contains("c"))
+			assert.Len(t, set, 3)
+		})
+
+		t.Run("deduplicates items", func(t *testing.T) {
+			set := collections.NewSet("a", "a", "b")
+
+			got := set.ToSlice()
+
+			assert.Len(t, got, 2)
+		})
 	})
 
-	t.Run("deduplicates items", func(t *testing.T) {
-		set := collections.NewSet("a", "a", "b")
+	t.Run("Add", func(t *testing.T) {
+		t.Run("adds an item to the set", func(t *testing.T) {
+			set := collections.NewSet[string]()
 
-		got := set.ToSlice()
+			set.Add("x")
 
-		assert.Len(t, got, 2)
-	})
-}
-
-func TestSet_Add(t *testing.T) {
-	t.Run("adds an item to the set", func(t *testing.T) {
-		set := collections.NewSet[string]()
-
-		set.Add("x")
-
-		assert.True(t, set.Contains("x"))
-	})
-}
-
-func TestSet_Contains(t *testing.T) {
-	t.Run("returns true for an item in the set", func(t *testing.T) {
-		set := collections.NewSet("present")
-
-		got := set.Contains("present")
-
-		assert.True(t, got)
+			assert.True(t, set.Contains("x"))
+		})
 	})
 
-	t.Run("returns false for an item not in the set", func(t *testing.T) {
-		set := collections.NewSet("present")
+	t.Run("Contains", func(t *testing.T) {
+		t.Run("returns true for an item in the set", func(t *testing.T) {
+			set := collections.NewSet("present")
 
-		got := set.Contains("absent")
+			got := set.Contains("present")
 
-		assert.False(t, got)
+			assert.True(t, got)
+		})
+
+		t.Run("returns false for an item not in the set", func(t *testing.T) {
+			set := collections.NewSet("present")
+
+			got := set.Contains("absent")
+
+			assert.False(t, got)
+		})
 	})
-}
 
-func TestSet_ToSlice(t *testing.T) {
-	t.Run("returns all elements as a slice", func(t *testing.T) {
-		set := collections.NewSet(1, 2, 3)
+	t.Run("ToSlice", func(t *testing.T) {
+		t.Run("returns all elements as a slice", func(t *testing.T) {
+			set := collections.NewSet(1, 2, 3)
 
-		got := set.ToSlice()
+			got := set.ToSlice()
 
-		assert.ElementsMatch(t, []int{1, 2, 3}, got)
-	})
+			assert.ElementsMatch(t, []int{1, 2, 3}, got)
+		})
 
-	t.Run("returns an empty slice for an empty set", func(t *testing.T) {
-		set := collections.NewSet[int]()
+		t.Run("returns an empty slice for an empty set", func(t *testing.T) {
+			set := collections.NewSet[int]()
 
-		got := set.ToSlice()
+			got := set.ToSlice()
 
-		assert.Empty(t, got)
+			assert.Empty(t, got)
+		})
 	})
 }
