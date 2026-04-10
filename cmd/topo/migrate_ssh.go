@@ -12,7 +12,13 @@ var migrateSSHCmd = &cobra.Command{
 	Args:   cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		return ssh.MigrateLegacyTopoConfig()
+
+		sshDir, err := ssh.GetConfigDirectory()
+		if err != nil {
+			return err
+		}
+
+		return ssh.MigrateLegacyTopoConfig(sshDir)
 	},
 }
 

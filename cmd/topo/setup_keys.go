@@ -26,16 +26,21 @@ var setupKeysCmd = &cobra.Command{
 			return err
 		}
 
-		if exists, err := ssh.LegacyTopoConfigDirectoryExists(); err != nil {
+		sshDir, err := ssh.GetConfigDirectory()
+		if err != nil {
 			return err
-		} else if exists {
+		}
+
+		if isLegacyDir, err := ssh.IsLegacyTopoConfigDirectory(sshDir); err != nil {
+			return err
+		} else if isLegacyDir {
 			return fmt.Errorf("legacy topo ssh config entries found; run 'topo migrate-ssh' to migrate to the new single-file format")
 		}
 
 		dest := ssh.NewDestination(targetArg)
 		targetSlug := dest.Slugify()
 		if privateKeyPath == "" {
-			privateKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
+			privateKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(sshDir, targetSlug)
 			if err != nil {
 				return err
 			}
@@ -66,7 +71,7 @@ var setupKeysCmd = &cobra.Command{
 			ssh.NewEnsureConfigDirective("IdentitiesOnly", "yes"),
 		}
 
-		return ssh.CreateOrModifyConfigFile(dest, modifiers)
+		return ssh.CreateOrModifyConfigFile(sshDir, dest, modifiers)
 	},
 }
 
