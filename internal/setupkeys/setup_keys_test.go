@@ -8,7 +8,6 @@ import (
 	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
 	"github.com/arm/topo/internal/setupkeys/sshkeygen"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,15 +53,13 @@ func TestNewKeySetup(t *testing.T) {
 func TestGetDefaultPrivateKeyPath(t *testing.T) {
 	t.Run("returns home-based ed25519 key path for target slug", func(t *testing.T) {
 		tmp := t.TempDir()
-		testutil.SetHomeDir(t, tmp)
-
 		target := "user@some1thing.com"
 		targetSlug := ssh.NewDestination(target).Slugify()
 
-		got, err := setupkeys.GetDefaultPrivateKeyPath(targetSlug)
+		got, err := setupkeys.GetDefaultPrivateKeyPath(tmp, targetSlug)
 
 		require.NoError(t, err)
-		require.Equal(t, filepath.Join(tmp, ".ssh", "id_ed25519_topo_user_some1thing.com"), got)
+		require.Equal(t, filepath.Join(tmp, "id_ed25519_topo_user_some1thing.com"), got)
 	})
 }
 

@@ -2,7 +2,6 @@ package setupkeys
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/arm/topo/internal/operation"
@@ -28,13 +27,9 @@ func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType) (ope
 	return operation.NewSequence(ops...), nil
 }
 
-func GetDefaultPrivateKeyPath(targetSlug string) (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to determine default key path: %w", err)
-	}
+func GetDefaultPrivateKeyPath(sshDir string, targetSlug string) (string, error) {
 	keyName := fmt.Sprintf("id_ed25519_topo_%s", targetSlug)
-	privKeyPath := filepath.Join(home, ".ssh", keyName)
+	privKeyPath := filepath.Join(sshDir, keyName)
 	return privKeyPath, nil
 }
 

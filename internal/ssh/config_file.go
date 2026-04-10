@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	defaultConfigFileName = "config"
-	topoConfigFileName    = "topo_config"
+	DefaultConfigFileName = "config"
+	TopoConfigFileName    = "topo_config"
 )
 
 type ConfigDirectiveModifier interface {
@@ -164,40 +164,30 @@ func updateConfigFile(path string, host string, modifiers []ConfigDirectiveModif
 	return nil
 }
 
-func getConfigFilePath(name string) (string, error) {
+// TODO write tests for this
+func GetConfigDirectory() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to determine home directory for SSH config: %w", err)
 	}
 
-	return filepath.Join(home, ".ssh", name), nil
+	return filepath.Join(home, ".ssh"), nil
 }
 
-func CreateOrModifyConfigFile(dest Destination, modifiers []ConfigDirectiveModifier) error {
-	topoConfigPath, err := getConfigFilePath(topoConfigFileName)
-	if err != nil {
-		return err
-	}
+func CreateOrModifyConfigFile(sshDir string, dest Destination, modifiers []ConfigDirectiveModifier) error {
+	topoConfigPath := filepath.Join(sshDir, TopoConfigFileName)
 	if err := updateConfigFile(topoConfigPath, dest.Host, modifiers); err != nil {
 		return err
 	}
 
-	defaultConfigPath, err := getConfigFilePath(defaultConfigFileName)
-	if err != nil {
-		return err
-	}
+	defaultConfigPath := filepath.Join(sshDir, DefaultConfigFileName)
 	return updateConfigFile(defaultConfigPath, "", []ConfigDirectiveModifier{
 		NewEnsureConfigDirectivePath("Include", topoConfigPath),
 	})
 }
 
-func LegacyTopoConfigDirectoryExists() (bool, error) {
-	topoConfigPath, err := getConfigFilePath(topoConfigFileName)
-	if err != nil {
-		return false, err
-	}
-
-	info, err := os.Stat(topoConfigPath)
+func LegacyTopoConfigDirectoryExists(sshDir string) (bool, error) {
+	info, err := os.Stat(filepath.Join(sshDir, TopoConfigFileName))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -212,13 +202,9 @@ func LegacyTopoConfigDirectoryExists() (bool, error) {
 	return false, nil
 }
 
-func MigrateLegacyTopoConfig() error {
-	legacyDir, err := getConfigFilePath(topoConfigFileName)
-	if err != nil {
-		return err
-	}
-
-	if exists, err := LegacyTopoConfigDirectoryExists(); err != nil {
+func MigrateLegacyTopoConfig(sshDir string) error {
+	legacyDir := filepath.Join(sshDir, TopoConfigFileName)
+	if exists, err := LegacyTopoConfigDirectoryExists(sshDir); err != nil {
 		return err
 	} else if !exists {
 		return fmt.Errorf("legacy topo ssh config directory not found at %s; nothing to migrate", legacyDir)
@@ -253,11 +239,7 @@ func MigrateLegacyTopoConfig() error {
 		return fmt.Errorf("failed to move migrated config to %s: %w", legacyDir, err)
 	}
 
-	defaultConfigPath, err := getConfigFilePath(defaultConfigFileName)
-	if err != nil {
-		return err
-	}
-
+	defaultConfigPath := filepath.Join(sshDir, DefaultConfigFileName)
 	return updateConfigFile(defaultConfigPath, "", []ConfigDirectiveModifier{
 		NewRemoveConfigDirectivePath("Include", legacyGlob),
 		NewEnsureConfigDirectivePath("Include", legacyDir),
