@@ -24,6 +24,9 @@ builds:
       - -X github.com/arm/topo/internal/version.Version={{ .Version }}
       - -X github.com/arm/topo/internal/version.GitCommit={{ .Commit }}
 
+release:
+  skip_upload: true
+
 archives:
   - id: archive
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
@@ -39,4 +42,22 @@ checksum:
   name_template: "checksums.txt"
 
 changelog:
-  disable: true
+  use: github
+  format: "{{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
+  sort: asc
+  abbrev: -1
+  filters:
+    include:
+      - '^(feat|fix|perf|security|breaking|build)(\\([^)]+\\))?(!)?: .*$'
+      - '^.*!:.*$'
+      - '^.*BREAKING CHANGE:.*$'
+  groups:
+    - title: Breaking Changes
+      regexp: '^.*?!:.*$|^.*BREAKING CHANGE:.*$'
+      order: 0
+    - title: Features / Enhancements
+      regexp: '^.*?feat(\([[:word:]]+\))??:.*$'
+      order: 1
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??:.*$'
+      order: 2
