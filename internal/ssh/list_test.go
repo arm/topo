@@ -105,7 +105,7 @@ Host host-b
 
 		got := ssh.ListHosts(configAPath)
 
-		assert.NotNil(t, got, "should return without hanging on cyclic includes")
+		assert.Nil(t, got, "should return without hanging on cyclic includes")
 	})
 
 	t.Run("returns empty slice for nonexistent config file", func(t *testing.T) {
