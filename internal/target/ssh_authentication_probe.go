@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	ErrHostKeyUnknown = errors.New("ssh host key is not known")
-	ErrHostKeyChanged = errors.New("ssh host key has changed")
-	ErrAuthFailed     = errors.New("ssh authentication failed")
+	ErrHostKeyUnknown = errors.New("SSH host key is not known")
+	ErrHostKeyChanged = errors.New("SSH host key has changed")
+	ErrAuthFailed     = errors.New("SSH authentication failed")
 )
 
 type SSHAuthenticationProbeOptions struct {
