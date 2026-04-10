@@ -67,7 +67,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{
 				Destination: ssh.NewDestination("user@my-target"),
-				Error:       target.ErrAuthenticationFailure,
+				Error:       target.ErrAuthFailed,
 			},
 		}
 
@@ -81,7 +81,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{
 				Destination: ssh.NewDestination("user@my-target"),
-				Error:       target.ErrHostKeyNew,
+				Error:       target.ErrHostKeyUnknown,
 			},
 		}
 
