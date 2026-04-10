@@ -43,6 +43,7 @@ checksum:
 
 changelog:
   use: github
+  format: "{{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
   sort: asc
   abbrev: -1
   filters:
