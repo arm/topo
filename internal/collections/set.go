@@ -1,5 +1,10 @@
 package collections
 
+import (
+	"maps"
+	"slices"
+)
+
 type Set[T comparable] struct {
 	elements map[T]struct{}
 }
@@ -17,11 +22,7 @@ func (s *Set[T]) Add(item T) {
 }
 
 func (s *Set[T]) ToSlice() []T {
-	slice := make([]T, 0, len(s.elements))
-	for item := range s.elements {
-		slice = append(slice, item)
-	}
-	return slice
+	return slices.Collect(maps.Keys(s.elements))
 }
 
 func (s *Set[T]) Contains(item T) bool {
