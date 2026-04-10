@@ -15,7 +15,7 @@ func TestSet(t *testing.T) {
 			assert.True(t, set.Contains("a"))
 			assert.True(t, set.Contains("b"))
 			assert.True(t, set.Contains("c"))
-			assert.Len(t, set, 3)
+			assert.Len(t, set.ToSlice(), 3)
 		})
 
 		t.Run("deduplicates items", func(t *testing.T) {
