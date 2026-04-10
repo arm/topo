@@ -185,7 +185,7 @@ func CreateOrModifyConfigFile(sshDir string, dest Destination, modifiers []Confi
 	})
 }
 
-func LegacyTopoConfigDirectoryExists(sshDir string) (bool, error) {
+func IsLegacyTopoConfigDirectory(sshDir string) (bool, error) {
 	info, err := os.Stat(filepath.Join(sshDir, TopoConfigFileName))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -194,18 +194,14 @@ func LegacyTopoConfigDirectoryExists(sshDir string) (bool, error) {
 		return false, fmt.Errorf("failed to check for legacy topo ssh config file: %w", err)
 	}
 
-	if info.IsDir() {
-		return true, nil
-	}
-
-	return false, nil
+	return info.IsDir(), nil
 }
 
 func MigrateLegacyTopoConfig(sshDir string) error {
 	legacyDir := filepath.Join(sshDir, TopoConfigFileName)
-	if exists, err := LegacyTopoConfigDirectoryExists(sshDir); err != nil {
+	if isLegacyDir, err := IsLegacyTopoConfigDirectory(sshDir); err != nil {
 		return err
-	} else if !exists {
+	} else if !isLegacyDir {
 		return fmt.Errorf("legacy topo ssh config directory not found at %s; nothing to migrate", legacyDir)
 	}
 

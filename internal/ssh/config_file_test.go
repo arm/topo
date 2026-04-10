@@ -122,20 +122,20 @@ func TestCheckForLegacyConfigEntries(t *testing.T) {
 	t.Run("detects if legacy config directory does not exist", func(t *testing.T) {
 		sshDir := mustCreateSshDirectory(t)
 
-		exists, err := ssh.LegacyTopoConfigDirectoryExists(sshDir)
+		isLegacyDir, err := ssh.IsLegacyTopoConfigDirectory(sshDir)
 
 		assert.NoError(t, err)
-		assert.False(t, exists)
+		assert.False(t, isLegacyDir)
 	})
 
 	t.Run("detects if legacy config directory exists", func(t *testing.T) {
 		sshDir := mustCreateSshDirectory(t)
 		testutil.RequireMkdirAll(t, filepath.Join(sshDir, ssh.TopoConfigFileName))
 
-		exists, err := ssh.LegacyTopoConfigDirectoryExists(sshDir)
+		isLegacyDir, err := ssh.IsLegacyTopoConfigDirectory(sshDir)
 
 		assert.NoError(t, err)
-		assert.True(t, exists)
+		assert.True(t, isLegacyDir)
 	})
 }
 
