@@ -1,4 +1,4 @@
-package pubkeytransfer
+package operations
 
 import (
 	"context"

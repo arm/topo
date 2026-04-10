@@ -1,4 +1,4 @@
-package pubkeytransfer_test
+package operations_test
 
 import (
 	"bytes"
@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/arm/topo/internal/deploy/docker/testutil"
 	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/setupkeys/pubkeytransfer"
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/internal/setupkeys/operations"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ func TestPubKeyTransfer(t *testing.T) {
 				"PreferredAuthentications=password",
 			).Return("ssh invoked", nil)
 
-			op := pubkeytransfer.NewPubKeyTransfer(privKeyPath, r)
+			op := operations.NewPubKeyTransfer(privKeyPath, r)
 
 			var buf bytes.Buffer
 			require.NoError(t, op.Run(&buf))
