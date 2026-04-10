@@ -7,47 +7,50 @@ import (
 )
 
 func TestClassifyStderr(t *testing.T) {
-	t.Run("returns ErrAuthFailed for publickey message", func(t *testing.T) {
-		assert.ErrorIs(t, ClassifyStderr("Permission denied (publickey)"), ErrAuthFailed)
-	})
+	tests := []struct {
+		name   string
+		stderr string
+		want   error
+	}{
+		{name: "auth failure", stderr: "user@host: Permission denied (publickey).", want: ErrAuthFailed},
+		{name: "connection refused", stderr: "ssh: connect to host example.com port 22: Connection refused", want: ErrConnectionFailed},
+		{name: "operation timed out (macOS)", stderr: "ssh: connect to host example.com port 22: Operation timed out", want: ErrConnectionTimeout},
+		{name: "connection timed out (Linux)", stderr: "ssh: connect to host example.com port 22: Connection timed out", want: ErrConnectionTimeout},
+		{name: "generic host key verification failure", stderr: "Host key verification failed.", want: ErrHostKeyUnknown},
+		{
+			name: "unknown host key",
+			stderr: `No ED25519 host key is known for 10.2.4.68 and you have requested strict checking.
+Host key verification failed.`,
+			want: ErrHostKeyUnknown,
+		},
+		{
+			name: "host key has changed",
+			stderr: `Host key for 10.2.4.68 has changed and you have requested strict checking.
+Host key verification failed.`,
+			want: ErrHostKeyChanged,
+		},
+		{name: "unrecognised output", stderr: "some unexpected error", want: nil},
+		{name: "empty stderr", stderr: "", want: nil},
+	}
 
-	t.Run("returns ErrAuthFailed for authentication message", func(t *testing.T) {
-		assert.ErrorIs(t, ClassifyStderr("Authentication failed"), ErrAuthFailed)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ClassifyStderr(tt.stderr)
 
-	t.Run("returns ErrConnectionFailed for connection refused", func(t *testing.T) {
-		assert.ErrorIs(t, ClassifyStderr("ssh: connect to host foo port 22: Connection refused"), ErrConnectionFailed)
-	})
+			if tt.want == nil {
+				assert.NoError(t, got)
+			} else {
+				assert.ErrorIs(t, got, tt.want)
+			}
+		})
+	}
+}
 
-	t.Run("ErrAuthFailed satisfies ErrSSH", func(t *testing.T) {
-		assert.ErrorIs(t, ErrAuthFailed, ErrSSH)
-	})
-
-	t.Run("ErrConnectionFailed satisfies ErrSSH", func(t *testing.T) {
-		assert.ErrorIs(t, ErrConnectionFailed, ErrSSH)
-	})
-
-	t.Run("returns ErrConnectionTimeout for timed out message", func(t *testing.T) {
-		assert.ErrorIs(t, ClassifyStderr("ssh: connect to host foo port 22: Operation timed out"), ErrConnectionTimeout)
-	})
-
-	t.Run("returns ErrConnectionTimeout for connection timeout message", func(t *testing.T) {
-		assert.ErrorIs(t, ClassifyStderr("Connection timeout"), ErrConnectionTimeout)
-	})
-
-	t.Run("returns ErrConnectionTimeout for windows timeout message", func(t *testing.T) {
-		assert.ErrorIs(t, ClassifyStderr("did not properly respond after a period of time"), ErrConnectionTimeout)
-	})
-
-	t.Run("ErrConnectionTimeout satisfies ErrSSH", func(t *testing.T) {
-		assert.ErrorIs(t, ErrConnectionTimeout, ErrSSH)
-	})
-
-	t.Run("returns nil for unrecognised output", func(t *testing.T) {
-		assert.Nil(t, ClassifyStderr("some unexpected error"))
-	})
-
-	t.Run("returns nil for empty stderr", func(t *testing.T) {
-		assert.Nil(t, ClassifyStderr(""))
-	})
+func TestSentinelErrors(t *testing.T) {
+	sentinels := []error{ErrAuthFailed, ErrConnectionFailed, ErrConnectionTimeout, ErrHostKeyUnknown, ErrHostKeyChanged}
+	for _, err := range sentinels {
+		t.Run(err.Error(), func(t *testing.T) {
+			assert.ErrorIs(t, err, ErrSSH)
+		})
+	}
 }

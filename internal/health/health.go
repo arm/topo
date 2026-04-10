@@ -152,9 +152,9 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 
 	check.Value = status.Error.Error()
 	switch {
-	case errors.Is(status.Error, target.ErrPasswordAuthentication):
+	case errors.Is(status.Error, target.ErrAuthFailed):
 		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` to configure SSH keys", status.Destination)
-	case errors.Is(status.Error, target.ErrHostKeyNew):
+	case errors.Is(status.Error, target.ErrHostKeyUnknown):
 		check.Fix = fmt.Sprintf("run `topo health --target %s --accept-new-host-keys` to trust the target's identity", status.Destination)
 	case errors.Is(status.Error, target.ErrHostKeyChanged):
 		check.Fix = fmt.Sprintf("run `ssh-keygen -R %s` to remove the old host key, then retry", status.Destination.Host)
