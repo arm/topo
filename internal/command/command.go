@@ -16,16 +16,12 @@ func WrapInLoginShell(cmd string) string {
 	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
 }
 
-func UnsafeBinaryLookupCommand(bin string) string {
-	return WrapInLoginShell(fmt.Sprintf("command -v %s", bin))
-}
-
 func BinaryLookupCommand(bin string) (string, error) {
 	if err := ValidateBinaryName(bin); err != nil {
 		return "", err
 	}
 
-	return UnsafeBinaryLookupCommand(bin), nil
+	return WrapInLoginShell(fmt.Sprintf("command -v %s", bin)), nil
 }
 
 func shellEscapeForDoubleQuotes(s string) string {

@@ -22,7 +22,7 @@ func TestBinaryLookupCommand(t *testing.T) {
 		got, err := command.BinaryLookupCommand("docker")
 
 		require.NoError(t, err)
-		assert.Equal(t, command.UnsafeBinaryLookupCommand("docker"), got)
+		assert.Equal(t, command.WrapInLoginShell("command -v docker"), got)
 	})
 
 	t.Run("returns error for invalid binary", func(t *testing.T) {
@@ -30,13 +30,5 @@ func TestBinaryLookupCommand(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Empty(t, got)
-	})
-}
-
-func TestUnsafeBinaryLookupCommand(t *testing.T) {
-	t.Run("returns wrapped command without validation", func(t *testing.T) {
-		got := command.UnsafeBinaryLookupCommand("docker")
-
-		assert.Equal(t, command.WrapInLoginShell("command -v docker"), got)
 	})
 }

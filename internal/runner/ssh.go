@@ -57,7 +57,11 @@ func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []by
 }
 
 func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
-	if _, err := r.Run(ctx, command.UnsafeBinaryLookupCommand(bin)); err != nil {
+	cmd, err := command.BinaryLookupCommand(bin)
+	if err != nil {
+		return err
+	}
+	if _, err := r.Run(ctx, cmd); err != nil {
 		return fmt.Errorf("%q not found on remote target's $PATH", bin)
 	}
 	return nil
