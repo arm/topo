@@ -22,9 +22,9 @@ var getProjectCmd = &cobra.Command{
 	},
 }
 
-var listSsh = &cobra.Command{
-	Use:    "list-ssh <config-filepath>",
-	Short:  "Prints a list of ssh hosts defined in the given config file as JSON",
+var listCandidateTargets = &cobra.Command{
+	Use:    "list-candidate-targets <config-filepath>",
+	Short:  "Prints a list of candidate ssh targets defined in the given config file as JSON",
 	Hidden: true,
 	Args:   cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -43,5 +43,5 @@ var listSsh = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(getProjectCmd)
-	rootCmd.AddCommand(listSsh)
+	rootCmd.AddCommand(listCandidateTargets)
 }
