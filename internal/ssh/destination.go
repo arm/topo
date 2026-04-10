@@ -46,6 +46,10 @@ func (d Destination) IsLocalhost() bool {
 	return strings.EqualFold(d.Host, "localhost") || d.Host == "127.0.0.1"
 }
 
+func (d Destination) IsIPLiteral() bool {
+	return net.ParseIP(d.Host) != nil
+}
+
 func (d Destination) AsURI() string {
 	return d.String()
 }

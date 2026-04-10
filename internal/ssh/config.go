@@ -41,31 +41,35 @@ func NewConfigFromBytes(data []byte) Config {
 	return config
 }
 
-func IsDestinationAlreadyConfiguredWithAnotherUser(dest Destination) error {
-	hostConfig, err := LookupExplicitHostConfig(dest.Host, dest.Port)
+// IsDestinationAlreadyConfiguredWithAnotherUser checks if the destination is already configured with another user.
+// If it is, an error is returned. Otherwise, the user associated with the destination in the SSH config is returned.
+func IsDestinationAlreadyConfiguredWithAnotherUser(dest Destination) (string, error) {
+	output, err := readConfig(Destination{Host: dest.Host, Port: dest.Port})
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	if dest.User != "" && hostConfig.User != dest.User {
-		return fmt.Errorf("ssh host/alias %q is already associated with user %q", dest.Host, hostConfig.User)
-	}
-	return nil
-}
+	hostConfig := NewConfigFromBytes(output)
+	isExplicitHostConfig := IsExplicitHostConfig(dest.Host, output)
 
-// LookupExplicitHostConfig returns configuration, only if there's an explicit entry for the given host/port
-func LookupExplicitHostConfig(host, port string) (Config, error) {
-	dest := Destination{Host: host, Port: port}
-	output, err := readConfig(dest)
-	if err != nil {
-		return Config{}, err
+	if isExplicitHostConfig {
+		if dest.User != "" && hostConfig.User != dest.User {
+			return "", fmt.Errorf(
+				"ssh host/alias %q is already associated with user %q",
+				dest.Host,
+				hostConfig.User,
+			)
+		}
+	} else if !isExplicitHostConfig && !dest.IsIPLiteral() {
+		return "", fmt.Errorf("no explicit host config found for %s", dest.Host)
+	} else if !isExplicitHostConfig && dest.IsIPLiteral() {
+		if dest.User != "" {
+			return dest.User, nil
+		}
+		return hostConfig.User, nil
 	}
 
-	if !IsExplicitHostConfig(host, output) {
-		return Config{}, fmt.Errorf("no explicit host config found for %s", host)
-	}
-
-	return NewConfigFromBytes(output), nil
+	return hostConfig.User, nil
 }
 
 func IsExplicitHostConfig(host string, config []byte) bool {
