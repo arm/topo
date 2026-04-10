@@ -25,15 +25,10 @@ func ClassifyStderr(stderr string) error {
 		}
 		return ErrHostKeyUnknown
 	}
-	if strings.Contains(lower, "timed out") ||
-		strings.Contains(lower, "connection timeout") ||
-		strings.Contains(lower, "did not properly respond after a period of time") {
+	if strings.Contains(lower, "timed out") {
 		return ErrConnectionTimeout
 	}
-	if strings.Contains(lower, "publickey") ||
-		strings.Contains(lower, "authentication") ||
-		strings.Contains(lower, "permission denied") ||
-		strings.Contains(lower, "password") {
+	if strings.Contains(lower, "permission denied") {
 		return ErrAuthFailed
 	}
 	if strings.Contains(lower, "connection refused") {

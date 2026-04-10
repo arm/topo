@@ -12,18 +12,23 @@ func TestClassifyStderr(t *testing.T) {
 		stderr string
 		want   error
 	}{
-		{name: "publickey message", stderr: "Permission denied (publickey)", want: ErrAuthFailed},
-		{name: "authentication message", stderr: "Authentication failed", want: ErrAuthFailed},
-		{name: "permission denied", stderr: "Permission denied", want: ErrAuthFailed},
-		{name: "password prompt", stderr: "password:", want: ErrAuthFailed},
-		{name: "connection refused", stderr: "ssh: connect to host foo port 22: Connection refused", want: ErrConnectionFailed},
-		{name: "timed out", stderr: "ssh: connect to host foo port 22: Operation timed out", want: ErrConnectionTimeout},
-		{name: "connection timeout", stderr: "Connection timeout", want: ErrConnectionTimeout},
-		{name: "windows timeout", stderr: "did not properly respond after a period of time", want: ErrConnectionTimeout},
+		{name: "auth failure", stderr: "user@host: Permission denied (publickey).", want: ErrAuthFailed},
+		{name: "connection refused", stderr: "ssh: connect to host example.com port 22: Connection refused", want: ErrConnectionFailed},
+		{name: "operation timed out (macOS)", stderr: "ssh: connect to host example.com port 22: Operation timed out", want: ErrConnectionTimeout},
+		{name: "connection timed out (Linux)", stderr: "ssh: connect to host example.com port 22: Connection timed out", want: ErrConnectionTimeout},
 		{name: "generic host key verification failure", stderr: "Host key verification failed.", want: ErrHostKeyUnknown},
-		{name: "unknown host key", stderr: "No ED25519 host key is known for 10.2.4.68 and you have requested strict checking.\nHost key verification failed.", want: ErrHostKeyUnknown},
-		{name: "host key has changed", stderr: "Host key for 10.2.4.68 has changed and you have requested strict checking.\nHost key verification failed.", want: ErrHostKeyChanged},
-		{name: "case insensitive", stderr: "HOST KEY VERIFICATION FAILED", want: ErrHostKeyUnknown},
+		{
+			name: "unknown host key",
+			stderr: `No ED25519 host key is known for 10.2.4.68 and you have requested strict checking.
+Host key verification failed.`,
+			want: ErrHostKeyUnknown,
+		},
+		{
+			name: "host key has changed",
+			stderr: `Host key for 10.2.4.68 has changed and you have requested strict checking.
+Host key verification failed.`,
+			want: ErrHostKeyChanged,
+		},
 		{name: "unrecognised output", stderr: "some unexpected error", want: nil},
 		{name: "empty stderr", stderr: "", want: nil},
 	}
