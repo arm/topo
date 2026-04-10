@@ -33,6 +33,12 @@ var setupKeysCmd = &cobra.Command{
 		}
 
 		dest := ssh.NewDestination(targetArg)
+		user, err := ssh.IsDestinationAlreadyConfiguredWithAnotherUser(dest)
+		if err != nil {
+			return fmt.Errorf("%w; note: a per user SSH config entry should be created when setting up keys", err)
+		}
+
+		dest.User = user
 		targetSlug := dest.Slugify()
 		if privateKeyPath == "" {
 			privateKeyPath, err = setupkeys.GetDefaultPrivateKeyPath(targetSlug)
@@ -44,11 +50,6 @@ var setupKeysCmd = &cobra.Command{
 		parsedKeyType, err := setupkeys.ParseKeyType(keyType)
 		if err != nil {
 			return err
-		}
-
-		err = ssh.IsDestinationAlreadyConfiguredWithAnotherUser(dest)
-		if err != nil {
-			return fmt.Errorf("%w; note: a per user SSH config entry should be created when setting up keys", err)
 		}
 
 		seq, err := setupkeys.NewKeySetup(dest, privateKeyPath, parsedKeyType)
