@@ -2,6 +2,7 @@ package ssh_test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -192,5 +193,17 @@ Host *
 `, filepath.ToSlash(legacyDir))
 		require.NoError(t, err)
 		testutil.AssertFileContents(t, wantConfig, filepath.Join(sshDir, ssh.DefaultConfigFileName))
+	})
+}
+
+func TestGetConfigDirectory(t *testing.T) {
+	t.Run("returns path to .ssh directory in user's home directory", func(t *testing.T) {
+		homeDir, err := os.UserHomeDir()
+		require.NoError(t, err)
+
+		got, err := ssh.GetConfigDirectory()
+
+		require.NoError(t, err)
+		require.Equal(t, filepath.Join(homeDir, ".ssh"), got)
 	})
 }

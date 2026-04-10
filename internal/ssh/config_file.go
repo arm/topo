@@ -164,7 +164,6 @@ func updateConfigFile(path string, host string, modifiers []ConfigDirectiveModif
 	return nil
 }
 
-// TODO write tests for this
 func GetConfigDirectory() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
