@@ -1,11 +1,11 @@
 package describe_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/assert/yaml"
@@ -29,9 +29,8 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 		outputFile, err := describe.WriteTargetDescriptionToFile(dir, report)
 		require.NoError(t, err)
 
-		content, err := os.ReadFile(outputFile)
-		require.NoError(t, err)
-		err = yaml.Unmarshal(content, &reportOut)
+		content := testutil.RequireReadFile(t, outputFile)
+		err = yaml.Unmarshal([]byte(content), &reportOut)
 		require.NoError(t, err)
 		require.FileExists(t, outputFile)
 		assert.Equal(t, report, reportOut)
@@ -55,11 +54,10 @@ func TestWriteTargetDescriptionFile(t *testing.T) {
 		outputFile2, err := describe.WriteTargetDescriptionToFile(dir, report2)
 		require.NoError(t, err)
 
-		content, err := os.ReadFile(outputFile2)
-		require.NoError(t, err)
+		content := testutil.RequireReadFile(t, outputFile2)
 		require.Equal(t, outputFile1, outputFile2)
-		assert.Contains(t, string(content), "feature1")
-		assert.NotContains(t, string(content), "feature2")
+		assert.Contains(t, content, "feature1")
+		assert.NotContains(t, content, "feature2")
 	})
 }
 
@@ -77,7 +75,7 @@ remoteprocs:
   - name: remoteproc0
 totalmemory_kb: 16384
 `
-		require.NoError(t, os.WriteFile(filePath, []byte(content), 0o644))
+		testutil.RequireWriteFile(t, filePath, content)
 		profile, err := describe.ReadTargetDescriptionFromFile(filePath)
 
 		require.NoError(t, err)
@@ -104,7 +102,7 @@ totalmemory_kb: 16384
 	t.Run("returns error when target description yaml is invalid", func(t *testing.T) {
 		dir := t.TempDir()
 		filePath := dir + "/invalid.yaml"
-		require.NoError(t, os.WriteFile(filePath, []byte("host_processor: ["), 0o644))
+		testutil.RequireWriteFile(t, filePath, "host_processor: [")
 
 		_, err := describe.ReadTargetDescriptionFromFile(filePath)
 

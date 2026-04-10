@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,10 +25,9 @@ func TestWriteTemplates(t *testing.T) {
 		err := WriteTemplates(path, input)
 		require.NoError(t, err)
 
-		raw, err := os.ReadFile(path)
-		require.NoError(t, err)
+		raw := testutil.RequireReadFile(t, path)
 		var decoded []Template
-		require.NoError(t, json.Unmarshal(raw, &decoded))
+		require.NoError(t, json.Unmarshal([]byte(raw), &decoded))
 		assert.Equal(t, input, decoded)
 	})
 }

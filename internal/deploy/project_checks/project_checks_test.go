@@ -1,11 +1,10 @@
 package checks_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	checks "github.com/arm/topo/internal/deploy/project_checks"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -79,11 +78,5 @@ services:
 
 func writeComposeFile(t *testing.T, contents string) string {
 	t.Helper()
-
-	dir := t.TempDir()
-	path := filepath.Join(dir, "compose.yaml")
-	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
-		t.Fatalf("failed to write compose file: %v", err)
-	}
-	return path
+	return testutil.WriteComposeFile(t, t.TempDir(), contents)
 }

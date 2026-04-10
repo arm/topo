@@ -224,21 +224,17 @@ func TestDirSource(t *testing.T) {
 	t.Run("CopyTo", func(t *testing.T) {
 		t.Run("copies directory contents to destination", func(t *testing.T) {
 			srcDir := t.TempDir()
-			require.NoError(t, os.WriteFile(filepath.Join(srcDir, "file.txt"), []byte("content"), 0o644))
-			require.NoError(t, os.Mkdir(filepath.Join(srcDir, "subdir"), 0o755))
-			require.NoError(t, os.WriteFile(filepath.Join(srcDir, "subdir", "nested.txt"), []byte("nested"), 0o644))
+			testutil.RequireWriteFile(t, filepath.Join(srcDir, "file.txt"), "content")
+			testutil.RequireMkdirAll(t, filepath.Join(srcDir, "subdir"))
+			testutil.RequireWriteFile(t, filepath.Join(srcDir, "subdir", "nested.txt"), "nested")
 			dstDir := filepath.Join(t.TempDir(), "dest")
 			src := template.DirSource{Path: srcDir}
 
 			err := src.CopyTo(dstDir)
 
 			require.NoError(t, err)
-			content, err := os.ReadFile(filepath.Join(dstDir, "file.txt"))
-			require.NoError(t, err)
-			assert.Equal(t, "content", string(content))
-			nested, err := os.ReadFile(filepath.Join(dstDir, "subdir", "nested.txt"))
-			require.NoError(t, err)
-			assert.Equal(t, "nested", string(nested))
+			testutil.AssertFileContents(t, "content", filepath.Join(dstDir, "file.txt"))
+			testutil.AssertFileContents(t, "nested", filepath.Join(dstDir, "subdir", "nested.txt"))
 		})
 
 		t.Run("preserves file permissions", func(t *testing.T) {
@@ -275,7 +271,7 @@ func TestDirSource(t *testing.T) {
 		t.Run("preserves symlinks as symlinks", func(t *testing.T) {
 			srcDir := t.TempDir()
 			targetFile := filepath.Join(srcDir, "target.txt")
-			require.NoError(t, os.WriteFile(targetFile, []byte("target content"), 0o644))
+			testutil.RequireWriteFile(t, targetFile, "target content")
 			symlinkPath := filepath.Join(srcDir, "link.txt")
 			if err := os.Symlink("target.txt", symlinkPath); err != nil {
 				if linkError, ok := err.(*os.LinkError); ok {
@@ -312,7 +308,7 @@ func TestDirSource(t *testing.T) {
 
 		t.Run("errors when source is a file", func(t *testing.T) {
 			srcFile := filepath.Join(t.TempDir(), "file.txt")
-			require.NoError(t, os.WriteFile(srcFile, []byte("content"), 0o644))
+			testutil.RequireWriteFile(t, srcFile, "content")
 			src := template.DirSource{Path: srcFile}
 			dstDir := filepath.Join(t.TempDir(), "dest")
 
@@ -336,7 +332,7 @@ func TestDirSource(t *testing.T) {
 
 		t.Run("errors when destination already exists", func(t *testing.T) {
 			srcDir := t.TempDir()
-			require.NoError(t, os.WriteFile(filepath.Join(srcDir, "file.txt"), []byte("content"), 0o644))
+			testutil.RequireWriteFile(t, filepath.Join(srcDir, "file.txt"), "content")
 			dstDir := t.TempDir()
 			src := template.DirSource{Path: srcDir}
 

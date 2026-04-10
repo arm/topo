@@ -2,11 +2,9 @@ package vscode_test
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/template"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/arm/topo/internal/vscode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,8 +13,7 @@ import (
 func TestPrintProject(t *testing.T) {
 	compose := `name: demo
 services: {}`
-	composePath := filepath.Join(t.TempDir(), template.ComposeFilename)
-	require.NoError(t, os.WriteFile(composePath, []byte(compose), 0o644))
+	composePath := testutil.WriteComposeFile(t, t.TempDir(), compose)
 	var buf bytes.Buffer
 
 	err := vscode.PrintProject(&buf, composePath)
