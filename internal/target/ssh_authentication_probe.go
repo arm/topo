@@ -18,6 +18,21 @@ type SSHAuthenticationProbeOptions struct {
 	AcceptNewHostKeys bool
 }
 
+func (s SSHAuthenticationProbeOptions) SSHArgs() []string {
+	args := []string{
+		"-o", "BatchMode=yes",
+		"-o", "PreferredAuthentications=publickey",
+		"-o", "PasswordAuthentication=no",
+		"-o", "NumberOfPasswordPrompts=0",
+	}
+	if s.AcceptNewHostKeys {
+		args = append(args, "-o", "StrictHostKeyChecking=accept-new")
+	} else {
+		args = append(args, "-o", "StrictHostKeyChecking=yes")
+	}
+	return args
+}
+
 type SSHAuthenticationProbe struct {
 	runner *runner.SSH
 	opts   SSHAuthenticationProbeOptions
@@ -29,7 +44,7 @@ func NewSSHAuthenticationProbe(r *runner.SSH, opts SSHAuthenticationProbeOptions
 
 // Probe verifies SSH connectivity by attempting public key authentication.
 func (p SSHAuthenticationProbe) Probe(ctx context.Context) error {
-	_, err := p.runner.RunWithArgs(ctx, "true", BuildProbeArgs(p.opts.AcceptNewHostKeys)...)
+	_, err := p.runner.RunWithArgs(ctx, "true", p.opts.SSHArgs()...)
 	if err == nil {
 		return nil
 	}
@@ -43,20 +58,4 @@ func (p SSHAuthenticationProbe) Probe(ctx context.Context) error {
 	default:
 		return err
 	}
-}
-
-// BuildProbeArgs returns SSH arguments for a public key authentication probe.
-func BuildProbeArgs(acceptNewHostKeys bool) []string {
-	args := []string{
-		"-o", "BatchMode=yes",
-		"-o", "PreferredAuthentications=publickey",
-		"-o", "PasswordAuthentication=no",
-		"-o", "NumberOfPasswordPrompts=0",
-	}
-	if acceptNewHostKeys {
-		args = append(args, "-o", "StrictHostKeyChecking=accept-new")
-	} else {
-		args = append(args, "-o", "StrictHostKeyChecking=yes")
-	}
-	return args
 }
