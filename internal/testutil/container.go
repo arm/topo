@@ -1,22 +1,26 @@
 package testutil
 
 import (
+	"context"
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const TargetContainerHost = "root@localhost"
 
-const TargetContainerImage = "topo-e2e-target:latest"
-
 type TargetContainer struct {
 	SSHDestination string
-	ContainerName  string
+	container      testcontainers.Container
 }
 
 func StartTargetContainer(t *testing.T) *TargetContainer {
@@ -25,103 +29,90 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 		t.Skip("skipping test that requires a target container in short mode")
 	}
 	RequireLinuxDockerEngine(t)
+	setDockerHostFromContext(t)
 
-	containerName := generateTargetContainerName(t)
+	ctx := context.Background()
+	ctr, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			FromDockerfile: testcontainers.FromDockerfile{
+				Context:       dockerfileContextPath(),
+				Dockerfile:    "Dockerfile",
+				PrintBuildLog: true,
+			},
+			ExposedPorts: []string{"22/tcp", "8080/tcp"},
+			Privileged:   true,
+			WaitingFor: wait.ForAll(
+				wait.ForListeningPort("22/tcp"),
+				wait.ForExec([]string{"docker", "info"}).
+					WithPollInterval(200*time.Millisecond).
+					WithStartupTimeout(20*time.Second),
+			),
+		},
+		Started: true,
+	})
+	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		deleteContainer(containerName)
+		require.NoError(t, ctr.Terminate(context.Background()))
 	})
 
-	if err := createTargetContainer(t, containerName); err != nil {
-		t.Fatalf("failed to create vm: %v", err)
-	}
+	sshPort, err := ctr.MappedPort(ctx, "22/tcp")
+	require.NoError(t, err)
 
-	port, err := GetContainerPublicPort(containerName, "22")
-	if err != nil {
-		t.Fatalf("failed to get container port: %v", err)
-	}
+	acceptSSHHostKey(t, sshPort.Port())
 
-	waitForDockerReady(t, TargetContainerHost, port)
-
-	// #nosec G204 -- ignore as its a test helper
 	return &TargetContainer{
-		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, port),
-		ContainerName:  containerName,
+		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, sshPort.Port()),
+		container:      ctr,
 	}
 }
 
-func generateTargetContainerName(t *testing.T) string {
-	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
-}
-
-func requireImageExists(t *testing.T, imageName string) {
+func (tc *TargetContainer) MappedPort(t *testing.T, port string) string {
 	t.Helper()
-	// #nosec G204 -- ignore as its a test helper
-	cmd := exec.Command("docker", "images", "-q", imageName)
-	output, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("failed to check for docker image %s: %v", imageName, err)
-	}
-	if len(strings.TrimSpace(string(output))) == 0 {
-		t.Skipf("required docker image %s not found. Please build it before running the tests.", imageName)
-	}
+	p, err := tc.container.MappedPort(context.Background(), port)
+	require.NoError(t, err)
+	return p.Port()
 }
 
-func createTargetContainer(t *testing.T, containerName string) error {
+func acceptSSHHostKey(t *testing.T, port string) {
 	t.Helper()
-	requireImageExists(t, TargetContainerImage)
-	deleteContainer(containerName)
-	// #nosec G204 -- ignore as its a test helper
-	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", TargetContainerImage)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to start target container: %w", err)
-	}
-	return nil
+	// #nosec G204 -- test helper
+	cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new", "--", TargetContainerHost, "true")
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "failed to accept SSH host key: %s", string(out))
 }
 
-func deleteContainer(containerName string) {
-	// #nosec G204 -- ignore as its a test helper
-	cmd := exec.Command("docker", "rm", "--force", containerName)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	_ = cmd.Run()
+func dockerfileContextPath() string {
+	_, thisFile, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(thisFile), "test-container")
 }
 
-func GetContainerPublicPort(containerName string, privatePort string) (string, error) {
-	// #nosec G204 -- ignore as its a test helper
-	cmd := exec.Command("docker", "port", containerName, privatePort)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get container port: %w", err)
-	}
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(lines) == 0 {
-		return "", fmt.Errorf("no port mapping found")
-	}
-	_, port, err := net.SplitHostPort(lines[0])
-	if err != nil {
-		return "", fmt.Errorf("failed to parse port mapping: %w", err)
-	}
-	return port, nil
-}
-
-func waitForDockerReady(t *testing.T, host string, port string) {
+// setDockerHostFromContext sets DOCKER_HOST from the active Docker context
+// when not already set. testcontainers-go doesn't read Docker contexts.
+// It also sets TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE for VM-based Docker
+// setups (e.g. Lima) where the host socket path doesn't exist inside the VM.
+func setDockerHostFromContext(t *testing.T) {
 	t.Helper()
-	deadline := time.Now().Add(20 * time.Second)
-	var lastErr error
-
-	for time.Now().Before(deadline) {
-		// #nosec G204 -- ignore as its a test helper
-		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", "--", host, "docker", "info")
-		output, err := cmd.CombinedOutput()
-		if err == nil {
-			return
-		}
-		lastErr = fmt.Errorf("docker info failed: %w output: %s", err, strings.TrimSpace(string(output)))
-		time.Sleep(200 * time.Millisecond)
+	if os.Getenv("DOCKER_HOST") != "" {
+		return
 	}
+	// #nosec G204 -- test helper
+	out, err := exec.Command("docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}").Output()
+	if err != nil {
+		return
+	}
+	host := strings.TrimSpace(string(out))
+	if host == "" {
+		return
+	}
+	t.Setenv("DOCKER_HOST", host)
 
-	t.Fatalf("docker daemon not ready in target container: %v", lastErr)
+	if os.Getenv("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE") == "" {
+		t.Setenv("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/var/run/docker.sock")
+	}
+	// Ryuk often fails in VM-based Docker setups (e.g. Lima).
+	// t.Cleanup handles container removal, so Ryuk is not essential.
+	if os.Getenv("TESTCONTAINERS_RYUK_DISABLED") == "" {
+		t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
+	}
 }

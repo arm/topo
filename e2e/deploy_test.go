@@ -33,8 +33,7 @@ func TestDeploy(t *testing.T) {
 		requireExtend(t, topo, projectDir, composeFile, nameArgValue)
 
 		requireDeploy(t, topo, projectDir, target.SSHDestination)
-		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
-		require.NoError(t, err)
+		port := target.MappedPort(t, "8080/tcp")
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 	})
 
@@ -50,8 +49,7 @@ func TestDeploy(t *testing.T) {
 		requireClone(t, topo, baseDir, cloneDir, "testdata/services/hello-server", fmt.Sprintf("NAME=%s", nameArgValue))
 		requireDeploy(t, topo, cloneDir, target.SSHDestination)
 		expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
-		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
-		require.NoError(t, err)
+		port := target.MappedPort(t, "8080/tcp")
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 	})
 }

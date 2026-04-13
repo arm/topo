@@ -40,7 +40,7 @@ jobs:
         os: [ ubuntu-latest, ubuntu-24.04-arm, windows-latest ]
         include:
           - os: windows-latest
-            docker_host: ssh://test@localhost:2222
+            docker_host: tcp://localhost:2375
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install WSL (Windows)
@@ -48,35 +48,28 @@ jobs:
         uses: Vampire/setup-wsl@6a8db447be7ed35f2f499c02c6e60ff77ef11278 # v6
         with:
           distribution: Ubuntu-24.04
-          additional-packages: |
-            openssh-server
-            docker.io
-      
-      - name: Setup SSH (Windows - WSL)
+          additional-packages: docker.io
+
+      - name: Setup Docker TCP (Windows - WSL)
         if: runner.os == 'Windows'
         shell: wsl-bash {0}
         run: |
-          useradd -G kvm,docker -m -s /bin/bash test
-          passwd -d test
-
-          cat > /etc/ssh/sshd_config.d/01-passwordless-authentication.conf << 'EOF'
-          PasswordAuthentication yes
-          PermitEmptyPasswords yes
-          UsePAM no
-          Port 2222
+          mkdir -p /etc/docker
+          cat > /etc/docker/daemon.json << 'EOF'
+          {
+            "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"]
+          }
           EOF
-          
-          systemctl daemon-reload
-          systemctl restart ssh
 
-      - name: Add WSL host key (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # Keep WSL running
-          wsl --exec dbus-launch true
-          #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
-          ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
+          mkdir -p /etc/systemd/system/docker.service.d
+          cat > /etc/systemd/system/docker.service.d/override.conf << 'EOF'
+          [Service]
+          ExecStart=
+          ExecStart=/usr/bin/dockerd
+          EOF
+
+          systemctl daemon-reload
+          systemctl restart docker
 
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -94,8 +87,7 @@ jobs:
           go build -v ./cmd/topo
 
       - name: Run tests with coverage
-        env: 
+        env:
           DOCKER_HOST: ${{ matrix.docker_host }}
         run: |
-          docker build -t topo-e2e-target:latest ./internal/testutil/test-container
           go test ./... -p 1 -v -covermode=atomic -coverprofile=coverage.out

@@ -31,7 +31,6 @@ func TestHealthCheck(t *testing.T) {
 	t.Run("fails to connect to an invalid target", func(t *testing.T) {
 		fakeContainer := testutil.TargetContainer{
 			SSHDestination: "fake@target",
-			ContainerName:  "fake-tgt-container",
 		}
 		out, err := runCheckHealth(topo, &fakeContainer)
 		assert.NoError(t, err)
