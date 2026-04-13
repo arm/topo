@@ -19,6 +19,7 @@ func TestSetupKeys(t *testing.T) {
 
 	home := t.TempDir()
 	sshDir := filepath.Join(home, ".ssh")
+	testutil.AcceptHostKeyFor(t, target, sshDir)
 
 	out, err := runSetupKeys(topo, target.SSHDestination, home)
 	require.NoError(t, err, "setup-keys failed: %s", out)

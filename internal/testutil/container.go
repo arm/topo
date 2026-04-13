@@ -23,20 +23,19 @@ type containerSpec struct {
 	dockerfileDir string
 	image         string
 	runArgs       []string
-	waitFunc      func(t *testing.T, host, port string)
+	postReady     func(t *testing.T, containerName string)
 }
 
 var dindSpec = containerSpec{
 	dockerfileDir: "test-container",
 	image:         "topo-e2e-target:latest",
 	runArgs:       []string{"--privileged"},
-	waitFunc:      waitForDockerReady,
+	postReady:     waitForDockerDaemon,
 }
 
 var sshSpec = containerSpec{
 	dockerfileDir: "ssh-container",
 	image:         "topo-e2e-ssh:latest",
-	waitFunc:      waitForSSHReady,
 }
 
 func StartDinDContainer(t *testing.T) *Container {
@@ -72,12 +71,20 @@ func startContainer(t *testing.T, spec containerSpec) *Container {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
-	spec.waitFunc(t, containerHost, port)
+	waitForPort(t, "localhost", port, 10*time.Second)
 
-	return &Container{
+	c := &Container{
 		SSHDestination: fmt.Sprintf("ssh://%s:%s", containerHost, port),
 		ContainerName:  containerName,
 	}
+
+	acceptHostKey(t, c, port)
+
+	if spec.postReady != nil {
+		spec.postReady(t, containerName)
+	}
+
+	return c
 }
 
 func buildImage(t *testing.T, spec containerSpec) {
@@ -137,40 +144,68 @@ func GetContainerPublicPort(containerName string, privatePort string) (string, e
 	return port, nil
 }
 
-func waitForSSHReady(t *testing.T, host string, port string) {
+func acceptHostKey(t *testing.T, c *Container, port string) {
 	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
+	// #nosec G204 -- ignore as its a test helper
+	cmd := exec.Command("ssh", c.SSHDestination, "-o", "StrictHostKeyChecking=accept-new", "true")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to accept host key: %v output: %s", err, strings.TrimSpace(string(output)))
+	}
+	t.Cleanup(func() {
+		// #nosec G204 -- ignore as its a test helper
+		_ = exec.Command("ssh-keygen", "-R", "[localhost]:"+port).Run()
+	})
+}
+
+func AcceptHostKeyFor(t *testing.T, c *Container, sshDir string) {
+	t.Helper()
+	knownHostsPath := filepath.Join(sshDir, "known_hosts")
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
+		t.Fatalf("failed to create ssh dir: %v", err)
+	}
+	// #nosec G204 -- ignore as its a test helper
+	cmd := exec.Command("ssh", c.SSHDestination, "-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile="+knownHostsPath, "true")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to accept host key: %v output: %s", err, strings.TrimSpace(string(output)))
+	}
+}
+
+func waitForPort(t *testing.T, host string, port string, timeout time.Duration) {
+	t.Helper()
+	addr := net.JoinHostPort(host, port)
+	deadline := time.Now().Add(timeout)
 	var lastErr error
 
 	for time.Now().Before(deadline) {
-		// #nosec G204 -- ignore as its a test helper
-		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", "--", host, "echo", "ready")
-		output, err := cmd.CombinedOutput()
+		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 		if err == nil {
+			conn.Close()
 			return
 		}
-		lastErr = fmt.Errorf("ssh check failed: %w output: %s", err, strings.TrimSpace(string(output)))
+		lastErr = err
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	t.Fatalf("ssh not ready in container: %v", lastErr)
+	t.Fatalf("port %s not ready: %v", addr, lastErr)
 }
 
-func waitForDockerReady(t *testing.T, host string, port string) {
+func waitForDockerDaemon(t *testing.T, containerName string) {
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	var lastErr error
 
 	for time.Now().Before(deadline) {
 		// #nosec G204 -- ignore as its a test helper
-		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", "--", host, "docker", "info")
+		cmd := exec.Command("docker", "exec", containerName, "docker", "info")
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			return
 		}
-		lastErr = fmt.Errorf("docker info failed: %w output: %s", err, strings.TrimSpace(string(output)))
+		lastErr = fmt.Errorf("docker daemon not ready: %w output: %s", err, strings.TrimSpace(string(output)))
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	t.Fatalf("docker daemon not ready in target container: %v", lastErr)
+	t.Fatalf("docker daemon not ready in container: %v", lastErr)
 }
