@@ -63,7 +63,7 @@ func findGeneratedKey(t *testing.T, sshDir string) string {
 	return keys[0]
 }
 
-func readRemoteFile(t *testing.T, target *testutil.TargetContainer, path string) string {
+func readRemoteFile(t *testing.T, target *testutil.Container, path string) string {
 	t.Helper()
 	cmd := exec.Command("ssh", target.SSHDestination, "cat", path)
 	out, err := cmd.CombinedOutput()

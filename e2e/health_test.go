@@ -10,7 +10,7 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
-	target := testutil.StartTargetContainer(t)
+	target := testutil.StartDinDContainer(t)
 	topo := buildBinary(t)
 
 	t.Run("accurately shows host health status", func(t *testing.T) {
@@ -29,7 +29,7 @@ func TestHealthCheck(t *testing.T) {
 	})
 
 	t.Run("fails to connect to an invalid target", func(t *testing.T) {
-		fakeContainer := testutil.TargetContainer{
+		fakeContainer := testutil.Container{
 			SSHDestination: "fake@target",
 			ContainerName:  "fake-tgt-container",
 		}
@@ -46,7 +46,7 @@ func TestHealthCheck(t *testing.T) {
 	})
 }
 
-func runCheckHealth(topo string, target *testutil.TargetContainer, args ...string) (string, error) {
+func runCheckHealth(topo string, target *testutil.Container, args ...string) (string, error) {
 	args = append([]string{"health", "--target", target.SSHDestination}, args...)
 	healthCmd := exec.Command(topo, args...)
 

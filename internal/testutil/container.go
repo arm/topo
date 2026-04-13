@@ -5,36 +5,66 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
 
-const TargetContainerHost = "root@localhost"
+const containerHost = "root@localhost"
 
-const TargetContainerImage = "topo-e2e-target:latest"
-const SSHContainerImage = "topo-e2e-ssh:latest"
-
-type TargetContainer struct {
+type Container struct {
 	SSHDestination string
 	ContainerName  string
 }
 
-func StartTargetContainer(t *testing.T) *TargetContainer {
+type containerSpec struct {
+	dockerfileDir string
+	image         string
+	runArgs       []string
+	waitFunc      func(t *testing.T, host, port string)
+}
+
+var dindSpec = containerSpec{
+	dockerfileDir: "test-container",
+	image:         "topo-e2e-target:latest",
+	runArgs:       []string{"--privileged"},
+	waitFunc:      waitForDockerReady,
+}
+
+var sshSpec = containerSpec{
+	dockerfileDir: "ssh-container",
+	image:         "topo-e2e-ssh:latest",
+	waitFunc:      waitForSSHReady,
+}
+
+func StartDinDContainer(t *testing.T) *Container {
+	t.Helper()
+	return startContainer(t, dindSpec)
+}
+
+func StartSSHContainer(t *testing.T) *Container {
+	t.Helper()
+	return startContainer(t, sshSpec)
+}
+
+func startContainer(t *testing.T, spec containerSpec) *Container {
 	t.Helper()
 	if testing.Short() {
-		t.Skip("skipping test that requires a target container in short mode")
+		t.Skip("skipping test that requires a container in short mode")
 	}
 	RequireLinuxDockerEngine(t)
 
-	containerName := generateTargetContainerName(t)
+	buildImage(t, spec)
 
+	containerName := generateContainerName(t)
 	t.Cleanup(func() {
 		deleteContainer(containerName)
 	})
 
-	if err := createContainer(t, containerName, TargetContainerImage, "--privileged"); err != nil {
-		t.Fatalf("failed to create vm: %v", err)
+	if err := runContainer(containerName, spec); err != nil {
+		t.Fatalf("failed to start container: %v", err)
 	}
 
 	port, err := GetContainerPublicPort(containerName, "22")
@@ -42,69 +72,36 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
-	waitForDockerReady(t, TargetContainerHost, port)
+	spec.waitFunc(t, containerHost, port)
 
+	return &Container{
+		SSHDestination: fmt.Sprintf("ssh://%s:%s", containerHost, port),
+		ContainerName:  containerName,
+	}
+}
+
+func buildImage(t *testing.T, spec containerSpec) {
+	t.Helper()
+	_, thisFile, _, _ := runtime.Caller(0)
+	contextDir := filepath.Join(filepath.Dir(thisFile), spec.dockerfileDir)
 	// #nosec G204 -- ignore as its a test helper
-	return &TargetContainer{
-		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, port),
-		ContainerName:  containerName,
+	cmd := exec.Command("docker", "build", "-t", spec.image, contextDir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("failed to build image %s: %v", spec.image, err)
 	}
 }
 
-func StartSSHContainer(t *testing.T) *TargetContainer {
-	t.Helper()
-	if testing.Short() {
-		t.Skip("skipping test that requires a target container in short mode")
-	}
-	RequireLinuxDockerEngine(t)
-
-	containerName := generateTargetContainerName(t)
-
-	t.Cleanup(func() {
-		deleteContainer(containerName)
-	})
-
-	if err := createContainer(t, containerName, SSHContainerImage); err != nil {
-		t.Fatalf("failed to create ssh container: %v", err)
-	}
-
-	port, err := GetContainerPublicPort(containerName, "22")
-	if err != nil {
-		t.Fatalf("failed to get container port: %v", err)
-	}
-
-	waitForSSHReady(t, TargetContainerHost, port)
-
-	return &TargetContainer{
-		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, port),
-		ContainerName:  containerName,
-	}
-}
-
-func generateTargetContainerName(t *testing.T) string {
+func generateContainerName(t *testing.T) string {
 	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
 }
 
-func requireImageExists(t *testing.T, imageName string) {
-	t.Helper()
-	// #nosec G204 -- ignore as its a test helper
-	cmd := exec.Command("docker", "images", "-q", imageName)
-	output, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("failed to check for docker image %s: %v", imageName, err)
-	}
-	if len(strings.TrimSpace(string(output))) == 0 {
-		t.Skipf("required docker image %s not found. Please build it before running the tests.", imageName)
-	}
-}
-
-func createContainer(t *testing.T, containerName string, image string, extraArgs ...string) error {
-	t.Helper()
-	requireImageExists(t, image)
+func runContainer(containerName string, spec containerSpec) error {
 	deleteContainer(containerName)
 	// #nosec G204 -- ignore as its a test helper
-	args := append([]string{"run", "--name", containerName, "--detach", "-P"}, extraArgs...)
-	args = append(args, image)
+	args := append([]string{"run", "--name", containerName, "--detach", "-P"}, spec.runArgs...)
+	args = append(args, spec.image)
 	cmd := exec.Command("docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
