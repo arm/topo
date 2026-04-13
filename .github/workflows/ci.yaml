@@ -40,7 +40,7 @@ jobs:
         os: [ ubuntu-latest, ubuntu-24.04-arm, windows-latest ]
         include:
           - os: windows-latest
-            docker_host: tcp://localhost:2375
+            docker_host: ssh://test@localhost:2222
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install WSL (Windows)
@@ -48,23 +48,33 @@ jobs:
         uses: Vampire/setup-wsl@6a8db447be7ed35f2f499c02c6e60ff77ef11278 # v6
         with:
           distribution: Ubuntu-24.04
-          additional-packages: docker.io
+          additional-packages: |
+            openssh-server
+            docker.io
 
-      - name: Start Docker with TCP (Windows - WSL)
+      - name: Setup SSH (Windows - WSL)
         if: runner.os == 'Windows'
         shell: wsl-bash {0}
         run: |
-          mkdir -p /etc/systemd/system/docker.service.d
-          cat > /etc/systemd/system/docker.service.d/override.conf << 'EOF'
-          [Service]
-          ExecStart=
-          ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
+          useradd -G kvm,docker -m -s /bin/bash test
+          passwd -d test
+
+          cat > /etc/ssh/sshd_config.d/01-passwordless-authentication.conf << 'EOF'
+          PasswordAuthentication yes
+          PermitEmptyPasswords yes
+          UsePAM no
+          Port 2222
           EOF
 
-          systemctl stop docker.socket docker.service
           systemctl daemon-reload
-          systemctl start docker
-          timeout 30 sh -c 'until docker -H tcp://127.0.0.1:2375 info >/dev/null 2>&1; do sleep 1; done'
+          systemctl restart ssh
+
+      - name: Add WSL host key (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          wsl --exec dbus-launch true
+          ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
 
       - name: Checkout repository
         uses: actions/checkout@v6
