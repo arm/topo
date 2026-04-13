@@ -20,17 +20,17 @@ type Container struct {
 }
 
 type ContainerSpec struct {
-	context   string
-	image     string
-	runArgs   []string
-	postReady func(t *testing.T, containerName string)
+	context     string
+	image       string
+	runArgs     []string
+	healthCheck func(t *testing.T, containerName string)
 }
 
 var DinDContainer = ContainerSpec{
-	context:   "test-container",
-	image:     "topo-e2e-target:latest",
-	runArgs:   []string{"--privileged"},
-	postReady: waitForDockerDaemon,
+	context:     "test-container",
+	image:       "topo-e2e-target:latest",
+	runArgs:     []string{"--privileged"},
+	healthCheck: waitForDockerDaemon,
 }
 
 var SSHContainer = ContainerSpec{
@@ -70,8 +70,8 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 
 	acceptHostKey(t, c, port)
 
-	if spec.postReady != nil {
-		spec.postReady(t, containerName)
+	if spec.healthCheck != nil {
+		spec.healthCheck(t, containerName)
 	}
 
 	return c
