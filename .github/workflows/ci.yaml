@@ -68,7 +68,7 @@ jobs:
           EOF
 
           systemctl daemon-reload
-          systemctl restart ssh
+          systemctl restart docker ssh
 
       - name: Add WSL host key (Windows)
         if: runner.os == 'Windows'
