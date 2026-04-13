@@ -19,36 +19,26 @@ type Container struct {
 	ContainerName  string
 }
 
-type containerSpec struct {
+type ContainerSpec struct {
 	dockerfileDir string
 	image         string
 	runArgs       []string
 	postReady     func(t *testing.T, containerName string)
 }
 
-var dindSpec = containerSpec{
+var DinDContainer = ContainerSpec{
 	dockerfileDir: "test-container",
 	image:         "topo-e2e-target:latest",
 	runArgs:       []string{"--privileged"},
 	postReady:     waitForDockerDaemon,
 }
 
-var sshSpec = containerSpec{
+var SSHContainer = ContainerSpec{
 	dockerfileDir: "ssh-container",
 	image:         "topo-e2e-ssh:latest",
 }
 
-func StartDinDContainer(t *testing.T) *Container {
-	t.Helper()
-	return startContainer(t, dindSpec)
-}
-
-func StartSSHContainer(t *testing.T) *Container {
-	t.Helper()
-	return startContainer(t, sshSpec)
-}
-
-func startContainer(t *testing.T, spec containerSpec) *Container {
+func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping test that requires a container in short mode")
@@ -87,7 +77,7 @@ func startContainer(t *testing.T, spec containerSpec) *Container {
 	return c
 }
 
-func buildImage(t *testing.T, spec containerSpec) {
+func buildImage(t *testing.T, spec ContainerSpec) {
 	t.Helper()
 	_, thisFile, _, _ := runtime.Caller(0)
 	contextDir := filepath.Join(filepath.Dir(thisFile), spec.dockerfileDir)
@@ -104,7 +94,7 @@ func generateContainerName(t *testing.T) string {
 	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
 }
 
-func runContainer(containerName string, spec containerSpec) error {
+func runContainer(containerName string, spec ContainerSpec) error {
 	deleteContainer(containerName)
 	// #nosec G204 -- ignore as its a test helper
 	args := append([]string{"run", "--name", containerName, "--detach", "-P"}, spec.runArgs...)

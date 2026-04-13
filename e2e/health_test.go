@@ -10,7 +10,7 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
-	target := testutil.StartDinDContainer(t)
+	target := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
 	t.Run("accurately shows host health status", func(t *testing.T) {

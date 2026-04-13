@@ -149,7 +149,7 @@ func TestDeployment(t *testing.T) {
 	testutil.RequireDocker(t)
 
 	t.Run("Run", func(t *testing.T) {
-		target := testutil.StartDinDContainer(t)
+		target := testutil.StartContainer(t, testutil.DinDContainer)
 
 		t.Run("builds images, transfers them, and starts services", func(t *testing.T) {
 			remoteDockerHost := ssh.NewDestination(target.SSHDestination)

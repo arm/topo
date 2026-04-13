@@ -14,7 +14,7 @@ import (
 )
 
 func TestSetupKeys(t *testing.T) {
-	target := testutil.StartSSHContainer(t)
+	target := testutil.StartContainer(t, testutil.SSHContainer)
 	topo := buildBinary(t)
 
 	home := t.TempDir()

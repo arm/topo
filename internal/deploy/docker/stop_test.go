@@ -45,7 +45,7 @@ func TestDeploymentStop(t *testing.T) {
 	testutil.RequireDocker(t)
 
 	t.Run("Run", func(t *testing.T) {
-		target := testutil.StartDinDContainer(t)
+		target := testutil.StartContainer(t, testutil.DinDContainer)
 
 		t.Run("deploys services then confirms stop shuts down containers", func(t *testing.T) {
 			remoteDockerHost := ssh.NewDestination(target.SSHDestination)

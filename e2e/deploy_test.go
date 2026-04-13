@@ -15,7 +15,7 @@ import (
 )
 
 func TestDeploy(t *testing.T) {
-	target := testutil.StartDinDContainer(t)
+	target := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
 	t.Run("Init, add and Deploy", func(t *testing.T) {
