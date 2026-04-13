@@ -50,26 +50,12 @@ jobs:
           distribution: Ubuntu-24.04
           additional-packages: docker.io
 
-      - name: Setup Docker TCP (Windows - WSL)
+      - name: Start Docker with TCP (Windows - WSL)
         if: runner.os == 'Windows'
         shell: wsl-bash {0}
         run: |
-          mkdir -p /etc/docker
-          cat > /etc/docker/daemon.json << 'EOF'
-          {
-            "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"]
-          }
-          EOF
-
-          mkdir -p /etc/systemd/system/docker.service.d
-          cat > /etc/systemd/system/docker.service.d/override.conf << 'EOF'
-          [Service]
-          ExecStart=
-          ExecStart=/usr/bin/dockerd
-          EOF
-
-          systemctl daemon-reload
-          systemctl restart docker
+          dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375 &
+          timeout 30 sh -c 'until docker info >/dev/null 2>&1; do sleep 1; done'
 
       - name: Checkout repository
         uses: actions/checkout@v6
