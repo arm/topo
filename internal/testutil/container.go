@@ -20,22 +20,22 @@ type Container struct {
 }
 
 type ContainerSpec struct {
-	dockerfileDir string
-	image         string
-	runArgs       []string
-	postReady     func(t *testing.T, containerName string)
+	context   string
+	image     string
+	runArgs   []string
+	postReady func(t *testing.T, containerName string)
 }
 
 var DinDContainer = ContainerSpec{
-	dockerfileDir: "test-container",
-	image:         "topo-e2e-target:latest",
-	runArgs:       []string{"--privileged"},
-	postReady:     waitForDockerDaemon,
+	context:   "test-container",
+	image:     "topo-e2e-target:latest",
+	runArgs:   []string{"--privileged"},
+	postReady: waitForDockerDaemon,
 }
 
 var SSHContainer = ContainerSpec{
-	dockerfileDir: "ssh-container",
-	image:         "topo-e2e-ssh:latest",
+	context: "ssh-container",
+	image:   "topo-e2e-ssh:latest",
 }
 
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
@@ -80,7 +80,7 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 func buildImage(t *testing.T, spec ContainerSpec) {
 	t.Helper()
 	_, thisFile, _, _ := runtime.Caller(0)
-	contextDir := filepath.Join(filepath.Dir(thisFile), spec.dockerfileDir)
+	contextDir := filepath.Join(filepath.Dir(thisFile), spec.context)
 	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("docker", "build", "-t", spec.image, contextDir)
 	cmd.Stdout = os.Stdout
