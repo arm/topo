@@ -2,7 +2,6 @@ package target_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/command"
@@ -16,11 +15,14 @@ import (
 func TestHardwareProbe(t *testing.T) {
 	t.Run("Probe", func(t *testing.T) {
 		t.Run("returns model name and features", func(t *testing.T) {
-			r := &runner.Mock{}
-			r.On("BinaryExists", context.Background(), "lscpu").Return(nil)
-			r.On("Run", context.Background(), command.WrapInLoginShell("lscpu --json")).Return(testutil.LsCpuOutputRaw, nil)
-			r.On("Run", context.Background(), command.WrapInLoginShell("ls /sys/class/remoteproc")).Return("", nil)
-			r.On("Run", context.Background(), command.WrapInLoginShell("cat /proc/meminfo")).Return("MemTotal:       16384000 kB", nil)
+			r := &runner.Fake{
+				Binaries: []string{"lscpu"},
+				Commands: map[string]runner.FakeResult{
+					command.WrapInLoginShell("lscpu --json"):             {Output: testutil.LsCpuOutputRaw},
+					command.WrapInLoginShell("ls /sys/class/remoteproc"): {Output: ""},
+					command.WrapInLoginShell("cat /proc/meminfo"):        {Output: "MemTotal:       16384000 kB"},
+				},
+			}
 			probe := target.NewHardwareProbe(r)
 
 			got, err := probe.Probe(context.Background())
@@ -37,30 +39,29 @@ func TestHardwareProbe(t *testing.T) {
 				TotalMemoryKb: int64(16384000),
 			}
 			assert.Equal(t, want, got)
-			r.AssertExpectations(t)
 		})
 
 		t.Run("returns error when lscpu not found", func(t *testing.T) {
-			r := &runner.Mock{}
-			r.On("BinaryExists", context.Background(), "lscpu").Return(fmt.Errorf(`"lscpu" not found in $PATH`))
+			r := &runner.Fake{}
 			probe := target.NewHardwareProbe(r)
 
 			_, err := probe.Probe(context.Background())
 
 			assert.ErrorContains(t, err, `"lscpu" not found in $PATH`)
-			r.AssertExpectations(t)
 		})
 
 		t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-			r := &runner.Mock{}
-			r.On("BinaryExists", context.Background(), "lscpu").Return(nil)
-			r.On("Run", context.Background(), command.WrapInLoginShell("lscpu --json")).Return("not json", nil)
+			r := &runner.Fake{
+				Binaries: []string{"lscpu"},
+				Commands: map[string]runner.FakeResult{
+					command.WrapInLoginShell("lscpu --json"): {Output: "not json"},
+				},
+			}
 			probe := target.NewHardwareProbe(r)
 
 			_, err := probe.Probe(context.Background())
 
 			assert.ErrorContains(t, err, "collecting CPU info")
-			r.AssertExpectations(t)
 		})
 	})
 }
