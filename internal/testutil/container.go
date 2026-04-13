@@ -54,7 +54,7 @@ func startContainer(t *testing.T, spec containerSpec) *Container {
 	if testing.Short() {
 		t.Skip("skipping test that requires a container in short mode")
 	}
-	RequireLinuxDockerEngine(t)
+	RequireDockerEngine(t)
 
 	buildImage(t, spec)
 

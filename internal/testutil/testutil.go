@@ -33,7 +33,7 @@ func RequireDocker(t testing.TB) {
 	}
 }
 
-func RequireLinuxDockerEngine(t testing.TB) {
+func RequireDockerEngine(t testing.TB) {
 	t.Helper()
 	RequireDocker(t)
 	cmd := exec.Command("docker", "info", "--format", "{{.OSType}}")

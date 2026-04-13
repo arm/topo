@@ -27,7 +27,7 @@ func TestDockerComposePipeTransfer(t *testing.T) {
 
 	t.Run("Run", func(t *testing.T) {
 		t.Run("transfers images from source to target", func(t *testing.T) {
-			testutil.RequireLinuxDockerEngine(t)
+			testutil.RequireDockerEngine(t)
 			// Note: The Run test doesn't perfectly verify that the image was transferred through
 			// the pipe rather than just existing on the target.
 			// To properly test this, we would need to either:

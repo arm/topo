@@ -66,7 +66,7 @@ func TestRegistryTransfer(t *testing.T) {
 
 	t.Run("Run", func(t *testing.T) {
 		t.Run("it transfers images via registry", func(t *testing.T) {
-			testutil.RequireLinuxDockerEngine(t)
+			testutil.RequireDockerEngine(t)
 			h := command.LocalHost
 			port := operation.DefaultRegistryPort
 			tmpDir := t.TempDir()

@@ -15,7 +15,7 @@ import (
 
 var (
 	RequireDocker            = gtestutil.RequireDocker
-	RequireLinuxDockerEngine = gtestutil.RequireLinuxDockerEngine
+	RequireDockerEngine = gtestutil.RequireDockerEngine
 	RequireWriteFile         = gtestutil.RequireWriteFile
 	SanitiseTestName         = gtestutil.SanitiseTestName
 	StartDinDContainer       = gtestutil.StartDinDContainer
