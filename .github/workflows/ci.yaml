@@ -51,6 +51,7 @@ jobs:
           additional-packages: |
             openssh-server
             docker.io
+            iptables
 
       - name: Setup SSH (Windows - WSL)
         if: runner.os == 'Windows'
