@@ -14,11 +14,12 @@ import (
 )
 
 var (
-	RequireDocker            = gtestutil.RequireDocker
+	RequireDocker       = gtestutil.RequireDocker
 	RequireLinuxDockerEngine = gtestutil.RequireLinuxDockerEngine
-	RequireWriteFile         = gtestutil.RequireWriteFile
-	SanitiseTestName         = gtestutil.SanitiseTestName
-	StartTargetContainer     = gtestutil.StartTargetContainer
+	RequireWriteFile    = gtestutil.RequireWriteFile
+	SanitiseTestName    = gtestutil.SanitiseTestName
+	StartContainer      = gtestutil.StartContainer
+	DinDContainer       = gtestutil.DinDContainer
 )
 
 func TestImageName(t *testing.T) string {

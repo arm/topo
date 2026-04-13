@@ -9,7 +9,7 @@ import (
 )
 
 func TestInstall(t *testing.T) {
-	target := testutil.StartTargetContainer(t)
+	target := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
 	t.Run("installs the binary", func(t *testing.T) {
