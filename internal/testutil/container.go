@@ -13,6 +13,7 @@ import (
 const TargetContainerHost = "root@localhost"
 
 const TargetContainerImage = "topo-e2e-target:latest"
+const SSHContainerImage = "topo-e2e-ssh:latest"
 
 type TargetContainer struct {
 	SSHDestination string
@@ -32,7 +33,7 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 		deleteContainer(containerName)
 	})
 
-	if err := createTargetContainer(t, containerName); err != nil {
+	if err := createContainer(t, containerName, TargetContainerImage, "--privileged"); err != nil {
 		t.Fatalf("failed to create vm: %v", err)
 	}
 
@@ -44,6 +45,36 @@ func StartTargetContainer(t *testing.T) *TargetContainer {
 	waitForDockerReady(t, TargetContainerHost, port)
 
 	// #nosec G204 -- ignore as its a test helper
+	return &TargetContainer{
+		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, port),
+		ContainerName:  containerName,
+	}
+}
+
+func StartSSHContainer(t *testing.T) *TargetContainer {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("skipping test that requires a target container in short mode")
+	}
+	RequireLinuxDockerEngine(t)
+
+	containerName := generateTargetContainerName(t)
+
+	t.Cleanup(func() {
+		deleteContainer(containerName)
+	})
+
+	if err := createContainer(t, containerName, SSHContainerImage); err != nil {
+		t.Fatalf("failed to create ssh container: %v", err)
+	}
+
+	port, err := GetContainerPublicPort(containerName, "22")
+	if err != nil {
+		t.Fatalf("failed to get container port: %v", err)
+	}
+
+	waitForSSHReady(t, TargetContainerHost, port)
+
 	return &TargetContainer{
 		SSHDestination: fmt.Sprintf("ssh://%s:%s", TargetContainerHost, port),
 		ContainerName:  containerName,
@@ -67,16 +98,18 @@ func requireImageExists(t *testing.T, imageName string) {
 	}
 }
 
-func createTargetContainer(t *testing.T, containerName string) error {
+func createContainer(t *testing.T, containerName string, image string, extraArgs ...string) error {
 	t.Helper()
-	requireImageExists(t, TargetContainerImage)
+	requireImageExists(t, image)
 	deleteContainer(containerName)
 	// #nosec G204 -- ignore as its a test helper
-	cmd := exec.Command("docker", "run", "--name", containerName, "--detach", "-P", "--privileged", TargetContainerImage)
+	args := append([]string{"run", "--name", containerName, "--detach", "-P"}, extraArgs...)
+	args = append(args, image)
+	cmd := exec.Command("docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to start target container: %w", err)
+		return fmt.Errorf("failed to start container: %w", err)
 	}
 	return nil
 }
@@ -105,6 +138,25 @@ func GetContainerPublicPort(containerName string, privatePort string) (string, e
 		return "", fmt.Errorf("failed to parse port mapping: %w", err)
 	}
 	return port, nil
+}
+
+func waitForSSHReady(t *testing.T, host string, port string) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		// #nosec G204 -- ignore as its a test helper
+		cmd := exec.Command("ssh", "-p", port, "-o", "ConnectTimeout=2", "-o", "StrictHostKeyChecking=accept-new", "--", host, "echo", "ready")
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			return
+		}
+		lastErr = fmt.Errorf("ssh check failed: %w output: %s", err, strings.TrimSpace(string(output)))
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	t.Fatalf("ssh not ready in container: %v", lastErr)
 }
 
 func waitForDockerReady(t *testing.T, host string, port string) {
