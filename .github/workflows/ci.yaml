@@ -54,8 +54,17 @@ jobs:
         if: runner.os == 'Windows'
         shell: wsl-bash {0}
         run: |
-          dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375 &
-          timeout 30 sh -c 'until docker info >/dev/null 2>&1; do sleep 1; done'
+          mkdir -p /etc/systemd/system/docker.service.d
+          cat > /etc/systemd/system/docker.service.d/override.conf << 'EOF'
+          [Service]
+          ExecStart=
+          ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
+          EOF
+
+          systemctl stop docker.socket docker.service
+          systemctl daemon-reload
+          systemctl start docker
+          timeout 30 sh -c 'until docker -H tcp://127.0.0.1:2375 info >/dev/null 2>&1; do sleep 1; done'
 
       - name: Checkout repository
         uses: actions/checkout@v6
