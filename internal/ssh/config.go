@@ -3,10 +3,13 @@ package ssh
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 )
+
+var ErrNoExplicitHostConfig = errors.New("no explicit host config found")
 
 type Config struct {
 	HostName string
@@ -43,6 +46,9 @@ func NewConfigFromBytes(data []byte) Config {
 
 func IsDestinationAlreadyConfiguredWithAnotherUser(dest Destination) error {
 	hostConfig, err := LookupExplicitHostConfig(dest.Host, dest.Port)
+	if errors.Is(err, ErrNoExplicitHostConfig) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -62,7 +68,7 @@ func LookupExplicitHostConfig(host, port string) (Config, error) {
 	}
 
 	if !IsExplicitHostConfig(host, output) {
-		return Config{}, fmt.Errorf("no explicit host config found for %s", host)
+		return Config{}, fmt.Errorf("%w: %s", ErrNoExplicitHostConfig, host)
 	}
 
 	return NewConfigFromBytes(output), nil
