@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
 )
 
@@ -69,12 +69,12 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 	cmd := s.Command()
 	cmd.Stdout = w
 	cmd.Stderr = w
-	run := cmd.Start
+	execute := command.StartCommand
 	if s.UseControlSockets {
-		run = cmd.Run
+		execute = command.RunCommand
 	}
-	if err := run(); err != nil {
-		return fmt.Errorf("failed to open SSH tunnel to %s: %w", s.TargetDest, err)
+	if err := execute(cmd, w); err != nil {
+		return fmt.Errorf("opening SSH tunnel: %w", err)
 	}
 	if cmd.Process != nil {
 		s.Process = cmd.Process
@@ -113,13 +113,7 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetDest))
 	}
 
-	var buf strings.Builder
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err := cmd.Run()
-	if err == nil {
-		_, _ = fmt.Fprint(w, buf.String())
+	if err := command.RunCommand(cmd, w); err == nil {
 		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
 	}
 
@@ -154,11 +148,8 @@ func (s *SSHTunnelStop) Run(w io.Writer) error {
 	if _, err := os.Stat(ControlSocketPath(s.TargetDest.String())); os.IsNotExist(err) {
 		return nil
 	}
-	cmd := s.Command()
-	cmd.Stdout = w
-	cmd.Stderr = w
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to close SSH tunnel to %s: %w", s.TargetDest, err)
+	if err := command.RunCommand(s.Command(), w); err != nil {
+		return fmt.Errorf("closing SSH tunnel: %w", err)
 	}
 	return nil
 }
@@ -192,11 +183,8 @@ func (s *SSHTunnelProcessStop) Run(w io.Writer) error {
 		return nil
 	}
 
-	cmd := s.Command()
-	cmd.Stdout = w
-	cmd.Stderr = w
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to stop SSH tunnel process: %d", s.Start.Process.Pid)
+	if err := command.RunCommand(s.Command(), w); err != nil {
+		return fmt.Errorf("stopping SSH tunnel process: %d", s.Start.Process.Pid)
 	}
 	s.Start.Process = nil
 	return nil
