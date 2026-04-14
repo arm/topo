@@ -200,7 +200,7 @@ func TestDestination(t *testing.T) {
 		})
 	})
 
-t.Run("Slugify", func(t *testing.T) {
+	t.Run("Slugify", func(t *testing.T) {
 		t.Run("slugifies the uri", func(t *testing.T) {
 			d := ssh.Destination{
 				User: "darth-vader",
