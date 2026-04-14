@@ -46,10 +46,10 @@ func GetUserFromConfig(dest Destination) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return resolveConfiguredUser(dest, output)
+	return ResolveConfiguredUser(dest, output)
 }
 
-func resolveConfiguredUser(dest Destination, configOutput []byte) (string, error) {
+func ResolveConfiguredUser(dest Destination, configOutput []byte) (string, error) {
 	hostConfig := NewConfigFromBytes(configOutput)
 	isExplicitHostConfig := IsExplicitHostConfig(dest.Host, configOutput)
 
