@@ -26,6 +26,11 @@ type ContainerSpec struct {
 	cleanup func(c *Container)
 }
 
+var SSHContainer = ContainerSpec{
+	context: relPath("ssh-container"),
+	image:   "topo-e2e-ssh:latest",
+}
+
 var DinDContainer = ContainerSpec{
 	context: relPath("test-container"),
 	image:   "topo-e2e-target:latest",
