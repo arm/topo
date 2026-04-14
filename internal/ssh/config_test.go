@@ -57,86 +57,77 @@ user homer
 }
 
 func TestResolveConfiguredUser(t *testing.T) {
-	t.Run("bare IP with no explicit config returns dest user", func(t *testing.T) {
-		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
-user username
+	t.Run("with explicit configuration", func(t *testing.T) {
+		explicitConfig := []byte(`debug1: /tmp/.ssh/topo_config line 1: Applying options for board-alias
+debug1: /etc/ssh/ssh_config line 57: Applying options for *
+user root
 hostname 10.2.2.26
 `)
-		dest := ssh.Destination{User: "root", Host: "10.2.2.26"}
 
-		got, err := ssh.ResolveConfiguredUser(dest, config)
-
-		assert.NoError(t, err)
-		assert.Equal(t, "root", got)
-	})
-
-	t.Run("no explicit config and no dest user falls back to config user", func(t *testing.T) {
-		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
-user username
+		t.Run("returns destination's user when no user is configured", func(t *testing.T) {
+			config := []byte(`debug1: /tmp/.ssh/topo_config line 1: Applying options for board-alias
+debug1: /etc/ssh/ssh_config line 57: Applying options for *
 hostname 10.2.2.26
 `)
-		dest := ssh.Destination{Host: "10.2.2.26"}
+			dest := ssh.Destination{User: "root", Host: "board-alias"}
 
-		got, err := ssh.ResolveConfiguredUser(dest, config)
+			got, err := ssh.ResolveConfiguredUser(dest, config)
 
-		assert.NoError(t, err)
-		assert.Equal(t, "username", got)
+			assert.NoError(t, err)
+			assert.Equal(t, "root", got)
+		})
+
+		t.Run("returns destination's user when user is configured as the same user", func(t *testing.T) {
+			dest := ssh.Destination{User: "root", Host: "board-alias"}
+
+			got, err := ssh.ResolveConfiguredUser(dest, explicitConfig)
+
+			assert.NoError(t, err)
+			assert.Equal(t, "root", got)
+		})
+
+		t.Run("returns configured user when destination's user is not set", func(t *testing.T) {
+			dest := ssh.Destination{Host: "board-alias"}
+
+			got, err := ssh.ResolveConfiguredUser(dest, explicitConfig)
+
+			assert.NoError(t, err)
+			assert.Equal(t, "root", got)
+		})
+
+		t.Run("errors if destination's user doesn't match configured user", func(t *testing.T) {
+			dest := ssh.Destination{User: "admin", Host: "board-alias"}
+
+			_, err := ssh.ResolveConfiguredUser(dest, explicitConfig)
+
+			assert.ErrorContains(t, err, `ssh host/alias "board-alias" is already associated with user "root"`)
+		})
 	})
 
-	t.Run("hostname with no explicit config returns dest user", func(t *testing.T) {
-		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
+	t.Run("without explicit host configuration", func(t *testing.T) {
+		wildcardConfig := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
 user username
 hostname board-alias
 `)
-		dest := ssh.Destination{User: "root", Host: "board-alias"}
 
-		got, err := ssh.ResolveConfiguredUser(dest, config)
+		t.Run("returns destination's user when it's set", func(t *testing.T) {
+			dest := ssh.Destination{User: "root", Host: "board-alias"}
 
-		assert.NoError(t, err)
-		assert.Equal(t, "root", got)
+			got, err := ssh.ResolveConfiguredUser(dest, wildcardConfig)
+
+			assert.NoError(t, err)
+			assert.Equal(t, "root", got)
+		})
+
+		t.Run("returns configured user when destination's user is not set", func(t *testing.T) {
+			dest := ssh.Destination{Host: "board-alias"}
+
+			got, err := ssh.ResolveConfiguredUser(dest, wildcardConfig)
+
+			assert.NoError(t, err)
+			assert.Equal(t, "username", got)
+		})
 	})
-
-	t.Run("explicit config with no user conflict returns config user", func(t *testing.T) {
-		config := []byte(`debug1: /tmp/.ssh/topo_config line 1: Applying options for board-alias
-user root
-hostname 10.2.2.26
-debug1: /etc/ssh/ssh_config line 57: Applying options for *
-`)
-		dest := ssh.Destination{User: "root", Host: "board-alias"}
-
-		got, err := ssh.ResolveConfiguredUser(dest, config)
-
-		assert.NoError(t, err)
-		assert.Equal(t, "root", got)
-	})
-
-	t.Run("explicit config with different user returns error", func(t *testing.T) {
-		config := []byte(`debug1: /tmp/.ssh/topo_config line 1: Applying options for board-alias
-user root
-hostname 10.2.2.26
-debug1: /etc/ssh/ssh_config line 57: Applying options for *
-`)
-		dest := ssh.Destination{User: "admin", Host: "board-alias"}
-
-		_, err := ssh.ResolveConfiguredUser(dest, config)
-
-		assert.ErrorContains(t, err, `ssh host/alias "board-alias" is already associated with user "root"`)
-	})
-
-	t.Run("explicit config with no dest user returns config user", func(t *testing.T) {
-		config := []byte(`debug1: /tmp/.ssh/topo_config line 1: Applying options for board-alias
-user root
-hostname 10.2.2.26
-debug1: /etc/ssh/ssh_config line 57: Applying options for *
-`)
-		dest := ssh.Destination{Host: "board-alias"}
-
-		got, err := ssh.ResolveConfiguredUser(dest, config)
-
-		assert.NoError(t, err)
-		assert.Equal(t, "root", got)
-	})
-
 }
 
 func TestIsExplicitHostConfig(t *testing.T) {

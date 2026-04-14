@@ -53,12 +53,15 @@ func ResolveConfiguredUser(dest Destination, configOutput []byte) (string, error
 	hostConfig := NewConfigFromBytes(configOutput)
 
 	if IsExplicitHostConfig(dest.Host, configOutput) {
-		if dest.User != "" && hostConfig.User != dest.User {
+		if hostConfig.User != "" && dest.User != "" && hostConfig.User != dest.User {
 			return "", fmt.Errorf(
 				"ssh host/alias %q is already associated with user %q",
 				dest.Host,
 				hostConfig.User,
 			)
+		}
+		if dest.User != "" {
+			return dest.User, nil
 		}
 		return hostConfig.User, nil
 	}
