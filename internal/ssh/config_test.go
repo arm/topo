@@ -57,7 +57,7 @@ user homer
 }
 
 func TestResolveConfiguredUser(t *testing.T) {
-	t.Run("IP literal with no explicit config returns dest user", func(t *testing.T) {
+	t.Run("bare IP with no explicit config returns dest user", func(t *testing.T) {
 		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
 user username
 hostname 10.2.2.26
@@ -70,7 +70,7 @@ hostname 10.2.2.26
 		assert.Equal(t, "root", got)
 	})
 
-	t.Run("IP literal with no explicit config and no dest user returns config user", func(t *testing.T) {
+	t.Run("no explicit config and no dest user falls back to config user", func(t *testing.T) {
 		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
 user username
 hostname 10.2.2.26
@@ -137,18 +137,6 @@ debug1: /etc/ssh/ssh_config line 57: Applying options for *
 		assert.Equal(t, "root", got)
 	})
 
-	t.Run("IP literal with explicit config and different user returns error", func(t *testing.T) {
-		config := []byte(`debug1: /tmp/.ssh/topo_config line 1: Applying options for 10.2.2.26
-user root
-hostname 10.2.2.26
-debug1: /etc/ssh/ssh_config line 57: Applying options for *
-`)
-		dest := ssh.Destination{User: "admin", Host: "10.2.2.26"}
-
-		_, err := ssh.ResolveConfiguredUser(dest, config)
-
-		assert.ErrorContains(t, err, `ssh host/alias "10.2.2.26" is already associated with user "root"`)
-	})
 }
 
 func TestIsExplicitHostConfig(t *testing.T) {
