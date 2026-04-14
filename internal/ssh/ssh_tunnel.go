@@ -4,16 +4,31 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/internal/output/logger"
 )
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"
+
+func isPortTaken(port string) bool {
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%s", port), 2*time.Second)
+	if err != nil {
+		return false
+	}
+	err = conn.Close()
+	if err != nil {
+		logger.Error(fmt.Sprintf("error closing tcp port probe: %v", err))
+	}
+	return true
+}
 
 func ControlSocketPath(targetHost string) string {
 	hash := sha256.Sum256([]byte(targetHost))
@@ -74,6 +89,9 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 		execute = command.RunCommand
 	}
 	if err := execute(cmd, w); err != nil {
+		if isPortTaken(s.Port) {
+			return fmt.Errorf("port already in use: %s - specify a different port or stop the existing process", s.Port)
+		}
 		return fmt.Errorf("opening SSH tunnel: %w", err)
 	}
 	if cmd.Process != nil {

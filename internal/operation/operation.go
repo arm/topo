@@ -25,7 +25,7 @@ func SetupExitCleanup(w io.Writer, operation Operation, exit func(int)) func() {
 		once.Do(func() {
 			if operation != nil {
 				if err := operation.Run(w); err != nil {
-					logger.Warn(fmt.Sprintf(": failed to cleanup on exit: %v\n", err))
+					logger.Error(fmt.Sprintf("failed to cleanup on exit: %v", err))
 				}
 			}
 			signal.Stop(sigChan)
