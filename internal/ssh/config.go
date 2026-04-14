@@ -51,9 +51,8 @@ func GetUserFromConfig(dest Destination) (string, error) {
 
 func ResolveConfiguredUser(dest Destination, configOutput []byte) (string, error) {
 	hostConfig := NewConfigFromBytes(configOutput)
-	isExplicitHostConfig := IsExplicitHostConfig(dest.Host, configOutput)
 
-	if isExplicitHostConfig {
+	if IsExplicitHostConfig(dest.Host, configOutput) {
 		if dest.User != "" && hostConfig.User != dest.User {
 			return "", fmt.Errorf(
 				"ssh host/alias %q is already associated with user %q",
@@ -61,16 +60,12 @@ func ResolveConfiguredUser(dest Destination, configOutput []byte) (string, error
 				hostConfig.User,
 			)
 		}
-	} else {
-		if !dest.IsIPLiteral() {
-			return "", fmt.Errorf("no explicit host config found for %s", dest.Host)
-		} else {
-			if dest.User != "" {
-				return dest.User, nil
-			}
-		}
+		return hostConfig.User, nil
 	}
 
+	if dest.User != "" {
+		return dest.User, nil
+	}
 	return hostConfig.User, nil
 }
 

@@ -83,16 +83,17 @@ hostname 10.2.2.26
 		assert.Equal(t, "username", got)
 	})
 
-	t.Run("non-IP alias with no explicit config returns error", func(t *testing.T) {
+	t.Run("hostname with no explicit config returns dest user", func(t *testing.T) {
 		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
 user username
 hostname board-alias
 `)
 		dest := ssh.Destination{User: "root", Host: "board-alias"}
 
-		_, err := ssh.ResolveConfiguredUser(dest, config)
+		got, err := ssh.ResolveConfiguredUser(dest, config)
 
-		assert.ErrorContains(t, err, "no explicit host config found for board-alias")
+		assert.NoError(t, err)
+		assert.Equal(t, "root", got)
 	})
 
 	t.Run("explicit config with no user conflict returns config user", func(t *testing.T) {
