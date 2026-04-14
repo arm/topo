@@ -15,14 +15,14 @@ import (
 )
 
 func TestDeploy(t *testing.T) {
-	target := testutil.StartContainer(t, testutil.DinDContainer)
+	container := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
 	t.Run("Init, add and Deploy", func(t *testing.T) {
 		projectDir := t.TempDir()
 		composeFile := filepath.Join(projectDir, "compose.yaml")
 		t.Cleanup(func() {
-			composeDown(t, composeFile, target.SSHDestination)
+			composeDown(t, composeFile, container.SSHDestination)
 		})
 
 		requireInit(t, topo, projectDir)
@@ -32,8 +32,8 @@ func TestDeploy(t *testing.T) {
 
 		requireExtend(t, topo, projectDir, composeFile, nameArgValue)
 
-		requireDeploy(t, topo, projectDir, target.SSHDestination)
-		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
+		requireDeploy(t, topo, projectDir, container.SSHDestination)
+		port, err := testutil.GetContainerPublicPort(container.Name, "8080")
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 	})
@@ -43,14 +43,14 @@ func TestDeploy(t *testing.T) {
 		cloneDir := filepath.Join(baseDir, "project")
 		composeFile := filepath.Join(cloneDir, "compose.yaml")
 		t.Cleanup(func() {
-			composeDown(t, composeFile, target.SSHDestination)
+			composeDown(t, composeFile, container.SSHDestination)
 		})
 
 		nameArgValue := "Topo"
 		requireClone(t, topo, baseDir, cloneDir, "testdata/services/hello-server", fmt.Sprintf("NAME=%s", nameArgValue))
-		requireDeploy(t, topo, cloneDir, target.SSHDestination)
+		requireDeploy(t, topo, cloneDir, container.SSHDestination)
 		expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
-		port, err := testutil.GetContainerPublicPort(target.ContainerName, "8080")
+		port, err := testutil.GetContainerPublicPort(container.Name, "8080")
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 	})

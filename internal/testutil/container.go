@@ -15,7 +15,7 @@ import (
 
 type Container struct {
 	SSHDestination string
-	ContainerName  string
+	Name           string
 }
 
 type ContainerSpec struct {
@@ -72,7 +72,7 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 
 	c := &Container{
 		SSHDestination: fmt.Sprintf("ssh://root@localhost:%s", port),
-		ContainerName:  containerName,
+		Name:           containerName,
 	}
 
 	if spec.setup != nil {
@@ -188,7 +188,7 @@ func waitForPort(host string, port string, timeout time.Duration) error {
 }
 
 func waitForDockerDaemon(c *Container) error {
-	containerName := c.ContainerName
+	containerName := c.Name
 	deadline := time.Now().Add(20 * time.Second)
 	var lastErr error
 

@@ -9,14 +9,14 @@ import (
 )
 
 func TestInstall(t *testing.T) {
-	target := testutil.StartContainer(t, testutil.DinDContainer)
+	container := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
 	t.Run("installs the binary", func(t *testing.T) {
-		out, err := installRemoteprocRuntime(topo, target.SSHDestination)
+		out, err := installRemoteprocRuntime(topo, container.SSHDestination)
 
 		require.NoError(t, err, out)
-		requireInstalled(t, "remoteproc-runtime", target.SSHDestination)
+		requireInstalled(t, "remoteproc-runtime", container.SSHDestination)
 	})
 }
 

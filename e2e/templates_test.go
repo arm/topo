@@ -50,9 +50,9 @@ totalmemory_kb: 4194304
 
 		t.Run("correctly handles the --target flag when no target description is provided", func(t *testing.T) {
 			bin := buildBinary(t)
-			target := testutil.StartContainer(t, testutil.DinDContainer)
+			container := testutil.StartContainer(t, testutil.DinDContainer)
 
-			cmd := exec.Command(bin, "templates", "--target", target.SSHDestination)
+			cmd := exec.Command(bin, "templates", "--target", container.SSHDestination)
 			out, err := cmd.CombinedOutput()
 			output := string(out)
 
