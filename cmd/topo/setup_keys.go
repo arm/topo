@@ -33,7 +33,7 @@ var setupKeysCmd = &cobra.Command{
 		}
 
 		dest := ssh.NewDestination(targetArg)
-		user, err := ssh.IsDestinationAlreadyConfiguredWithAnotherUser(dest)
+		user, err := ssh.GetUserFromConfig(dest)
 		if err != nil {
 			return fmt.Errorf("%w; note: a per user SSH config entry should be created when setting up keys", err)
 		}

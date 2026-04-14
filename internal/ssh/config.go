@@ -41,7 +41,7 @@ func NewConfigFromBytes(data []byte) Config {
 	return config
 }
 
-func IsDestinationAlreadyConfiguredWithAnotherUser(dest Destination) (string, error) {
+func GetUserFromConfig(dest Destination) (string, error) {
 	output, err := readConfig(Destination{Host: dest.Host, Port: dest.Port})
 	if err != nil {
 		return "", err
@@ -61,13 +61,14 @@ func resolveConfiguredUser(dest Destination, configOutput []byte) (string, error
 				hostConfig.User,
 			)
 		}
-	} else if !isExplicitHostConfig && !dest.IsIPLiteral() {
-		return "", fmt.Errorf("no explicit host config found for %s", dest.Host)
-	} else if !isExplicitHostConfig && dest.IsIPLiteral() {
-		if dest.User != "" {
-			return dest.User, nil
+	} else {
+		if !dest.IsIPLiteral() {
+			return "", fmt.Errorf("no explicit host config found for %s", dest.Host)
+		} else {
+			if dest.User != "" {
+				return dest.User, nil
+			}
 		}
-		return hostConfig.User, nil
 	}
 
 	return hostConfig.User, nil
