@@ -2,9 +2,17 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/arm/topo)](https://goreportcard.com/report/github.com/arm/topo)
 
-Discover what your Arm hardware can do and deploy workloads that use it to its full potential.
+Discover what your Arm hardware can do, find software that unlocks its potential, and deploy it in minutes with standard container tooling.
 
-Every Arm system has a different mix of architecture features, and many include additional specialized processors alongside the main CPU. Topo connects to your target over SSH, probes its capabilities, and matches it to ready-made containerized workloads that fully leverage your specific hardware. Where a system has multiple processors, Topo can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) to extend container workloads across all of them.
+Point Topo at an Arm Linux system over SSH and it can:
+
+- probe the hardware, identifying CPU features and heterogeneous coprocessors
+- match your system with [Compose](https://compose-spec.io/)-based [Topo Templates](https://github.com/arm/topo-template-format) that showcase those features
+- build, transfer, and launch workloads with an idempotent `topo deploy` workflow
+
+Use Topo Templates to go from a fresh Linux install to a working demo in minutes. Already have a Docker Compose project? Deploy it as-is and iterate without rebuilding your workflow around a new tool.
+
+For boards with heterogeneous processors, Topo goes further. A template like [Lightbulb Moment](https://github.com/Arm-Examples/topo-lightbulb-moment) reads GPIO on the M-core, passes messages to the A-core, and serves a web UI, all deployed with one command. Under the hood, Topo and [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) orchestrate Linux services and coprocessor firmware in the same Compose project, so you can treat a heterogeneous board as one deployable unit instead of juggling separate toolchains.
 
 ## Core Concepts
 
