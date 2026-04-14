@@ -28,7 +28,7 @@ func NewDockerComposeBuild(composeFile string, h command.Host) *DockerCompose {
 }
 
 func NewDockerComposePull(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("Pull images", composeFile, h, []string{"pull"})
+	return NewDockerCompose("Pull images", composeFile, h, []string{"pull", "--ignore-buildable"})
 }
 
 func NewDockerComposeStop(composeFile string, h command.Host) *DockerCompose {

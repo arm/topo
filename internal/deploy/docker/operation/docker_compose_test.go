@@ -54,6 +54,30 @@ func TestNewDockerComposePull(t *testing.T) {
 
 		assert.Equal(t, "Pull images", got)
 	})
+
+	t.Run("Run", func(t *testing.T) {
+		testutil.RequireDocker(t)
+
+		t.Run("skips services that have a build context", func(t *testing.T) {
+			tmpDir := t.TempDir()
+			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
+			composeFileContent := `
+services:
+  locally-built:
+    build:
+      context: .
+      dockerfile_inline: "FROM alpine:latest"
+    image: this-image-does-not-exist-on-docker-hub
+`
+			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
+			var buf bytes.Buffer
+			op := operation.NewDockerComposePull(composeFilePath, command.LocalHost)
+
+			err := op.Run(&buf)
+
+			require.NoError(t, err)
+		})
+	})
 }
 
 func TestNewDockerComposeRun(t *testing.T) {
