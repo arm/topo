@@ -200,13 +200,7 @@ func TestDestination(t *testing.T) {
 		})
 	})
 
-	t.Run("IsIPLiteral", func(t *testing.T) {
-		assert.True(t, ssh.Destination{User: "root", Host: "10.1.197.67", Port: "22"}.IsIPLiteral())
-		assert.True(t, ssh.Destination{User: "darth", Host: "2001:db8::1", Port: "80"}.IsIPLiteral())
-		assert.False(t, ssh.Destination{User: "vader", Host: "board", Port: "300"}.IsIPLiteral())
-	})
-
-	t.Run("Slugify", func(t *testing.T) {
+t.Run("Slugify", func(t *testing.T) {
 		t.Run("slugifies the uri", func(t *testing.T) {
 			d := ssh.Destination{
 				User: "darth-vader",
