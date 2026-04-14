@@ -177,7 +177,7 @@ func (s *SSHTunnelStop) Run(w io.Writer) error {
 	cmd.Stderr = w
 	if err := cmd.Run(); err != nil {
 		formattedError := command.FormatError(cmd.Args, err)
-		return fmt.Errorf("failed to opcloseen SSH tunnel: %w", formattedError)
+		return fmt.Errorf("failed to close SSH tunnel: %w", formattedError)
 	}
 	return nil
 }
