@@ -120,7 +120,7 @@ func TestSSHTunnelStart(t *testing.T) {
 			err := st.Run(&buf)
 
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "opening SSH tunnel:")
+			assert.Contains(t, err.Error(), "failed to open SSH tunnel:")
 			assert.NotContains(t, err.Error(), "port already in use")
 		})
 	})

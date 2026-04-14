@@ -84,15 +84,17 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 	cmd := s.Command()
 	cmd.Stdout = w
 	cmd.Stderr = w
-	execute := command.StartCommand
+	run := cmd.Start
 	if s.UseControlSockets {
-		execute = command.RunCommand
+		run = cmd.Run
 	}
-	if err := execute(cmd, w); err != nil {
+	if err := run(); err != nil {
 		if isPortTaken(s.Port) {
 			return fmt.Errorf("port already in use: %s - specify a different port or stop the existing process", s.Port)
 		}
-		return fmt.Errorf("opening SSH tunnel: %w", err)
+
+		formattedError := command.FormatError(cmd.Args, err)
+		return fmt.Errorf("failed to open SSH tunnel: %w", formattedError)
 	}
 	if cmd.Process != nil {
 		s.Process = cmd.Process
@@ -131,7 +133,11 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetDest))
 	}
 
-	if err := command.RunCommand(cmd, w); err == nil {
+	cmd.Stdout = w
+	cmd.Stderr = w
+
+	err := cmd.Run()
+	if err == nil {
 		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
 	}
 
@@ -166,8 +172,12 @@ func (s *SSHTunnelStop) Run(w io.Writer) error {
 	if _, err := os.Stat(ControlSocketPath(s.TargetDest.String())); os.IsNotExist(err) {
 		return nil
 	}
-	if err := command.RunCommand(s.Command(), w); err != nil {
-		return fmt.Errorf("closing SSH tunnel: %w", err)
+	cmd := s.Command()
+	cmd.Stdout = w
+	cmd.Stderr = w
+	if err := cmd.Run(); err != nil {
+		formattedError := command.FormatError(cmd.Args, err)
+		return fmt.Errorf("failed to opcloseen SSH tunnel: %w", formattedError)
 	}
 	return nil
 }
@@ -201,8 +211,13 @@ func (s *SSHTunnelProcessStop) Run(w io.Writer) error {
 		return nil
 	}
 
-	if err := command.RunCommand(s.Command(), w); err != nil {
-		return fmt.Errorf("stopping SSH tunnel process: %d", s.Start.Process.Pid)
+	cmd := s.Command()
+	cmd.Stdout = w
+	cmd.Stderr = w
+	if err := cmd.Run(); err != nil {
+		pid := s.Start.Process.Pid
+		formattedError := command.FormatError(cmd.Args, err)
+		return fmt.Errorf("failed to stop SSH tunnel process (pid: %d): %w", pid, formattedError)
 	}
 	s.Start.Process = nil
 	return nil
