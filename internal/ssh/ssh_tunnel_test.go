@@ -2,6 +2,7 @@ package ssh_test
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"testing"
@@ -93,6 +94,34 @@ func TestSSHTunnelStart(t *testing.T) {
 
 			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -R %s:127.0.0.1:%s ssh://user@remote", port, port)
 			assert.Equal(t, want, got)
+		})
+	})
+
+	t.Run("Run", func(t *testing.T) {
+		t.Run("it returns port in use error when port is taken", func(t *testing.T) {
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+			defer listener.Close() //nolint:errcheck
+			_, port, err := net.SplitHostPort(listener.Addr().String())
+			require.NoError(t, err)
+			var buf strings.Builder
+			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), port, true)
+
+			err = st.Run(&buf)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "port already in use: "+port)
+		})
+
+		t.Run("it returns generic tunnel error when port is free", func(t *testing.T) {
+			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), operation.DefaultRegistryPort, true)
+			var buf strings.Builder
+
+			err := st.Run(&buf)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "opening SSH tunnel:")
+			assert.NotContains(t, err.Error(), "port already in use")
 		})
 	})
 
