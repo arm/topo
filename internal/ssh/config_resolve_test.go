@@ -9,7 +9,7 @@ import (
 func TestResolveConfiguredUser(t *testing.T) {
 	t.Run("IP literal with no explicit config returns dest user", func(t *testing.T) {
 		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
-user lukpar01
+user username
 hostname 10.2.2.26
 `)
 		dest := Destination{User: "root", Host: "10.2.2.26"}
@@ -22,7 +22,7 @@ hostname 10.2.2.26
 
 	t.Run("IP literal with no explicit config and no dest user returns config user", func(t *testing.T) {
 		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
-user lukpar01
+user username
 hostname 10.2.2.26
 `)
 		dest := Destination{Host: "10.2.2.26"}
@@ -30,12 +30,12 @@ hostname 10.2.2.26
 		got, err := resolveConfiguredUser(dest, config)
 
 		assert.NoError(t, err)
-		assert.Equal(t, "lukpar01", got)
+		assert.Equal(t, "username", got)
 	})
 
 	t.Run("non-IP alias with no explicit config returns error", func(t *testing.T) {
 		config := []byte(`debug1: /etc/ssh/ssh_config line 57: Applying options for *
-user lukpar01
+user username
 hostname board-alias
 `)
 		dest := Destination{User: "root", Host: "board-alias"}
