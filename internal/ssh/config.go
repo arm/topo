@@ -41,16 +41,17 @@ func NewConfigFromBytes(data []byte) Config {
 	return config
 }
 
-// IsDestinationAlreadyConfiguredWithAnotherUser checks if the destination is already configured with another user.
-// If it is, an error is returned. Otherwise, the user associated with the destination in the SSH config is returned.
 func IsDestinationAlreadyConfiguredWithAnotherUser(dest Destination) (string, error) {
 	output, err := readConfig(Destination{Host: dest.Host, Port: dest.Port})
 	if err != nil {
 		return "", err
 	}
+	return resolveConfiguredUser(dest, output)
+}
 
-	hostConfig := NewConfigFromBytes(output)
-	isExplicitHostConfig := IsExplicitHostConfig(dest.Host, output)
+func resolveConfiguredUser(dest Destination, configOutput []byte) (string, error) {
+	hostConfig := NewConfigFromBytes(configOutput)
+	isExplicitHostConfig := IsExplicitHostConfig(dest.Host, configOutput)
 
 	if isExplicitHostConfig {
 		if dest.User != "" && hostConfig.User != dest.User {
