@@ -188,7 +188,8 @@ main() {
   url="$(build_download_url "$version")"
   install_dir="$(resolve_install_dir "$ARG_INSTALL_DIR")"
 
-  tmpdir="$(mktemp -d)"
+  tmpdir="/tmp/topo.$$"
+  mkdir -p "$tmpdir"
   trap 'rm -rf "$tmpdir"' EXIT
 
   download_and_extract "$url" "$tmpdir"
