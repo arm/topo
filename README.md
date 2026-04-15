@@ -37,7 +37,7 @@ The `topo describe` command probes your board and writes a `target-description.y
 
 ### Templates
 
-Topo templates extend the [Compose Specification](https://compose-spec.io/) popularised by Docker, adding `x-topo` metadata that declares CPU feature requirements and build arguments. Topo uses your target description to match and configure compatible templates for your board. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
+Topo templates extend the [Compose Specification](https://compose-spec.io/) popularised by Docker, adding `x-topo` metadata that declares CPU feature requirements and build arguments. Topo uses your target description to match and configure compatible templates for your board. Templates can come from a git repository (`git:https://...`), or a local directory (`dir:path`).
 
 The full format specification is at [arm/topo-template-format](https://github.com/arm/topo-template-format).
 
@@ -126,14 +126,16 @@ topo templates --target my-board
 
 ### 4. Clone a template into a new project
 
+You can use `topo clone` with a git url, or file source. Git urls for our example templates can be found in the output of `topo templates`
+
 ```sh
-topo clone template:topo-welcome
+topo clone https://github.com/Arm-Examples/topo-welcome.git
 ```
 
 If the template requires build arguments, Topo will prompt you for them. You can also supply them on the command line:
 
 ```sh
-topo clone template:topo-welcome GREETING_NAME="World"
+topo clone https://github.com/Arm-Examples/topo-welcome.git GREETING_NAME="World"
 ```
 
 This creates a project directory containing a `compose.yaml`, and any source files from the template.
