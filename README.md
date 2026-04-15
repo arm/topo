@@ -56,14 +56,12 @@ Download the latest Windows binary from [GitHub Releases](https://github.com/arm
 1. Extract the `.zip` file you downloaded.
 2. Open **Command Prompt** in the folder where `topo.exe` was extracted:
    - Right-click in the folder → **Open in Terminal**
-3. Run the following commands:
+3. Run the following command to install to path:
 
 ```bat
-mkdir "%USERPROFILE%\tools\topo"
-move topo.exe "%USERPROFILE%\tools\topo"
-setx PATH "%PATH%;%USERPROFILE%\tools\topo"
+mkdir "$env:USERPROFILE\tools\topo" -Force; move .\topo.exe "$env:USERPROFILE\tools\topo\"; setx PATH "$env:PATH;$env:USERPROFILE\tools\topo"
 ```
-Then from any terminal run `topo --help to confirm installation`
+Then from a new terminal run `topo --help to confirm installation`
 
 ### Prerequisites
 
