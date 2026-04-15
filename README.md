@@ -35,25 +35,34 @@ The full format specification is at [arm/topo-template-format](https://github.co
 
 ## Installation
 
-For Linux and macOS users, the quickest way to install is with the installer script, which auto-detects your platform and places the binary on your `PATH`:
+For **Linux** and **macOS** users, the quickest way to install is with the installer script, which auto-detects your platform and places the binary on your `PATH`:
 
+In your shell, run:
 ```sh
 curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
 ```
 
-To install a specific version or choose a custom install directory:
-
+Or, To install a specific version or choose a custom install directory:
 ```sh
 curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh -s -- --version v4.0.0 --path ~/.local/bin
 ```
 
-For manual installation, including Windows, download the latest binary for your platform from [GitHub Releases](https://github.com/arm/topo/releases/latest), extract it, and place it on your `PATH`.
+Alternatively, You may also want to manually install it from [GitHub Releases](https://github.com/arm/topo/releases/latest).
 
-To build from source instead (requires Go 1.26+):
+**Windows**
 
-```sh
-go build ./cmd/topo
+Download the latest Windows binary from [GitHub Releases](https://github.com/arm/topo/releases/latest).
+
+1. Extract the `.zip` file you downloaded.
+2. Open **Command Prompt** in the folder where `topo.exe` was extracted:
+   - Right-click in the folder → **Open in Terminal**
+3. Run the following commands:
+
+```bat
+mkdir "%USERPROFILE%\tools\topo" && move topo.exe "%USERPROFILE%\tools\topo"
+setx PATH "%PATH%;%USERPROFILE%\tools\topo"
 ```
+Then from any terminal run `topo --help to confirm installation`
 
 ### Prerequisites
 
