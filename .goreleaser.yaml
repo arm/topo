@@ -53,11 +53,14 @@ changelog:
       - '^.*BREAKING CHANGE:.*$'
   groups:
     - title: Breaking Changes
+      # Examples: "feat!: drop legacy flags", "fix(auth)!: change token format", "BREAKING CHANGE: drop v1 API"
       regexp: '^.*?!:.*$|^.*BREAKING CHANGE:.*$'
       order: 0
     - title: Features / Enhancements
+      # Examples: "feat: add export command", "feat(api): add /v2 endpoints"
       regexp: '^.*?feat(\([[:word:]]+\))??:.*$'
       order: 1
     - title: Bug Fixes
+      # Examples: "fix: handle nil config", "fix(auth): suggest correct fix for auth failure"
       regexp: '^.*?fix(\([[:word:]]+\))??:.*$'
       order: 2
