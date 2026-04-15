@@ -45,12 +45,6 @@ The full format specification is at [arm/topo-template-format](https://github.co
 
 Download the latest binary for your platform from [GitHub Releases](https://github.com/arm/topo/releases/latest), extract it, and place it on your `PATH`.
 
-To build from source instead (requires Go 1.26+):
-
-```sh
-go build ./cmd/topo
-```
-
 ### Prerequisites
 
 **Host machine** (where you run `topo`):
