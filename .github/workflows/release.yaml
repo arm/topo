@@ -123,7 +123,7 @@ jobs:
           app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
           private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
           owner: Arm-Debug
-          repositories: signer
+          repositories: topo-signer
 
       - name: Trigger sign-and-release
         env:
@@ -131,7 +131,7 @@ jobs:
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
           gh workflow run sign-and-release.yml \
-            --repo Arm-Debug/signer \
+            --repo Arm-Debug/topo-signer \
             --ref v3 \
             --field run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
