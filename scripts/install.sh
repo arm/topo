@@ -1,16 +1,16 @@
 #!/bin/sh
-# POSIX-portable idempotent installer for topo.
-# Downloads a release from the Arm artifactory server and places the binary
-# on the current user's PATH.
-#
-# Usage:
-#   sh install.sh [--version VERSION] [--path DIRECTORY]
-#
-# Options:
-#   --version VERSION   Install a specific version (e.g. v4.0.0). Default: latest.
-#   --path DIRECTORY    Install the binary into DIRECTORY instead of auto-detecting.
-
 set -eu
+
+USAGE="POSIX-portable idempotent installer for topo.
+Downloads a release from the Arm artifactory server and places the binary
+on the current user's PATH.
+
+Usage:
+  sh install.sh [--version VERSION] [--path DIRECTORY]
+
+Options:
+  --version VERSION   Install a specific version (e.g. v4.0.0). Default: latest.
+  --path DIRECTORY    Install the binary into DIRECTORY instead of auto-detecting."
 
 BASE_URL="https://artifacts.tools.arm.com/topo"
 BINARY_NAME="topo"
@@ -43,24 +43,24 @@ download() {
 
 parse_args() {
   version=""
-  install_dir=""
+  ARG_VERSION=""
+  ARG_INSTALL_DIR=""
 
   while [ $# -gt 0 ]; do
     case "$1" in
       --version)
         [ $# -ge 2 ] || { echo "Error: --version requires a value" >&2; exit 1; }
-        version="$2"; shift 2 ;;
+        ARG_VERSION="$2"; shift 2 ;;
       --path)
         [ $# -ge 2 ] || { echo "Error: --path requires a value" >&2; exit 1; }
-        install_dir="$2"; shift 2 ;;
+        ARG_INSTALL_DIR="$2"; shift 2 ;;
       -h|--help)
-        sed -n '2,/^$/s/^# \{0,1\}//p' "$0"; exit 0 ;;
+        # print the script's header comment, stripping leading "# ", as usage information
+        echo "$USAGE"; exit 0 ;;
       *)
         echo "Unknown option: $1" >&2; exit 1 ;;
     esac
   done
-
-  echo "${version} ${install_dir}"
 }
 
 resolve_version() {
@@ -178,15 +178,13 @@ install_binary() {
 }
 
 main() {
-  args="$(parse_args "$@")"
-  arg_version="${args%% *}"
-  arg_install_dir="${args#* }"
+  parse_args "$@"
 
-  version="$(resolve_version "$arg_version")"
+  version="$(resolve_version "$ARG_VERSION")"
   echo "Installing ${BINARY_NAME} ${version}"
 
   url="$(build_download_url "$version")"
-  install_dir="$(resolve_install_dir "$arg_install_dir")"
+  install_dir="$(resolve_install_dir "$ARG_INSTALL_DIR")"
 
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
