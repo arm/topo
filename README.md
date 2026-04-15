@@ -38,13 +38,13 @@ The full format specification is at [arm/topo-template-format](https://github.co
 For Linux and macOS users, the quickest way to install is with the installer script, which auto-detects your platform and places the binary on your `PATH`:
 
 ```sh
-curl -fsSL https://artifacts.tools.arm.com/topo/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
 ```
 
 To install a specific version or choose a custom install directory:
 
 ```sh
-curl -fsSL https://artifacts.tools.arm.com/topo/install.sh | sh -s -- --version v4.0.0 --path ~/.local/bin
+curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh -s -- --version v4.0.0 --path ~/.local/bin
 ```
 
 For manual installation, including Windows, download the latest binary for your platform from [GitHub Releases](https://github.com/arm/topo/releases/latest), extract it, and place it on your `PATH`.
