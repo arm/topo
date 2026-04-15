@@ -1,4 +1,7 @@
 #!/bin/sh
+# wrapped in { } so the entire script is parsed before execution,
+# which is required when piped from curl (e.g. curl ... | sh).
+{
 set -eu
 
 USAGE="POSIX-portable idempotent installer for topo.
@@ -188,8 +191,7 @@ main() {
   url="$(build_download_url "$version")"
   install_dir="$(resolve_install_dir "$ARG_INSTALL_DIR")"
 
-  tmpdir="/tmp/topo.$$"
-  mkdir -p "$tmpdir"
+  tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
 
   download_and_extract "$url" "$tmpdir"
@@ -197,3 +199,4 @@ main() {
 }
 
 main "$@"
+}
