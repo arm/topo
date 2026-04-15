@@ -175,9 +175,13 @@ install_binary() {
   if has_cmd "$BINARY_NAME"; then
     echo "Run '${BINARY_NAME} --help' to get started"
   else
+    abs_dir=$(cd "$install_dir" && pwd -L)
     echo ""
-    echo "Warning: ${install_dir} is not on your PATH."
-    echo "Add it with:  export PATH=\"\$PATH:${install_dir}\""
+    echo "Warning: ${abs_dir} is not on your PATH"
+    echo "Add it to your current session with:"
+    echo "  export PATH=\"\$PATH:${abs_dir}\""
+    echo "To persist across terminal restarts, add the export line to your shell's configuration file (e.g. ~/.bashrc, ~/.zshrc)"
+    echo ""
   fi
 }
 
