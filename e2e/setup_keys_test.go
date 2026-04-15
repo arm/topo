@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/arm/topo/internal/testutil"
@@ -59,6 +60,16 @@ const sshRootPassword = "topo-test"
 func writeAskPassScript(t *testing.T, password string) string {
 	t.Helper()
 	dir := t.TempDir()
+
+	if runtime.GOOS == "windows" {
+		script := fmt.Sprintf(`@echo off
+echo %%~1 | findstr /i "assphrase" >nul && (echo.) || (echo %s)
+`, password)
+		path := filepath.Join(dir, "askpass.bat")
+		require.NoError(t, os.WriteFile(path, []byte(script), 0o755))
+		return path
+	}
+
 	script := fmt.Sprintf(`#!/bin/sh
 case "$1" in
   *assphrase*) echo "" ;;
