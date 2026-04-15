@@ -59,7 +59,8 @@ Download the latest Windows binary from [GitHub Releases](https://github.com/arm
 3. Run the following commands:
 
 ```bat
-mkdir "%USERPROFILE%\tools\topo" && move topo.exe "%USERPROFILE%\tools\topo"
+mkdir "%USERPROFILE%\tools\topo"
+move topo.exe "%USERPROFILE%\tools\topo"
 setx PATH "%PATH%;%USERPROFILE%\tools\topo"
 ```
 Then from any terminal run `topo --help to confirm installation`
