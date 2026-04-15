@@ -17,13 +17,13 @@ const (
 	KeyTypeRSA     KeyType = "rsa"
 )
 
-func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType) (operation.Sequence, error) {
+func NewKeySetup(dest ssh.Destination, privKeyPath string, keyType KeyType) operation.Sequence {
 	sshRunner := runner.NewSSH(dest, runner.SSHOptions{})
 	ops := []operation.Operation{
 		operations.NewSSHKeyGen("Generate SSH key pair for target", dest, string(keyType), privKeyPath, operations.SSHKeyGenOptions{}),
 		operations.NewPubKeyTransfer(privKeyPath, sshRunner),
 	}
-	return operation.NewSequence(ops...), nil
+	return operation.NewSequence(ops...)
 }
 
 func GetDefaultPrivateKeyPath(sshDir string, targetSlug string) (string, error) {

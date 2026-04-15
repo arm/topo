@@ -57,10 +57,7 @@ var setupKeysCmd = &cobra.Command{
 			return err
 		}
 
-		seq, err := setupkeys.NewKeySetup(dest, privateKeyPath, parsedKeyType)
-		if err != nil {
-			return err
-		}
+		seq := setupkeys.NewKeySetup(dest, privateKeyPath, parsedKeyType)
 
 		err = seq.Run(os.Stdout)
 		if err != nil {
