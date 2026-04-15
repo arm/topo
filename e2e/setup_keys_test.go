@@ -14,7 +14,7 @@ import (
 )
 
 func TestSetupKeysJourney(t *testing.T) {
-	container := testutil.StartContainer(t, testutil.SSHContainer)
+	container := testutil.StartContainer(t, testutil.PasswordedSSHContainer)
 	topo := buildBinary(t)
 
 	Step(t, "health reports unknown host key and suggests accept-new-host-keys")
