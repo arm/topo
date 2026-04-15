@@ -72,9 +72,7 @@ resolve_version() {
   if [ -z "$version" ]; then
     echo "Resolving latest version..." >&2
     page="$(fetch "${BASE_URL}/")"
-    # regex to match version strings like v1.2.3, taking the last one with tail to get the latest
-    # as artifactory lists versions in ascending order.
-    version="$(echo "$page" | sed -n 's/.*\(v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | tail -n1)"
+    version="$(echo "$page" | sed -n 's/.*\(v[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | sort -u -V | tail -n1)"
     if [ -z "$version" ]; then
       echo "Error: could not determine latest version from ${BASE_URL}/" >&2
       exit 1
