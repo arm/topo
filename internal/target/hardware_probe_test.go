@@ -23,9 +23,8 @@ func TestHardwareProbe(t *testing.T) {
 					command.WrapInLoginShell("cat /proc/meminfo"):        {Output: "MemTotal:       16384000 kB"},
 				},
 			}
-			probe := target.NewHardwareProbe(r)
 
-			got, err := probe.Probe(context.Background())
+			got, err := target.ProbeHardware(context.Background(), r)
 
 			require.NoError(t, err)
 			want := target.HardwareProfile{
@@ -43,9 +42,8 @@ func TestHardwareProbe(t *testing.T) {
 
 		t.Run("returns error when lscpu not found", func(t *testing.T) {
 			r := &runner.Fake{}
-			probe := target.NewHardwareProbe(r)
 
-			_, err := probe.Probe(context.Background())
+			_, err := target.ProbeHardware(context.Background(), r)
 
 			assert.ErrorContains(t, err, `"lscpu" not found in $PATH`)
 		})
@@ -57,9 +55,8 @@ func TestHardwareProbe(t *testing.T) {
 					command.WrapInLoginShell("lscpu --json"): {Output: "not json"},
 				},
 			}
-			probe := target.NewHardwareProbe(r)
 
-			_, err := probe.Probe(context.Background())
+			_, err := target.ProbeHardware(context.Background(), r)
 
 			assert.ErrorContains(t, err, "collecting CPU info")
 		})

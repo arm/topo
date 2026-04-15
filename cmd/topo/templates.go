@@ -37,10 +37,9 @@ var templatesCmd = &cobra.Command{
 			targetArg, exists := lookupTarget(cmd)
 			if exists {
 				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
-				probe := target.NewHardwareProbe(r)
 				ctx, cancel := contextWithTimeout(cmd)
 				defer cancel()
-				hwProfile, err := probe.Probe(ctx)
+				hwProfile, err := target.ProbeHardware(ctx, r)
 				if err != nil {
 					return err
 				}
