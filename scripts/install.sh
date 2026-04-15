@@ -1,6 +1,6 @@
 #!/bin/sh
 # POSIX-portable idempotent installer for topo.
-# Downloads a release from the Arm artifacts server and places the binary
+# Downloads a release from the Arm artifactory server and places the binary
 # on the current user's PATH.
 #
 # Usage:
@@ -40,8 +40,6 @@ download() {
     exit 1
   fi
 }
-
-# ── steps ───────────────────────────────────────────────────────────
 
 parse_args() {
   version=""
