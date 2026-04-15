@@ -126,7 +126,8 @@ resolve_install_dir() {
   existing="$(command -v "$BINARY_NAME" 2>/dev/null || true)"
   if [ -n "$existing" ]; then
     dir="$(dirname "$existing")"
-    echo "Existing installation found at ${dir}, will update in-place" >&2
+    version="$("$existing" --version 2>/dev/null || true)"
+    echo "Existing installation found at ${dir} (${version}), will update in-place" >&2
     echo "$dir"
     return
   fi
