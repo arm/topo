@@ -2,11 +2,9 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/arm/topo)](https://goreportcard.com/report/github.com/arm/topo)
 
-Go from a fresh Linux install to a working demo on Arm hardware in minutes.
+Discover and deploy containerised software to Arm hardware over SSH.
 
-Topo helps you discover, configure, and deploy [Topo Templates](https://github.com/arm/topo-template-format) - containerised projects built to showcase what Arm can do.
-
-Already have a Docker Compose project? Topo works with it out of the box, giving you fast, incremental deployment to remote targets over SSH.
+Topo matches your system with [Topo Templates](https://github.com/arm/topo-template-format) that showcase its capabilities. Already have a Docker Compose project? Topo gives you fast, incremental deployment to remote targets.
 
 ## Installation
 
