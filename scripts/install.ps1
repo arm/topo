@@ -82,7 +82,7 @@ function Resolve-InstallDir {
     }
 
     # windows convention is to install user-local binaries under %LOCALAPPDATA%\Programs\$BinaryName
-    $default = Join-Path $env:LOCALAPPDATA 'Programs' $BinaryName
+    $default = Join-Path $env:LOCALAPPDATA (Join-Path 'Programs' $BinaryName)
     New-Item -ItemType Directory -Path $default -Force | Out-Null
     return (Resolve-Path -LiteralPath $default).ProviderPath
 }
