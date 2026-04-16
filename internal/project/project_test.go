@@ -129,7 +129,6 @@ func mockCloneSourceWithContent(t *testing.T, content, sourceName string) *mockT
 		testutil.RequireMkdirAll(t, destDir)
 		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
 	})
-	mockSource.On("String").Return(sourceName).Maybe()
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})
