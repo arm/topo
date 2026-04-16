@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/catalog"
-	"github.com/arm/topo/internal/describe"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/runner"
@@ -12,8 +11,6 @@ import (
 	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
 )
-
-var targetDescriptionPath string
 
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
@@ -28,24 +25,16 @@ var templatesCmd = &cobra.Command{
 		}
 
 		var profile *target.HardwareProfile
-		if targetDescriptionPath != "" {
-			profile, err = describe.ReadTargetDescriptionFromFile(targetDescriptionPath)
+		if targetArg, exists := lookupTarget(cmd); exists {
+			r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
+			probe := target.NewHardwareProbe(r)
+			ctx, cancel := contextWithTimeout(cmd)
+			defer cancel()
+			hwProfile, err := probe.Probe(ctx)
 			if err != nil {
 				return err
 			}
-		} else {
-			targetArg, exists := lookupTarget(cmd)
-			if exists {
-				r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
-				probe := target.NewHardwareProbe(r)
-				ctx, cancel := contextWithTimeout(cmd)
-				defer cancel()
-				hwProfile, err := probe.Probe(ctx)
-				if err != nil {
-					return err
-				}
-				profile = &hwProfile
-			}
+			profile = &hwProfile
 		}
 
 		reposWithCompatibility := catalog.AnnotateCompatibility(profile, repos)
@@ -56,12 +45,5 @@ var templatesCmd = &cobra.Command{
 func init() {
 	addTargetFlag(templatesCmd)
 	addTimeoutFlag(templatesCmd, defaultTimeout)
-	templatesCmd.Flags().StringVar(
-		&targetDescriptionPath,
-		"target-description",
-		"",
-		"Path to the target description file used to show template compatibility",
-	)
-	templatesCmd.MarkFlagsMutuallyExclusive("target", "target-description")
 	rootCmd.AddCommand(templatesCmd)
 }

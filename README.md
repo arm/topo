@@ -135,7 +135,7 @@ topo describe --target my-board
 This SSHs into the target, probes CPU features, and prints a YAML target description to stdout. You can save it to a file if needed:
 
 ```sh
-topo describe --target my-board > target-description.yaml
+topo describe --target my-board
 ```
 
 Topo uses this description to match your system to compatible templates.
@@ -143,15 +143,10 @@ Topo uses this description to match your system to compatible templates.
 ### 3. Find a template
 
 ```sh
-topo templates --target-description target-description.yaml
+topo templates --target my-board
 ```
 
 This lists available templates and indicates compatibility with your target hardware.
-If you don't already have a target description file for your board, you can still use:
-
-```sh
-topo templates --target my-board
-```
 
 ### 4. Clone a template into a new project
 

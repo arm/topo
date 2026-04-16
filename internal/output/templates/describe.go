@@ -4,43 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"text/template"
 
 	"github.com/arm/topo/internal/target"
+	"go.yaml.in/yaml/v4"
 )
 
 type PrintableTargetDescription struct {
 	target.HardwareProfile
 }
 
-const describeTemplate = `Host Processors
----------------
-{{- range .HostProcessor }}
-  Model: {{ .Model }}
-  Cores: {{ .Cores }}
-  Features: {{ join .Features ", " }}
-{{- end }}
-{{ if .RemoteCPU }}
-Remote Processors
------------------
-{{- range .RemoteCPU }}
-  {{ .Name }}
-{{- end }}
-{{ end }}
-Total Memory: {{ .TotalMemoryKb }} KB
-`
-
-func (d PrintableTargetDescription) AsPlain(isTTY bool) (string, error) {
-	tmpl, err := template.
-		New("describe").
-		Funcs(getFuncMap(isTTY)).
-		Parse(describeTemplate)
-	if err != nil {
-		return "", err
-	}
+func (d PrintableTargetDescription) AsPlain(_ bool) (string, error) {
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, d.HardwareProfile); err != nil {
-		return "", err
+	if err := yaml.NewEncoder(&buf).Encode(d.HardwareProfile); err != nil {
+		return "", fmt.Errorf("encode target description as yaml: %w", err)
 	}
 	return buf.String(), nil
 }

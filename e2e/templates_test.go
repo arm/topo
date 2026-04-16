@@ -3,7 +3,6 @@ package e2e
 import (
 	"encoding/json"
 	"os/exec"
-	"path/filepath"
 	"testing"
 
 	"github.com/arm/topo/internal/testutil"
@@ -27,27 +26,6 @@ func TestTemplates(t *testing.T) {
 	})
 
 	t.Run("filtering", func(t *testing.T) {
-		t.Run("matches templates to target description", func(t *testing.T) {
-			bin := buildBinary(t)
-
-			targetDescriptionYAML := `host:
-  - model: Cortex-A
-    cores: 4
-    features:
-      - asimd
-totalmemory_kb: 4194304
-`
-			targetDescriptionPath := writeTargetDescription(t, targetDescriptionYAML)
-
-			cmd := exec.Command(bin, "templates", "--target-description", targetDescriptionPath)
-			out, err := cmd.CombinedOutput()
-			output := string(out)
-
-			require.NoError(t, err, output)
-			assert.Contains(t, output, "✅ Hello World")
-			assert.Contains(t, output, "❌ Lightbulb Moment")
-		})
-
 		t.Run("correctly handles the --target flag when no target description is provided", func(t *testing.T) {
 			bin := buildBinary(t)
 			target := testutil.StartContainer(t, testutil.DinDContainer)
@@ -82,11 +60,4 @@ totalmemory_kb: 4194304
 		assert.True(t, ok, "msg field should be a string")
 		assert.NotNil(t, entry["time"])
 	})
-}
-
-func writeTargetDescription(t *testing.T, content string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "target-description.yaml")
-	testutil.RequireWriteFile(t, path, content)
-	return path
 }
