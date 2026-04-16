@@ -33,18 +33,9 @@ func (s SSHAuthenticationProbeOptions) SSHArgs() []string {
 	return args
 }
 
-type SSHAuthenticationProbe struct {
-	runner *runner.SSH
-	opts   SSHAuthenticationProbeOptions
-}
-
-func NewSSHAuthenticationProbe(r *runner.SSH, opts SSHAuthenticationProbeOptions) SSHAuthenticationProbe {
-	return SSHAuthenticationProbe{runner: r, opts: opts}
-}
-
-// Probe verifies SSH connectivity by attempting public key authentication.
-func (p SSHAuthenticationProbe) Probe(ctx context.Context) error {
-	_, err := p.runner.RunWithArgs(ctx, "true", p.opts.SSHArgs()...)
+// ProbeSSHAuthentication verifies SSH connectivity by attempting public key authentication.
+func ProbeSSHAuthentication(ctx context.Context, r *runner.SSH, opts SSHAuthenticationProbeOptions) error {
+	_, err := r.RunWithArgs(ctx, "true", opts.SSHArgs()...)
 	if err == nil {
 		return nil
 	}

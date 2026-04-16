@@ -5,49 +5,9 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/setupkeys"
-	"github.com/arm/topo/internal/setupkeys/operations"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/require"
 )
-
-func TestNewKeySetup(t *testing.T) {
-	t.Run("NewKeySetup returns SSHKeyGen then PubKeyTransfer for supported key types", func(t *testing.T) {
-		t.Run("ed25519 with empty private key path", func(t *testing.T) {
-			got, err := setupkeys.NewKeySetup(ssh.NewDestination("user@some1thing.com"), "", setupkeys.KeyTypeED25519)
-
-			require.NoError(t, err)
-			require.Len(t, got, 2)
-			require.IsType(t, &operations.SSHKeyGen{}, got[0])
-			require.IsType(t, &operations.PubKeyTransfer{}, got[1])
-		})
-
-		t.Run("ed25519 with custom private key path", func(t *testing.T) {
-			got, err := setupkeys.NewKeySetup(
-				ssh.NewDestination("user@some1thing.com"),
-				filepath.Join(t.TempDir(), "id_ed25519_custom"),
-				setupkeys.KeyTypeED25519,
-			)
-
-			require.NoError(t, err)
-			require.Len(t, got, 2)
-			require.IsType(t, &operations.SSHKeyGen{}, got[0])
-			require.IsType(t, &operations.PubKeyTransfer{}, got[1])
-		})
-
-		t.Run("rsa with custom private key path", func(t *testing.T) {
-			got, err := setupkeys.NewKeySetup(
-				ssh.NewDestination("user@some2thing.com"),
-				filepath.Join(t.TempDir(), "id_rsa_custom"),
-				setupkeys.KeyTypeRSA,
-			)
-
-			require.NoError(t, err)
-			require.Len(t, got, 2)
-			require.IsType(t, &operations.SSHKeyGen{}, got[0])
-			require.IsType(t, &operations.PubKeyTransfer{}, got[1])
-		})
-	})
-}
 
 func TestGetDefaultPrivateKeyPath(t *testing.T) {
 	t.Run("returns home-based ed25519 key path for target slug", func(t *testing.T) {

@@ -28,8 +28,7 @@ type HealthStatus struct {
 func ProbeHealthStatus(ctx context.Context, r runner.Runner) HealthStatus {
 	var hs HealthStatus
 
-	probe := target.NewHardwareProbe(r)
-	remoteprocs, _ := probe.ProbeRemoteproc(ctx)
+	remoteprocs, _ := target.ProbeRemoteproc(ctx, r)
 	hs.Hardware.RemoteCPU = remoteprocs
 
 	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, hs.Hardware.Capabilities())
