@@ -151,4 +151,19 @@ $url        = Build-DownloadUrl -Version $resolvedVersion
 $installDir = Resolve-InstallDir -Requested $Path
 
 Install-Binary -Url $url -InstallDir $installDir -Version $resolvedVersion
-Add-ToUserPath -Dir $installDir
+
+# avoid modifying PATH if the user explicitly provided an install location
+if ($PSBoundParameters.ContainsKey('Path')) {
+    $onPath = ($env:PATH -split ';' |
+        Where-Object { $_ } |
+        ForEach-Object { $_.TrimEnd('\') }) -contains $installDir.TrimEnd('\')
+    if (-not $onPath) {
+        Write-Host ""
+        Write-Host "$installDir is not on your PATH. To add it for the current session:"
+        Write-Host "  `$env:PATH = `"`$env:PATH;$installDir`""
+        Write-Host "To persist across terminal restarts:"
+        Write-Host "  [Environment]::SetEnvironmentVariable('PATH', `"`$([Environment]::GetEnvironmentVariable('PATH','User'));$installDir`", 'User')"
+    }
+} else {
+    Add-ToUserPath -Dir $installDir
+}
