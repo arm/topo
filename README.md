@@ -2,9 +2,17 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/arm/topo)](https://goreportcard.com/report/github.com/arm/topo)
 
-Discover what your Arm hardware can do and deploy workloads that use it to its full potential.
+Discover what your Arm hardware can do, find software that unlocks its potential, and deploy it in minutes with standard container tooling.
 
-Every Arm system has a different mix of architecture features, and many include additional specialized processors alongside the main CPU. Topo connects to your target over SSH, probes its capabilities, and matches it to ready-made containerized workloads that fully leverage your specific hardware. Where a system has multiple processors, Topo can install companion runtimes like [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) to extend container workloads across all of them.
+Point Topo at an Arm Linux system over SSH and it can:
+
+- probe the hardware, identifying CPU features and heterogeneous coprocessors
+- match your system with [Compose](https://compose-spec.io/)-based [Topo Templates](https://github.com/arm/topo-template-format) that showcase those features
+- build, transfer, and launch workloads with an idempotent `topo deploy` workflow
+
+Use Topo Templates to go from a fresh Linux install to a working demo in minutes. Already have a Docker Compose project? Deploy it as-is and iterate without rebuilding your workflow around a new tool.
+
+For boards with heterogeneous processors, Topo goes further. A template like [Lightbulb Moment](https://github.com/Arm-Examples/topo-lightbulb-moment) reads GPIO on the M-core, passes messages to the A-core, and serves a web UI, all deployed with one command. Under the hood, Topo and [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) orchestrate Linux services and coprocessor firmware in the same Compose project, so you can treat a heterogeneous board as one deployable unit instead of juggling separate toolchains.
 
 ## Core Concepts
 
@@ -29,7 +37,7 @@ The `topo describe` command probes your board and writes a `target-description.y
 
 ### Templates
 
-Topo templates extend the [Compose Specification](https://compose-spec.io/) popularised by Docker, adding `x-topo` metadata that declares CPU feature requirements and build arguments. Topo uses your target description to match and configure compatible templates for your board. Templates can come from the built-in catalog (`template:Name`), a git repository (`git:https://...`), or a local directory (`dir:path`).
+Topo templates extend the [Compose Specification](https://compose-spec.io/) popularised by Docker, adding `x-topo` metadata that declares CPU feature requirements and build arguments. Topo uses your target description to match and configure compatible templates for your board. Templates can come from a git repository (`git:https://...`), or a local directory (`dir:path`).
 
 The full format specification is at [arm/topo-template-format](https://github.com/arm/topo-template-format).
 
@@ -141,14 +149,16 @@ topo templates --target my-board
 
 ### 4. Clone a template into a new project
 
+You can use `topo clone` with a git url, or file source. Git urls for our example templates can be found in the output of `topo templates`
+
 ```sh
-topo clone template:topo-welcome
+topo clone https://github.com/Arm-Examples/topo-welcome.git
 ```
 
 If the template requires build arguments, Topo will prompt you for them. You can also supply them on the command line:
 
 ```sh
-topo clone template:topo-welcome GREETING_NAME="World"
+topo clone https://github.com/Arm-Examples/topo-welcome.git GREETING_NAME="World"
 ```
 
 This creates a project directory containing a `compose.yaml`, and any source files from the template.
@@ -156,7 +166,7 @@ This creates a project directory containing a `compose.yaml`, and any source fil
 ### 5. Deploy to your target
 
 ```sh
-cd my-project/
+cd topo-welcome/
 topo deploy --target my-board
 ```
 

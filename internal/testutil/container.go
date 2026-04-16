@@ -26,9 +26,14 @@ type ContainerSpec struct {
 	cleanup func(c *Container)
 }
 
+var PasswordedSSHContainer = ContainerSpec{
+	context: relPath("passworded-ssh"),
+	image:   "topo-e2e-passworded-ssh:latest",
+}
+
 var DinDContainer = ContainerSpec{
-	context: relPath("test-container"),
-	image:   "topo-e2e-target:latest",
+	context: relPath("dind"),
+	image:   "topo-e2e-dind:latest",
 	runArgs: []string{"--privileged"},
 	setup: func(c *Container) error {
 		if err := acceptHostKey(c); err != nil {
