@@ -3,11 +3,13 @@ package project
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/template"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -15,24 +17,23 @@ import (
 )
 
 func Clone(path string, src template.Source, argProvider arguments.Provider) error {
-	if err := src.CopyTo(path); err != nil {
-		if errDestDirExists, ok := errors.AsType[template.DestDirExistsError](err); ok {
-			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
-		}
-		return fmt.Errorf("failed to copy Service Template: %w", err)
-	}
+	return NewClone(path, src, argProvider).Run(nil)
+}
 
-	composeFile := filepath.Join(path, template.ComposeFilename)
-
-	err := ResolveAndApplyArgs(composeFile, argProvider)
-	if err != nil {
-		if rmErr := os.RemoveAll(path); rmErr != nil {
-			return errors.Join(err, rmErr)
-		}
-		return fmt.Errorf("init failed: %w", err)
-	}
-	fmt.Printf("%s", path)
-	return err
+func NewClone(path string, src template.Source, argProvider arguments.Provider) operation.Sequence {
+	return operation.NewSequence(
+		copyTemplateOperation{
+			path: path,
+			src:  src,
+		},
+		resolveArgsOperation{
+			path:        path,
+			argProvider: argProvider,
+		},
+		printProjectDirectoryOperation{
+			path: path,
+		},
+	)
 }
 
 func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider) error {
@@ -254,4 +255,59 @@ func argsToMap(args []arguments.ResolvedArg) map[string]string {
 		result[arg.Name] = arg.Value
 	}
 	return result
+}
+
+type copyTemplateOperation struct {
+	path string
+	src  template.Source
+}
+
+func (o copyTemplateOperation) Description() string {
+	return "Git clone"
+}
+
+func (o copyTemplateOperation) Run(_ io.Writer) error {
+	if err := o.src.CopyTo(o.path); err != nil {
+		if errDestDirExists, ok := errors.AsType[template.DestDirExistsError](err); ok {
+			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
+		}
+		return fmt.Errorf("failed to copy Service Template: %w", err)
+	}
+	return nil
+}
+
+type resolveArgsOperation struct {
+	path        string
+	argProvider arguments.Provider
+}
+
+func (o resolveArgsOperation) Description() string {
+	return "Input args"
+}
+
+func (o resolveArgsOperation) Run(_ io.Writer) error {
+	composeFile := filepath.Join(o.path, template.ComposeFilename)
+	if err := ResolveAndApplyArgs(composeFile, o.argProvider); err != nil {
+		if rmErr := os.RemoveAll(o.path); rmErr != nil {
+			return errors.Join(err, rmErr)
+		}
+		return fmt.Errorf("init failed: %w", err)
+	}
+	return nil
+}
+
+type printProjectDirectoryOperation struct {
+	path string
+}
+
+func (o printProjectDirectoryOperation) Description() string {
+	return "Project directory"
+}
+
+func (o printProjectDirectoryOperation) Run(w io.Writer) error {
+	if w == nil {
+		return nil
+	}
+	_, err := fmt.Fprintln(w, o.path)
+	return err
 }

@@ -56,6 +56,48 @@ func TestInit(t *testing.T) {
 	})
 }
 
+func TestClone(t *testing.T) {
+	t.Run("clones source into destination directory", func(t *testing.T) {
+		dir := t.TempDir()
+		destDir := filepath.Join(dir, "demo")
+		mockSource := mockTemplateSourceWithContent(t, `
+services:
+  app:
+    image: nginx:alpine
+`, "demo-source")
+
+		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
+
+		require.NoError(t, err)
+		composeFilePath := filepath.Join(destDir, template.ComposeFilename)
+		_, statErr := os.Stat(composeFilePath)
+		require.NoError(t, statErr)
+	})
+
+	t.Run("removes destination directory when args resolution fails", func(t *testing.T) {
+		dir := t.TempDir()
+		destDir := filepath.Join(dir, "demo")
+		mockSource := mockTemplateSourceWithContent(t, `
+services:
+  app:
+    build:
+      args:
+        GREETING: ${GREETING}
+x-topo:
+  args:
+    GREETING:
+      description: "Greeting"
+      required: true
+`, "demo-source")
+
+		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
+
+		require.Error(t, err)
+		_, statErr := os.Stat(destDir)
+		assert.True(t, os.IsNotExist(statErr))
+	})
+}
+
 func mockTemplateSourceWithContent(t *testing.T, content, sourceName string) *mockTemplateSource {
 	mockSource := &mockTemplateSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
@@ -63,7 +105,7 @@ func mockTemplateSourceWithContent(t *testing.T, content, sourceName string) *mo
 		testutil.RequireMkdirAll(t, destDir)
 		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
 	})
-	mockSource.On("GetName").Return(sourceName, nil)
+	mockSource.On("GetName").Return(sourceName, nil).Maybe()
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})
@@ -73,7 +115,7 @@ func mockTemplateSourceWithContent(t *testing.T, content, sourceName string) *mo
 func mockTemplateSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceName string) *mockTemplateSource {
 	mockSource := &mockTemplateSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(errToReturn)
-	mockSource.On("GetName").Return(sourceName, nil)
+	mockSource.On("GetName").Return(sourceName, nil).Maybe()
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})

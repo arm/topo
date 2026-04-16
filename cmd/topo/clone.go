@@ -77,7 +77,7 @@ Some projects require build arguments. Supply them on the command line or answer
 
 		argProvider := arguments.NewStrictProviderChain(providers...)
 
-		return project.Clone(path, projectSource, argProvider)
+		return project.NewClone(path, projectSource, argProvider).Run(os.Stdout)
 	},
 }
 

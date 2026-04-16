@@ -21,8 +21,11 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 	var result []ResolvedArg
 	scanner := bufio.NewScanner(p.input)
 
-	for _, arg := range args {
-		_, err := fmt.Fprintf(p.output, "\n%s\n", arg.Description)
+	for i, arg := range args {
+		if i != 0 {
+			fmt.Printf("\n")
+		}
+		_, err := fmt.Fprintf(p.output, "Provide: %s\n", arg.Description)
 		if err != nil {
 			return nil, err
 		}
