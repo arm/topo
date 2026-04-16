@@ -81,7 +81,8 @@ function Resolve-InstallDir {
         return $dir
     }
 
-    $default = Join-Path $env:LOCALAPPDATA 'Programs\topo'
+    # windows convention is to install user-local binaries under %LOCALAPPDATA%\Programs\$BinaryName
+    $default = Join-Path $env:LOCALAPPDATA 'Programs' $BinaryName
     New-Item -ItemType Directory -Path $default -Force | Out-Null
     return (Resolve-Path -LiteralPath $default).ProviderPath
 }
@@ -113,6 +114,8 @@ function Install-Binary {
     }
 }
 
+# windows convention is to automatically add the install dir to user PATH for the user
+# since it's in its own directory, there's no risk of accidentally shadowing other binaries
 function Add-ToUserPath {
     param([string]$Dir)
 
@@ -130,7 +133,7 @@ function Add-ToUserPath {
         Write-Host "Run '$BinaryName --help' to get started."
     }
 
-    # Make the binary usable in the current session too.
+    # make the binary usable in the current session too.
     if (($env:PATH -split ';') -notcontains $Dir) {
         $env:PATH = "$env:PATH;$Dir"
     }
