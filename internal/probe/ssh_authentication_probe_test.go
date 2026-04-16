@@ -1,9 +1,9 @@
-package target_test
+package probe_test
 
 import (
 	"testing"
 
-	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/probe"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +40,7 @@ func TestSSHAuthenticationProbeOptions(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				opts := target.SSHAuthenticationProbeOptions{
+				opts := probe.SSHAuthenticationProbeOptions{
 					AcceptNewHostKeys: tt.acceptNewHostKeys,
 				}
 

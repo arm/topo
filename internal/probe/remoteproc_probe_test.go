@@ -1,12 +1,12 @@
-package target_test
+package probe_test
 
 import (
 	"context"
 	"errors"
 	"testing"
 
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,10 +20,10 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := target.ProbeRemoteproc(context.Background(), r)
+		got, err := probe.ProbeRemoteproc(context.Background(), r)
 
 		require.NoError(t, err)
-		want := []target.RemoteprocCPU{
+		want := []probe.RemoteprocCPU{
 			{Name: "virtio0"},
 			{Name: "virtio1"},
 		}
@@ -37,7 +37,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := target.ProbeRemoteproc(context.Background(), r)
+		got, err := probe.ProbeRemoteproc(context.Background(), r)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -50,7 +50,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := target.ProbeRemoteproc(context.Background(), r)
+		got, err := probe.ProbeRemoteproc(context.Background(), r)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -64,7 +64,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		_, err := target.ProbeRemoteproc(context.Background(), r)
+		_, err := probe.ProbeRemoteproc(context.Background(), r)
 
 		assert.ErrorContains(t, err, "permission denied")
 	})

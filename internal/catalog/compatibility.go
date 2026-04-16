@@ -3,7 +3,7 @@ package catalog
 import (
 	"strings"
 
-	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/probe"
 )
 
 type CompatibilityStatus string
@@ -19,7 +19,7 @@ type RepoWithCompatibility struct {
 	Compatibility CompatibilityStatus `json:"compatibility,omitempty"`
 }
 
-func AnnotateCompatibility(profile *target.HardwareProfile, repos []Repo) []RepoWithCompatibility {
+func AnnotateCompatibility(profile *probe.HardwareProfile, repos []Repo) []RepoWithCompatibility {
 	if profile == nil {
 		return withCompatibility(repos)
 	}
@@ -44,14 +44,14 @@ func withCompatibility(repos []Repo) []RepoWithCompatibility {
 	return withCompatibility
 }
 
-func compatibilityStatus(profile target.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) CompatibilityStatus {
+func compatibilityStatus(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) CompatibilityStatus {
 	if isRepoSupported(profile, supportedFeatures, repo) {
 		return CompatibilitySupported
 	}
 	return CompatibilityUnsupported
 }
 
-func extractSupportedFeatures(profile target.HardwareProfile) map[string]struct{} {
+func extractSupportedFeatures(profile probe.HardwareProfile) map[string]struct{} {
 	supportedFeatures := map[string]struct{}{}
 	for _, proc := range profile.HostProcessor {
 		for _, feature := range proc.ExtractArmFeatures() {
@@ -65,7 +65,7 @@ func extractSupportedFeatures(profile target.HardwareProfile) map[string]struct{
 	return supportedFeatures
 }
 
-func isRepoSupported(profile target.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) bool {
+func isRepoSupported(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) bool {
 	if repo.MinRAMKb > 0 && profile.TotalMemoryKb < repo.MinRAMKb {
 		return false
 	}

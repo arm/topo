@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/catalog"
-	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/probe"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,8 +12,8 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("supports template requiring SVE when target has SVE", func(t *testing.T) {
 		repo := catalog.Repo{Name: "sve-template", Features: []string{"SVE"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
+		profile := probe.HardwareProfile{
+			HostProcessor: []probe.HostProcessor{
 				{Features: []string{"asimd", "sve"}},
 			},
 		}
@@ -28,8 +28,8 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("marks template unsupported when SVE is missing", func(t *testing.T) {
 		repo := catalog.Repo{Name: "sve-template", Features: []string{"SVE"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
+		profile := probe.HardwareProfile{
+			HostProcessor: []probe.HostProcessor{
 				{Features: []string{"asimd"}},
 			},
 		}
@@ -44,8 +44,8 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("supports template requiring NEON when target has NEON", func(t *testing.T) {
 		repo := catalog.Repo{Name: "neon-template", Features: []string{"NEON"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
+		profile := probe.HardwareProfile{
+			HostProcessor: []probe.HostProcessor{
 				{Features: []string{"asimd"}},
 			},
 		}
@@ -60,8 +60,8 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("marks template unsupported when NEON is missing", func(t *testing.T) {
 		repo := catalog.Repo{Name: "neon-template", Features: []string{"NEON"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
+		profile := probe.HardwareProfile{
+			HostProcessor: []probe.HostProcessor{
 				{Features: []string{"sve"}},
 			},
 		}
@@ -76,7 +76,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("marks template unsupported when remoteproc is required but absent", func(t *testing.T) {
 		repo := catalog.Repo{Name: "rp-template", Features: []string{"remoteproc"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{}
+		profile := probe.HardwareProfile{}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
 		want := []catalog.RepoWithCompatibility{
@@ -88,8 +88,8 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("marks template supported when remoteproc is required and present", func(t *testing.T) {
 		repo := catalog.Repo{Name: "rp-template", Features: []string{"remoteproc"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{
-			RemoteCPU: []target.RemoteprocCPU{
+		profile := probe.HardwareProfile{
+			RemoteCPU: []probe.RemoteprocCPU{
 				{Name: "m3"},
 			},
 		}
@@ -104,8 +104,8 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("supports template when any required feature is present", func(t *testing.T) {
 		repo := catalog.Repo{Name: "multi-feature-template", Features: []string{"SVE", "remoteproc"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
+		profile := probe.HardwareProfile{
+			HostProcessor: []probe.HostProcessor{
 				{Features: []string{"asimd", "sve"}},
 			},
 		}
@@ -120,8 +120,8 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("marks template unsupported when none of required features are present", func(t *testing.T) {
 		repo := catalog.Repo{Name: "multi-feature-template", Features: []string{"SVE", "remoteproc"}}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
+		profile := probe.HardwareProfile{
+			HostProcessor: []probe.HostProcessor{
 				{Features: []string{"asimd"}},
 			},
 		}
@@ -136,7 +136,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("marks template unsupported when RAM is below requirement", func(t *testing.T) {
 		repo := catalog.Repo{Name: "ram-template", MinRAMKb: 1024}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{TotalMemoryKb: 512}
+		profile := probe.HardwareProfile{TotalMemoryKb: 512}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
 		want := []catalog.RepoWithCompatibility{
@@ -148,7 +148,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 	t.Run("supports template with no requirements and does not mutate input", func(t *testing.T) {
 		repo := catalog.Repo{Name: "plain"}
 		repos := []catalog.Repo{repo}
-		profile := target.HardwareProfile{}
+		profile := probe.HardwareProfile{}
 
 		got := catalog.AnnotateCompatibility(&profile, repos)
 		want := []catalog.RepoWithCompatibility{

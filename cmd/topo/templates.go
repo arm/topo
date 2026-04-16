@@ -6,9 +6,9 @@ import (
 	"github.com/arm/topo/internal/catalog"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/target"
 	"github.com/spf13/cobra"
 )
 
@@ -24,12 +24,12 @@ var templatesCmd = &cobra.Command{
 			return err
 		}
 
-		var profile *target.HardwareProfile
+		var profile *probe.HardwareProfile
 		if targetArg, exists := lookupTarget(cmd); exists {
 			r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 			ctx, cancel := contextWithTimeout(cmd)
 			defer cancel()
-			hwProfile, err := target.ProbeHardware(ctx, r)
+			hwProfile, err := probe.ProbeHardware(ctx, r)
 			if err != nil {
 				return err
 			}

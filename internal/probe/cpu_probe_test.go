@@ -1,11 +1,11 @@
-package target_test
+package probe_test
 
 import (
 	"context"
 	"testing"
 
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,10 +20,10 @@ func TestProbeCPU(t *testing.T) {
 			},
 		}
 
-		got, err := target.ProbeCPU(context.Background(), r)
+		got, err := probe.ProbeCPU(context.Background(), r)
 
 		require.NoError(t, err)
-		want := []target.HostProcessor{
+		want := []probe.HostProcessor{
 			{
 				Model:    "Cortex-A55",
 				Cores:    2,
@@ -36,7 +36,7 @@ func TestProbeCPU(t *testing.T) {
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
 		r := &runner.Fake{}
 
-		_, err := target.ProbeCPU(context.Background(), r)
+		_, err := probe.ProbeCPU(context.Background(), r)
 
 		assert.ErrorContains(t, err, `"lscpu" not found in $PATH`)
 	})
@@ -49,7 +49,7 @@ func TestProbeCPU(t *testing.T) {
 			},
 		}
 
-		_, err := target.ProbeCPU(context.Background(), r)
+		_, err := probe.ProbeCPU(context.Background(), r)
 
 		assert.Error(t, err)
 	})
@@ -57,7 +57,7 @@ func TestProbeCPU(t *testing.T) {
 
 func TestExtractArmFeatures(t *testing.T) {
 	t.Run("extracts mapped Arm features and ignores unrecognised", func(t *testing.T) {
-		ts := target.HostProcessor{
+		ts := probe.HostProcessor{
 			Features: []string{"fp", "asimd", "sve2", "sme"},
 		}
 
@@ -68,7 +68,7 @@ func TestExtractArmFeatures(t *testing.T) {
 	})
 
 	t.Run("returns empty slice if no matching features", func(t *testing.T) {
-		ts := target.HostProcessor{
+		ts := probe.HostProcessor{
 			Features: []string{"fp", "crc32"},
 		}
 
@@ -80,7 +80,7 @@ func TestExtractArmFeatures(t *testing.T) {
 
 func TestCreateCPUProfile(t *testing.T) {
 	t.Run("parses lscpu with sockets", func(t *testing.T) {
-		input := []target.LscpuOutputField{
+		input := []probe.LscpuOutputField{
 			{Field: "Vendor ID:", Data: "ARM"},
 			{Field: "Model name:", Data: "Cortex-A72"},
 			{Field: "Core(s) per socket:", Data: "4"},
@@ -88,11 +88,11 @@ func TestCreateCPUProfile(t *testing.T) {
 			{Field: "Flags:", Data: "fp asimd evtstrm"},
 		}
 
-		got, err := target.CreateCPUProfile(input)
+		got, err := probe.CreateCPUProfile(input)
 
 		require.NoError(t, err)
 		require.Len(t, got, 1)
-		want := target.HostProcessor{
+		want := probe.HostProcessor{
 			Model:    "Cortex-A72",
 			Cores:    8,
 			Features: []string{"fp", "asimd", "evtstrm"},
@@ -101,7 +101,7 @@ func TestCreateCPUProfile(t *testing.T) {
 	})
 
 	t.Run("parses lscpu with clusters", func(t *testing.T) {
-		input := []target.LscpuOutputField{
+		input := []probe.LscpuOutputField{
 			{Field: "Vendor ID:", Data: "ARM"},
 			{Field: "Model name:", Data: "Cortex-A55"},
 			{Field: "Core(s) per cluster:", Data: "2"},
@@ -110,11 +110,11 @@ func TestCreateCPUProfile(t *testing.T) {
 			{Field: "Flags:", Data: "fp asimd"},
 		}
 
-		got, err := target.CreateCPUProfile(input)
+		got, err := probe.CreateCPUProfile(input)
 
 		require.NoError(t, err)
 		require.Len(t, got, 1)
-		want := target.HostProcessor{
+		want := probe.HostProcessor{
 			Model:    "Cortex-A55",
 			Cores:    2,
 			Features: []string{"fp", "asimd"},
@@ -123,7 +123,7 @@ func TestCreateCPUProfile(t *testing.T) {
 	})
 
 	t.Run("parses multiple processors", func(t *testing.T) {
-		input := []target.LscpuOutputField{
+		input := []probe.LscpuOutputField{
 			{Field: "Vendor ID:", Data: "ARM"},
 			{Field: "Model name:", Data: "Cortex-A55"},
 			{Field: "Core(s) per socket:", Data: "4"},
@@ -135,7 +135,7 @@ func TestCreateCPUProfile(t *testing.T) {
 			{Field: "Flags:", Data: "fp asimd sve"},
 		}
 
-		got, err := target.CreateCPUProfile(input)
+		got, err := probe.CreateCPUProfile(input)
 
 		require.NoError(t, err)
 		require.Len(t, got, 2)
@@ -146,24 +146,24 @@ func TestCreateCPUProfile(t *testing.T) {
 	})
 
 	t.Run("returns empty when no model name field", func(t *testing.T) {
-		input := []target.LscpuOutputField{
+		input := []probe.LscpuOutputField{
 			{Field: "Architecture:", Data: "aarch64"},
 		}
 
-		got, err := target.CreateCPUProfile(input)
+		got, err := probe.CreateCPUProfile(input)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
 	})
 
 	t.Run("returns error when cores per socket is not a number", func(t *testing.T) {
-		input := []target.LscpuOutputField{
+		input := []probe.LscpuOutputField{
 			{Field: "Model name:", Data: "Cortex-A55"},
 			{Field: "Core(s) per socket:", Data: "abc"},
 			{Field: "Socket(s):", Data: "1"},
 		}
 
-		_, err := target.CreateCPUProfile(input)
+		_, err := probe.CreateCPUProfile(input)
 
 		assert.Error(t, err)
 	})

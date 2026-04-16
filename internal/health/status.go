@@ -3,12 +3,12 @@ package health
 import (
 	"context"
 
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/target"
 )
 
 type HardwareProfile struct {
-	RemoteCPU []target.RemoteprocCPU
+	RemoteCPU []probe.RemoteprocCPU
 }
 
 func (h HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
@@ -27,7 +27,7 @@ type HealthStatus struct {
 func ProbeHealthStatus(ctx context.Context, r runner.Runner) HealthStatus {
 	var hs HealthStatus
 
-	remoteprocs, _ := target.ProbeRemoteproc(ctx, r)
+	remoteprocs, _ := probe.ProbeRemoteproc(ctx, r)
 	hs.Hardware.RemoteCPU = remoteprocs
 
 	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, hs.Hardware.Capabilities())

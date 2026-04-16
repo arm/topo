@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/target"
 )
 
 type CheckStatus string
@@ -83,7 +83,7 @@ type Status struct {
 	Hardware     HardwareProfile
 }
 
-func CheckTarget(ctx context.Context, dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions) (TargetReport, error) {
+func CheckTarget(ctx context.Context, dest ssh.Destination, probeOpts probe.SSHAuthenticationProbeOptions) (TargetReport, error) {
 	r, connErr := prepareRunner(ctx, dest, probeOpts)
 	status := Status{Connection: ConnectionStatus{Destination: dest, Error: connErr}}
 	if connErr == nil {
@@ -94,12 +94,12 @@ func CheckTarget(ctx context.Context, dest ssh.Destination, probeOpts target.SSH
 	return GenerateTargetReport(status), nil
 }
 
-func prepareRunner(ctx context.Context, dest ssh.Destination, probeOpts target.SSHAuthenticationProbeOptions) (runner.Runner, error) {
+func prepareRunner(ctx context.Context, dest ssh.Destination, probeOpts probe.SSHAuthenticationProbeOptions) (runner.Runner, error) {
 	if dest.IsPlainLocalhost() {
 		return runner.NewLocal(), nil
 	}
 	sshOpts := runner.SSHOptions{Multiplex: true}
-	if err := target.ProbeSSHAuthentication(ctx, runner.NewSSH(dest, sshOpts), probeOpts); err != nil {
+	if err := probe.ProbeSSHAuthentication(ctx, runner.NewSSH(dest, sshOpts), probeOpts); err != nil {
 		return nil, err
 	}
 	return runner.NewSSH(dest, sshOpts), nil
@@ -147,11 +147,11 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 
 	check.Value = status.Error.Error()
 	switch {
-	case errors.Is(status.Error, target.ErrAuthFailed):
+	case errors.Is(status.Error, probe.ErrAuthFailed):
 		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` to configure SSH keys", status.Destination)
-	case errors.Is(status.Error, target.ErrHostKeyUnknown):
+	case errors.Is(status.Error, probe.ErrHostKeyUnknown):
 		check.Fix = fmt.Sprintf("run `topo health --target %s --accept-new-host-keys` to trust the target's identity", status.Destination)
-	case errors.Is(status.Error, target.ErrHostKeyChanged):
+	case errors.Is(status.Error, probe.ErrHostKeyChanged):
 		check.Fix = fmt.Sprintf("run `ssh-keygen -R %s` to remove the old host key, then retry", status.Destination.Host)
 	}
 	return check

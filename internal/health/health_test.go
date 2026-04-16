@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +36,7 @@ func TestGenerateTargetReport(t *testing.T) {
 	t.Run("when remoteproc devices are found, SubsystemDriver status is ok and includes device names", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{
-				RemoteCPU: []target.RemoteprocCPU{{Name: "m4_0"}, {Name: "m4_1"}},
+				RemoteCPU: []probe.RemoteprocCPU{{Name: "m4_0"}, {Name: "m4_1"}},
 			},
 		}
 
@@ -67,7 +67,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{
 				Destination: ssh.NewDestination("user@my-target"),
-				Error:       target.ErrAuthFailed,
+				Error:       probe.ErrAuthFailed,
 			},
 		}
 
@@ -81,7 +81,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{
 				Destination: ssh.NewDestination("user@my-target"),
-				Error:       target.ErrHostKeyUnknown,
+				Error:       probe.ErrHostKeyUnknown,
 			},
 		}
 
@@ -95,7 +95,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{
 				Destination: ssh.NewDestination("user@my-target"),
-				Error:       target.ErrHostKeyChanged,
+				Error:       probe.ErrHostKeyChanged,
 			},
 		}
 
