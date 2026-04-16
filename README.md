@@ -101,7 +101,7 @@ export TOPO_TARGET=user@my-board
 ### 1. Check that everything is ready
 
 ```sh
-topo health --target my-board
+topo health --target user@my-board
 ```
 
 ```
@@ -129,7 +129,7 @@ Subsystem Driver (remoteproc): ✅ (m4_0)
 ### 2. Describe your target hardware
 
 ```sh
-topo describe --target my-board
+topo describe --target user@my-board
 ```
 
 This SSHs into the target, probes CPU features, and writes a `target-description.yaml` in the current directory. Topo uses this file to match your system to compatible templates.
@@ -144,7 +144,7 @@ This lists available templates and indicates compatibility with your target hard
 If you don't already have a target description file for your board, you can still use:
 
 ```sh
-topo templates --target my-board
+topo templates --target user@my-board
 ```
 
 ### 4. Clone a template into a new project
@@ -167,7 +167,7 @@ This creates a project directory containing a `compose.yaml`, and any source fil
 
 ```sh
 cd topo-welcome/
-topo deploy --target my-board
+topo deploy --target user@my-board
 ```
 
 Topo builds the container images on your host, transfers them to the target over SSH, and starts the services.
@@ -177,7 +177,7 @@ Topo builds the container images on your host, transfers them to the target over
 When you're done, stop the running services:
 
 ```sh
-topo stop --target my-board
+topo stop --target user@my-board
 ```
 
 ## Other Commands
