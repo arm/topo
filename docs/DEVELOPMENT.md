@@ -2,6 +2,16 @@
 
 This guide covers the development workflow, tools, and conventions for contributing to `topo`.
 
+## Prerequisites 
+
+- Go 1.26+
+
+## Building 
+
+```sh
+go build ./cmd/topo
+```
+
 ## Linting
 
 The project uses [golangci-lint](https://golangci-lint.run/) for Go code quality checks.
