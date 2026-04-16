@@ -263,7 +263,7 @@ type copyTemplateOperation struct {
 }
 
 func (o copyTemplateOperation) Description() string {
-	return "Git clone"
+	return "Copy files"
 }
 
 func (o copyTemplateOperation) Run(_ io.Writer) error {

@@ -60,7 +60,7 @@ func TestClone(t *testing.T) {
 	t.Run("clones source into destination directory", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockCloneSourceWithContent(t, `
 services:
   app:
     image: nginx:alpine
@@ -77,7 +77,7 @@ services:
 	t.Run("removes destination directory when args resolution fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockCloneSourceWithContent(t, `
 services:
   app:
     build:
@@ -105,7 +105,7 @@ func mockTemplateSourceWithContent(t *testing.T, content, sourceName string) *mo
 		testutil.RequireMkdirAll(t, destDir)
 		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
 	})
-	mockSource.On("GetName").Return(sourceName, nil).Maybe()
+	mockSource.On("GetName").Return(sourceName, nil)
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})
@@ -115,7 +115,21 @@ func mockTemplateSourceWithContent(t *testing.T, content, sourceName string) *mo
 func mockTemplateSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceName string) *mockTemplateSource {
 	mockSource := &mockTemplateSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(errToReturn)
-	mockSource.On("GetName").Return(sourceName, nil).Maybe()
+	mockSource.On("GetName").Return(sourceName, nil)
+	t.Cleanup(func() {
+		mockSource.AssertExpectations(t)
+	})
+	return mockSource
+}
+
+func mockCloneSourceWithContent(t *testing.T, content, sourceName string) *mockTemplateSource {
+	mockSource := &mockTemplateSource{}
+	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		destDir := args.String(0)
+		testutil.RequireMkdirAll(t, destDir)
+		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
+	})
+	mockSource.On("String").Return(sourceName).Maybe()
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})
