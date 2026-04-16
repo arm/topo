@@ -8,7 +8,6 @@ import (
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
@@ -27,8 +26,6 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			panic(fmt.Sprintf("internal error: %s flag not registered: %v", acceptNewHostFlag, err))
 		}
-		probeOpts := probe.SSHAuthenticationProbeOptions{AcceptNewHostKeys: acceptNewHostKeys}
-
 		var spinner *term.Spinner
 		if outputFormat == term.Plain {
 			spinner = term.StartSpinner(os.Stderr, "Checking health...")
@@ -41,7 +38,7 @@ var healthCmd = &cobra.Command{
 		if targetArg, ok := lookupTarget(cmd); ok {
 			ctx, cancel := contextWithTimeout(cmd)
 			defer cancel()
-			targetReport, err := health.CheckTarget(ctx, ssh.NewDestination(targetArg), probeOpts)
+			targetReport, err := health.CheckTarget(ctx, ssh.NewDestination(targetArg), acceptNewHostKeys)
 			if err != nil {
 				if spinner != nil {
 					spinner.Stop()

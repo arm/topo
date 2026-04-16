@@ -83,8 +83,8 @@ type Status struct {
 	Hardware     HardwareProfile
 }
 
-func CheckTarget(ctx context.Context, dest ssh.Destination, probeOpts probe.SSHAuthenticationProbeOptions) (TargetReport, error) {
-	r, connErr := prepareRunner(ctx, dest, probeOpts)
+func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) (TargetReport, error) {
+	r, connErr := prepareRunner(ctx, dest, acceptNewHostKeys)
 	status := Status{Connection: ConnectionStatus{Destination: dest, Error: connErr}}
 	if connErr == nil {
 		hs := ProbeHealthStatus(ctx, r)
@@ -94,12 +94,12 @@ func CheckTarget(ctx context.Context, dest ssh.Destination, probeOpts probe.SSHA
 	return GenerateTargetReport(status), nil
 }
 
-func prepareRunner(ctx context.Context, dest ssh.Destination, probeOpts probe.SSHAuthenticationProbeOptions) (runner.Runner, error) {
+func prepareRunner(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) (runner.Runner, error) {
 	if dest.IsPlainLocalhost() {
 		return runner.NewLocal(), nil
 	}
 	sshOpts := runner.SSHOptions{Multiplex: true}
-	if err := probe.SSHAuthentication(ctx, runner.NewSSH(dest, sshOpts), probeOpts); err != nil {
+	if err := probe.SSHAuthentication(ctx, runner.NewSSH(dest, sshOpts), acceptNewHostKeys); err != nil {
 		return nil, err
 	}
 	return runner.NewSSH(dest, sshOpts), nil
