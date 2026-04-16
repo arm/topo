@@ -92,7 +92,7 @@ The host and target can be the same system. If you're working directly on an Arm
 
 ## Getting Started
 
-This walkthrough takes you from first connection to a running deployment. The examples use `my-board` as the SSH destination — replace it with your own `user@host` or SSH config alias, or set `TOPO_TARGET` once to skip repeating it:
+This walkthrough takes you from first connection to a running deployment. The examples use `user@my-board` as the SSH destination — replace it with your own `user@host` or SSH config alias, or set `TOPO_TARGET` once to skip repeating it:
 
 ```sh
 export TOPO_TARGET=user@my-board
