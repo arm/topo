@@ -1,6 +1,4 @@
 #!/bin/sh
-# wrapped in { } so the entire script is parsed before execution,
-# which is required when piped from curl (e.g. curl ... | sh).
 {
 set -eu
 
