@@ -130,8 +130,10 @@ resolve_install_dir() {
     return
   fi
 
+  preferred_dir="$HOME/.local/bin"
+
   # try conventional user-local directories already on PATH.
-  for candidate in "$HOME/.local/bin" "$HOME/bin"; do
+  for candidate in "$preferred_dir" "$HOME/bin"; do
     case ":${PATH}:" in
       *":${candidate}:"*)
         mkdir -p "$candidate" 2>/dev/null && echo "$candidate" && return
@@ -140,7 +142,9 @@ resolve_install_dir() {
   done
 
   echo "Error: could not find a user-writable directory on PATH." >&2
-  echo "Provide one explicitly with --path, or add ~/.local/bin to your PATH." >&2
+  echo "Provide one explicitly with --path, or add $preferred_dir to your PATH with the following command:" >&2
+  echo "  export PATH=\"\$PATH:$preferred_dir\"" >&2
+  echo "To persist across terminal restarts, add the export line to your shell's configuration file (e.g. ~/.bashrc, ~/.zshrc)" >&2
   exit 1
 }
 
