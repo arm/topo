@@ -28,22 +28,13 @@ The host and target can be the same system. If you're working directly on an Arm
 curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
 ```
 
-Alternatively, manually add the appropriate binary from [GitHub Releases](https://github.com/arm/topo/releases/latest) to your `PATH`.
-
 ### Windows
 
-Download the latest binary for Windows from [GitHub Releases](https://github.com/arm/topo/releases/latest).
-
-1. Extract the `.zip` file you downloaded.
-2. Open **Command Prompt** in the folder where `topo.exe` was extracted:
-   - Right-click in the folder → **Open in Terminal**
-3. Run the following command to install to path:
-
-```bat
-mkdir "$env:USERPROFILE\tools\topo" -Force; move .\topo.exe "$env:USERPROFILE\tools\topo\"; setx PATH "$env:PATH;$env:USERPROFILE\tools\topo"
+```sh
+irm https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.ps1 | iex
 ```
 
-Then from a new terminal run `topo --help` to confirm installation.
+Alternatively, manually add the appropriate binary from [GitHub Releases](https://github.com/arm/topo/releases/latest) to your `PATH`.
 
 ## Getting Started
 
