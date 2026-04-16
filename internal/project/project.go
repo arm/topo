@@ -31,8 +31,8 @@ func Clone(path string, src template.Source, argProvider arguments.Provider) err
 		}
 		return fmt.Errorf("init failed: %w", err)
 	}
-
-	return nil
+	fmt.Printf("%s", path)
+	return err
 }
 
 func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider) error {
