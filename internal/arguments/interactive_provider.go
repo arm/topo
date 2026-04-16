@@ -23,7 +23,10 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 
 	for i, arg := range args {
 		if i != 0 {
-			fmt.Fprintf(p.output, "\n")
+			_, err := fmt.Fprintf(p.output, "\n")
+			if err != nil {
+				return nil, err
+			}
 		}
 		_, err := fmt.Fprintf(p.output, "Provide: %s\n", arg.Description)
 		if err != nil {
