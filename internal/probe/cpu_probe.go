@@ -16,7 +16,7 @@ type HostProcessor struct {
 	Features []string `yaml:"features" json:"features"`
 }
 
-func ProbeCPU(ctx context.Context, r runner.Runner) ([]HostProcessor, error) {
+func CPU(ctx context.Context, r runner.Runner) ([]HostProcessor, error) {
 	if err := r.BinaryExists(ctx, "lscpu"); err != nil {
 		return nil, err
 	}

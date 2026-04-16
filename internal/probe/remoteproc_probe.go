@@ -11,7 +11,7 @@ type RemoteprocCPU struct {
 	Name string `yaml:"name" json:"name"`
 }
 
-func ProbeRemoteproc(ctx context.Context, r runner.Runner) ([]RemoteprocCPU, error) {
+func Remoteproc(ctx context.Context, r runner.Runner) ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
 	out, err := r.Run(ctx, "ls /sys/class/remoteproc")
 	if err != nil || out == "" {

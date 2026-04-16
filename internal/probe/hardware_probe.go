@@ -13,22 +13,22 @@ type HardwareProfile struct {
 	TotalMemoryKb int64           `yaml:"totalmemory_kb" json:"totalmemory_kb"`
 }
 
-func ProbeHardware(ctx context.Context, r runner.Runner) (HardwareProfile, error) {
+func Hardware(ctx context.Context, r runner.Runner) (HardwareProfile, error) {
 	var hp HardwareProfile
 
-	cpuProfile, err := ProbeCPU(ctx, r)
+	cpuProfile, err := CPU(ctx, r)
 	if err != nil {
 		return hp, fmt.Errorf("collecting CPU info: %w", err)
 	}
 	hp.HostProcessor = cpuProfile
 
-	cpus, err := ProbeRemoteproc(ctx, r)
+	cpus, err := Remoteproc(ctx, r)
 	if err != nil {
 		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
 	}
 	hp.RemoteCPU = cpus
 
-	memTotal, err := ProbeMemory(ctx, r)
+	memTotal, err := Memory(ctx, r)
 	if err != nil {
 		return hp, fmt.Errorf("collecting memory info: %w", err)
 	}

@@ -20,7 +20,7 @@ func TestProbeCPU(t *testing.T) {
 			},
 		}
 
-		got, err := probe.ProbeCPU(context.Background(), r)
+		got, err := probe.CPU(context.Background(), r)
 
 		require.NoError(t, err)
 		want := []probe.HostProcessor{
@@ -36,7 +36,7 @@ func TestProbeCPU(t *testing.T) {
 	t.Run("returns error when lscpu not found", func(t *testing.T) {
 		r := &runner.Fake{}
 
-		_, err := probe.ProbeCPU(context.Background(), r)
+		_, err := probe.CPU(context.Background(), r)
 
 		assert.ErrorContains(t, err, `"lscpu" not found in $PATH`)
 	})
@@ -49,7 +49,7 @@ func TestProbeCPU(t *testing.T) {
 			},
 		}
 
-		_, err := probe.ProbeCPU(context.Background(), r)
+		_, err := probe.CPU(context.Background(), r)
 
 		assert.Error(t, err)
 	})

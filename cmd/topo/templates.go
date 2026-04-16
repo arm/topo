@@ -29,7 +29,7 @@ var templatesCmd = &cobra.Command{
 			r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 			ctx, cancel := contextWithTimeout(cmd)
 			defer cancel()
-			hwProfile, err := probe.ProbeHardware(ctx, r)
+			hwProfile, err := probe.Hardware(ctx, r)
 			if err != nil {
 				return err
 			}

@@ -99,7 +99,7 @@ func prepareRunner(ctx context.Context, dest ssh.Destination, probeOpts probe.SS
 		return runner.NewLocal(), nil
 	}
 	sshOpts := runner.SSHOptions{Multiplex: true}
-	if err := probe.ProbeSSHAuthentication(ctx, runner.NewSSH(dest, sshOpts), probeOpts); err != nil {
+	if err := probe.SSHAuthentication(ctx, runner.NewSSH(dest, sshOpts), probeOpts); err != nil {
 		return nil, err
 	}
 	return runner.NewSSH(dest, sshOpts), nil

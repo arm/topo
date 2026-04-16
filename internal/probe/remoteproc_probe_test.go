@@ -20,7 +20,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := probe.ProbeRemoteproc(context.Background(), r)
+		got, err := probe.Remoteproc(context.Background(), r)
 
 		require.NoError(t, err)
 		want := []probe.RemoteprocCPU{
@@ -37,7 +37,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := probe.ProbeRemoteproc(context.Background(), r)
+		got, err := probe.Remoteproc(context.Background(), r)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -50,7 +50,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := probe.ProbeRemoteproc(context.Background(), r)
+		got, err := probe.Remoteproc(context.Background(), r)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -64,7 +64,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		_, err := probe.ProbeRemoteproc(context.Background(), r)
+		_, err := probe.Remoteproc(context.Background(), r)
 
 		assert.ErrorContains(t, err, "permission denied")
 	})

@@ -33,8 +33,8 @@ func (s SSHAuthenticationProbeOptions) SSHArgs() []string {
 	return args
 }
 
-// ProbeSSHAuthentication verifies SSH connectivity by attempting public key authentication.
-func ProbeSSHAuthentication(ctx context.Context, r *runner.SSH, opts SSHAuthenticationProbeOptions) error {
+// SSHAuthentication verifies SSH connectivity by attempting public key authentication.
+func SSHAuthentication(ctx context.Context, r *runner.SSH, opts SSHAuthenticationProbeOptions) error {
 	_, err := r.RunWithArgs(ctx, "true", opts.SSHArgs()...)
 	if err == nil {
 		return nil
