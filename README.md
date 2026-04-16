@@ -33,7 +33,7 @@ If host and target are the same system, use `--target localhost`.
 
 ### Target Description
 
-The `topo describe` command probes your board and writes a `target-description.yaml` that captures CPU features, core topology, and any heterogeneous processors.
+The `topo describe` command probes your board and prints a YAML description of CPU features, core topology, and any heterogeneous processors to stdout.
 
 ### Templates
 
@@ -132,7 +132,13 @@ Subsystem Driver (remoteproc): ✅ (m4_0)
 topo describe --target my-board
 ```
 
-This SSHs into the target, probes CPU features, and writes a `target-description.yaml` in the current directory. Topo uses this file to match your system to compatible templates.
+This SSHs into the target, probes CPU features, and prints a YAML target description to stdout. You can save it to a file if needed:
+
+```sh
+topo describe --target my-board > target-description.yaml
+```
+
+Topo uses this description to match your system to compatible templates.
 
 ### 3. Find a template
 

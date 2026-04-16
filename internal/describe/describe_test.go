@@ -8,58 +8,8 @@ import (
 	"github.com/arm/topo/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/assert/yaml"
 	"github.com/stretchr/testify/require"
 )
-
-func TestWriteTargetDescriptionFile(t *testing.T) {
-	t.Run("writes full target to description to given directory", func(t *testing.T) {
-		dir := t.TempDir()
-		report := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
-				{Features: []string{"feature1", "feature2"}},
-			},
-			RemoteCPU: []target.RemoteprocCPU{
-				{Name: "remoteproc1"},
-				{Name: "remoteproc2"},
-			},
-		}
-		var reportOut target.HardwareProfile
-
-		outputFile, err := describe.WriteTargetDescriptionToFile(dir, report)
-		require.NoError(t, err)
-
-		content := testutil.RequireReadFile(t, outputFile)
-		err = yaml.Unmarshal([]byte(content), &reportOut)
-		require.NoError(t, err)
-		require.FileExists(t, outputFile)
-		assert.Equal(t, report, reportOut)
-	})
-
-	t.Run("overwrites existing file", func(t *testing.T) {
-		dir := t.TempDir()
-		report1 := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
-				{Features: []string{"feature1", "feature2"}},
-			},
-		}
-		report2 := target.HardwareProfile{
-			HostProcessor: []target.HostProcessor{
-				{Features: []string{"feature1"}},
-			},
-		}
-
-		outputFile1, err := describe.WriteTargetDescriptionToFile(dir, report1)
-		require.NoError(t, err)
-		outputFile2, err := describe.WriteTargetDescriptionToFile(dir, report2)
-		require.NoError(t, err)
-
-		content := testutil.RequireReadFile(t, outputFile2)
-		require.Equal(t, outputFile1, outputFile2)
-		assert.Contains(t, content, "feature1")
-		assert.NotContains(t, content, "feature2")
-	})
-}
 
 func TestReadTargetDescriptionFromFile(t *testing.T) {
 	t.Run("Correctly reads and parses target description from yaml file", func(t *testing.T) {

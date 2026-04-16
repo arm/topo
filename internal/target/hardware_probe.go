@@ -14,19 +14,19 @@ import (
 )
 
 type HostProcessor struct {
-	Model    string   `yaml:"model"`
-	Cores    int      `yaml:"cores"`
-	Features []string `yaml:"features"`
+	Model    string   `yaml:"model" json:"model"`
+	Cores    int      `yaml:"cores" json:"cores"`
+	Features []string `yaml:"features" json:"features"`
 }
 
 type RemoteprocCPU struct {
-	Name string `yaml:"name"`
+	Name string `yaml:"name" json:"name"`
 }
 
 type HardwareProfile struct {
-	HostProcessor []HostProcessor `yaml:"host"`
-	RemoteCPU     []RemoteprocCPU `yaml:"remoteprocs"`
-	TotalMemoryKb int64           `yaml:"totalmemory_kb"`
+	HostProcessor []HostProcessor `yaml:"host" json:"host"`
+	RemoteCPU     []RemoteprocCPU `yaml:"remoteprocs" json:"remoteprocs,omitempty"`
+	TotalMemoryKb int64           `yaml:"totalmemory_kb" json:"totalmemory_kb"`
 }
 
 type HardwareProbe struct {

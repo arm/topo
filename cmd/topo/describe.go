@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/arm/topo/internal/describe"
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/output/printable"
+	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/target"
@@ -15,10 +14,11 @@ import (
 var describeCmd = &cobra.Command{
 	Use:   "describe",
 	Short: "Describe the hardware characteristics of the target host",
-	Long:  fmt.Sprintf(`Generates a %s file that describes the hardware characteristics of the target host including CPU ISA features and remoteproc capabilities`, describe.TargetDescriptionFilename),
+	Long:  `Prints a description of the hardware characteristics of the target host including CPU ISA features and remoteproc capabilities`,
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
+		outputFormat := resolveOutput(cmd)
 		targetArg, err := requireTarget(cmd)
 		if err != nil {
 			return err
@@ -33,19 +33,8 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		workDir, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-
-		outputPath, err := describe.WriteTargetDescriptionToFile(workDir, hwProfile)
-		if err != nil {
-			return err
-		}
-
-		logger.Info(fmt.Sprintf("Target description written to %s", outputPath))
-
-		return nil
+		toPrint := templates.PrintableTargetDescription{HardwareProfile: hwProfile}
+		return printable.Print(toPrint, os.Stdout, outputFormat)
 	},
 }
 
