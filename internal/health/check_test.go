@@ -18,7 +18,7 @@ func TestBinaryExists(t *testing.T) {
 		runner := &runner.Fake{}
 		ctx := context.Background()
 
-		_, err := check.Apply(ctx, runner, dependency)
+		_, err := check.Run(ctx, runner, dependency)
 
 		wantErr := health.WarningError{Err: runner.BinaryExists(ctx, dependency.Binary)}
 		assert.Equal(t, wantErr, err)

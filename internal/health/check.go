@@ -7,7 +7,7 @@ import (
 )
 
 type Check interface {
-	Apply(ctx context.Context, r runner.Runner, dep Dependency) (string, error)
+	Run(ctx context.Context, r runner.Runner, dep Dependency) (string, error)
 }
 
 type CheckSeverity int
@@ -22,7 +22,7 @@ type CommandSuccessful struct {
 	Fix string
 }
 
-func (c CommandSuccessful) Apply(ctx context.Context, r runner.Runner, dep Dependency) (string, error) {
+func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Dependency) (string, error) {
 	_, err := r.Run(ctx, c.Cmd)
 	return c.Fix, err
 }
@@ -32,7 +32,7 @@ type BinaryExists struct {
 	Fix      string
 }
 
-func (b BinaryExists) Apply(ctx context.Context, r runner.Runner, dep Dependency) (string, error) {
+func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) (string, error) {
 	err := r.BinaryExists(ctx, dep.Binary)
 	if b.Severity == SeverityWarning && err != nil {
 		err = WarningError{Err: err}

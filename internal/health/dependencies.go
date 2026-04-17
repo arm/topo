@@ -137,7 +137,7 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 		var fix string
 		var err error
 		for _, check := range dep.Checks {
-			fix, err = check.Apply(ctx, runner, dep)
+			fix, err = check.Run(ctx, runner, dep)
 			if err != nil {
 				break
 			}
