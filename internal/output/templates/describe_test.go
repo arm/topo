@@ -54,11 +54,21 @@ func TestPrintTargetDescription(t *testing.T) {
 
 			err := printable.Print(toPrint, &out, term.JSON)
 
+			want := `{
+				"host": [
+					{
+						"model": "Cortex-A55",
+						"cores": 4,
+						"features": ["asimd", "sve"]
+					}
+				],
+				"remoteprocs": [
+					{"name": "remoteproc0"}
+				],
+				"totalmemory_kb": 16384
+			}`
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), `"model": "Cortex-A55"`)
-			assert.Contains(t, out.String(), `"cores": 4`)
-			assert.Contains(t, out.String(), `"remoteproc0"`)
-			assert.Contains(t, out.String(), `"totalmemory_kb": 16384`)
+			assert.JSONEq(t, want, out.String())
 		})
 	})
 }
