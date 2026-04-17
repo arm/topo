@@ -7,7 +7,7 @@ import (
 	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/vscode"
 	"github.com/spf13/cobra"
 )
@@ -41,7 +41,7 @@ var describeCmd = &cobra.Command{
 		r := runner.For(ssh.NewDestination(targetArg), runner.SSHOptions{Multiplex: true})
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
-		hwProfile, err := target.ProbeHardware(ctx, r)
+		hwProfile, err := probe.Hardware(ctx, r)
 		if err != nil {
 			return err
 		}

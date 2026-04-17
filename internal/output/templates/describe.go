@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/probe"
 	"go.yaml.in/yaml/v4"
 )
 
 type PrintableTargetDescription struct {
-	target.HardwareProfile
+	probe.HardwareProfile
 }
 
 func (d PrintableTargetDescription) AsPlain(_ bool) (string, error) {

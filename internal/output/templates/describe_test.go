@@ -7,7 +7,7 @@ import (
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/target"
+	"github.com/arm/topo/internal/probe"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,11 +15,11 @@ import (
 func TestPrintTargetDescription(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("outputs valid yaml that round-trips back to the hardware profile", func(t *testing.T) {
-			profile := target.HardwareProfile{
-				HostProcessor: []target.HostProcessor{
+			profile := probe.HardwareProfile{
+				HostProcessor: []probe.HostProcessor{
 					{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
 				},
-				RemoteCPU: []target.RemoteprocCPU{
+				RemoteCPU: []probe.RemoteprocCPU{
 					{Name: "remoteproc0"},
 				},
 				TotalMemoryKb: 16384,
@@ -48,11 +48,11 @@ totalmemory_kb: 16384
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders valid JSON with all fields", func(t *testing.T) {
 			toPrint := templates.PrintableTargetDescription{
-				HardwareProfile: target.HardwareProfile{
-					HostProcessor: []target.HostProcessor{
+				HardwareProfile: probe.HardwareProfile{
+					HostProcessor: []probe.HostProcessor{
 						{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
 					},
-					RemoteCPU: []target.RemoteprocCPU{
+					RemoteCPU: []probe.RemoteprocCPU{
 						{Name: "remoteproc0"},
 					},
 					TotalMemoryKb: 16384,
