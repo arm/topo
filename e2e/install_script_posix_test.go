@@ -1,10 +1,10 @@
+//go:build !windows
 package e2e
 
 import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,9 +27,6 @@ func runInstallScript(t *testing.T, args ...string) (string, error) {
 }
 
 func TestInstallScript(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("install script is not supported on Windows")
-	}
 	if testing.Short() {
 		t.Skip("skipping install script e2e tests in short mode")
 	}
