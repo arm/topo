@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 )
 
@@ -15,7 +14,7 @@ func ProbeMemory(ctx context.Context, r runner.Runner) (int64, error) {
 	key := "MemTotal"
 	path := "/proc/meminfo"
 
-	out, err := r.Run(ctx, command.WrapInLoginShell(fmt.Sprintf("cat %s", path)))
+	out, err := r.Run(ctx, fmt.Sprintf("cat %s", path))
 	if err != nil {
 		return 0, err
 	}
