@@ -3,7 +3,6 @@ package health
 import (
 	"context"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/target"
 )
@@ -32,11 +31,7 @@ func ProbeHealthStatus(ctx context.Context, r runner.Runner) HealthStatus {
 	hs.Hardware.RemoteCPU = remoteprocs
 
 	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, hs.Hardware.Capabilities())
-	commandSuccessful := func(fullCmd string) error {
-		_, err := r.Run(ctx, command.WrapInLoginShell(fullCmd))
-		return err
-	}
-	hs.Dependencies = PerformChecks(ctx, dependenciesToCheck, r.BinaryExists, commandSuccessful)
+	hs.Dependencies = PerformChecks(ctx, dependenciesToCheck, r)
 
 	return hs
 }

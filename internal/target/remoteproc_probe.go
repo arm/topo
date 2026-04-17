@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 )
 
@@ -14,12 +13,12 @@ type RemoteprocCPU struct {
 
 func ProbeRemoteproc(ctx context.Context, r runner.Runner) ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
-	out, err := r.Run(ctx, command.WrapInLoginShell("ls /sys/class/remoteproc"))
+	out, err := r.Run(ctx, "ls /sys/class/remoteproc")
 	if err != nil || out == "" {
 		return remoteProcs, nil
 	}
 
-	out, err = r.Run(ctx, command.WrapInLoginShell("cat /sys/class/remoteproc/*/name"))
+	out, err = r.Run(ctx, "cat /sys/class/remoteproc/*/name")
 	if err != nil {
 		return remoteProcs, err
 	}

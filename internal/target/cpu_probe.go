@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 )
 
@@ -22,7 +21,7 @@ func ProbeCPU(ctx context.Context, r runner.Runner) ([]HostProcessor, error) {
 		return nil, err
 	}
 
-	out, err := r.Run(ctx, command.WrapInLoginShell("lscpu --json"))
+	out, err := r.Run(ctx, "lscpu --json")
 	if err != nil {
 		return nil, err
 	}

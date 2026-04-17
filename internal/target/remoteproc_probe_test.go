@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/assert"
@@ -16,8 +15,8 @@ func TestProbeRemoteproc(t *testing.T) {
 	t.Run("returns remote processors", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				command.WrapInLoginShell("ls /sys/class/remoteproc"):         {Output: "remoteproc0\nremoteproc1"},
-				command.WrapInLoginShell("cat /sys/class/remoteproc/*/name"): {Output: "virtio0\nvirtio1"},
+				"ls /sys/class/remoteproc":         {Output: "remoteproc0\nremoteproc1"},
+				"cat /sys/class/remoteproc/*/name": {Output: "virtio0\nvirtio1"},
 			},
 		}
 
@@ -34,7 +33,7 @@ func TestProbeRemoteproc(t *testing.T) {
 	t.Run("returns empty when no remoteproc directory", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				command.WrapInLoginShell("ls /sys/class/remoteproc"): {Output: "", Err: errors.New("no such file")},
+				"ls /sys/class/remoteproc": {Output: "", Err: errors.New("no such file")},
 			},
 		}
 
@@ -47,7 +46,7 @@ func TestProbeRemoteproc(t *testing.T) {
 	t.Run("returns empty when remoteproc directory is empty", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				command.WrapInLoginShell("ls /sys/class/remoteproc"): {Output: ""},
+				"ls /sys/class/remoteproc": {Output: ""},
 			},
 		}
 
@@ -60,8 +59,8 @@ func TestProbeRemoteproc(t *testing.T) {
 	t.Run("returns error when reading names fails", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				command.WrapInLoginShell("ls /sys/class/remoteproc"):         {Output: "remoteproc0"},
-				command.WrapInLoginShell("cat /sys/class/remoteproc/*/name"): {Err: errors.New("permission denied")},
+				"ls /sys/class/remoteproc":         {Output: "remoteproc0"},
+				"cat /sys/class/remoteproc/*/name": {Err: errors.New("permission denied")},
 			},
 		}
 

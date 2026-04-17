@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/target"
 	"github.com/arm/topo/internal/testutil"
@@ -17,7 +16,7 @@ func TestProbeCPU(t *testing.T) {
 		r := &runner.Fake{
 			Binaries: []string{"lscpu"},
 			Commands: map[string]runner.FakeResult{
-				command.WrapInLoginShell("lscpu --json"): {Output: testutil.LsCpuOutputRaw},
+				"lscpu --json": {Output: testutil.LsCpuOutputRaw},
 			},
 		}
 
@@ -46,7 +45,7 @@ func TestProbeCPU(t *testing.T) {
 		r := &runner.Fake{
 			Binaries: []string{"lscpu"},
 			Commands: map[string]runner.FakeResult{
-				command.WrapInLoginShell("lscpu --json"): {Output: "not json"},
+				"lscpu --json": {Output: "not json"},
 			},
 		}
 

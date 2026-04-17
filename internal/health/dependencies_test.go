@@ -3,11 +3,11 @@ package health_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/runner"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,47 +52,30 @@ func TestDependencyFormat(t *testing.T) {
 
 func TestPerformChecks(t *testing.T) {
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
-		deps := []health.Dependency{
-			{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
-			{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
-		}
-		mockBinaryExists := func(_ context.Context, bin string) error {
-			return fmt.Errorf("%q executable file not found in $PATH", bin)
-		}
-		mockCommandSuccessful := func(string) error { return nil }
+		fooDependency := health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}}
+		bazDependency := health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}}
+		deps := []health.Dependency{fooDependency, bazDependency}
+		runner := &runner.Fake{}
 
-		got := health.PerformChecks(context.Background(), deps, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), deps, runner)
 
-		want := []health.DependencyStatus{
-			{
-				Dependency: health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
-				Error:      mockBinaryExists(context.Background(), "foo"),
-			},
-			{
-				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
-				Error:      mockBinaryExists(context.Background(), "baz"),
-			},
-		}
+		wantFoo := health.DependencyStatus{Dependency: fooDependency, Error: runner.BinaryExists(context.Background(), fooDependency.Binary)}
+		wantBar := health.DependencyStatus{Dependency: bazDependency, Error: runner.BinaryExists(context.Background(), bazDependency.Binary)}
+		want := []health.DependencyStatus{wantFoo, wantBar}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("wraps error as WarningError when binary exists check severity is warning", func(t *testing.T) {
 		missingBin := health.Dependency{Binary: "missing-bin", Label: "Missing", Checks: []health.Check{health.BinaryExistsWarning()}}
 		deps := []health.Dependency{missingBin}
-		mockBinaryExists := func(_ context.Context, bin string) error {
-			return fmt.Errorf("%q executable file not found in $PATH", bin)
-		}
-		mockCommandSuccessful := func(string) error { return nil }
+		runner := &runner.Fake{}
 
-		got := health.PerformChecks(context.Background(), deps, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), deps, runner)
 
 		assert.Len(t, got, 1)
-		want := []health.DependencyStatus{
-			{
-				Dependency: missingBin,
-				Error:      health.WarningError{Err: mockBinaryExists(context.Background(), "missing-bin")},
-			},
-		}
+		wantBin := health.DependencyStatus{Dependency: missingBin}
+		wantBin.Error = health.WarningError{Err: runner.BinaryExists(context.Background(), missingBin.Binary)}
+		want := []health.DependencyStatus{wantBin}
 		assert.Equal(t, want, got)
 	})
 
@@ -100,15 +83,11 @@ func TestPerformChecks(t *testing.T) {
 		deps := []health.Dependency{
 			{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
 		}
-		mockBinaryExists := func(_ context.Context, bin string) error {
-			if bin == "baz" {
-				return nil
-			}
-			return fmt.Errorf("%q executable file not found in $PATH", bin)
+		runner := &runner.Fake{
+			Binaries: []string{"baz"},
 		}
-		mockCommandSuccessful := func(string) error { return nil }
 
-		got := health.PerformChecks(context.Background(), deps, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), deps, runner)
 
 		want := []health.DependencyStatus{
 			{
@@ -120,23 +99,19 @@ func TestPerformChecks(t *testing.T) {
 	})
 
 	t.Run("omits dependency when none of its SoftwarePrerequisites are installed", func(t *testing.T) {
+		dockerDependecy := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}
 		deps := []health.Dependency{
-			{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}},
+			dockerDependecy,
 			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}},
 		}
-		mockBinaryExists := func(_ context.Context, bin string) error {
-			if bin == "runtime" {
-				return nil
-			}
-			return fmt.Errorf("%q executable file not found in $PATH", bin)
+		runner := &runner.Fake{
+			Binaries: []string{"runtime"},
 		}
-		mockCommandSuccessful := func(string) error { return nil }
 
-		got := health.PerformChecks(context.Background(), deps, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), deps, runner)
 
-		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}, Error: mockBinaryExists(context.Background(), "docker")},
-		}
+		wantDocker := health.DependencyStatus{Dependency: dockerDependecy, Error: runner.BinaryExists(context.Background(), dockerDependecy.Binary)}
+		want := []health.DependencyStatus{wantDocker}
 		assert.Equal(t, want, got)
 	})
 
@@ -145,12 +120,11 @@ func TestPerformChecks(t *testing.T) {
 			{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists()}},
 			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}},
 		}
-		mockBinaryExists := func(_ context.Context, bin string) error {
-			return nil
+		runner := &runner.Fake{
+			Binaries: []string{"runtime", "docker"},
 		}
-		mockCommandSuccessful := func(string) error { return nil }
 
-		got := health.PerformChecks(context.Background(), deps, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), deps, runner)
 
 		want := []health.DependencyStatus{
 			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists()}}, Error: nil},
@@ -165,12 +139,9 @@ func TestPerformChecks(t *testing.T) {
 			Label:  "Sith",
 			Checks: []health.Check{{Kind: health.CheckBinaryExists, Severity: health.SeverityWarning, Fix: "turn Anakin into a bad man"}},
 		}
-		mockBinaryExists := func(_ context.Context, bin string) error {
-			return errors.New("vader not found")
-		}
-		mockCommandSuccessful := func(string) error { return nil }
+		runner := &runner.Fake{}
 
-		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, runner)
 
 		assert.Len(t, got, 1)
 		assert.Equal(t, "turn Anakin into a bad man", got[0].Fix)
@@ -180,12 +151,11 @@ func TestPerformChecks(t *testing.T) {
 		deps := []health.Dependency{
 			{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists()}},
 		}
-		mockBinaryExists := func(_ context.Context, bin string) error {
-			return nil
+		runner := &runner.Fake{
+			Binaries: []string{"standalone"},
 		}
-		mockCommandSuccessful := func(string) error { return nil }
 
-		got := health.PerformChecks(context.Background(), deps, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), deps, runner)
 
 		want := []health.DependencyStatus{
 			{Dependency: health.Dependency{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists()}}, Error: nil},
@@ -204,15 +174,16 @@ func TestPerformChecks(t *testing.T) {
 				Fix:      "Ensure current user can run the potatoe cooker",
 			}},
 		}
-		mockBinaryExists := func(context.Context, string) error { return nil }
-		mockCommandSuccessful := func(cmd string) error {
-			if cmd == "potatoes --cook-well" {
-				return errors.New("permission denied")
-			}
-			return nil
+		runner := &runner.Fake{
+			Binaries: []string{"potatoes"},
+			Commands: map[string]runner.FakeResult{
+				"potatoes --cook-well": {
+					Err: errors.New("permission denied"),
+				},
+			},
 		}
 
-		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, mockBinaryExists, mockCommandSuccessful)
+		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, runner)
 
 		want := []health.DependencyStatus{
 			{

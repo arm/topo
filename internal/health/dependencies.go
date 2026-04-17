@@ -1,6 +1,10 @@
 package health
 
-import "context"
+import (
+	"context"
+
+	"github.com/arm/topo/internal/runner"
+)
 
 type CheckKind int
 
@@ -148,12 +152,7 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 	return false
 }
 
-type (
-	BinaryExistsFn      = func(ctx context.Context, bin string) error
-	CommandSuccessfulFn = func(fullCmd string) error
-)
-
-func PerformChecks(ctx context.Context, dependencies []Dependency, binaryExists BinaryExistsFn, commandSuccessful CommandSuccessfulFn) []DependencyStatus {
+func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner.Runner) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
 
@@ -167,12 +166,12 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, binaryExists 
 		for _, check := range dep.Checks {
 			switch check.Kind {
 			case CheckBinaryExists:
-				err = binaryExists(ctx, dep.Binary)
+				err = runner.BinaryExists(ctx, dep.Binary)
 				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 					installed[dep.SoftwareEnumID] = struct{}{}
 				}
 			case CheckCommandSuccessful:
-				err = commandSuccessful(check.Arg)
+				_, err = runner.Run(ctx, check.Arg)
 			}
 			if err != nil {
 				if check.Severity == SeverityWarning {

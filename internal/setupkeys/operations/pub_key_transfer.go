@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"github.com/arm/topo/internal/command"
 )
 
 const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
@@ -41,7 +39,7 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 		return fmt.Errorf("failed to read public key %s: %w", kt.pubKeyPath, err)
 	}
 
-	cmdOutput, err := kt.r.RunWithStdinAndArgs(context.TODO(), command.WrapInLoginShell(remoteAuthorizedKeysCommand), pubKey, passwordAuthArgs...)
+	cmdOutput, err := kt.r.RunWithStdinAndArgs(context.TODO(), remoteAuthorizedKeysCommand, pubKey, passwordAuthArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to transfer public key to target: %w", err)
 	}

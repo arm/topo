@@ -22,7 +22,7 @@ func TestBinaryLookupCommand(t *testing.T) {
 		got, err := command.BinaryLookupCommand("docker")
 
 		require.NoError(t, err)
-		assert.Equal(t, command.WrapInLoginShell("command -v docker"), got)
+		assert.Equal(t, "command -v docker", got)
 	})
 
 	t.Run("returns error for invalid binary", func(t *testing.T) {
