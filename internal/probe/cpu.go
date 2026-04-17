@@ -38,9 +38,8 @@ var armCpuFeatures = map[string]string{
 }
 
 type lscpuOutputField struct {
-	Field    string             `json:"field"`
-	Data     string             `json:"data"`
-	Children []lscpuOutputField `json:"children,omitempty"`
+	Field string `json:"field"`
+	Data  string `json:"data"`
 }
 
 type lscpuJSON struct {
