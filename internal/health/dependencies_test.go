@@ -3,7 +3,6 @@ package health_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/command"
@@ -53,24 +52,16 @@ func TestDependencyFormat(t *testing.T) {
 
 func TestPerformChecks(t *testing.T) {
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
-		deps := []health.Dependency{
-			{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
-			{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
-		}
+		fooDependency := health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}}
+		bazDependency := health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}}
+		deps := []health.Dependency{fooDependency, bazDependency}
 		runner := &runner.Fake{}
 
 		got := health.PerformChecks(context.Background(), deps, runner)
 
-		want := []health.DependencyStatus{
-			{
-				Dependency: health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}},
-				Error:      errors.New("\"foo\" not found in $PATH"),
-			},
-			{
-				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
-				Error:      errors.New("\"baz\" not found in $PATH"),
-			},
-		}
+		wantFoo := health.DependencyStatus{Dependency: fooDependency, Error: runner.BinaryExists(context.Background(), fooDependency.Binary)}
+		wantBar := health.DependencyStatus{Dependency: bazDependency, Error: runner.BinaryExists(context.Background(), bazDependency.Binary)}
+		want := []health.DependencyStatus{wantFoo, wantBar}
 		assert.Equal(t, want, got)
 	})
 
@@ -82,12 +73,9 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(context.Background(), deps, runner)
 
 		assert.Len(t, got, 1)
-		want := []health.DependencyStatus{
-			{
-				Dependency: missingBin,
-				Error:      health.WarningError{Err: errors.New("\"missing-bin\" not found in $PATH")},
-			},
-		}
+		wantBin := health.DependencyStatus{Dependency: missingBin}
+		wantBin.Error = health.WarningError{Err: runner.BinaryExists(context.Background(), missingBin.Binary)}
+		want := []health.DependencyStatus{wantBin}
 		assert.Equal(t, want, got)
 	})
 
@@ -111,8 +99,9 @@ func TestPerformChecks(t *testing.T) {
 	})
 
 	t.Run("omits dependency when none of its SoftwarePrerequisites are installed", func(t *testing.T) {
+		dockerDependecy := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}
 		deps := []health.Dependency{
-			{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}},
+			dockerDependecy,
 			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}},
 		}
 		runner := &runner.Fake{
@@ -121,9 +110,8 @@ func TestPerformChecks(t *testing.T) {
 
 		got := health.PerformChecks(context.Background(), deps, runner)
 
-		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}, Error: fmt.Errorf(`"docker" not found in $PATH`)},
-		}
+		wantDocker := health.DependencyStatus{Dependency: dockerDependecy, Error: runner.BinaryExists(context.Background(), dockerDependecy.Binary)}
+		want := []health.DependencyStatus{wantDocker}
 		assert.Equal(t, want, got)
 	})
 
