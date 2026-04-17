@@ -5,9 +5,9 @@ import (
 
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/vscode"
 	"github.com/spf13/cobra"
 )
