@@ -152,11 +152,6 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 	return false
 }
 
-type (
-	BinaryExistsFn      = func(ctx context.Context, bin string) error
-	CommandSuccessfulFn = func(fullCmd string) error
-)
-
 func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner.Runner) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
