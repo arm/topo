@@ -60,7 +60,7 @@ func TestClone(t *testing.T) {
 	t.Run("clones source into destination directory", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
-		mockSource := mockCloneSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     image: nginx:alpine
@@ -70,14 +70,13 @@ services:
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, template.ComposeFilename)
-		_, statErr := os.Stat(composeFilePath)
-		require.NoError(t, statErr)
+		assert.FileExists(t, composeFilePath)
 	})
 
 	t.Run("removes destination directory when args resolution fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
-		mockSource := mockCloneSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     build:
@@ -98,14 +97,14 @@ x-topo:
 	})
 }
 
-func mockTemplateSourceWithContent(t *testing.T, content, sourceName string) *mockTemplateSource {
+func mockSourceWithContent(t *testing.T, content, sourceName string) *mockTemplateSource {
 	mockSource := &mockTemplateSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
 		testutil.RequireMkdirAll(t, destDir)
 		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
 	})
-	mockSource.On("GetName").Return(sourceName, nil)
+	mockSource.On("GetName").Maybe().Return(sourceName, nil)
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})
@@ -122,19 +121,6 @@ func mockTemplateSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceNa
 	return mockSource
 }
 
-func mockCloneSourceWithContent(t *testing.T, content, sourceName string) *mockTemplateSource {
-	mockSource := &mockTemplateSource{}
-	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		destDir := args.String(0)
-		testutil.RequireMkdirAll(t, destDir)
-		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
-	})
-	t.Cleanup(func() {
-		mockSource.AssertExpectations(t)
-	})
-	return mockSource
-}
-
 func TestExtend(t *testing.T) {
 	t.Run("extends service from TemplateSource", func(t *testing.T) {
 		dir := t.TempDir()
@@ -144,7 +130,7 @@ name: example-project
 services: {}
 `
 		targetProjectFile := testutil.WriteComposeFile(t, dir, projectYAML)
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     image: nginx:alpine
@@ -194,7 +180,7 @@ services:
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "ginger"
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     volumes:
@@ -228,7 +214,7 @@ volumes:
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "piggy-service"
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     image: nginx:alpine
@@ -269,7 +255,7 @@ services:
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "service-args-scope"
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     image: nginx:alpine
@@ -327,7 +313,7 @@ services:
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "oyster-service"
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     image: nginx:alpine
@@ -372,7 +358,7 @@ services:
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
 		sourceName := "vinegar-service"
-		mockSource := mockTemplateSourceWithContent(t, `
+		mockSource := mockSourceWithContent(t, `
 services:
   app:
     image: nginx:alpine
