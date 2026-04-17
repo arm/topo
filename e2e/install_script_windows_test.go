@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,15 +20,8 @@ func runInstallScript(t *testing.T, args ...string) (string, error) {
 	require.NoError(t, err)
 
 	tmpDir := t.TempDir()
-	homeDir := filepath.Join(tmpDir, "home")
 	localAppDataDir := filepath.Join(tmpDir, "localappdata")
-	appDataDir := filepath.Join(tmpDir, "appdata")
-	tempDir := filepath.Join(tmpDir, "tmp")
-
-	for _, dir := range []string{homeDir, localAppDataDir, appDataDir, tempDir} {
-		err := os.MkdirAll(dir, 0o755)
-		require.NoError(t, err)
-	}
+	testutil.RequireMkdirAll(t, localAppDataDir)
 
 	cmdArgs := append([]string{
 		"-NoProfile",
@@ -35,14 +29,7 @@ func runInstallScript(t *testing.T, args ...string) (string, error) {
 		"-File", path,
 	}, args...)
 	cmd := exec.Command("powershell", cmdArgs...)
-	cmd.Env = append(os.Environ(),
-		"HOME="+homeDir,
-		"USERPROFILE="+homeDir,
-		"LOCALAPPDATA="+localAppDataDir,
-		"APPDATA="+appDataDir,
-		"TEMP="+tempDir,
-		"TMP="+tempDir,
-	)
+	cmd.Env = append(os.Environ(), "LOCALAPPDATA="+localAppDataDir)
 
 	out, err := cmd.CombinedOutput()
 	return string(out), err
