@@ -8,36 +8,9 @@ import (
 
 type CheckKind int
 
-const (
-	CheckBinaryExists CheckKind = iota
-	CheckCommandSuccessful
-)
-
-type CheckSeverity int
-
-const (
-	SeverityError CheckSeverity = iota
-	SeverityWarning
-)
-
 type WarningError struct{ Err error }
 
 func (w WarningError) Error() string { return w.Err.Error() }
-
-type Check struct {
-	Kind     CheckKind
-	Arg      string
-	Severity CheckSeverity
-	Fix      string
-}
-
-func BinaryExists() Check {
-	return Check{Kind: CheckBinaryExists, Severity: SeverityError}
-}
-
-func BinaryExistsWarning() Check {
-	return Check{Kind: CheckBinaryExists, Severity: SeverityWarning}
-}
 
 type HardwareCapability int
 
@@ -66,18 +39,19 @@ var HostRequiredDependencies = []Dependency{
 	{
 		Binary: "ssh",
 		Label:  "SSH",
-		Checks: []Check{BinaryExists()},
+		Checks: []Check{BinaryExists{}},
 	},
 	{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,
-		Checks: []Check{BinaryExists(), {
-			Kind:     CheckCommandSuccessful,
-			Arg:      "docker info",
-			Severity: SeverityError,
-			Fix:      "Ensure current user can run docker commands",
-		}},
+		Checks: []Check{
+			BinaryExists{},
+			CommandSuccessful{
+				Cmd: "docker info",
+				Fix: "Ensure current user can run docker commands",
+			},
+		},
 	},
 }
 
@@ -86,12 +60,13 @@ var TargetRequiredDependencies = []Dependency{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,
-		Checks: []Check{BinaryExists(), {
-			Kind:     CheckCommandSuccessful,
-			Arg:      "docker info",
-			Severity: SeverityError,
-			Fix:      "Ensure current user can run docker commands",
-		}},
+		Checks: []Check{
+			BinaryExists{},
+			CommandSuccessful{
+				Cmd: "docker info",
+				Fix: "Ensure current user can run docker commands",
+			},
+		},
 	},
 	{
 		Binary:                "remoteproc-runtime",
@@ -99,8 +74,7 @@ var TargetRequiredDependencies = []Dependency{
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
 		Checks: []Check{
-			{
-				Kind:     CheckBinaryExists,
+			BinaryExists{
 				Severity: SeverityWarning,
 				Fix:      "run `topo install remoteproc-runtime`",
 			},
@@ -112,8 +86,7 @@ var TargetRequiredDependencies = []Dependency{
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
 		Checks: []Check{
-			{
-				Kind:     CheckBinaryExists,
+			BinaryExists{
 				Severity: SeverityWarning,
 				Fix:      "run `topo install remoteproc-runtime`",
 			},
@@ -123,7 +96,7 @@ var TargetRequiredDependencies = []Dependency{
 		Binary:         "lscpu",
 		Label:          "Hardware Info",
 		SoftwareEnumID: Lscpu,
-		Checks:         []Check{BinaryExists()},
+		Checks:         []Check{BinaryExists{}},
 	},
 }
 
@@ -161,23 +134,18 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 			continue
 		}
 
-		var err error
-		var fix string
-		for _, check := range dep.Checks {
-			switch check.Kind {
-			case CheckBinaryExists:
-				err = runner.BinaryExists(ctx, dep.Binary)
-				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
-					installed[dep.SoftwareEnumID] = struct{}{}
-				}
-			case CheckCommandSuccessful:
-				_, err = runner.Run(ctx, check.Arg)
+		if dep.SoftwareEnumID != UnsetSoftwareDependency {
+			exists := runner.BinaryExists(ctx, dep.Binary)
+			if exists == nil {
+				installed[dep.SoftwareEnumID] = struct{}{}
 			}
+		}
+
+		var fix string
+		var err error
+		for _, check := range dep.Checks {
+			fix, err = check.Apply(ctx, runner, dep)
 			if err != nil {
-				if check.Severity == SeverityWarning {
-					err = WarningError{Err: err}
-				}
-				fix = check.Fix
 				break
 			}
 		}
