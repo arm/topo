@@ -9,7 +9,6 @@ import (
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/target"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/assert/yaml"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,10 +29,19 @@ func TestPrintTargetDescription(t *testing.T) {
 
 			err := printable.Print(toPrint, &out, term.Plain)
 
+			want := `
+host:
+  - model: Cortex-A55
+    cores: 4
+    features:
+      - asimd
+      - sve
+remoteprocs:
+  - name: remoteproc0
+totalmemory_kb: 16384
+`
 			require.NoError(t, err)
-			var parsed target.HardwareProfile
-			require.NoError(t, yaml.Unmarshal(out.Bytes(), &parsed))
-			assert.Equal(t, profile, parsed)
+			assert.YAMLEq(t, want, out.String())
 		})
 	})
 
