@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 
@@ -62,6 +63,9 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 		return err
 	}
 	if _, err := r.Run(ctx, cmd); err != nil {
+		if errors.Is(err, ErrTimeout) {
+			return ErrTimeout
+		}
 		return fmt.Errorf("%q not found on remote target's $PATH", bin)
 	}
 	return nil

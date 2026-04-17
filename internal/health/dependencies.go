@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"errors"
 
 	"github.com/arm/topo/internal/runner"
 )
@@ -152,7 +153,7 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 	return false
 }
 
-func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner.Runner) []DependencyStatus {
+func PerformChecks(ctx context.Context, dependencies []Dependency, r runner.Runner) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
 
@@ -166,15 +167,21 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 		for _, check := range dep.Checks {
 			switch check.Kind {
 			case CheckBinaryExists:
-				err = runner.BinaryExists(ctx, dep.Binary)
+				err = r.BinaryExists(ctx, dep.Binary)
+				if errors.Is(err, runner.ErrTimeout) {
+					if dep.SoftwareEnumID != UnsetSoftwareDependency {
+						installed[dep.SoftwareEnumID] = struct{}{}
+					}
+					break
+				}
 				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
 					installed[dep.SoftwareEnumID] = struct{}{}
 				}
 			case CheckCommandSuccessful:
-				_, err = runner.Run(ctx, check.Arg)
+				_, err = r.Run(ctx, check.Arg)
 			}
 			if err != nil {
-				if check.Severity == SeverityWarning {
+				if check.Severity == SeverityWarning && !errors.Is(err, runner.ErrTimeout) {
 					err = WarningError{Err: err}
 				}
 				fix = check.Fix

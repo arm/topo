@@ -15,8 +15,9 @@ type FakeResult struct {
 // Fake is a test double that maps commands to canned results.
 // It satisfies the Runner interface without coupling tests to method signatures.
 type Fake struct {
-	Binaries []string
-	Commands map[string]FakeResult
+	Binaries        []string
+	BinaryExistsErr map[string]error
+	Commands        map[string]FakeResult
 }
 
 func (f *Fake) Run(ctx context.Context, command string) (string, error) {
@@ -32,6 +33,11 @@ func (f *Fake) RunWithStdin(ctx context.Context, command string, stdin []byte) (
 }
 
 func (f *Fake) BinaryExists(_ context.Context, bin string) error {
+	if f.BinaryExistsErr != nil {
+		if err, ok := f.BinaryExistsErr[bin]; ok {
+			return err
+		}
+	}
 	if slices.Contains(f.Binaries, bin) {
 		return nil
 	}

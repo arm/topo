@@ -194,6 +194,61 @@ func TestPerformChecks(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("propagates timeout error from BinaryExists without masking as not found", func(t *testing.T) {
+		dep := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}
+		r := &runner.Fake{
+			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
+		}
+
+		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, r)
+
+		assert.Len(t, got, 1)
+		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
+	})
+
+	t.Run("timeout on prerequisite still checks dependent dependencies", func(t *testing.T) {
+		dockerDep := health.Dependency{
+			Binary:         "docker",
+			Label:          "Container Engine",
+			SoftwareEnumID: health.Docker,
+			Checks:         []health.Check{health.BinaryExists()},
+		}
+		runtimeDep := health.Dependency{
+			Binary:                "runtime",
+			Label:                 "Runtime",
+			SoftwarePrerequisites: []health.SoftwareDependency{health.Docker},
+			Checks:                []health.Check{health.BinaryExists()},
+		}
+		r := &runner.Fake{
+			Binaries:        []string{"runtime"},
+			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
+		}
+
+		got := health.PerformChecks(context.Background(), []health.Dependency{dockerDep, runtimeDep}, r)
+
+		assert.Len(t, got, 2)
+		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
+		assert.NoError(t, got[1].Error)
+	})
+
+	t.Run("timeout on warning severity check is not wrapped as WarningError", func(t *testing.T) {
+		dep := health.Dependency{
+			Binary: "optional-tool",
+			Label:  "Optional",
+			Checks: []health.Check{health.BinaryExistsWarning()},
+		}
+		r := &runner.Fake{
+			BinaryExistsErr: map[string]error{"optional-tool": runner.ErrTimeout},
+		}
+
+		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, r)
+
+		assert.Len(t, got, 1)
+		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
+		_, isWarning := got[0].Error.(health.WarningError)
+		assert.False(t, isWarning)
+	})
 }
 
 func TestFilterByHardware(t *testing.T) {
