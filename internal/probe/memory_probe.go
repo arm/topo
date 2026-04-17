@@ -19,14 +19,14 @@ func Memory(ctx context.Context, r runner.Runner) (int64, error) {
 		return 0, err
 	}
 
-	value, err := FindKeyValueInString(key, out)
+	value, err := findKeyValue(key, out)
 	if err != nil {
 		return 0, fmt.Errorf("in checking %s", path)
 	}
 	return value, nil
 }
 
-func FindKeyValueInString(key string, text string) (int64, error) {
+func findKeyValue(key string, text string) (int64, error) {
 	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
