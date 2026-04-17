@@ -12,54 +12,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHardwareProbe(t *testing.T) {
-	t.Run("Probe", func(t *testing.T) {
-		t.Run("returns model name and features", func(t *testing.T) {
-			r := &runner.Fake{
-				Binaries: []string{"lscpu"},
-				Commands: map[string]runner.FakeResult{
-					command.WrapInLoginShell("lscpu --json"):             {Output: testutil.LsCpuOutputRaw},
-					command.WrapInLoginShell("ls /sys/class/remoteproc"): {Output: ""},
-					command.WrapInLoginShell("cat /proc/meminfo"):        {Output: "MemTotal:       16384000 kB"},
-				},
-			}
+func TestProbeCPU(t *testing.T) {
+	t.Run("returns model name and features", func(t *testing.T) {
+		r := &runner.Fake{
+			Binaries: []string{"lscpu"},
+			Commands: map[string]runner.FakeResult{
+				command.WrapInLoginShell("lscpu --json"): {Output: testutil.LsCpuOutputRaw},
+			},
+		}
 
-			got, err := target.ProbeHardware(context.Background(), r)
+		got, err := target.ProbeCPU(context.Background(), r)
 
-			require.NoError(t, err)
-			want := target.HardwareProfile{
-				HostProcessor: []target.HostProcessor{
-					{
-						Model:    "Cortex-A55",
-						Cores:    2,
-						Features: []string{"fp", "asimd"},
-					},
-				},
-				TotalMemoryKb: int64(16384000),
-			}
-			assert.Equal(t, want, got)
-		})
+		require.NoError(t, err)
+		want := []target.HostProcessor{
+			{
+				Model:    "Cortex-A55",
+				Cores:    2,
+				Features: []string{"fp", "asimd"},
+			},
+		}
+		assert.Equal(t, want, got)
+	})
 
-		t.Run("returns error when lscpu not found", func(t *testing.T) {
-			r := &runner.Fake{}
+	t.Run("returns error when lscpu not found", func(t *testing.T) {
+		r := &runner.Fake{}
 
-			_, err := target.ProbeHardware(context.Background(), r)
+		_, err := target.ProbeCPU(context.Background(), r)
 
-			assert.ErrorContains(t, err, `"lscpu" not found in $PATH`)
-		})
+		assert.ErrorContains(t, err, `"lscpu" not found in $PATH`)
+	})
 
-		t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
-			r := &runner.Fake{
-				Binaries: []string{"lscpu"},
-				Commands: map[string]runner.FakeResult{
-					command.WrapInLoginShell("lscpu --json"): {Output: "not json"},
-				},
-			}
+	t.Run("returns error when lscpu output is invalid JSON", func(t *testing.T) {
+		r := &runner.Fake{
+			Binaries: []string{"lscpu"},
+			Commands: map[string]runner.FakeResult{
+				command.WrapInLoginShell("lscpu --json"): {Output: "not json"},
+			},
+		}
 
-			_, err := target.ProbeHardware(context.Background(), r)
+		_, err := target.ProbeCPU(context.Background(), r)
 
-			assert.ErrorContains(t, err, "collecting CPU info")
-		})
+		assert.Error(t, err)
 	})
 }
 
@@ -83,35 +76,6 @@ func TestExtractArmFeatures(t *testing.T) {
 		res := ts.ExtractArmFeatures()
 
 		assert.Empty(t, res)
-	})
-}
-
-func TestFindKeyValueInString(t *testing.T) {
-	t.Run("finds key and parses value", func(t *testing.T) {
-		text := `MemTotal:       16384000 kB
-MemFree:        8192000 kB`
-
-		got, err := target.FindKeyValueInString("MemTotal", text)
-
-		require.NoError(t, err)
-		assert.Equal(t, int64(16384000), got)
-	})
-
-	t.Run("returns error when key not found", func(t *testing.T) {
-		text := `MemTotal:       16384000 kB`
-
-		got, err := target.FindKeyValueInString("MissingKey", text)
-
-		assert.Error(t, err)
-		assert.Equal(t, int64(0), got)
-	})
-
-	t.Run("returns error when value is invalid", func(t *testing.T) {
-		text := `MemTotal:       notanumber`
-
-		_, err := target.FindKeyValueInString("MemTotal", text)
-
-		assert.Error(t, err)
 	})
 }
 
