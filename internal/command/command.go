@@ -21,7 +21,7 @@ func BinaryLookupCommand(bin string) (string, error) {
 		return "", err
 	}
 
-	return WrapInLoginShell(fmt.Sprintf("command -v %s", bin)), nil
+	return fmt.Sprintf("command -v %s", bin), nil
 }
 
 func shellEscapeForDoubleQuotes(s string) string {
