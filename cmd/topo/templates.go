@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var targetDescriptionPath string
-
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
 	Short: "List available Service Templates",
@@ -46,12 +44,5 @@ var templatesCmd = &cobra.Command{
 func init() {
 	addTargetFlag(templatesCmd)
 	addTimeoutFlag(templatesCmd, defaultTimeout)
-	templatesCmd.Flags().StringVar(
-		&targetDescriptionPath,
-		"target-description",
-		"",
-		"Path to the target description file used to show template compatibility",
-	)
-	templatesCmd.MarkFlagsMutuallyExclusive("target", "target-description")
 	rootCmd.AddCommand(templatesCmd)
 }
