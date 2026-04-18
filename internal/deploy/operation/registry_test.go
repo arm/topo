@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
-	"github.com/arm/topo/internal/deploy/docker/operation"
-	"github.com/arm/topo/internal/deploy/docker/testutil"
+	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/deploy/testutil"
 	goperation "github.com/arm/topo/internal/operation"
 
 	"github.com/stretchr/testify/assert"

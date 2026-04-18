@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/docker/operation"
+	"github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/internal/deploy/operation"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/logger"
@@ -25,7 +25,7 @@ var (
 	noRecreate        bool
 )
 
-var deployOpts docker.DeployOptions
+var deployOpts deploy.DeployOptions
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
@@ -76,10 +76,10 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 		}
 
 		goos := runtime.GOOS
-		if docker.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
-			deployOpts.Registry = &docker.RegistryConfig{
+		if deploy.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
+			deployOpts.Registry = &deploy.RegistryConfig{
 				Port:              resolvedPort,
-				UseControlSockets: docker.SupportsSSHControlSockets(goos),
+				UseControlSockets: deploy.SupportsSSHControlSockets(goos),
 			}
 		}
 		switch {
@@ -93,7 +93,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 			logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
 		}
 
-		deployment, cleanup := docker.NewDeployment(composeFile, deployOpts)
+		deployment, cleanup := deploy.NewDeployment(composeFile, deployOpts)
 		stop := goperation.SetupExitCleanup(os.Stdout, cleanup, os.Exit)
 
 		defer stop()

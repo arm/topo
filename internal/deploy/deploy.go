@@ -1,8 +1,8 @@
-package docker
+package deploy
 
 import (
-	"github.com/arm/topo/internal/deploy/docker/command"
-	"github.com/arm/topo/internal/deploy/docker/operation"
+	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/operation"
 	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 )

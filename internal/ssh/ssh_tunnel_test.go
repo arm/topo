@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker/operation"
+	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"

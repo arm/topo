@@ -1,4 +1,4 @@
-package docker_test
+package deploy_test
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/docker/command"
-	"github.com/arm/topo/internal/deploy/docker/operation"
-	"github.com/arm/topo/internal/deploy/docker/testutil"
+	"github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/deploy/testutil"
 	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +23,7 @@ func TestNewDeploymentStop(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
 		remoteHost := command.NewHostFromDestination(remoteDest)
 
-		got := docker.NewDeploymentStop(composeFile, remoteDest)
+		got := deploy.NewDeploymentStop(composeFile, remoteDest)
 
 		want := goperation.Sequence{
 			operation.NewDockerComposeStop(composeFile, remoteHost),
@@ -32,7 +32,7 @@ func TestNewDeploymentStop(t *testing.T) {
 	})
 
 	t.Run("runs stop operation for local host", func(t *testing.T) {
-		got := docker.NewDeploymentStop(composeFile, ssh.PlainLocalhost)
+		got := deploy.NewDeploymentStop(composeFile, ssh.PlainLocalhost)
 
 		want := goperation.Sequence{
 			operation.NewDockerComposeStop(composeFile, command.LocalHost),
@@ -69,13 +69,13 @@ services:
 			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
 
-			deployOpts := docker.DeployOptions{TargetHost: remoteDockerHost}
-			deploy, _ := docker.NewDeployment(composeFilePath, deployOpts)
+			deployOpts := deploy.DeployOptions{TargetHost: remoteDockerHost}
+			deployment, _ := deploy.NewDeployment(composeFilePath, deployOpts)
 
-			require.NoError(t, deploy.Run(os.Stdout))
+			require.NoError(t, deployment.Run(os.Stdout))
 			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
 
-			stop := docker.NewDeploymentStop(composeFilePath, remoteDockerHost)
+			stop := deploy.NewDeploymentStop(composeFilePath, remoteDockerHost)
 			err := stop.Run(os.Stdout)
 
 			require.NoError(t, err)

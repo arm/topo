@@ -4,7 +4,7 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/arm/topo/internal/deploy/docker/command"
+	"github.com/arm/topo/internal/deploy/command"
 )
 
 type DockerCompose struct {

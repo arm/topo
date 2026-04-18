@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/ssh"
 
 	"github.com/spf13/cobra"
@@ -33,7 +33,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		dest := ssh.NewDestination(targetArg)
 
-		stop := docker.NewDeploymentStop(composeFile, dest)
+		stop := deploy.NewDeploymentStop(composeFile, dest)
 
 		return stop.Run(os.Stdout)
 	},
