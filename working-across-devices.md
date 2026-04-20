@@ -31,10 +31,10 @@ In principle, some target-specific build configuration could instead be driven e
 
 That said, once a build starts selecting CPU-specific optimizations, the resulting image becomes more closely tied to the target class. This can reduce portability and cache reuse, and may require separate builds for different devices even when they are all `linux/arm64`.
 
-### When Docker images are not well structured
+### When good Docker image authoring requires too much expertise
 
-Docker build performance is extremely sensitive to how well an image is structured for layer caching. Docker reuses unchanged layers, and `topo deploy` transfers images via a registry, so both rebuild time and transfer time benefit when changes are isolated to later layers.
+Topo gets its fast edit-build-deploy loop from Docker and OCI primitives, but the quality of that loop depends heavily on how well images are authored. Techniques such as sensible layer ordering, multi-stage builds, and modern build cache features can make rebuilds and transfers dramatically faster, while poor image structure can cause very large regressions.
 
 In the best case, a 10 GB image can be rebuilt and transferred with only a tiny amount of work if the only change is a 1 KB file in the final layer. In the worst case, changing a similarly small file in an early layer can invalidate everything that follows, forcing most or all of the image to be rebuilt and transferred again.
 
-Anyone authoring or extending a [Topo Template](https://github.com/arm/topo-template-format) needs to understand this, because it is easy to introduce large performance regressions in the developer iteration loop.
+This creates an awkward requirement for Topo users: even when they are primarily trying to build for Arm hardware, they may need to understand advanced container build techniques to get good iteration performance.
