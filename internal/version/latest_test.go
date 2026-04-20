@@ -63,7 +63,7 @@ func TestFetchLatest(t *testing.T) {
 		got, err := version.FetchLatest(context.Background(), srv.URL)
 
 		require.NoError(t, err)
-		assert.Equal(t, "v4.1.0", got)
+		assert.Equal(t, "4.1.0", got)
 	})
 
 	t.Run("picks correct version when order is scrambled", func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestFetchLatest(t *testing.T) {
 		got, err := version.FetchLatest(context.Background(), srv.URL)
 
 		require.NoError(t, err)
-		assert.Equal(t, "v10.0.0", got)
+		assert.Equal(t, "10.0.0", got)
 	})
 
 	t.Run("deduplicates repeated versions", func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestFetchLatest(t *testing.T) {
 		got, err := version.FetchLatest(context.Background(), srv.URL)
 
 		require.NoError(t, err)
-		assert.Equal(t, "v1.0.0", got)
+		assert.Equal(t, "1.0.0", got)
 	})
 
 	t.Run("returns error when no versions found", func(t *testing.T) {

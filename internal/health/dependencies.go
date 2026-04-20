@@ -37,6 +37,11 @@ type Dependency struct {
 
 var HostRequiredDependencies = []Dependency{
 	{
+		Binary: "topo",
+		Label:  "Topo",
+		Checks: []Check{IsTopoUpToDate{}},
+	},
+	{
 		Binary: "ssh",
 		Label:  "SSH",
 		Checks: []Check{BinaryExists{}},

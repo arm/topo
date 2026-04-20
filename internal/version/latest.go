@@ -61,7 +61,9 @@ func FetchLatest(ctx context.Context, url string) (string, error) {
 	sort.Slice(versionsList, func(i, j int) bool {
 		return compareSemver(versionsList[i], versionsList[j]) < 0
 	})
-	return versionsList[len(versionsList)-1], nil
+	latest := versionsList[len(versionsList)-1]
+
+	return latest[1:], nil
 }
 
 func compareSemver(a, b string) int {
