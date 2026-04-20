@@ -80,15 +80,13 @@ type modelFields struct {
 
 func groupByModelName(fields []lscpuOutputField) []modelFields {
 	var groups []modelFields
-	idx := -1
 	for _, f := range fields {
 		if f.Field == "Model name:" {
 			groups = append(groups, modelFields{name: f.Data})
-			idx = len(groups) - 1
 			continue
 		}
-		if idx >= 0 {
-			groups[idx].fields = append(groups[idx].fields, f)
+		if len(groups) > 0 {
+			groups[len(groups)-1].fields = append(groups[len(groups)-1].fields, f)
 		}
 	}
 	return groups
