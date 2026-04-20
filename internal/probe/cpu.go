@@ -54,8 +54,8 @@ func CPU(ctx context.Context, r runner.Runner) ([]HostProcessor, error) {
 	}
 
 	var processors []HostProcessor
-	for name, fields := range groupByModelName(output.Lscpu) {
-		hp, err := newHostProcessor(name, fields)
+	for _, group := range groupByModelName(output.Lscpu) {
+		hp, err := newHostProcessor(group.name, group.fields)
 		if err != nil {
 			return nil, err
 		}
@@ -73,21 +73,25 @@ type lscpuJSON struct {
 	Lscpu []lscpuOutputField `json:"lscpu"`
 }
 
-type fieldsByModelName map[string][]lscpuOutputField
+type modelFields struct {
+	name   string
+	fields []lscpuOutputField
+}
 
-func groupByModelName(fields []lscpuOutputField) fieldsByModelName {
-	grouped := make(fieldsByModelName)
-	currentName := ""
+func groupByModelName(fields []lscpuOutputField) []modelFields {
+	var groups []modelFields
+	idx := -1
 	for _, f := range fields {
 		if f.Field == "Model name:" {
-			currentName = f.Data
+			groups = append(groups, modelFields{name: f.Data})
+			idx = len(groups) - 1
 			continue
 		}
-		if currentName != "" {
-			grouped[currentName] = append(grouped[currentName], f)
+		if idx >= 0 {
+			groups[idx].fields = append(groups[idx].fields, f)
 		}
 	}
-	return grouped
+	return groups
 }
 
 func newHostProcessor(name string, fields []lscpuOutputField) (HostProcessor, error) {
