@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/arm/topo/internal/catalog"
@@ -31,6 +33,9 @@ var templatesCmd = &cobra.Command{
 			defer cancel()
 			hwProfile, err := probe.Hardware(ctx, r)
 			if err != nil {
+				if errors.Is(err, ssh.ErrSSH) || errors.Is(err, runner.ErrTimeout) {
+					return fmt.Errorf("failed to reach target %s: %w", targetArg, err)
+				}
 				return err
 			}
 			profile = &hwProfile
