@@ -35,7 +35,6 @@ topo deploy --target pi@raspberrypi
 
 - **Fast, incremental deploys** over SSH, with layer caching to keep rebuilds quick
 - **Hardware-aware template discovery** that matches your target's actual capabilities
-- **Real Compose projects** you configure at clone time, then inspect, modify, and reuse
 - **Standard tooling throughout**: Docker Compose, container images, and OCI registries
 - **Whole-device orchestration** of Linux services and coprocessor firmware in a single Compose project
 
