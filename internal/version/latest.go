@@ -24,6 +24,7 @@ func FetchLatest(ctx context.Context, url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("creating request: %w", err)
 	}
+	// #nosec G704 -- request to a hardcoded, trusted URL
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("fetching version index: %w", err)
