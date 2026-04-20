@@ -30,7 +30,7 @@ func NewClone(path string, src template.Source, argProvider arguments.Provider) 
 			path:        path,
 			argProvider: argProvider,
 		},
-		printProjectDirectoryOperation{
+		printSummary{
 			path: path,
 		},
 	)
@@ -296,18 +296,24 @@ func (o resolveArgsOperation) Run(_ io.Writer) error {
 	return nil
 }
 
-type printProjectDirectoryOperation struct {
+type printSummary struct {
 	path string
 }
 
-func (o printProjectDirectoryOperation) Description() string {
-	return "Project directory"
+func (o printSummary) Description() string {
+	return "Project ready"
 }
 
-func (o printProjectDirectoryOperation) Run(w io.Writer) error {
+func (o printSummary) Run(w io.Writer) error {
 	if w == nil {
 		return nil
 	}
-	_, err := fmt.Fprintln(w, o.path)
+	toPrint := fmt.Sprintf(`Created in '%s'
+
+Now run:
+  cd %s
+  topo deploy`, o.path, o.path)
+
+	_, err := fmt.Fprintln(w, toPrint)
 	return err
 }

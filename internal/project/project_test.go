@@ -1,6 +1,7 @@
 package project_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -57,6 +58,26 @@ func TestInit(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
+	t.Run("prints summary with next steps", func(t *testing.T) {
+		dir := t.TempDir()
+		destDir := filepath.Join(dir, "demo")
+		mockSource := mockSourceWithContent(t, `
+services:
+  app:
+    image: nginx:alpine
+`, "demo-source")
+		var output bytes.Buffer
+
+		err := project.NewClone(destDir, mockSource, arguments.NewStrictProviderChain()).Run(&output)
+
+		require.NoError(t, err)
+		out := output.String()
+		assert.Contains(t, out, "Project ready")
+		assert.Contains(t, out, fmt.Sprintf("Created in '%s'", destDir))
+		assert.Contains(t, out, "cd "+destDir)
+		assert.Contains(t, out, "topo deploy")
+	})
+
 	t.Run("clones source into destination directory", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
