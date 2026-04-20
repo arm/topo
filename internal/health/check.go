@@ -35,8 +35,14 @@ type BinaryExists struct {
 
 func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) (string, error) {
 	err := r.BinaryExists(ctx, dep.Binary)
-	if b.Severity == SeverityWarning && err != nil && !errors.Is(err, runner.ErrTimeout) {
-		err = WarningError{Err: err}
+	if err == nil {
+		return b.Fix, nil
+	}
+	if errors.Is(err, runner.ErrTimeout) {
+		return "", err
+	}
+	if b.Severity == SeverityWarning {
+		return b.Fix, WarningError{Err: err}
 	}
 	return b.Fix, err
 }
