@@ -1,9 +1,12 @@
 package operation
 
 import (
+	"fmt"
 	"io"
+	"os"
 	"os/exec"
 
+	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/deploy/command"
 )
 
@@ -27,8 +30,35 @@ func NewDockerComposeBuild(composeFile string, h command.Host) *DockerCompose {
 	return NewDockerCompose("Build images", composeFile, h, []string{"build"})
 }
 
-func NewDockerComposePull(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("Pull images", composeFile, h, []string{"pull", "--ignore-buildable"})
+type DockerComposePull struct {
+	composeFile string
+	host        command.Host
+}
+
+func NewDockerComposePull(composeFile string, h command.Host) *DockerComposePull {
+	return &DockerComposePull{composeFile: composeFile, host: h}
+}
+
+func (p *DockerComposePull) Description() string { return "Pull images" }
+
+func (p *DockerComposePull) Run(w io.Writer) error {
+	f, err := os.Open(p.composeFile)
+	if err != nil {
+		return fmt.Errorf("reading compose file: %w", err)
+	}
+	defer f.Close() //nolint:errcheck
+	services, err := compose.PullableServices(f)
+	if err != nil {
+		return err
+	}
+	if len(services) == 0 {
+		return nil
+	}
+	args := append([]string{"pull"}, services...)
+	cmd := command.DockerCompose(p.host, p.composeFile, args...)
+	cmd.Stdout = w
+	cmd.Stderr = w
+	return cmd.Run()
 }
 
 func NewDockerComposeStop(composeFile string, h command.Host) *DockerCompose {
