@@ -52,8 +52,8 @@ func TestDependencyFormat(t *testing.T) {
 
 func TestPerformChecks(t *testing.T) {
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
-		fooDependency := health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists()}}
-		bazDependency := health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}}
+		fooDependency := health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists{}}}
+		bazDependency := health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists{}}}
 		deps := []health.Dependency{fooDependency, bazDependency}
 		runner := &runner.Fake{}
 
@@ -65,23 +65,9 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("wraps error as WarningError when binary exists check severity is warning", func(t *testing.T) {
-		missingBin := health.Dependency{Binary: "missing-bin", Label: "Missing", Checks: []health.Check{health.BinaryExistsWarning()}}
-		deps := []health.Dependency{missingBin}
-		runner := &runner.Fake{}
-
-		got := health.PerformChecks(context.Background(), deps, runner)
-
-		assert.Len(t, got, 1)
-		wantBin := health.DependencyStatus{Dependency: missingBin}
-		wantBin.Error = health.WarningError{Err: runner.BinaryExists(context.Background(), missingBin.Binary)}
-		want := []health.DependencyStatus{wantBin}
-		assert.Equal(t, want, got)
-	})
-
 	t.Run("when a dependency is found, its status entry reflects that", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
+			{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists{}}},
 		}
 		runner := &runner.Fake{
 			Binaries: []string{"baz"},
@@ -91,7 +77,7 @@ func TestPerformChecks(t *testing.T) {
 
 		want := []health.DependencyStatus{
 			{
-				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists()}},
+				Dependency: health.Dependency{Binary: "baz", Label: "qux", Checks: []health.Check{health.BinaryExists{}}},
 				Error:      nil,
 			},
 		}
@@ -99,10 +85,10 @@ func TestPerformChecks(t *testing.T) {
 	})
 
 	t.Run("omits dependency when none of its SoftwarePrerequisites are installed", func(t *testing.T) {
-		dockerDependecy := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}
+		dockerDependecy := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists{}}}
 		deps := []health.Dependency{
 			dockerDependecy,
-			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}},
+			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists{}}},
 		}
 		runner := &runner.Fake{
 			Binaries: []string{"runtime"},
@@ -117,8 +103,8 @@ func TestPerformChecks(t *testing.T) {
 
 	t.Run("checks dependency when one of its SoftwarePrerequisites is installed", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists()}},
-			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}},
+			{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists{}}},
+			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists{}}},
 		}
 		runner := &runner.Fake{
 			Binaries: []string{"runtime", "docker"},
@@ -127,8 +113,8 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(context.Background(), deps, runner)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists()}}, Error: nil},
-			{Dependency: health.Dependency{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists()}}, Error: nil},
+			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists{}}}, Error: nil},
+			{Dependency: health.Dependency{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists{}}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -137,7 +123,12 @@ func TestPerformChecks(t *testing.T) {
 		dep := health.Dependency{
 			Binary: "vader.exe",
 			Label:  "Sith",
-			Checks: []health.Check{{Kind: health.CheckBinaryExists, Severity: health.SeverityWarning, Fix: "turn Anakin into a bad man"}},
+			Checks: []health.Check{
+				health.BinaryExists{
+					Severity: health.SeverityWarning,
+					Fix:      "turn Anakin into a bad man",
+				},
+			},
 		}
 		runner := &runner.Fake{}
 
@@ -149,7 +140,7 @@ func TestPerformChecks(t *testing.T) {
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists()}},
+			{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists{}}},
 		}
 		runner := &runner.Fake{
 			Binaries: []string{"standalone"},
@@ -158,7 +149,7 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(context.Background(), deps, runner)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists()}}, Error: nil},
+			{Dependency: health.Dependency{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists{}}}, Error: nil},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -167,11 +158,9 @@ func TestPerformChecks(t *testing.T) {
 		dep := health.Dependency{
 			Binary: "potatoes",
 			Label:  "Air Fryer Engine",
-			Checks: []health.Check{health.BinaryExists(), {
-				Kind:     health.CheckCommandSuccessful,
-				Arg:      "potatoes --cook-well",
-				Severity: health.SeverityError,
-				Fix:      "Ensure current user can run the potatoe cooker",
+			Checks: []health.Check{health.BinaryExists{}, health.CommandSuccessful{
+				Cmd: "potatoes --cook-well",
+				Fix: "Ensure current user can run the potatoe cooker",
 			}},
 		}
 		runner := &runner.Fake{
@@ -196,7 +185,7 @@ func TestPerformChecks(t *testing.T) {
 	})
 
 	t.Run("propagates timeout error from BinaryExists without masking as not found", func(t *testing.T) {
-		dep := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists()}}
+		dep := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists{}}}
 		r := &runner.Fake{
 			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
 		}
@@ -212,13 +201,13 @@ func TestPerformChecks(t *testing.T) {
 			Binary:         "docker",
 			Label:          "Container Engine",
 			SoftwareEnumID: health.Docker,
-			Checks:         []health.Check{health.BinaryExists()},
+			Checks:         []health.Check{health.BinaryExists{}},
 		}
 		runtimeDep := health.Dependency{
 			Binary:                "runtime",
 			Label:                 "Runtime",
 			SoftwarePrerequisites: []health.SoftwareDependency{health.Docker},
-			Checks:                []health.Check{health.BinaryExists()},
+			Checks:                []health.Check{health.BinaryExists{}},
 		}
 		r := &runner.Fake{
 			Binaries:        []string{"runtime"},
@@ -236,7 +225,7 @@ func TestPerformChecks(t *testing.T) {
 		dep := health.Dependency{
 			Binary: "optional-tool",
 			Label:  "Optional",
-			Checks: []health.Check{health.BinaryExistsWarning()},
+			Checks: []health.Check{health.BinaryExists{Severity: health.SeverityWarning}},
 		}
 		r := &runner.Fake{
 			BinaryExistsErr: map[string]error{"optional-tool": runner.ErrTimeout},
