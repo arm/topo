@@ -34,5 +34,8 @@ func ClassifyStderr(stderr string) error {
 	if strings.Contains(lower, "connection refused") {
 		return ErrConnectionFailed
 	}
+	if strings.Contains(lower, "could not resolve hostname") {
+		return ErrConnectionFailed
+	}
 	return nil
 }

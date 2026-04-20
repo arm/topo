@@ -64,7 +64,10 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 	}
 	if _, err := r.Run(ctx, cmd); err != nil {
 		if errors.Is(err, ErrTimeout) {
-			return ErrTimeout
+			return err
+		}
+		if errors.Is(err, ssh.ErrSSH) {
+			return err
 		}
 		return fmt.Errorf("%q not found on remote target's $PATH", bin)
 	}
