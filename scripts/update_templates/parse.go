@@ -11,7 +11,7 @@ import (
 func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {
 	tmpl, err := template.FromContent(compose)
 	if err != nil {
-		return Template{}, fmt.Errorf("parse compose definition: %w", err)
+		return Template{}, fmt.Errorf("failed to parse compose definition: %w", err)
 	}
 
 	metadata := tmpl.Metadata

@@ -13,7 +13,6 @@ import (
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/output/logger"
 )
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"
@@ -23,10 +22,7 @@ func isPortTaken(port string) bool {
 	if err != nil {
 		return false
 	}
-	err = conn.Close()
-	if err != nil {
-		logger.Error(fmt.Sprintf("error closing tcp port probe: %v", err))
-	}
+	conn.Close() // nolint:errcheck
 	return true
 }
 

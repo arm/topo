@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	ErrHostKeyUnknown = errors.New("SSH host key is not known")
-	ErrHostKeyChanged = errors.New("SSH host key has changed")
-	ErrAuthFailed     = errors.New("SSH authentication failed")
+	ErrHostKeyUnknown = errors.New("ssh host key is unknown")
+	ErrHostKeyChanged = errors.New("ssh host key has changed")
+	ErrAuthFailed     = errors.New("ssh authentication failed")
 )
 
 // SSHAuthentication verifies SSH connectivity by attempting public key authentication.

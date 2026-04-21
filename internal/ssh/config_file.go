@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/arm/topo/internal/output/logger"
 	sshconfig "github.com/kevinburke/ssh_config"
 )
 
@@ -80,13 +79,7 @@ func readConfigFile(path string) (*sshconfig.Config, error) {
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("failed to open topo ssh config file: %w", err)
 	}
-	defer func() {
-		if cfgFile != nil {
-			if err := cfgFile.Close(); err != nil {
-				logger.Error("failed to close topo ssh config file", "error", err)
-			}
-		}
-	}()
+	defer cfgFile.Close() // nolint:errcheck
 
 	cfgReader := io.Reader(cfgFile)
 	if cfgFile == nil {
