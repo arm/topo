@@ -1,9 +1,7 @@
 package operation
 
 import (
-	"fmt"
 	"io"
-	"os"
 	"os/exec"
 
 	"github.com/arm/topo/internal/compose"
@@ -42,12 +40,7 @@ func NewDockerComposePull(composeFile string, h command.Host) *DockerComposePull
 func (p *DockerComposePull) Description() string { return "Pull images" }
 
 func (p *DockerComposePull) Run(w io.Writer) error {
-	f, err := os.Open(p.composeFile)
-	if err != nil {
-		return fmt.Errorf("reading compose file: %w", err)
-	}
-	defer f.Close() //nolint:errcheck
-	services, err := compose.PullableServices(f)
+	services, err := compose.PullableServices(p.composeFile)
 	if err != nil {
 		return err
 	}

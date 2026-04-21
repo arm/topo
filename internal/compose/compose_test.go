@@ -188,6 +188,88 @@ func TestRegisterVolumes(t *testing.T) {
 	})
 }
 
+func TestPullableServices(t *testing.T) {
+	t.Run("returns services without a build key", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `
+services:
+  duff-beer:
+    image: duff:7
+  kwik-e-mart:
+    image: apu:16
+`)
+
+		got, err := compose.PullableServices(path)
+
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"duff-beer", "kwik-e-mart"}, got)
+	})
+
+	t.Run("excludes services with a build key", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `
+services:
+  krusty-burger:
+    build: .
+    image: krusty:latest
+  duff-beer:
+    image: duff:7
+`)
+
+		got, err := compose.PullableServices(path)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"duff-beer"}, got)
+	})
+
+	t.Run("returns empty slice when all services are buildable", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `
+services:
+  krusty-burger:
+    build: .
+  nuclear-plant:
+    build:
+      context: .
+      dockerfile: Dockerfile.sector7g
+`)
+
+		got, err := compose.PullableServices(path)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("excludes services that extend a buildable service", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `
+services:
+  krusty-burger:
+    build: .
+    image: krusty:latest
+  ribwich:
+    extends:
+      service: krusty-burger
+  duff-beer:
+    image: duff:7
+`)
+
+		got, err := compose.PullableServices(path)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"duff-beer"}, got)
+	})
+
+	t.Run("returns error for invalid yaml", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `{invalid`)
+
+		_, err := compose.PullableServices(path)
+
+		assert.Error(t, err)
+	})
+}
+
 func TestReadProject(t *testing.T) {
 	t.Run("when project file not found returns error", func(t *testing.T) {
 		dir := t.TempDir()
