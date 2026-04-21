@@ -12,33 +12,26 @@ import (
 
 var extendCmd = &cobra.Command{
 	Use:   "extend <compose-filepath> <source> [flags] [-- ARG=VALUE ...]",
-	Short: "Add all services of source to the compose file from a template Name, git URL, or local directory",
-	Long: `Add all services of source to the compose file.
+	Short: "Add services from a template to the compose file",
+	Long: `Add all services from a source to the compose file.
 
-The source argument uses scheme prefixes to specify the source type:
+The source argument uses scheme prefixes to specify the source type.
+The git: prefix is optional for git@host and https:// URLs.
 
-Git repository (git: prefix is optional for git@host and https:// URLs):
-  topo extend compose.yaml git:https://github.com/user/repo.git
+Service templates may require build arguments. You can provide them after --
+or answer interactive prompts.`,
+	Example: `  # Git repository
   topo extend compose.yaml https://github.com/user/repo.git
   topo extend compose.yaml https://github.com/user/repo.git#develop
   topo extend compose.yaml git:git@github.com:user/repo.git
-  topo extend compose.yaml git@github.com:user/repo.git
-  topo extend compose.yaml git@github.com:user/repo.git#main
-  topo extend compose.yaml git:ubuntu@example.com:repo.git
   topo extend compose.yaml git:builder@host:tools/platform.git#v2
 
-Local directory:
+  # Local directory
   topo extend compose.yaml dir:/path/to/template/folder
   topo extend compose.yaml dir:./relative/path
 
-Service templates may require build arguments. You can provide them via the command line
-or interactively when prompted:
-
-  # Will prompt for required args
-  topo extend compose.yaml git:url
-  # Provide args explicitly
-  topo extend compose.yaml git:url -- GREETING="Hello" PORT=8080
-`,
+  # Provide build arguments explicitly
+  topo extend compose.yaml git:url -- GREETING="Hello" PORT=8080`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true

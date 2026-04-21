@@ -22,8 +22,7 @@ Fetches binaries from https://github.com/` + remoteprocRuntimeRepoURL + `
 Set GITHUB_TOKEN to authenticate with the GitHub API and avoid rate limits.
 
 Attempts to replace existing installations if found.
-Falls back to ~/bin if no suitable locations are automatically found.
-`,
+Falls back to ~/bin if no suitable locations are automatically found.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true

@@ -16,7 +16,8 @@ const acceptNewHostFlag = "accept-new-host-keys"
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Check the target host environment (container engines, SSH availability)",
+	Short: "Check the target host environment",
+	Long:  "Check the target host environment, including container engines and SSH availability.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -61,6 +62,6 @@ var healthCmd = &cobra.Command{
 func init() {
 	addTargetFlag(healthCmd)
 	addTimeoutFlag(healthCmd, defaultTimeout)
-	healthCmd.Flags().Bool(acceptNewHostFlag, false, "Automatically trust and add new SSH host keys for the target")
+	healthCmd.Flags().Bool(acceptNewHostFlag, false, "automatically trust and add new SSH host keys for the target")
 	rootCmd.AddCommand(healthCmd)
 }

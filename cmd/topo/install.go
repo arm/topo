@@ -6,7 +6,7 @@ import (
 
 var installCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Install components to target",
+	Short: "Install components to the target",
 }
 
 func init() {

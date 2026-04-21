@@ -33,7 +33,7 @@ var deployCmd = &cobra.Command{
 	Long: `Deploy services to the target host using definitions in the compose file.
 
 This command performs the following operations in sequence:
-  1. Build - Builds Container images defined in the compose file on the local host
+  1. Build - Builds container images defined in the compose file on the local host
   2. Pull - Pulls any required images from registries to the local host
   3. Transfer - Transfers built and pulled images and compose file to the target host
   4. Run - Runs docker compose up on the target host
@@ -141,11 +141,11 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 
 func init() {
 	addTargetFlag(deployCmd)
-	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, fmt.Sprintf("Registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
-	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "Disable private registry flow; use direct save/load transfer")
-	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "Force recreation of containers even if their configuration and image haven't changed")
-	deployCmd.Flags().BoolVar(&noRecreate, "no-recreate", false, "Prevent recreation of containers even if their configuration and image have changed")
-	deployCmd.Flags().BoolVar(&skipProjectChecks, "skip-project-checks", false, "Skip project compatibility checks for the target platform")
+	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
+	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "disable private registry flow; use direct save/load transfer")
+	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "force recreation of containers even if their configuration and image haven't changed")
+	deployCmd.Flags().BoolVar(&noRecreate, "no-recreate", false, "prevent recreation of containers even if their configuration and image have changed")
+	deployCmd.Flags().BoolVar(&skipProjectChecks, "skip-project-checks", false, "skip project compatibility checks for the target platform")
 	deployCmd.MarkFlagsMutuallyExclusive("force-recreate", "no-recreate")
 	rootCmd.AddCommand(deployCmd)
 }

@@ -30,7 +30,7 @@ func init() {
 		"output",
 		"o",
 		"plain",
-		"Output format: plain or json",
+		"output format: plain or json",
 	)
 }
 
@@ -39,7 +39,7 @@ const targetEnvVar = "TOPO_TARGET"
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
 		"target", "t", "",
-		fmt.Sprintf("The SSH destination (can also be set via %s env var).", targetEnvVar),
+		fmt.Sprintf("SSH destination (can also be set via %s env var)", targetEnvVar),
 	)
 }
 
@@ -72,7 +72,7 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 const defaultTimeout = 5 * time.Second
 
 func addTimeoutFlag(cmd *cobra.Command, defaultTimeout time.Duration) {
-	cmd.Flags().Duration("timeout", defaultTimeout, "Maximum time to wait for the command to complete (0 to disable timeout)")
+	cmd.Flags().Duration("timeout", defaultTimeout, "maximum time to wait for the command to complete (0 to disable timeout)")
 }
 
 func contextWithTimeout(cmd *cobra.Command) (context.Context, context.CancelFunc) {

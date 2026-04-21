@@ -14,7 +14,7 @@ import (
 
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
-	Short: "List available Service Templates",
+	Short: "List available service templates",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
