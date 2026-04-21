@@ -3,9 +3,8 @@
     "dependencies": [
       {
         "name": "Topo",
-        "status": "error",
-        "value": "out of date - current: dev, latest version: 4.1.0",
-        "fix": "run `curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh`"
+        "status": "ok",
+        "value": "topo"
       },
       {
         "name": "SSH",

@@ -43,6 +43,10 @@ var HostRequiredDependencies = []Dependency{
 		Label:  "Topo",
 		Checks: []Check{VersionMatches{
 			FetchLatest: func(ctx context.Context) (string, error) {
+				if version.Version == "dev" {
+					return version.Version, nil
+				}
+
 				return version.FetchLatest(ctx, version.ArtifactoryBaseURL)
 			},
 			CurrentVersion: version.Version,
