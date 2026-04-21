@@ -146,13 +146,13 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, r runner.Runn
 		var err error
 		for _, check := range dep.Checks {
 			fix, err = check.Run(ctx, r, dep)
-			if err == nil {
-				if _, ok := check.(BinaryExists); ok && dep.SoftwareEnumID != UnsetSoftwareDependency {
-					installed[dep.SoftwareEnumID] = struct{}{}
-				}
-				continue
+			if _, ok := check.(BinaryExists); ok && err == nil {
+				installed[dep.SoftwareEnumID] = struct{}{}
 			}
-			break
+
+			if err != nil {
+				break
+			}
 		}
 
 		result = append(result, DependencyStatus{
