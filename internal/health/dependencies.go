@@ -127,9 +127,18 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 func PerformChecks(ctx context.Context, dependencies []Dependency, r runner.Runner) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
+	var timedOut bool
 
 	for _, dep := range dependencies {
 		if len(dep.SoftwarePrerequisites) > 0 && !hasAnyInstalledPrerequisite(dep.SoftwarePrerequisites, installed) {
+			continue
+		}
+
+		if timedOut {
+			result = append(result, DependencyStatus{
+				Dependency: dep,
+				Error:      runner.ErrTimeout,
+			})
 			continue
 		}
 
@@ -137,21 +146,13 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, r runner.Runn
 		var err error
 		for _, check := range dep.Checks {
 			fix, err = check.Run(ctx, r, dep)
-			if _, ok := check.(BinaryExists); ok {
-				if errors.Is(err, runner.ErrTimeout) {
-					if dep.SoftwareEnumID != UnsetSoftwareDependency {
-						installed[dep.SoftwareEnumID] = struct{}{}
-					}
-					break
-				}
-				if err == nil && dep.SoftwareEnumID != UnsetSoftwareDependency {
+			if err == nil {
+				if _, ok := check.(BinaryExists); ok && dep.SoftwareEnumID != UnsetSoftwareDependency {
 					installed[dep.SoftwareEnumID] = struct{}{}
 				}
+				continue
 			}
-
-			if err != nil {
-				break
-			}
+			break
 		}
 
 		result = append(result, DependencyStatus{
@@ -159,6 +160,10 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, r runner.Runn
 			Error:      err,
 			Fix:        fix,
 		})
+
+		if errors.Is(err, runner.ErrTimeout) {
+			timedOut = true
+		}
 	}
 	return result
 }

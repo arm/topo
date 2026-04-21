@@ -196,7 +196,7 @@ func TestPerformChecks(t *testing.T) {
 		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
 	})
 
-	t.Run("timeout on prerequisite still checks dependent dependencies", func(t *testing.T) {
+	t.Run("timeout skips unverified prerequisite dependents and marks the rest as timed out", func(t *testing.T) {
 		dockerDep := health.Dependency{
 			Binary:         "docker",
 			Label:          "Container Engine",
@@ -209,16 +209,22 @@ func TestPerformChecks(t *testing.T) {
 			SoftwarePrerequisites: []health.SoftwareDependency{health.Docker},
 			Checks:                []health.Check{health.BinaryExists{}},
 		}
+		standaloneDep := health.Dependency{
+			Binary: "lscpu",
+			Label:  "Hardware Info",
+			Checks: []health.Check{health.BinaryExists{}},
+		}
 		r := &runner.Fake{
-			Binaries:        []string{"runtime"},
 			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
 		}
 
-		got := health.PerformChecks(context.Background(), []health.Dependency{dockerDep, runtimeDep}, r)
+		got := health.PerformChecks(context.Background(), []health.Dependency{dockerDep, runtimeDep, standaloneDep}, r)
 
 		assert.Len(t, got, 2)
+		assert.Equal(t, "Container Engine", got[0].Dependency.Label)
 		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
-		assert.NoError(t, got[1].Error)
+		assert.Equal(t, "Hardware Info", got[1].Dependency.Label)
+		assert.ErrorIs(t, got[1].Error, runner.ErrTimeout)
 	})
 
 	t.Run("timeout on warning severity check is not wrapped as WarningError", func(t *testing.T) {
