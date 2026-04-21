@@ -21,14 +21,21 @@ The git: prefix is optional for git@host and https:// URLs.
 Service templates may require build arguments. You can provide them after --
 or answer interactive prompts.`,
 	Example: `  # Git repository
+  topo extend compose.yaml git:https://github.com/user/repo.git
   topo extend compose.yaml https://github.com/user/repo.git
   topo extend compose.yaml https://github.com/user/repo.git#develop
   topo extend compose.yaml git:git@github.com:user/repo.git
+  topo extend compose.yaml git@github.com:user/repo.git
+  topo extend compose.yaml git@github.com:user/repo.git#main
+  topo extend compose.yaml git:ubuntu@example.com:repo.git
   topo extend compose.yaml git:builder@host:tools/platform.git#v2
 
   # Local directory
   topo extend compose.yaml dir:/path/to/template/folder
   topo extend compose.yaml dir:./relative/path
+
+  # Will prompt for required args
+  topo extend compose.yaml git:url
 
   # Provide build arguments explicitly
   topo extend compose.yaml git:url -- GREETING="Hello" PORT=8080`,

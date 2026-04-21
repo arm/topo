@@ -24,18 +24,23 @@ interactive prompts.`,
 	Example: `  # Git repository
   topo clone git@github.com:user/repo.git
   topo clone https://github.com/user/repo.git#develop
+  topo clone git:git@github.com:user/repo.git
   topo clone git:https://github.com/user/repo.git#main
+  topo clone git:ubuntu@example.com:repo.git
   topo clone git:builder@host:tools/platform.git#v2
 
   # Local directory (must contain a Topo template)
   topo clone dir:/path/to/template/folder
   topo clone dir:./relative/path
 
+  # Will prompt for required args
+  topo clone https://github.com/Arm-Examples/topo-welcome.git
+
   # Provide build arguments explicitly
-  topo clone https://github.com/user/repo.git GREETING_NAME="World"
+  topo clone https://github.com/Arm-Examples/topo-welcome.git GREETING_NAME="World"
 
   # With an explicit path
-  topo clone https://github.com/user/repo.git my-demo GREETING_NAME="World"`,
+  topo clone https://github.com/Arm-Examples/topo-welcome.git my-demo GREETING_NAME="World"`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
