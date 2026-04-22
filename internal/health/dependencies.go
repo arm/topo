@@ -2,7 +2,6 @@ package health
 
 import (
 	"context"
-	"errors"
 
 	"github.com/arm/topo/internal/runner"
 )
@@ -124,28 +123,19 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 	return false
 }
 
-func PerformChecks(ctx context.Context, dependencies []Dependency, r runner.Runner) []DependencyStatus {
+func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner.Runner) []DependencyStatus {
 	installed := make(map[SoftwareDependency]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
-	var timedOut bool
 
 	for _, dep := range dependencies {
 		if len(dep.SoftwarePrerequisites) > 0 && !hasAnyInstalledPrerequisite(dep.SoftwarePrerequisites, installed) {
 			continue
 		}
 
-		if timedOut {
-			result = append(result, DependencyStatus{
-				Dependency: dep,
-				Error:      runner.ErrTimeout,
-			})
-			continue
-		}
-
 		var fix string
 		var err error
 		for _, check := range dep.Checks {
-			fix, err = check.Run(ctx, r, dep)
+			fix, err = check.Run(ctx, runner, dep)
 			if _, ok := check.(BinaryExists); ok && err == nil {
 				installed[dep.SoftwareEnumID] = struct{}{}
 			}
@@ -160,10 +150,6 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, r runner.Runn
 			Error:      err,
 			Fix:        fix,
 		})
-
-		if errors.Is(err, runner.ErrTimeout) {
-			timedOut = true
-		}
 	}
 	return result
 }

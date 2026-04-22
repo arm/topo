@@ -204,6 +204,7 @@ func TestPerformChecks(t *testing.T) {
 		}
 		r := &runner.Fake{
 			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
+			Binaries:        []string{"lscpu"},
 		}
 
 		got := health.PerformChecks(context.Background(), []health.Dependency{dockerDep, runtimeDep, standaloneDep}, r)
@@ -212,7 +213,7 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, "Container Engine", got[0].Dependency.Label)
 		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
 		assert.Equal(t, "Hardware Info", got[1].Dependency.Label)
-		assert.ErrorIs(t, got[1].Error, runner.ErrTimeout)
+		assert.NoError(t, got[1].Error)
 	})
 
 	t.Run("timeout on warning severity check is not wrapped as WarningError", func(t *testing.T) {
