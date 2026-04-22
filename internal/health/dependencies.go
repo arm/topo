@@ -12,6 +12,10 @@ type WarningError struct{ Err error }
 
 func (w WarningError) Error() string { return w.Err.Error() }
 
+type InfoError struct{ Err error }
+
+func (i InfoError) Error() string { return i.Err.Error() }
+
 type HardwareCapability int
 
 const (

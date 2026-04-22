@@ -167,6 +167,8 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 		} else {
 			if _, ok := errors.AsType[WarningError](ds.Error); ok {
 				hc.Status = CheckStatusWarning
+			} else if _, ok := errors.AsType[InfoError](ds.Error); ok {
+				hc.Status = CheckStatusInfo
 			} else {
 				hc.Status = CheckStatusError
 			}

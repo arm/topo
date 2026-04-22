@@ -64,5 +64,5 @@ func (v VersionMatches) Run(ctx context.Context, r runner.Runner, dep Dependency
 		return "", nil
 	}
 
-	return v.Fix, fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)
+	return v.Fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
 }
