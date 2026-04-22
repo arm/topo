@@ -196,7 +196,7 @@ func TestPerformChecks(t *testing.T) {
 		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
 	})
 
-	t.Run("timeout skips unverified prerequisite dependents and marks the rest as timed out", func(t *testing.T) {
+	t.Run("timeout skips unverified prerequisite dependents", func(t *testing.T) {
 		dockerDep := health.Dependency{
 			Binary:         "docker",
 			Label:          "Container Engine",
