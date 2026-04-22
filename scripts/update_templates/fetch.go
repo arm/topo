@@ -50,7 +50,7 @@ func fetchComposeFile(client *http.Client, githubToken string, repoSpec string) 
 
 	yamlBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 	yamlReader := bytes.NewReader(yamlBytes)
 

@@ -21,7 +21,7 @@ func Memory(ctx context.Context, r runner.Runner) (int64, error) {
 
 	value, err := findKeyValue(key, out)
 	if err != nil {
-		return 0, fmt.Errorf("in checking %s", path)
+		return 0, fmt.Errorf("failed to read %s: %w", path, err)
 	}
 	return value, nil
 }

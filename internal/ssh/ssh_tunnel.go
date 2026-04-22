@@ -13,7 +13,6 @@ import (
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/output/logger"
 )
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"
@@ -23,10 +22,7 @@ func isPortTaken(port string) bool {
 	if err != nil {
 		return false
 	}
-	err = conn.Close()
-	if err != nil {
-		logger.Error(fmt.Sprintf("error closing tcp port probe: %v", err))
-	}
+	conn.Close() // nolint:errcheck
 	return true
 }
 
@@ -94,7 +90,7 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 		}
 
 		formattedError := command.FormatError(cmd.Args, err)
-		return fmt.Errorf("failed to open SSH tunnel: %w", formattedError)
+		return fmt.Errorf("failed to open ssh tunnel: %w", formattedError)
 	}
 	if cmd.Process != nil {
 		s.Process = cmd.Process
@@ -138,7 +134,7 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 
 	err := cmd.Run()
 	if err == nil {
-		return fmt.Errorf("SSH tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
+		return fmt.Errorf("ssh tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
 	}
 
 	_, _ = fmt.Fprintf(w, "Port %s is not exposed on target to local network\n", ct.Port)
@@ -217,7 +213,7 @@ func (s *SSHTunnelProcessStop) Run(w io.Writer) error {
 	if err := cmd.Run(); err != nil {
 		pid := s.Start.Process.Pid
 		formattedError := command.FormatError(cmd.Args, err)
-		return fmt.Errorf("failed to stop SSH tunnel process (pid: %d): %w", pid, formattedError)
+		return fmt.Errorf("failed to stop ssh tunnel process (pid: %d): %w", pid, formattedError)
 	}
 	s.Start.Process = nil
 	return nil

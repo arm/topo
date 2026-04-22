@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrSSH               = errors.New("SSH failed")
+	ErrSSH               = errors.New("ssh failed")
 	ErrAuthFailed        = fmt.Errorf("%w: authentication failed", ErrSSH)
 	ErrConnectionFailed  = fmt.Errorf("%w: connection failed", ErrSSH)
 	ErrConnectionTimeout = fmt.Errorf("%w: connection timed out", ErrSSH)
