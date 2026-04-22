@@ -45,7 +45,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		portChanged := cmd.Flags().Changed("registry-port")
 		if portChanged && noRegistry {
-			logger.Warn("--registry-port has no effect when --no-registry is set. Define SSH port in your SSH config instead.")
+			logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 		}
 
 		targetArg, err := requireTarget(cmd)

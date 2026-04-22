@@ -160,7 +160,7 @@ func updateConfigFile(path string, host string, modifiers []ConfigDirectiveModif
 func GetConfigDirectory() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to determine home directory for SSH config: %w", err)
+		return "", fmt.Errorf("failed to determine home directory for ssh config: %w", err)
 	}
 
 	return filepath.Join(home, ".ssh"), nil
