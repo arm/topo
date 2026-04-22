@@ -4,7 +4,39 @@
 
 Discover and deploy containerised software to Arm hardware over SSH.
 
-Topo matches your system with [Topo Templates](https://github.com/arm/topo-template-format) that showcase its capabilities. Already have a Docker Compose project? Topo gives you fast, incremental deployment to remote targets.
+Point Topo at any Arm-based Linux device to discover software templates which showcase its capabilities. Pick one and Topo helps you configure it for your use case, then deploys it in minutes. The result? A standard Docker Compose project to learn from, modify, or use as a starting point for your own work.
+
+Already have a Compose project? Topo gives you a fast, incremental build-deploy loop over SSH.
+
+## Who is this for?
+
+**You just got a board and want to see what it can do.** Topo scans your target and finds [Topo Templates](https://github.com/arm/topo-template-format) that showcase its capabilities, from running an LLM to comparing SIMD performance. Each one deploys in minutes and is a real Compose project you can learn from or build on.
+
+**You want a faster edit-build-deploy loop.** Build on your laptop and deploy to a Pi or Jetson over SSH. Rebuilds are incremental, so after the first deploy you're often iterating in seconds.
+
+**You have a heterogeneous device and want to use all of it.** Your board has coprocessors like a Cortex-M that normally need separate toolchains and manual firmware loading. Topo and [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) let you orchestrate the whole device as one Docker Compose project.
+
+## What does it look like?
+
+```sh
+# Check your target is ready
+topo health --target pi@raspberrypi
+
+# See which templates match your hardware
+topo templates --target pi@raspberrypi
+
+# Clone one and configure it for your target
+topo clone https://github.com/Arm-Examples/topo-welcome.git
+cd topo-welcome/
+topo deploy --target pi@raspberrypi
+```
+
+## Highlights
+
+- **Fast, incremental deploys** over SSH, with layer caching to keep rebuilds quick
+- **Hardware-aware template discovery** that matches your target's actual capabilities
+- **Standard tooling throughout**: Docker Compose, container images, and OCI registries
+- **Whole-device orchestration** of Linux services and coprocessor firmware in a single Compose project
 
 ## Installation
 

@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/arm/topo/internal/output/logger"
@@ -35,11 +36,16 @@ type BinaryExists struct {
 }
 
 func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) (string, error) {
-	err := r.BinaryExists(ctx, dep.Binary)
-	if b.Severity == SeverityWarning && err != nil {
-		err = WarningError{Err: err}
+	if err := r.BinaryExists(ctx, dep.Binary); err != nil {
+		if errors.Is(err, runner.ErrTimeout) {
+			return "", err
+		}
+		if b.Severity == SeverityWarning {
+			err = WarningError{Err: err}
+		}
+		return b.Fix, err
 	}
-	return b.Fix, err
+	return "", nil
 }
 
 type VersionMatches struct {

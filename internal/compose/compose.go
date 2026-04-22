@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/compose-spec/compose-go/v2/cli"
@@ -174,6 +175,21 @@ func RegisterVolumes(targetProject *types.Project, volumes []types.ServiceVolume
 			targetProject.Volumes[vol.Source] = types.VolumeConfig{}
 		}
 	}
+}
+
+func PullableServices(composeFilePath string) ([]string, error) {
+	project, err := ReadProject(composeFilePath)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for name, svc := range project.Services {
+		if svc.Build == nil {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names, nil
 }
 
 func ReadProject(targetProjectFile string) (*types.Project, error) {

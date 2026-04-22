@@ -183,6 +183,56 @@ func TestPerformChecks(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("timeout skips unverified prerequisite dependents", func(t *testing.T) {
+		dockerDep := health.Dependency{
+			Binary:         "docker",
+			Label:          "Container Engine",
+			SoftwareEnumID: health.Docker,
+			Checks:         []health.Check{health.BinaryExists{}},
+		}
+		runtimeDep := health.Dependency{
+			Binary:                "runtime",
+			Label:                 "Runtime",
+			SoftwarePrerequisites: []health.SoftwareDependency{health.Docker},
+			Checks:                []health.Check{health.BinaryExists{}},
+		}
+		standaloneDep := health.Dependency{
+			Binary: "lscpu",
+			Label:  "Hardware Info",
+			Checks: []health.Check{health.BinaryExists{}},
+		}
+		r := &runner.Fake{
+			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
+			Binaries:        []string{"lscpu"},
+		}
+
+		got := health.PerformChecks(context.Background(), []health.Dependency{dockerDep, runtimeDep, standaloneDep}, r)
+
+		assert.Len(t, got, 2)
+		assert.Equal(t, "Container Engine", got[0].Dependency.Label)
+		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
+		assert.Equal(t, "Hardware Info", got[1].Dependency.Label)
+		assert.NoError(t, got[1].Error)
+	})
+
+	t.Run("timeout on warning severity check is not wrapped as WarningError", func(t *testing.T) {
+		dep := health.Dependency{
+			Binary: "optional-tool",
+			Label:  "Optional",
+			Checks: []health.Check{health.BinaryExists{Severity: health.SeverityWarning}},
+		}
+		r := &runner.Fake{
+			BinaryExistsErr: map[string]error{"optional-tool": runner.ErrTimeout},
+		}
+
+		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, r)
+
+		assert.Len(t, got, 1)
+		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
+		_, isWarning := got[0].Error.(health.WarningError)
+		assert.False(t, isWarning)
+	})
 }
 
 func TestFilterByHardware(t *testing.T) {
