@@ -27,6 +27,21 @@ func TestBinaryExists(t *testing.T) {
 	})
 }
 
+func TestFilterVersionChecks(t *testing.T) {
+	t.Run("removes checks of type VersionMatches", func(t *testing.T) {
+		dep := health.Dependency{
+			Binary: "mixed",
+			Label:  "Mixed",
+			Checks: []health.Check{health.BinaryExists{}, health.VersionMatches{}},
+		}
+
+		got := health.FilterVersionChecks([]health.Dependency{dep})
+
+		assert.Len(t, got, 1)
+		assert.Equal(t, got[0].Checks, []health.Check{health.BinaryExists{}})
+	})
+}
+
 func TestVersionMatches(t *testing.T) {
 	ctx := context.Background()
 	dep := health.Dependency{}

@@ -62,9 +62,17 @@ func (r TargetReport) MarshalJSON() ([]byte, error) {
 	return json.Marshal(Alias(r))
 }
 
-func CheckHost() HostReport {
+type CheckHostOptions struct {
+	SkipVersionChecks bool
+}
+
+func CheckHost(opts CheckHostOptions) HostReport {
 	r := runner.NewLocal()
-	dependencyStatuses := PerformChecks(context.Background(), HostRequiredDependencies, r)
+	deps := HostRequiredDependencies
+	if opts.SkipVersionChecks {
+		deps = FilterVersionChecks(deps)
+	}
+	dependencyStatuses := PerformChecks(context.Background(), deps, r)
 	return GenerateHostReport(dependencyStatuses)
 }
 
