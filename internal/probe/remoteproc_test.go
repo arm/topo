@@ -15,8 +15,8 @@ func TestProbeRemoteproc(t *testing.T) {
 	t.Run("returns remote processors", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"ls /sys/class/remoteproc":         {Output: "remoteproc0\nremoteproc1"},
-				"cat /sys/class/remoteproc/*/name": {Output: "virtio0\nvirtio1"},
+				"ls /sys/class/remoteproc 2>/dev/null || true": {Output: "remoteproc0\nremoteproc1"},
+				"cat /sys/class/remoteproc/*/name":             {Output: "virtio0\nvirtio1"},
 			},
 		}
 
@@ -33,19 +33,19 @@ func TestProbeRemoteproc(t *testing.T) {
 	t.Run("returns error when listing remoteproc directory fails", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"ls /sys/class/remoteproc": {Output: "", Err: errors.New("no such file")},
+				"ls /sys/class/remoteproc 2>/dev/null || true": {Output: "", Err: errors.New("connection lost")},
 			},
 		}
 
 		_, err := probe.Remoteproc(context.Background(), r)
 
-		assert.ErrorContains(t, err, "no such file")
+		assert.ErrorContains(t, err, "connection lost")
 	})
 
 	t.Run("returns empty when remoteproc directory is empty", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"ls /sys/class/remoteproc": {Output: ""},
+				"ls /sys/class/remoteproc 2>/dev/null || true": {Output: ""},
 			},
 		}
 
@@ -58,8 +58,8 @@ func TestProbeRemoteproc(t *testing.T) {
 	t.Run("returns error when reading names fails", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"ls /sys/class/remoteproc":         {Output: "remoteproc0"},
-				"cat /sys/class/remoteproc/*/name": {Err: errors.New("permission denied")},
+				"ls /sys/class/remoteproc 2>/dev/null || true": {Output: "remoteproc0"},
+				"cat /sys/class/remoteproc/*/name":             {Err: errors.New("permission denied")},
 			},
 		}
 
