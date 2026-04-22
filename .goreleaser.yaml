@@ -48,9 +48,9 @@ changelog:
   abbrev: -1
   filters:
     include:
-      - '^(feat|fix|perf|security|breaking|build)(\\([^)]+\\))?(!)?: .*$'
+      - '^(feat|fix|perf|security|breaking|build)(\\([^)]+\\))?: .*$'
+      # Scan for breaking changes
       - '^.*!:.*$'
-      - '^.*BREAKING CHANGE:.*$'
   groups:
     - title: Breaking Changes
       # Examples: "feat!: drop legacy flags", "fix(auth)!: change token format", "BREAKING CHANGE: drop v1 API"
