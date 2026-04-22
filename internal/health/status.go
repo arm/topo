@@ -8,7 +8,8 @@ import (
 )
 
 type HardwareProfile struct {
-	RemoteCPU []probe.RemoteprocCPU
+	RemoteCPU    []probe.RemoteprocCPU
+	RemoteCPUErr error
 }
 
 func (h HardwareProfile) Capabilities() map[HardwareCapability]struct{} {
@@ -27,8 +28,9 @@ type HealthStatus struct {
 func ProbeHealthStatus(ctx context.Context, r runner.Runner) HealthStatus {
 	var hs HealthStatus
 
-	remoteprocs, _ := probe.Remoteproc(ctx, r)
+	remoteprocs, err := probe.Remoteproc(ctx, r)
 	hs.Hardware.RemoteCPU = remoteprocs
+	hs.Hardware.RemoteCPUErr = err
 
 	dependenciesToCheck := FilterByHardware(TargetRequiredDependencies, hs.Hardware.Capabilities())
 	hs.Dependencies = PerformChecks(ctx, dependenciesToCheck, r)

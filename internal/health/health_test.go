@@ -33,6 +33,19 @@ func TestGenerateTargetReport(t *testing.T) {
 		assert.Equal(t, "no remoteproc devices found", got.SubsystemDriver.Value)
 	})
 
+	t.Run("when remoteproc probe fails, SubsystemDriver reports the error", func(t *testing.T) {
+		ts := health.Status{
+			Hardware: health.HardwareProfile{
+				RemoteCPUErr: fmt.Errorf("timed out"),
+			},
+		}
+
+		got := health.GenerateTargetReport(ts)
+
+		assert.Equal(t, health.CheckStatusError, got.SubsystemDriver.Status)
+		assert.Equal(t, "timed out", got.SubsystemDriver.Value)
+	})
+
 	t.Run("when remoteproc devices are found, SubsystemDriver status is ok and includes device names", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{

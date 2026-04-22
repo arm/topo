@@ -14,7 +14,10 @@ type RemoteprocCPU struct {
 func Remoteproc(ctx context.Context, r runner.Runner) ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
 	out, err := r.Run(ctx, "ls /sys/class/remoteproc")
-	if err != nil || out == "" {
+	if err != nil {
+		return remoteProcs, err
+	}
+	if out == "" {
 		return remoteProcs, nil
 	}
 

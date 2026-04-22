@@ -30,17 +30,16 @@ func TestProbeRemoteproc(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("returns empty when no remoteproc directory", func(t *testing.T) {
+	t.Run("returns error when listing remoteproc directory fails", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
 				"ls /sys/class/remoteproc": {Output: "", Err: errors.New("no such file")},
 			},
 		}
 
-		got, err := probe.Remoteproc(context.Background(), r)
+		_, err := probe.Remoteproc(context.Background(), r)
 
-		require.NoError(t, err)
-		assert.Empty(t, got)
+		assert.ErrorContains(t, err, "no such file")
 	})
 
 	t.Run("returns empty when remoteproc directory is empty", func(t *testing.T) {
@@ -68,4 +67,5 @@ func TestProbeRemoteproc(t *testing.T) {
 
 		assert.ErrorContains(t, err, "permission denied")
 	})
+
 }
