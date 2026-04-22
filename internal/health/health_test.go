@@ -36,7 +36,7 @@ func TestGenerateTargetReport(t *testing.T) {
 	t.Run("when remoteproc probe fails, SubsystemDriver reports the error", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{
-				RemoteCPUErr: fmt.Errorf("timed out"),
+				Err: fmt.Errorf("timed out"),
 			},
 		}
 

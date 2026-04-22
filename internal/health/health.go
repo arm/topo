@@ -120,9 +120,9 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
 	remoteCPUs := targetStatus.Hardware.RemoteCPU
 	switch {
-	case targetStatus.Hardware.RemoteCPUErr != nil:
+	case targetStatus.Hardware.Err != nil:
 		report.SubsystemDriver.Status = CheckStatusError
-		report.SubsystemDriver.Value = targetStatus.Hardware.RemoteCPUErr.Error()
+		report.SubsystemDriver.Value = targetStatus.Hardware.Err.Error()
 	case len(remoteCPUs) > 0:
 		names := make([]string, len(remoteCPUs))
 		for i, remoteProc := range remoteCPUs {
