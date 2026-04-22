@@ -67,5 +67,4 @@ func TestProbeRemoteproc(t *testing.T) {
 
 		assert.ErrorContains(t, err, "permission denied")
 	})
-
 }
