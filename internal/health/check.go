@@ -54,7 +54,7 @@ type VersionMatches struct {
 	Fix            string
 }
 
-func (v VersionMatches) Run(ctx context.Context, r runner.Runner, dep Dependency) (string, error) {
+func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) (string, error) {
 	latest, err := v.FetchLatest(ctx)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
