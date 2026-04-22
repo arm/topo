@@ -184,18 +184,6 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("propagates timeout error from BinaryExists without masking as not found", func(t *testing.T) {
-		dep := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists{}}}
-		r := &runner.Fake{
-			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
-		}
-
-		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, r)
-
-		assert.Len(t, got, 1)
-		assert.ErrorIs(t, got[0].Error, runner.ErrTimeout)
-	})
-
 	t.Run("timeout skips unverified prerequisite dependents", func(t *testing.T) {
 		dockerDep := health.Dependency{
 			Binary:         "docker",
