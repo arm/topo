@@ -88,12 +88,12 @@ func TestInstall(t *testing.T) {
 
 	t.Run("leaves no temp files in destination directory", func(t *testing.T) {
 		srv := serveBytes(t, validArchive)
-		dir := t.TempDir()
+		dst := createDstFile(t)
 
-		err := upgrade.Install(context.Background(), createDstFile(t), srv.URL)
+		err := upgrade.Install(context.Background(), dst, srv.URL)
 
 		require.NoError(t, err)
-		entries, err := os.ReadDir(dir)
+		entries, err := os.ReadDir(filepath.Dir(dst))
 		require.NoError(t, err)
 		assert.Len(t, entries, 1)
 	})
