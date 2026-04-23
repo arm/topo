@@ -12,7 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const acceptNewHostFlag = "accept-new-host-keys"
+const (
+	acceptNewHostFlag     = "accept-new-host-keys"
+	skipVersionChecksFlag = "skip-version-checks"
+)
+
+const skipVersionChecksEnvVar = "TOPO_SKIP_VERSION_CHECKS"
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
@@ -27,13 +32,16 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			panic(fmt.Sprintf("internal error: %s flag not registered: %v", acceptNewHostFlag, err))
 		}
+
+		skipVersionCheck := resolveSkipVersionChecks(cmd)
+
 		var spinner *term.Spinner
 		if outputFormat == term.Plain {
 			spinner = term.StartSpinner(os.Stderr, "Checking health...")
 		}
 
 		toPrint := templates.PrintableHealthReport{
-			Host: health.CheckHost(),
+			Host: health.CheckHost(health.CheckHostOptions{SkipVersionChecks: skipVersionCheck}),
 		}
 
 		if targetArg, ok := lookupTarget(cmd); ok {
@@ -63,5 +71,19 @@ func init() {
 	addTargetFlag(healthCmd)
 	addTimeoutFlag(healthCmd, defaultTimeout)
 	healthCmd.Flags().Bool(acceptNewHostFlag, false, "automatically trust and add new SSH host keys for the target")
+	healthCmd.Flags().Bool(skipVersionChecksFlag, false, fmt.Sprintf("skip version checks for dependencies (can also be set via %s env var)", skipVersionChecksEnvVar))
 	rootCmd.AddCommand(healthCmd)
+}
+
+func resolveSkipVersionChecks(cmd *cobra.Command) bool {
+	skipVersionCheck, err := cmd.Flags().GetBool(skipVersionChecksFlag)
+	if err != nil {
+		panic(fmt.Sprintf("internal error: %s flag not registered: %v", skipVersionChecksFlag, err))
+	}
+
+	if !skipVersionCheck {
+		skipVersionCheck = os.Getenv(skipVersionChecksEnvVar) != ""
+	}
+
+	return skipVersionCheck
 }

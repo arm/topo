@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/runner"
@@ -65,4 +66,15 @@ func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) 
 	}
 
 	return v.Fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
+}
+
+func RemoveVersionChecks(deps []Dependency) []Dependency {
+	deps = slices.Clone(deps)
+	for i, dep := range deps {
+		deps[i].Checks = slices.DeleteFunc(dep.Checks, func(c Check) bool {
+			_, ok := c.(VersionMatches)
+			return ok
+		})
+	}
+	return deps
 }
