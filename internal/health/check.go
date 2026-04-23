@@ -68,7 +68,7 @@ func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) 
 	return v.Fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
 }
 
-func FilterVersionChecks(deps []Dependency) []Dependency {
+func RemoveVersionChecks(deps []Dependency) []Dependency {
 	deps = slices.Clone(deps)
 	for i, dep := range deps {
 		deps[i].Checks = slices.DeleteFunc(dep.Checks, func(c Check) bool {

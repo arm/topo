@@ -70,7 +70,7 @@ func CheckHost(opts CheckHostOptions) HostReport {
 	r := runner.NewLocal()
 	deps := HostRequiredDependencies
 	if opts.SkipVersionChecks {
-		deps = FilterVersionChecks(deps)
+		deps = RemoveVersionChecks(deps)
 	}
 	dependencyStatuses := PerformChecks(context.Background(), deps, r)
 	return GenerateHostReport(dependencyStatuses)
