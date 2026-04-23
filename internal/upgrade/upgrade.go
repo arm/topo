@@ -25,7 +25,7 @@ func Install(ctx context.Context, currentBin string, downloadURL string) error {
 	if err != nil {
 		return err
 	}
-	defer removeTemporaryFile(newBin)
+	defer ensureFileRemoved(newBin)
 
 	return moveBinary(newBin, currentBin)
 }
@@ -127,7 +127,7 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 		return tmp.Close()
 	})
 	if err != nil {
-		removeTemporaryFile(tmpPath)
+		ensureFileRemoved(tmpPath)
 		return "", fmt.Errorf("failed to read archive: %w", err)
 	}
 
@@ -136,7 +136,6 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 
 func moveBinary(src, dst string) error {
 	if runtime.GOOS == "windows" {
-		// windows locks running executables, so we can't rename directly over dst
 		old := dst + ".old"
 		if err := os.Rename(dst, old); err != nil {
 			return fmt.Errorf("failed to rename current binary: %w", err)
@@ -163,7 +162,7 @@ func moveBinary(src, dst string) error {
 	return nil
 }
 
-func removeTemporaryFile(path string) {
+func ensureFileRemoved(path string) {
 	err := os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {

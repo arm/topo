@@ -38,9 +38,12 @@ func makeTarGz(t *testing.T, files map[string][]byte) []byte {
 	return buf.Bytes()
 }
 
-func createDstFile(t *testing.T) string {
+func createFakeBinary(t *testing.T) string {
 	t.Helper()
-	return filepath.Join(t.TempDir(), upgrade.BinaryName("topo"))
+	path := filepath.Join(t.TempDir(), upgrade.BinaryName("topo"))
+	err := os.WriteFile(path, []byte("old binary"), 0o644)
+	require.NoError(t, err)
+	return path
 }
 
 func serveBytes(t *testing.T, data []byte) *httptest.Server {
@@ -63,7 +66,7 @@ func TestInstall(t *testing.T) {
 
 	t.Run("writes binary to destination", func(t *testing.T) {
 		srv := serveBytes(t, validArchive)
-		dst := createDstFile(t)
+		dst := createFakeBinary(t)
 
 		err := upgrade.Install(context.Background(), dst, srv.URL)
 
@@ -76,7 +79,7 @@ func TestInstall(t *testing.T) {
 	t.Run("sets executable permissions on installed binary", func(t *testing.T) {
 		testutil.RequireOS(t, "linux", "darwin")
 		srv := serveBytes(t, validArchive)
-		dst := createDstFile(t)
+		dst := createFakeBinary(t)
 
 		err := upgrade.Install(context.Background(), dst, srv.URL)
 
@@ -88,7 +91,7 @@ func TestInstall(t *testing.T) {
 
 	t.Run("leaves no temp files in destination directory", func(t *testing.T) {
 		srv := serveBytes(t, validArchive)
-		dst := createDstFile(t)
+		dst := createFakeBinary(t)
 
 		err := upgrade.Install(context.Background(), dst, srv.URL)
 
@@ -104,13 +107,13 @@ func TestInstall(t *testing.T) {
 		}))
 		t.Cleanup(srv.Close)
 
-		err := upgrade.Install(context.Background(), createDstFile(t), srv.URL)
+		err := upgrade.Install(context.Background(), createFakeBinary(t), srv.URL)
 
 		assert.ErrorContains(t, err, "HTTP 404")
 	})
 
 	t.Run("returns error on connection failure", func(t *testing.T) {
-		err := upgrade.Install(context.Background(), createDstFile(t), "something-invalid")
+		err := upgrade.Install(context.Background(), createFakeBinary(t), "something-invalid")
 
 		assert.Error(t, err)
 	})
@@ -121,7 +124,7 @@ func TestInstall(t *testing.T) {
 		})
 		srv := serveBytes(t, archive)
 
-		err := upgrade.Install(context.Background(), createDstFile(t), srv.URL)
+		err := upgrade.Install(context.Background(), createFakeBinary(t), srv.URL)
 
 		assert.Error(t, err)
 	})
@@ -129,7 +132,7 @@ func TestInstall(t *testing.T) {
 	t.Run("returns error on invalid archive body", func(t *testing.T) {
 		srv := serveBytes(t, []byte("this is not a valid archive"))
 
-		err := upgrade.Install(context.Background(), createDstFile(t), srv.URL)
+		err := upgrade.Install(context.Background(), createFakeBinary(t), srv.URL)
 
 		assert.Error(t, err)
 	})
@@ -139,7 +142,7 @@ func TestInstall(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		err := upgrade.Install(ctx, createDstFile(t), srv.URL)
+		err := upgrade.Install(ctx, createFakeBinary(t), srv.URL)
 
 		assert.Error(t, err)
 	})
