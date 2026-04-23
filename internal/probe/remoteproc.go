@@ -14,14 +14,6 @@ type RemoteprocCPU struct {
 
 func Remoteproc(ctx context.Context, r runner.Runner) ([]RemoteprocCPU, error) {
 	var remoteProcs []RemoteprocCPU
-	_, err := r.Run(ctx, "test -d /sys/class/remoteproc")
-	if err != nil {
-		if errors.Is(err, runner.ErrTimeout) {
-			return remoteProcs, err
-		}
-		return remoteProcs, nil
-	}
-
 	out, err := r.Run(ctx, "cat /sys/class/remoteproc/*/name")
 	if err != nil {
 		if errors.Is(err, runner.ErrTimeout) {
