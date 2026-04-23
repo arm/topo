@@ -15,8 +15,6 @@ import (
 	"github.com/mholt/archives"
 )
 
-var topoBinaryName = binaryName("topo")
-
 func Install(ctx context.Context, currentBin string, downloadURL string) error {
 	archiveData, err := downloadArchive(ctx, downloadURL)
 	if err != nil {
@@ -97,7 +95,7 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 	var tmpPath string
 
 	err = extractor.Extract(ctx, stream, func(ctx context.Context, fileInfo archives.FileInfo) error {
-		if filepath.Base(fileInfo.Name()) != topoBinaryName {
+		if filepath.Base(fileInfo.Name()) != binaryName("topo") {
 			return nil
 		}
 
