@@ -2,7 +2,6 @@ package health
 
 import (
 	"context"
-	"runtime"
 
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/version"
@@ -52,7 +51,7 @@ var HostRequiredDependencies = []Dependency{
 				return version.FetchLatest(ctx, version.ArtifactoryBaseURL)
 			},
 			CurrentVersion: version.Version,
-			Fix:            getTopoInstallCommand(),
+			Fix:            "run `topo upgrade`",
 		}},
 	},
 	{
@@ -182,12 +181,4 @@ func hasAnyInstalledPrerequisite(required []SoftwareDependency, installed map[So
 		}
 	}
 	return false
-}
-
-func getTopoInstallCommand() string {
-	if runtime.GOOS == "windows" {
-		return "run `irm https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.ps1 | iex`"
-	}
-
-	return "run `curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh`"
 }
