@@ -32,29 +32,19 @@ func NewSSH(dest ssh.Destination, opts SSHOptions) *SSH {
 }
 
 func (r *SSH) Run(ctx context.Context, cmdStr string) (string, error) {
-	return r.exec(ctx, cmdStr, nil, nil)
+	return r.exec(ctx, cmdStr, nil)
 }
 
 func (r *SSH) RunWithStdin(ctx context.Context, cmdStr string, stdin []byte) (string, error) {
-	return r.exec(ctx, cmdStr, stdin, nil)
+	return r.exec(ctx, cmdStr, stdin)
 }
 
 func (r *SSH) RunWithArgs(ctx context.Context, cmdStr string, args ...string) (string, error) {
-	args = append(args, r.opts.SSHArgs()...)
-	out, err := ssh.RunCommand(ctx, r.dest, cmdStr, nil, args...)
-	if err != nil && ctx.Err() != nil {
-		return "", ErrTimeout
-	}
-	return out, err
+	return r.exec(ctx, cmdStr, nil, args...)
 }
 
 func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []byte, args ...string) (string, error) {
-	args = append(args, r.opts.SSHArgs()...)
-	out, err := ssh.RunCommand(ctx, r.dest, cmdStr, stdin, args...)
-	if err != nil && ctx.Err() != nil {
-		return "", ErrTimeout
-	}
-	return out, err
+	return r.exec(ctx, cmdStr, stdin, args...)
 }
 
 func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
@@ -71,8 +61,9 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 	return nil
 }
 
-func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArgs []string) (string, error) {
-	out, err := ssh.RunCommand(ctx, r.dest, command.WrapInLoginShell(cmdStr), stdin, extraSSHArgs...)
+func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArgs ...string) (string, error) {
+	args := append(r.opts.SSHArgs(), extraSSHArgs...)
+	out, err := ssh.RunCommand(ctx, r.dest, command.WrapInLoginShell(cmdStr), stdin, args...)
 	if err != nil && ctx.Err() != nil {
 		return "", ErrTimeout
 	}
