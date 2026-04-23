@@ -39,12 +39,12 @@ func (r *SSH) RunWithStdin(ctx context.Context, cmdStr string, stdin []byte) (st
 	return r.exec(ctx, cmdStr, stdin)
 }
 
-func (r *SSH) RunWithArgs(ctx context.Context, cmdStr string, args ...string) (string, error) {
-	return r.exec(ctx, cmdStr, nil, args...)
+func (r *SSH) RunWithArgs(ctx context.Context, cmdStr string, sshArgs ...string) (string, error) {
+	return r.exec(ctx, cmdStr, nil, sshArgs...)
 }
 
-func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []byte, args ...string) (string, error) {
-	return r.exec(ctx, cmdStr, stdin, args...)
+func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []byte, sshArgs ...string) (string, error) {
+	return r.exec(ctx, cmdStr, stdin, sshArgs...)
 }
 
 func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
