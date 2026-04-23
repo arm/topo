@@ -148,6 +148,9 @@ func binaryName(name string) string {
 func removeTemporaryFile(path string) {
 	err := os.Remove(path)
 	if err != nil {
-		logger.Warn(fmt.Sprintf("failed to remove temp file %s: %v", path, err))
+		if os.IsNotExist(err) {
+			return
+		}
+		logger.Warn(fmt.Sprintf("failed to remove temporary file %s: %v", path, err))
 	}
 }
