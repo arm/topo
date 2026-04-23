@@ -44,13 +44,17 @@ func CurrentBinaryPath() (string, error) {
 }
 
 func ArtifactoryDownloadURL(targetVersion string) string {
-	archiveName := fmt.Sprintf("topo_%s_%s.zip", runtime.GOOS, runtime.GOARCH)
+	ext := "tar.gz"
+	if runtime.GOOS == "windows" {
+		ext = "zip"
+	}
 
 	urlOS := runtime.GOOS
 	if runtime.GOOS == "darwin" {
 		urlOS = "macos"
 	}
 
+	archiveName := fmt.Sprintf("topo_%s_%s.%s", runtime.GOOS, runtime.GOARCH, ext)
 	return fmt.Sprintf("%s/v%s/%s/%s", version.ArtifactoryBaseURL, targetVersion, urlOS, archiveName)
 }
 
@@ -67,7 +71,7 @@ func downloadArchive(ctx context.Context, url string) (string, error) {
 	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to download archive: HTTP %d", resp.StatusCode)
+		return "", fmt.Errorf("failed to download archive from %s: HTTP %d", url, resp.StatusCode)
 	}
 
 	archive, err := os.CreateTemp("", "topo-archive-*")
@@ -163,7 +167,17 @@ func moveBinary(srcPath string, dstPath string) error {
 		return nil
 	}
 
-	return os.Rename(srcPath, dstPath)
+	err := os.Rename(srcPath, dstPath)
+	if err != nil {
+		return fmt.Errorf("failed to replace binary: %w", err)
+	}
+
+	err = os.Chmod(dstPath, 0o755)
+	if err != nil {
+		return fmt.Errorf("failed to set executable permissions: %w", err)
+	}
+
+	return nil
 }
 
 func binaryName(name string) string {
