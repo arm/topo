@@ -69,7 +69,7 @@ func downloadArchive(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create download request: %w", err)
 	}
-	// #nosec G107 -- URL is constructed from a hardcoded, trusted base URL
+	// #nosec G704 -- request to a hardcoded, trusted URL
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download archive: %w", err)
@@ -126,7 +126,6 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 		}
 		return tmp.Close()
 	})
-
 	if err != nil {
 		removeTemporaryFile(tmpPath)
 		return "", fmt.Errorf("failed to read archive: %w", err)
