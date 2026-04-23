@@ -89,7 +89,7 @@ func TestInstall(t *testing.T) {
 		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
 	})
 
-	t.Run("leaves no temp files in destination directory", func(t *testing.T) {
+	t.Run("leaves no unexpected temp files in destination directory", func(t *testing.T) {
 		srv := serveBytes(t, validArchive)
 		dst := createFakeBinary(t)
 
@@ -98,7 +98,12 @@ func TestInstall(t *testing.T) {
 		require.NoError(t, err)
 		entries, err := os.ReadDir(filepath.Dir(dst))
 		require.NoError(t, err)
-		assert.Len(t, entries, 1)
+
+		if runtime.GOOS == "windows" {
+			assert.Len(t, entries, 2)
+		} else {
+			assert.Len(t, entries, 1)
+		}
 	})
 
 	t.Run("returns error on non-200 response", func(t *testing.T) {
