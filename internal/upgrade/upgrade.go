@@ -17,27 +17,19 @@ import (
 
 var topoBinaryName = binaryName("topo")
 
-func Install(ctx context.Context, binPath string, downloadURL string) error {
+func Install(ctx context.Context, currentBin string, downloadURL string) error {
 	archiveData, err := downloadArchive(ctx, downloadURL)
 	if err != nil {
 		return err
 	}
 
-	tmpPath, err := extractBinary(ctx, archiveData, filepath.Dir(binPath))
+	newBin, err := extractBinary(ctx, archiveData, filepath.Dir(currentBin))
 	if err != nil {
 		return err
 	}
-	defer removeTemporaryFile(tmpPath)
+	defer removeTemporaryFile(newBin)
 
-	if err := os.Rename(tmpPath, binPath); err != nil {
-		return fmt.Errorf("failed to replace binary: %w", err)
-	}
-
-	if err := os.Chmod(binPath, 0o755); err != nil {
-		return fmt.Errorf("failed to set executable permissions: %w", err)
-	}
-
-	return nil
+	return moveBinary(newBin, currentBin)
 }
 
 func CurrentBinaryPath() (string, error) {
@@ -143,6 +135,35 @@ func binaryName(name string) string {
 		return name + ".exe"
 	}
 	return name
+}
+
+func moveBinary(src, dst string) error {
+	if runtime.GOOS == "windows" {
+		// windows locks running executables, so we can't rename directly over dst
+		old := dst + ".old"
+		if err := os.Rename(dst, old); err != nil {
+			return fmt.Errorf("failed to rename current binary: %w", err)
+		}
+
+		if err := os.Rename(src, dst); err != nil {
+			restoreErr := os.Rename(old, dst)
+			if restoreErr != nil {
+				logger.Error(fmt.Sprintf("failed to restore original binary after failed upgrade: %v", restoreErr))
+			}
+			return fmt.Errorf("failed to replace binary: %w", err)
+		}
+		return nil
+	}
+
+	if err := os.Rename(src, dst); err != nil {
+		return fmt.Errorf("failed to replace binary: %w", err)
+	}
+
+	if err := os.Chmod(dst, 0o755); err != nil {
+		return fmt.Errorf("failed to set executable permissions: %w", err)
+	}
+
+	return nil
 }
 
 func removeTemporaryFile(path string) {
