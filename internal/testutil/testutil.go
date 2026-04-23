@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -33,9 +34,9 @@ func RequireLinuxDockerEngine(t testing.TB) {
 	}
 }
 
-func RequireOS(t testing.TB, os string) {
+func RequireOS(t testing.TB, os ...string) {
 	t.Helper()
-	if runtime.GOOS != os {
+	if !slices.Contains(os, runtime.GOOS) {
 		t.Skipf("skipping test that requires %s", os)
 	}
 }

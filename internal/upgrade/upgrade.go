@@ -57,6 +57,13 @@ func ArtifactoryDownloadURL(targetVersion string) string {
 	return fmt.Sprintf("%s/v%s/%s/%s", version.ArtifactoryBaseURL, targetVersion, urlOS, archiveName)
 }
 
+func BinaryName(name string) string {
+	if runtime.GOOS == "windows" {
+		return name + ".exe"
+	}
+	return name
+}
+
 func downloadArchive(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -95,7 +102,7 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 	var tmpPath string
 
 	err = extractor.Extract(ctx, stream, func(ctx context.Context, fileInfo archives.FileInfo) error {
-		if filepath.Base(fileInfo.Name()) != binaryName("topo") {
+		if filepath.Base(fileInfo.Name()) != BinaryName("topo") {
 			return nil
 		}
 
@@ -106,7 +113,7 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 		defer rc.Close() //nolint:errcheck
 
 		// important to create the temp file in the same directory to ensure atomic rename works across filesystems
-		tmp, err := os.CreateTemp(destDir, binaryName(".topo-new-*"))
+		tmp, err := os.CreateTemp(destDir, BinaryName(".topo-new-*"))
 		if err != nil {
 			return fmt.Errorf("failed to create temp file: %w", err)
 		}
@@ -126,13 +133,6 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 	}
 
 	return tmpPath, nil
-}
-
-func binaryName(name string) string {
-	if runtime.GOOS == "windows" {
-		return name + ".exe"
-	}
-	return name
 }
 
 func moveBinary(src, dst string) error {
