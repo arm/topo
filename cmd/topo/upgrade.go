@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/upgrade"
@@ -24,7 +23,7 @@ var upgradeCmd = &cobra.Command{
 
 		current := version.Version
 		var latest string
-		err := withSpinner(outputFormat, "Checking for updates...", func() (err error) {
+		err := term.WithSpinner(outputFormat, "Checking for updates...", func() (err error) {
 			latest, err = version.FetchLatest(ctx, version.ArtifactoryBaseURL)
 			return err
 		})
@@ -32,7 +31,7 @@ var upgradeCmd = &cobra.Command{
 			return err
 		}
 
-		if current == latest || current == version.Placeholder {
+		if current == latest || current == version.Dev {
 			fmt.Printf("topo %s is already up to date\n", current)
 			return nil
 		}
@@ -44,7 +43,7 @@ var upgradeCmd = &cobra.Command{
 			return fmt.Errorf("failed to determine current binary path: %w", err)
 		}
 
-		err = withSpinner(outputFormat, fmt.Sprintf("Downloading topo %s...", latest), func() error {
+		err = term.WithSpinner(outputFormat, fmt.Sprintf("Downloading topo %s...", latest), func() error {
 			downloadURL := upgrade.ArtifactoryDownloadURL(latest)
 			return upgrade.Install(ctx, binPath, downloadURL)
 		})
@@ -55,14 +54,6 @@ var upgradeCmd = &cobra.Command{
 		fmt.Printf("Upgraded topo to %s\n", latest)
 		return nil
 	},
-}
-
-func withSpinner(outputFormat term.Format, msg string, fn func() error) error {
-	if outputFormat == term.Plain {
-		s := term.StartSpinner(os.Stderr, msg)
-		defer s.Stop()
-	}
-	return fn()
 }
 
 func init() {

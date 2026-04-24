@@ -44,7 +44,7 @@ var HostRequiredDependencies = []Dependency{
 		Label:  "Topo",
 		Checks: []Check{VersionMatches{
 			FetchLatest: func(ctx context.Context) (string, error) {
-				if version.Version == version.Placeholder {
+				if version.Version == version.Dev {
 					return version.Version, nil
 				}
 

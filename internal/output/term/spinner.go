@@ -3,6 +3,7 @@ package term
 import (
 	"fmt"
 	"io"
+	"os"
 	"time"
 )
 
@@ -51,4 +52,12 @@ func (s *Spinner) Stop() {
 		close(s.stop)
 	}
 	<-s.done
+}
+
+func WithSpinner(outputFormat Format, msg string, fn func() error) error {
+	if outputFormat == Plain {
+		s := StartSpinner(os.Stderr, msg)
+		defer s.Stop()
+	}
+	return fn()
 }
