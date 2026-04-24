@@ -13,7 +13,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "sve-template", Features: []string{"SVE"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			HostProcessor: []probe.HostProcessor{
+			HostProcessors: []probe.HostProcessor{
 				{Features: []string{"asimd", "sve"}},
 			},
 		}
@@ -29,7 +29,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "sve-template", Features: []string{"SVE"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			HostProcessor: []probe.HostProcessor{
+			HostProcessors: []probe.HostProcessor{
 				{Features: []string{"asimd"}},
 			},
 		}
@@ -45,7 +45,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "neon-template", Features: []string{"NEON"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			HostProcessor: []probe.HostProcessor{
+			HostProcessors: []probe.HostProcessor{
 				{Features: []string{"asimd"}},
 			},
 		}
@@ -61,7 +61,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "neon-template", Features: []string{"NEON"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			HostProcessor: []probe.HostProcessor{
+			HostProcessors: []probe.HostProcessor{
 				{Features: []string{"sve"}},
 			},
 		}
@@ -89,7 +89,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "rp-template", Features: []string{"remoteproc"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			RemoteCPU: []probe.RemoteprocCPU{
+			RemoteCPUs: []probe.RemoteprocCPU{
 				{Name: "m3"},
 			},
 		}
@@ -105,7 +105,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "multi-feature-template", Features: []string{"SVE", "remoteproc"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			HostProcessor: []probe.HostProcessor{
+			HostProcessors: []probe.HostProcessor{
 				{Features: []string{"asimd", "sve"}},
 			},
 		}
@@ -121,7 +121,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "multi-feature-template", Features: []string{"SVE", "remoteproc"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			HostProcessor: []probe.HostProcessor{
+			HostProcessors: []probe.HostProcessor{
 				{Features: []string{"asimd"}},
 			},
 		}
