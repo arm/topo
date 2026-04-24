@@ -1,8 +1,10 @@
 package version
 
 var (
+	Dev = "dev"
+
 	// Version holds the complete version number. Filled in at linking time via -ldflags.
-	Version = "dev"
+	Version = Dev
 
 	// GitCommit holds the git revision. Filled in at linking time via -ldflags.
 	GitCommit = "unknown"

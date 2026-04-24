@@ -3,8 +3,13 @@ package term
 import (
 	"fmt"
 	"io"
+	"os"
 	"time"
 )
+
+type ProgressReporter interface {
+	Step(message string)
+}
 
 type Spinner struct {
 	stop chan struct{}
@@ -51,4 +56,11 @@ func (s *Spinner) Stop() {
 		close(s.stop)
 	}
 	<-s.done
+}
+
+func (s *Spinner) Step(message string) {
+	if s == nil || s.stop == nil {
+		return
+	}
+	_, _ = fmt.Fprintf(os.Stderr, "\r%s %s\033[K\n", "•", message)
 }
