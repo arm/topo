@@ -160,7 +160,7 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 
 	check.Value = status.Error.Error()
 	switch {
-	case errors.Is(status.Error, probe.ErrAuthFailed):
+	case errors.Is(status.Error, probe.ErrAuthFailed) || errors.Is(status.Error, probe.ErrTooManyAuthFails):
 		check.Fix = &Fix{
 			Description: "Configure SSH keys on remote target",
 			Command:     fmt.Sprintf("topo setup-keys --target %s", status.Destination),

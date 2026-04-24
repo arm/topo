@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	ErrHostKeyUnknown = errors.New("ssh host key is unknown")
-	ErrHostKeyChanged = errors.New("ssh host key has changed")
-	ErrAuthFailed     = errors.New("ssh authentication failed")
+	ErrHostKeyUnknown   = errors.New("ssh host key is unknown")
+	ErrHostKeyChanged   = errors.New("ssh host key has changed")
+	ErrAuthFailed       = errors.New("ssh authentication failed")
+	ErrTooManyAuthFails = errors.New("ssh too many authentication failures")
 )
 
 // SSHAuthentication verifies SSH connectivity by attempting public key authentication.
@@ -27,6 +28,8 @@ func SSHAuthentication(ctx context.Context, r *runner.SSH, acceptNewHostKeys boo
 		return ErrHostKeyUnknown
 	case errors.Is(err, ssh.ErrAuthFailed):
 		return ErrAuthFailed
+	case errors.Is(err, ssh.ErrTooManyAuthFails):
+		return ErrTooManyAuthFails
 	default:
 		return err
 	}

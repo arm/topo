@@ -91,6 +91,21 @@ func TestGenerateTargetReport(t *testing.T) {
 		assert.Equal(t, "topo setup-keys --target ssh://user@my-target", got.Connectivity.Fix.Command)
 	})
 
+	t.Run("when too many authentication failures occur, Connectivity includes a setup-keys fix", func(t *testing.T) {
+		ts := health.Status{
+			Connection: health.ConnectionStatus{
+				Destination: ssh.NewDestination("user@my-target"),
+				Error:       probe.ErrTooManyAuthFails,
+			},
+		}
+
+		got := health.GenerateTargetReport(ts)
+
+		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
+		assert.Equal(t, "Configure SSH keys on remote target", got.Connectivity.Fix.Description)
+		assert.Equal(t, "topo setup-keys --target ssh://user@my-target", got.Connectivity.Fix.Command)
+	})
+
 	t.Run("when host key is new, Connectivity includes an accept-new-host-keys fix", func(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{

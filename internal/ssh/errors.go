@@ -9,6 +9,7 @@ import (
 var (
 	ErrSSH               = errors.New("ssh failed")
 	ErrAuthFailed        = fmt.Errorf("%w: authentication failed", ErrSSH)
+	ErrTooManyAuthFails  = fmt.Errorf("%w: too many authentication failures", ErrSSH)
 	ErrConnectionFailed  = fmt.Errorf("%w: connection failed", ErrSSH)
 	ErrConnectionTimeout = fmt.Errorf("%w: connection timed out", ErrSSH)
 	ErrHostKeyUnknown    = fmt.Errorf("%w: host key is not known", ErrSSH)
@@ -28,8 +29,11 @@ func ClassifyStderr(stderr string) error {
 	if strings.Contains(lower, "timed out") {
 		return ErrConnectionTimeout
 	}
-	if strings.Contains(lower, "permission denied") || strings.Contains(lower, "too many authentication failures") {
+	if strings.Contains(lower, "permission denied") {
 		return ErrAuthFailed
+	}
+	if strings.Contains(lower, "too many authentication failures") {
+		return ErrTooManyAuthFails
 	}
 	if strings.Contains(lower, "connection refused") {
 		return ErrConnectionFailed
