@@ -125,7 +125,7 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	report.Connectivity = connectivityCheck(targetStatus.Connection)
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
-	remoteCPUs := targetStatus.Hardware.RemoteCPU
+	remoteCPUs := targetStatus.Hardware.RemoteCPUs
 	switch {
 	case targetStatus.Hardware.Err != nil:
 		report.SubsystemDriver.Status = CheckStatusError

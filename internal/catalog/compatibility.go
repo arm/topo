@@ -53,12 +53,12 @@ func compatibilityStatus(profile probe.HardwareProfile, supportedFeatures map[st
 
 func extractSupportedFeatures(profile probe.HardwareProfile) map[string]struct{} {
 	supportedFeatures := map[string]struct{}{}
-	for _, proc := range profile.HostProcessor {
+	for _, proc := range profile.HostProcessors {
 		for _, feature := range proc.ExtractArmFeatures() {
 			supportedFeatures[strings.ToLower(feature)] = struct{}{}
 		}
 	}
-	if len(profile.RemoteCPU) > 0 {
+	if len(profile.RemoteCPUs) > 0 {
 		supportedFeatures["remoteproc"] = struct{}{}
 		supportedFeatures["remoteproc-runtime"] = struct{}{}
 	}

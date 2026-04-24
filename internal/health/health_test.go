@@ -49,7 +49,7 @@ func TestGenerateTargetReport(t *testing.T) {
 	t.Run("when remoteproc devices are found, SubsystemDriver status is ok and includes device names", func(t *testing.T) {
 		ts := health.Status{
 			Hardware: health.HardwareProfile{
-				RemoteCPU: []probe.RemoteprocCPU{{Name: "m4_0"}, {Name: "m4_1"}},
+				RemoteCPUs: []probe.RemoteprocCPU{{Name: "m4_0"}, {Name: "m4_1"}},
 			},
 		}
 

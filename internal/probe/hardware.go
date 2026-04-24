@@ -8,25 +8,25 @@ import (
 )
 
 type HardwareProfile struct {
-	HostProcessor []HostProcessor `yaml:"host" json:"host"`
-	RemoteCPU     []RemoteprocCPU `yaml:"remoteprocs" json:"remoteprocs,omitempty"`
-	TotalMemoryKb int64           `yaml:"totalmemory_kb" json:"totalmemory_kb"`
+	HostProcessors []HostProcessor `yaml:"hosts" json:"hosts"`
+	RemoteCPUs     []RemoteprocCPU `yaml:"remoteprocs" json:"remoteprocs,omitempty"`
+	TotalMemoryKb  int64           `yaml:"totalmemory_kb" json:"totalmemory_kb"`
 }
 
 func Hardware(ctx context.Context, r runner.Runner) (HardwareProfile, error) {
 	var hp HardwareProfile
 
-	cpuProfile, err := CPU(ctx, r)
+	hostProcessors, err := CPU(ctx, r)
 	if err != nil {
 		return hp, fmt.Errorf("collecting CPU info: %w", err)
 	}
-	hp.HostProcessor = cpuProfile
+	hp.HostProcessors = hostProcessors
 
-	cpus, err := Remoteproc(ctx, r)
+	remoteCPUs, err := Remoteproc(ctx, r)
 	if err != nil {
 		return hp, fmt.Errorf("collecting remote CPUs: %w", err)
 	}
-	hp.RemoteCPU = cpus
+	hp.RemoteCPUs = remoteCPUs
 
 	memTotal, err := Memory(ctx, r)
 	if err != nil {
