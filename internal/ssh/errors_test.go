@@ -13,6 +13,7 @@ func TestClassifyStderr(t *testing.T) {
 		want   error
 	}{
 		{name: "auth failure", stderr: "user@host: Permission denied (publickey).", want: ErrAuthFailed},
+		{name: "too many authentication failures", stderr: "Received disconnect from 192.0.2.10 port 22:2: Too many authentication failures", want: ErrAuthFailed},
 		{name: "connection refused", stderr: "ssh: connect to host example.com port 22: Connection refused", want: ErrConnectionFailed},
 		{name: "hostname not resolved", stderr: "ssh: Could not resolve hostname not-valid: Temporary failure in name resolution", want: ErrConnectionFailed},
 		{name: "operation timed out (macOS)", stderr: "ssh: connect to host example.com port 22: Operation timed out", want: ErrConnectionTimeout},

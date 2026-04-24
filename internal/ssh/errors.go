@@ -28,7 +28,7 @@ func ClassifyStderr(stderr string) error {
 	if strings.Contains(lower, "timed out") {
 		return ErrConnectionTimeout
 	}
-	if strings.Contains(lower, "permission denied") {
+	if strings.Contains(lower, "permission denied") || strings.Contains(lower, "too many authentication failures") {
 		return ErrAuthFailed
 	}
 	if strings.Contains(lower, "connection refused") {
