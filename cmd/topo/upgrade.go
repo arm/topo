@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/upgrade"
@@ -44,7 +45,7 @@ var upgradeCmd = &cobra.Command{
 		}
 
 		err = term.WithSpinner(outputFormat, fmt.Sprintf("Downloading topo %s...", latest), func() error {
-			downloadURL := upgrade.ArtifactoryDownloadURL(latest)
+			downloadURL := upgrade.ArtifactoryDownloadURL(runtime.GOOS, runtime.GOARCH, latest)
 			return upgrade.Install(ctx, binPath, downloadURL)
 		})
 		if err != nil {

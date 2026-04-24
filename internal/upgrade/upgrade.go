@@ -42,18 +42,18 @@ func CurrentBinaryPath() (string, error) {
 	return binPath, nil
 }
 
-func ArtifactoryDownloadURL(targetVersion string) string {
+func ArtifactoryDownloadURL(os string, arch string, targetVersion string) string {
 	ext := "tar.gz"
-	if runtime.GOOS == "windows" {
+	if os == "windows" {
 		ext = "zip"
 	}
 
-	urlOS := runtime.GOOS
-	if runtime.GOOS == "darwin" {
+	urlOS := os
+	if os == "darwin" {
 		urlOS = "macos"
 	}
 
-	archiveName := fmt.Sprintf("topo_%s_%s.%s", runtime.GOOS, runtime.GOARCH, ext)
+	archiveName := fmt.Sprintf("topo_%s_%s.%s", os, arch, ext)
 	return fmt.Sprintf("%s/v%s/%s/%s", version.ArtifactoryBaseURL, targetVersion, urlOS, archiveName)
 }
 

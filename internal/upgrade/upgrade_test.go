@@ -154,39 +154,26 @@ func TestInstall(t *testing.T) {
 }
 
 func TestArtifactoryDownloadURL(t *testing.T) {
-	t.Run("contains the formatted target version", func(t *testing.T) {
-		url := upgrade.ArtifactoryDownloadURL("3.13.37")
+	version := "3.13.37"
+	tests := []struct {
+		os       string
+		arch     string
+		expected string
+	}{
+		{"darwin", "amd64", "https://artifacts.tools.arm.com/topo/v" + version + "/macos/topo_darwin_amd64.tar.gz"},
+		{"darwin", "arm64", "https://artifacts.tools.arm.com/topo/v" + version + "/macos/topo_darwin_arm64.tar.gz"},
+		{"linux", "amd64", "https://artifacts.tools.arm.com/topo/v" + version + "/linux/topo_linux_amd64.tar.gz"},
+		{"linux", "arm64", "https://artifacts.tools.arm.com/topo/v" + version + "/linux/topo_linux_arm64.tar.gz"},
+		{"windows", "amd64", "https://artifacts.tools.arm.com/topo/v" + version + "/windows/topo_windows_amd64.zip"},
+		{"windows", "arm64", "https://artifacts.tools.arm.com/topo/v" + version + "/windows/topo_windows_arm64.zip"},
+	}
 
-		assert.Contains(t, url, "v3.13.37")
-	})
+	for _, tt := range tests {
+		name := tt.os + "/" + tt.arch
+		t.Run(name, func(t *testing.T) {
+			url := upgrade.ArtifactoryDownloadURL(tt.os, tt.arch, version)
 
-	t.Run("contains current architecture", func(t *testing.T) {
-		url := upgrade.ArtifactoryDownloadURL("3.13.37")
-
-		assert.Contains(t, url, runtime.GOARCH)
-	})
-
-	t.Run("maps darwin to macos", func(t *testing.T) {
-		testutil.RequireOS(t, "darwin")
-
-		url := upgrade.ArtifactoryDownloadURL("3.13.37")
-
-		assert.Contains(t, url, "/macos/")
-	})
-
-	t.Run("uses zip extension on windows", func(t *testing.T) {
-		testutil.RequireOS(t, "windows")
-
-		url := upgrade.ArtifactoryDownloadURL("3.13.37")
-
-		assert.Contains(t, url, ".zip")
-	})
-
-	t.Run("uses tar.gz extension on linux and darwin", func(t *testing.T) {
-		testutil.RequireOS(t, "linux", "darwin")
-
-		url := upgrade.ArtifactoryDownloadURL("3.13.37")
-
-		assert.Contains(t, url, ".tar.gz")
-	})
+			assert.Equal(t, url, tt.expected)
+		})
+	}
 }
