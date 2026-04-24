@@ -11,9 +11,41 @@ import (
 	"runtime"
 
 	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/version"
 	"github.com/mholt/archives"
 )
+
+func Upgrade(ctx context.Context, reporter term.ProgressReporter) (string, error) {
+	if reporter != nil {
+		reporter.Step("Checking for latest version...")
+	}
+	latest, err := version.FetchLatest(ctx, version.ArtifactoryBaseURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch latest version: %w", err)
+	}
+
+	if version.Version == version.Dev || latest == version.Version {
+		return version.Version, nil
+	}
+
+	binPath, err := CurrentBinaryPath()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine current binary path: %w", err)
+	}
+
+	downloadURL := ArtifactoryDownloadURL(runtime.GOOS, runtime.GOARCH, latest)
+
+	if reporter != nil {
+		reporter.Step(fmt.Sprintf("Installing topo version %s...", latest))
+	}
+	err = Install(ctx, binPath, downloadURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to install new version: %w", err)
+	}
+
+	return latest, nil
+}
 
 func Install(ctx context.Context, currentBin string, downloadURL string) error {
 	archiveData, err := downloadArchive(ctx, downloadURL)

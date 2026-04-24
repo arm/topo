@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+type ProgressReporter interface {
+	Step(message string)
+}
+
 type Spinner struct {
 	stop chan struct{}
 	done chan struct{}
@@ -54,10 +58,9 @@ func (s *Spinner) Stop() {
 	<-s.done
 }
 
-func WithSpinner(outputFormat Format, msg string, fn func() error) error {
-	if outputFormat == Plain {
-		s := StartSpinner(os.Stderr, msg)
-		defer s.Stop()
+func (s *Spinner) Step(message string) {
+	if s == nil || s.stop == nil {
+		return
 	}
-	return fn()
+	_, _ = fmt.Fprintf(os.Stderr, "\r%s %s\033[K\n", "•", message)
 }

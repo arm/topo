@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"runtime"
+	"os"
 
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/upgrade"
@@ -19,40 +19,26 @@ var upgradeCmd = &cobra.Command{
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
 
+		var spinner *term.Spinner
+		if outputFormat == term.Plain {
+			spinner = term.StartSpinner(os.Stderr, "Upgrading topo...")
+		}
+
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 
-		current := version.Version
-		var latest string
-		err := term.WithSpinner(outputFormat, "Checking for updates...", func() (err error) {
-			latest, err = version.FetchLatest(ctx, version.ArtifactoryBaseURL)
-			return err
-		})
+		newVersion, err := upgrade.Upgrade(ctx, spinner)
+		spinner.Stop()
 		if err != nil {
 			return err
 		}
 
-		if current == latest || current == version.Dev {
-			fmt.Printf("topo %s is already up to date\n", current)
+		if newVersion == version.Version {
+			fmt.Printf("Already running the latest version of topo (%s)\n", newVersion)
 			return nil
 		}
 
-		fmt.Printf("Upgrading topo from %s to %s\n", current, latest)
-
-		binPath, err := upgrade.CurrentBinaryPath()
-		if err != nil {
-			return fmt.Errorf("failed to determine current binary path: %w", err)
-		}
-
-		err = term.WithSpinner(outputFormat, fmt.Sprintf("Downloading topo %s...", latest), func() error {
-			downloadURL := upgrade.ArtifactoryDownloadURL(runtime.GOOS, runtime.GOARCH, latest)
-			return upgrade.Install(ctx, binPath, downloadURL)
-		})
-		if err != nil {
-			return err
-		}
-
-		fmt.Printf("Upgraded topo to %s\n", latest)
+		fmt.Printf("Upgraded topo to %s\n", newVersion)
 		return nil
 	},
 }
