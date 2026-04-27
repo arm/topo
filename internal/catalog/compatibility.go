@@ -58,7 +58,7 @@ func extractSupportedFeatures(profile probe.HardwareProfile) map[string]struct{}
 			supportedFeatures[strings.ToLower(feature)] = struct{}{}
 		}
 	}
-	if len(profile.RemoteCPUs) > 0 {
+	if len(profile.RemoteProcessors) > 0 {
 		supportedFeatures["remoteproc"] = struct{}{}
 		supportedFeatures["remoteproc-runtime"] = struct{}{}
 	}

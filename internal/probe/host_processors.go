@@ -38,7 +38,7 @@ func (proc *HostProcessor) ExtractArmFeatures() []string {
 	return res
 }
 
-func CPU(ctx context.Context, r runner.Runner) ([]HostProcessor, error) {
+func HostProcessors(ctx context.Context, r runner.Runner) ([]HostProcessor, error) {
 	if err := r.BinaryExists(ctx, "lscpu"); err != nil {
 		return nil, err
 	}

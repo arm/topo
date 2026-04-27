@@ -19,7 +19,7 @@ func TestPrintTargetDescription(t *testing.T) {
 				HostProcessors: []probe.HostProcessor{
 					{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
 				},
-				RemoteCPUs: []probe.RemoteprocCPU{
+				RemoteProcessors: []probe.RemoteProc{
 					{Name: "remoteproc0"},
 				},
 				TotalMemoryKb: 16384,
@@ -30,13 +30,13 @@ func TestPrintTargetDescription(t *testing.T) {
 			err := printable.Print(toPrint, &out, term.Plain)
 
 			want := `
-hosts:
+hostProcessors:
   - model: Cortex-A55
     cores: 4
     features:
       - asimd
       - sve
-remoteprocs:
+remoteProcessors:
   - name: remoteproc0
 totalmemory_kb: 16384
 `
@@ -52,7 +52,7 @@ totalmemory_kb: 16384
 					HostProcessors: []probe.HostProcessor{
 						{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
 					},
-					RemoteCPUs: []probe.RemoteprocCPU{
+					RemoteProcessors: []probe.RemoteProc{
 						{Name: "remoteproc0"},
 					},
 					TotalMemoryKb: 16384,
@@ -63,14 +63,14 @@ totalmemory_kb: 16384
 			err := printable.Print(toPrint, &out, term.JSON)
 
 			want := `{
-				"hosts": [
+				"hostProcessors": [
 					{
 						"model": "Cortex-A55",
 						"cores": 4,
 						"features": ["asimd", "sve"]
 					}
 				],
-				"remoteprocs": [
+				"remoteProcessors": [
 					{"name": "remoteproc0"}
 				],
 				"totalmemory_kb": 16384
