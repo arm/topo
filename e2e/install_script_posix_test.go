@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -77,7 +76,7 @@ func TestInstallScript(t *testing.T) {
 
 	t.Run("tells user to use upgrade when topo is already installed", func(t *testing.T) {
 		dir := t.TempDir()
-		testutil.RequireWriteFile(t, filepath.Join(dir, "topo"), "")
+		requireWriteDummyExecutable(t, filepath.Join(dir, "topo"))
 		pathWithTopo := dir + string(os.PathListSeparator) + os.Getenv("PATH")
 
 		out, err := runInstallScriptWithEnv(t, []string{"PATH=" + pathWithTopo})

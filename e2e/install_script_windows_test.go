@@ -80,7 +80,7 @@ func TestInstallScriptWindows(t *testing.T) {
 
 	t.Run("tells user to use upgrade when topo is already installed", func(t *testing.T) {
 		dir := t.TempDir()
-		testutil.RequireWriteFile(t, filepath.Join(dir, "topo.exe"), "")
+		requireWriteDummyExecutable(t, filepath.Join(dir, "topo.exe"))
 		pathWithTopo := dir + string(os.PathListSeparator) + os.Getenv("PATH")
 
 		out, err := runInstallScriptWithEnv(t, []string{"PATH=" + pathWithTopo})
