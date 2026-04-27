@@ -193,7 +193,7 @@ main() {
   parse_args "$@"
 
   if [ -z "$ARG_INSTALL_DIR" ]; then
-    exit_if_topo_already_installed "$ARG_INSTALL_DIR"
+    exit_if_topo_already_installed
   fi  
 
   install_dir="$(resolve_install_dir "$ARG_INSTALL_DIR")"

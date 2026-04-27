@@ -148,7 +148,7 @@ if ($Help) {
 
 $installDir = $null
 if ([string]::IsNullOrWhiteSpace($Path)) {
-    Exit-IfTopoAlreadyInstalled -Requested $Path
+    Exit-IfTopoAlreadyInstalled
 }
 $installDir = Resolve-InstallDir -Requested $Path
 $resolvedVersion = Resolve-Version -Requested $Version
