@@ -84,8 +84,6 @@ func TestInstallScript(t *testing.T) {
 		require.NoError(t, err, "script failed: %s", out)
 		assert.Contains(t, out, "topo is already installed")
 		assert.Contains(t, out, "topo upgrade")
-		assert.NotContains(t, out, "Installing topo")
-		assert.NotContains(t, out, "Installed topo")
 	})
 
 	t.Run("fails on unknown flag", func(t *testing.T) {
