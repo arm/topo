@@ -38,7 +38,7 @@ hostProcessors:
       - sve
 remoteProcessors:
   - name: remoteproc0
-totalmemory_kb: 16384
+totalMemoryKb: 16384
 `
 			require.NoError(t, err)
 			assert.YAMLEq(t, want, out.String())
@@ -73,7 +73,7 @@ totalmemory_kb: 16384
 				"remoteProcessors": [
 					{"name": "remoteproc0"}
 				],
-				"totalmemory_kb": 16384
+				"totalMemoryKb": 16384
 			}`
 			require.NoError(t, err)
 			assert.JSONEq(t, want, out.String())

@@ -10,7 +10,7 @@ import (
 type HardwareProfile struct {
 	HostProcessors   []HostProcessor `yaml:"hostProcessors" json:"hostProcessors"`
 	RemoteProcessors []RemoteProc    `yaml:"remoteProcessors" json:"remoteProcessors,omitempty"`
-	TotalMemoryKb    int64           `yaml:"totalmemory_kb" json:"totalmemory_kb"`
+	TotalMemoryKb    int64           `yaml:"totalMemoryKb" json:"totalMemoryKb"`
 }
 
 func Hardware(ctx context.Context, r runner.Runner) (HardwareProfile, error) {
