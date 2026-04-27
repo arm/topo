@@ -112,23 +112,11 @@ func (ct *CheckSSHTunnelSecurity) Description() string {
 	return "Check SSH tunnel security"
 }
 
-func (ct *CheckSSHTunnelSecurity) Command() *exec.Cmd {
-	if !ct.TargetDest.IsLocalhost() {
-		hostName := NewConfig(ct.TargetDest).HostName
-		return exec.Command("curl", fmt.Sprintf("%s:%s", hostName, ct.Port), "--max-time", "1")
-	}
-	return nil
-}
-
 func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 	if ct.TargetDest.IsLocalhost() {
 		return nil
 	}
-	cmd := ct.Command()
-	if cmd == nil {
-		panic(fmt.Sprintf("BUG: security check called for unresolvable host %q; caller must validate host before invoking", ct.TargetDest))
-	}
-
+	cmd := ct.command()
 	cmd.Stdout = w
 	cmd.Stderr = w
 
@@ -139,6 +127,11 @@ func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
 
 	_, _ = fmt.Fprintf(w, "Port %s is not exposed on target to local network\n", ct.Port)
 	return nil
+}
+
+func (ct *CheckSSHTunnelSecurity) command() *exec.Cmd {
+	hostName := NewConfig(ct.TargetDest).HostName
+	return exec.Command("curl", fmt.Sprintf("%s:%s", hostName, ct.Port), "--max-time", "1")
 }
 
 type SSHTunnelStop struct {

@@ -137,28 +137,6 @@ func TestSSHTunnelStart(t *testing.T) {
 }
 
 func TestCheckSSHTunnelSecurity(t *testing.T) {
-	t.Run("Command", func(t *testing.T) {
-		t.Run("it generates correct curl command", func(t *testing.T) {
-			dest := ssh.NewDestination("user@remote")
-			port := operation.DefaultRegistryPort
-
-			cs := ssh.NewCheckSSHTunnelSecurity(dest, port)
-			got := strings.Join(cs.Command().Args, " ")
-
-			want := fmt.Sprintf("curl remote:%s --max-time 1", port)
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("it returns nil when target is localhost", func(t *testing.T) {
-			dest := ssh.NewDestination("root@localhost")
-			port := operation.DefaultRegistryPort
-
-			cs := ssh.NewCheckSSHTunnelSecurity(dest, port)
-			got := cs.Command()
-			assert.Nil(t, got)
-		})
-	})
-
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns the expected string", func(t *testing.T) {
 			cs := ssh.NewCheckSSHTunnelSecurity(ssh.NewDestination("user@remote"), operation.DefaultRegistryPort)
