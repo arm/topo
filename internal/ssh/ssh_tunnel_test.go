@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +18,7 @@ func TestSSHTunnel(t *testing.T) {
 		t.Run("it returns start and stop operations with control sockets", func(t *testing.T) {
 			dest := ssh.NewDestination("user@remote")
 
-			start, _, stop := ssh.NewSSHTunnel(dest, operation.DefaultRegistryPort, true)
+			start, _, stop := ssh.NewSSHTunnel(dest, "91232", true)
 
 			_, ok := start.(*ssh.SSHTunnelStart)
 			assert.True(t, ok, "start operation is not of type SSHTunnelStart")
@@ -30,7 +29,7 @@ func TestSSHTunnel(t *testing.T) {
 		t.Run("it returns start and stop operations without control sockets", func(t *testing.T) {
 			dest := ssh.NewDestination("user@remote")
 
-			start, _, stop := ssh.NewSSHTunnel(dest, operation.DefaultRegistryPort, false)
+			start, _, stop := ssh.NewSSHTunnel(dest, "12201", false)
 
 			_, ok := start.(*ssh.SSHTunnelStart)
 			assert.True(t, ok, "start operation is not of type SSHTunnelStart")
@@ -41,7 +40,7 @@ func TestSSHTunnel(t *testing.T) {
 		t.Run("stop operation has access to start operation process", func(t *testing.T) {
 			dest := ssh.NewDestination("user@remote")
 
-			start, _, stop := ssh.NewSSHTunnel(dest, operation.DefaultRegistryPort, false)
+			start, _, stop := ssh.NewSSHTunnel(dest, "07070", false)
 			startOp, ok := start.(*ssh.SSHTunnelStart)
 			require.True(t, ok, "start operation is not of type SSHTunnelStart")
 
@@ -53,7 +52,7 @@ func TestSSHTunnel(t *testing.T) {
 		t.Run("it returns security check operation", func(t *testing.T) {
 			dest := ssh.NewDestination("user@remote")
 
-			_, securityCheck, _ := ssh.NewSSHTunnel(dest, operation.DefaultRegistryPort, true)
+			_, securityCheck, _ := ssh.NewSSHTunnel(dest, "44553", true)
 
 			_, ok := securityCheck.(*ssh.CheckSSHTunnelSecurity)
 			assert.True(t, ok, "security check operation is not of type CheckSSHTunnelSecurity")
@@ -65,7 +64,7 @@ func TestSSHTunnelStart(t *testing.T) {
 	t.Run("Command", func(t *testing.T) {
 		t.Run("it generates correct ssh command", func(t *testing.T) {
 			dest := ssh.NewDestination("user@remote")
-			port := operation.DefaultRegistryPort
+			port := "1337"
 
 			st := ssh.NewSSHTunnelStart(dest, port, true)
 			got := strings.Join(st.Command().Args, " ")
@@ -74,20 +73,9 @@ func TestSSHTunnelStart(t *testing.T) {
 			assert.Equal(t, want, got)
 		})
 
-		t.Run("it includes port flag when host has custom port", func(t *testing.T) {
-			dest := ssh.NewDestination("user@remote:2222")
-			port := operation.DefaultRegistryPort
-
-			st := ssh.NewSSHTunnelStart(dest, port, true)
-			got := strings.Join(st.Command().Args, " ")
-
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s ssh://user@remote:2222", ssh.ControlSocketPath(dest.String()), port, port)
-			assert.Equal(t, want, got)
-		})
-
 		t.Run("it does not include control socket flag when disabled", func(t *testing.T) {
 			dest := ssh.NewDestination("user@remote")
-			port := operation.DefaultRegistryPort
+			port := "1338"
 
 			st := ssh.NewSSHTunnelStart(dest, port, false)
 			got := strings.Join(st.Command().Args, " ")
@@ -114,7 +102,7 @@ func TestSSHTunnelStart(t *testing.T) {
 		})
 
 		t.Run("it returns generic tunnel error when port is free", func(t *testing.T) {
-			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), operation.DefaultRegistryPort, true)
+			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), "99010", true)
 			var buf strings.Builder
 
 			err := st.Run(&buf)
@@ -127,7 +115,7 @@ func TestSSHTunnelStart(t *testing.T) {
 
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
-			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), operation.DefaultRegistryPort, true)
+			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), "12345", true)
 
 			got := st.Description()
 
@@ -161,7 +149,7 @@ func TestCheckSSHTunnelSecurity(t *testing.T) {
 
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns the expected string", func(t *testing.T) {
-			cs := ssh.NewCheckSSHTunnelSecurity(ssh.NewDestination("user@remote"), operation.DefaultRegistryPort)
+			cs := ssh.NewCheckSSHTunnelSecurity(ssh.NewDestination("user@remote"), "12345")
 
 			got := cs.Description()
 
