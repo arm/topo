@@ -110,12 +110,6 @@ build_download_url() {
 }
 
 exit_if_topo_already_installed() {
-  requested_install_dir="$1"
-
-  if [ -n "$requested_install_dir" ]; then
-    return
-  fi
-
   existing="$(command -v "$BINARY_NAME" 2>/dev/null || true)"
   if [ -z "$existing" ]; then
     return
@@ -198,7 +192,9 @@ install_binary() {
 main() {
   parse_args "$@"
 
-  exit_if_topo_already_installed "$ARG_INSTALL_DIR"
+  if [ -z "$ARG_INSTALL_DIR" ]; then
+    exit_if_topo_already_installed "$ARG_INSTALL_DIR"
+  fi  
 
   install_dir="$(resolve_install_dir "$ARG_INSTALL_DIR")"
   version="$(resolve_version "$ARG_VERSION")"

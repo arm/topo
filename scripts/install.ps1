@@ -65,12 +65,6 @@ function Build-DownloadUrl {
 }
 
 function Exit-IfTopoAlreadyInstalled {
-    param([string]$Requested)
-
-    if (-not [string]::IsNullOrWhiteSpace($Requested)) {
-        return
-    }
-
     $existing = Get-Command $ExeName -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $existing) {
         return
@@ -153,7 +147,9 @@ if ($Help) {
 }
 
 $installDir = $null
-Exit-IfTopoAlreadyInstalled -Requested $Path
+if ([string]::IsNullOrWhiteSpace($Path)) {
+    Exit-IfTopoAlreadyInstalled -Requested $Path
+}
 $installDir = Resolve-InstallDir -Requested $Path
 $resolvedVersion = Resolve-Version -Requested $Version
 Write-Host "Installing $BinaryName $resolvedVersion"
