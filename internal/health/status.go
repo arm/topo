@@ -8,7 +8,7 @@ import (
 )
 
 type HardwareProfile struct {
-	RemoteProcessors []probe.RemoteProc
+	RemoteProcessors []probe.RemoteProcessor
 	Err              error
 }
 
@@ -28,7 +28,7 @@ type HealthStatus struct {
 func ProbeHealthStatus(ctx context.Context, r runner.Runner) HealthStatus {
 	var hs HealthStatus
 
-	remoteProcessors, err := probe.Remoteprocs(ctx, r)
+	remoteProcessors, err := probe.Remoteproc(ctx, r)
 	hs.Hardware.RemoteProcessors = remoteProcessors
 	hs.Hardware.Err = err
 

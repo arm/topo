@@ -89,7 +89,7 @@ func TestAnnotateCompatibility(t *testing.T) {
 		repo := catalog.Repo{Name: "rp-template", Features: []string{"remoteproc"}}
 		repos := []catalog.Repo{repo}
 		profile := probe.HardwareProfile{
-			RemoteProcessors: []probe.RemoteProc{
+			RemoteProcessors: []probe.RemoteProcessor{
 				{Name: "m3"},
 			},
 		}

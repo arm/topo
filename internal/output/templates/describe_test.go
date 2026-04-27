@@ -19,7 +19,7 @@ func TestPrintTargetDescription(t *testing.T) {
 				HostProcessors: []probe.HostProcessor{
 					{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
 				},
-				RemoteProcessors: []probe.RemoteProc{
+				RemoteProcessors: []probe.RemoteProcessor{
 					{Name: "remoteproc0"},
 				},
 				TotalMemoryKb: 16384,
@@ -52,7 +52,7 @@ totalMemoryKb: 16384
 					HostProcessors: []probe.HostProcessor{
 						{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
 					},
-					RemoteProcessors: []probe.RemoteProc{
+					RemoteProcessors: []probe.RemoteProcessor{
 						{Name: "remoteproc0"},
 					},
 					TotalMemoryKb: 16384,

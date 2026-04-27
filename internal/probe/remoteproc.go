@@ -8,12 +8,12 @@ import (
 	"github.com/arm/topo/internal/runner"
 )
 
-type RemoteProc struct {
+type RemoteProcessor struct {
 	Name string `yaml:"name" json:"name"`
 }
 
-func Remoteprocs(ctx context.Context, r runner.Runner) ([]RemoteProc, error) {
-	var remoteProcs []RemoteProc
+func Remoteproc(ctx context.Context, r runner.Runner) ([]RemoteProcessor, error) {
+	var remoteProcs []RemoteProcessor
 	out, err := r.Run(ctx, "cat /sys/class/remoteproc/*/name")
 	if err != nil {
 		if errors.Is(err, runner.ErrTimeout) {
@@ -24,7 +24,7 @@ func Remoteprocs(ctx context.Context, r runner.Runner) ([]RemoteProc, error) {
 
 	procs := strings.FieldsSeq(out)
 	for proc := range procs {
-		remoteProcs = append(remoteProcs, RemoteProc{Name: proc})
+		remoteProcs = append(remoteProcs, RemoteProcessor{Name: proc})
 	}
 	return remoteProcs, nil
 }

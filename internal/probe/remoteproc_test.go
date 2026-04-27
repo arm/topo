@@ -19,10 +19,10 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := probe.Remoteprocs(context.Background(), r)
+		got, err := probe.Remoteproc(context.Background(), r)
 
 		require.NoError(t, err)
-		want := []probe.RemoteProc{
+		want := []probe.RemoteProcessor{
 			{Name: "virtio0"},
 			{Name: "virtio1"},
 		}
@@ -36,7 +36,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := probe.Remoteprocs(context.Background(), r)
+		got, err := probe.Remoteproc(context.Background(), r)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -49,7 +49,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		got, err := probe.Remoteprocs(context.Background(), r)
+		got, err := probe.Remoteproc(context.Background(), r)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -62,7 +62,7 @@ func TestProbeRemoteproc(t *testing.T) {
 			},
 		}
 
-		_, err := probe.Remoteprocs(context.Background(), r)
+		_, err := probe.Remoteproc(context.Background(), r)
 
 		assert.ErrorIs(t, err, runner.ErrTimeout)
 	})
