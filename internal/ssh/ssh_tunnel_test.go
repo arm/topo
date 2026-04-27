@@ -54,8 +54,8 @@ func TestSSHTunnel(t *testing.T) {
 
 			_, securityCheck, _ := ssh.NewSSHTunnel(dest, "44553", true)
 
-			_, ok := securityCheck.(*ssh.CheckSSHTunnelSecurity)
-			assert.True(t, ok, "security check operation is not of type CheckSSHTunnelSecurity")
+			_, ok := securityCheck.(*ssh.CheckRemoteForwardNotExposed)
+			assert.True(t, ok, "security check operation is not of type CheckRemoteForwardNotExposed")
 		})
 	})
 }
@@ -124,14 +124,14 @@ func TestSSHTunnelStart(t *testing.T) {
 	})
 }
 
-func TestCheckSSHTunnelSecurity(t *testing.T) {
+func TestCheckRemoteForwardNotExposed(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns the expected string", func(t *testing.T) {
-			cs := ssh.NewCheckSSHTunnelSecurity(ssh.NewDestination("user@remote"), "12345")
+			cs := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("user@remote"), "12345")
 
 			got := cs.Description()
 
-			assert.Equal(t, "Check SSH tunnel security", got)
+			assert.Equal(t, "Check tunnel port is not exposed on remote network", got)
 		})
 	})
 }

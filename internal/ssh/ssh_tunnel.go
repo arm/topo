@@ -34,7 +34,7 @@ func ControlSocketPath(targetHost string) string {
 
 func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	start := NewSSHTunnelStart(targetDest, port, useControlSockets)
-	securityCheck := NewCheckSSHTunnelSecurity(targetDest, port)
+	securityCheck := NewCheckRemoteForwardNotExposed(targetDest, port)
 
 	var stop operation.Operation
 	if useControlSockets {
@@ -99,39 +99,39 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 	return nil
 }
 
-type CheckSSHTunnelSecurity struct {
+type CheckRemoteForwardNotExposed struct {
 	TargetDest Destination
 	Port       string
 }
 
-func NewCheckSSHTunnelSecurity(targetDest Destination, port string) *CheckSSHTunnelSecurity {
-	return &CheckSSHTunnelSecurity{TargetDest: targetDest, Port: port}
+// Detects a remote sshd with GatewayPorts enabled, which would bind the -R
+// forward to 0.0.0.0 on the target instead of its loopback, exposing the
+// local registry to the target's network.
+func NewCheckRemoteForwardNotExposed(targetDest Destination, port string) *CheckRemoteForwardNotExposed {
+	return &CheckRemoteForwardNotExposed{TargetDest: targetDest, Port: port}
 }
 
-func (ct *CheckSSHTunnelSecurity) Description() string {
-	return "Check SSH tunnel security"
+func (ct *CheckRemoteForwardNotExposed) Description() string {
+	return "Check tunnel port is not exposed on remote network"
 }
 
-func (ct *CheckSSHTunnelSecurity) Run(w io.Writer) error {
+func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 	if ct.TargetDest.IsLocalhost() {
 		return nil
 	}
-	cmd := ct.command()
+
+	hostName := NewConfig(ct.TargetDest).HostName
+	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", hostName, ct.Port), "--max-time", "1")
 	cmd.Stdout = w
 	cmd.Stderr = w
 
 	err := cmd.Run()
 	if err == nil {
-		return fmt.Errorf("ssh tunnel to %s is not secure: able to access registry port without authentication", ct.TargetDest)
+		return fmt.Errorf("remote sshd is exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry is reachable without SSH auth", ct.Port)
 	}
 
-	_, _ = fmt.Fprintf(w, "Port %s is not exposed on target to local network\n", ct.Port)
+	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
 	return nil
-}
-
-func (ct *CheckSSHTunnelSecurity) command() *exec.Cmd {
-	hostName := NewConfig(ct.TargetDest).HostName
-	return exec.Command("curl", fmt.Sprintf("%s:%s", hostName, ct.Port), "--max-time", "1")
 }
 
 type SSHTunnelStop struct {
