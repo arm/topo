@@ -122,11 +122,12 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 
 	hostName := NewConfig(ct.TargetDest).HostName
 	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", hostName, ct.Port), "--max-time", "1")
-	cmd.Stdout = w
-	cmd.Stderr = w
+	// curl failing is the success path here; suppress its output so a
+	// "Failed to connect" line doesn't appear in the deployment log.
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
 
-	err := cmd.Run()
-	if err == nil {
+	if err := cmd.Run(); err == nil {
 		return fmt.Errorf("remote sshd is exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry is reachable without SSH auth", ct.Port)
 	}
 
