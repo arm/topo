@@ -14,7 +14,7 @@ func lscpuJSON(fields string) string {
 	return `{"lscpu": [` + fields + `]}`
 }
 
-func TestProbeCPU(t *testing.T) {
+func TestHostProcessors(t *testing.T) {
 	t.Run("parses lscpu with clusters", func(t *testing.T) {
 		r := &runner.Fake{
 			Binaries: []string{"lscpu"},
