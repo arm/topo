@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference    = 'SilentlyContinue'
 
 $Usage = @'
-PowerShell installer for topo on Windows.
+PowerShell bootstrap installer for topo on Windows.
 Downloads a release from the Arm artifactory server, installs it under the
 current user, and ensures the install directory is on your PATH.
 
@@ -64,21 +64,29 @@ function Build-DownloadUrl {
     return "$BaseUrl/$Version/windows/$archive"
 }
 
+function Exit-IfTopoAlreadyInstalled {
+    param([string]$Requested)
+
+    if (-not [string]::IsNullOrWhiteSpace($Requested)) {
+        return
+    }
+
+    $existing = Get-Command $ExeName -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $existing) {
+        return
+    }
+
+    Write-Host "$BinaryName is already installed at $($existing.Source)."
+    Write-Host "Use '$BinaryName upgrade' to update the existing installation, or pass -Path to download to somewhere else."
+    exit 0
+}
+
 function Resolve-InstallDir {
     param([string]$Requested)
 
     if (-not [string]::IsNullOrWhiteSpace($Requested)) {
         New-Item -ItemType Directory -Path $Requested -Force | Out-Null
         return (Resolve-Path -LiteralPath $Requested).ProviderPath
-    }
-
-    $existing = Get-Command $ExeName -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($existing) {
-        $dir = Split-Path -Parent $existing.Source
-        $currentVersion = ''
-        try { $currentVersion = (& $existing.Source --version 2>$null) -join ' ' } catch { }
-        Write-Host "Existing installation found at $dir ($currentVersion), will update in-place"
-        return $dir
     }
 
     # windows convention is to install user-local binaries under %LOCALAPPDATA%\Programs\$BinaryName
@@ -144,11 +152,13 @@ if ($Help) {
     return
 }
 
+$installDir = $null
+Exit-IfTopoAlreadyInstalled -Requested $Path
+$installDir = Resolve-InstallDir -Requested $Path
 $resolvedVersion = Resolve-Version -Requested $Version
 Write-Host "Installing $BinaryName $resolvedVersion"
 
 $url        = Build-DownloadUrl -Version $resolvedVersion
-$installDir = Resolve-InstallDir -Requested $Path
 
 Install-Binary -Url $url -InstallDir $installDir -Version $resolvedVersion
 

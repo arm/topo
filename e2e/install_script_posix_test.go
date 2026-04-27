@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,12 +20,18 @@ func scriptPath(t *testing.T) string {
 	return path
 }
 
-func runInstallScript(t *testing.T, args ...string) (string, error) {
+func runInstallScriptWithEnv(t *testing.T, env []string, args ...string) (string, error) {
 	t.Helper()
 	cmdArgs := append([]string{scriptPath(t)}, args...)
 	cmd := exec.Command("sh", cmdArgs...)
+	cmd.Env = append(os.Environ(), env...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
+}
+
+func runInstallScript(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+	return runInstallScriptWithEnv(t, nil, args...)
 }
 
 func TestInstallScript(t *testing.T) {
@@ -57,7 +64,7 @@ func TestInstallScript(t *testing.T) {
 		assert.FileExists(t, filepath.Join(dir, "topo"))
 	})
 
-	t.Run("can reinstall in-place", func(t *testing.T) {
+	t.Run("can override existing binary with --path", func(t *testing.T) {
 		dir := t.TempDir()
 		_, err := runInstallScript(t, "--path", dir)
 		require.NoError(t, err)
@@ -66,6 +73,20 @@ func TestInstallScript(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.FileExists(t, filepath.Join(dir, "topo"))
+	})
+
+	t.Run("tells user to use upgrade when topo is already installed", func(t *testing.T) {
+		dir := t.TempDir()
+		testutil.RequireWriteFile(t, filepath.Join(dir, "topo"), "")
+		pathWithTopo := dir + string(os.PathListSeparator) + os.Getenv("PATH")
+
+		out, err := runInstallScriptWithEnv(t, []string{"PATH=" + pathWithTopo})
+
+		require.NoError(t, err, "script failed: %s", out)
+		assert.Contains(t, out, "topo is already installed")
+		assert.Contains(t, out, "topo upgrade")
+		assert.NotContains(t, out, "Installing topo")
+		assert.NotContains(t, out, "Installed topo")
 	})
 
 	t.Run("fails on unknown flag", func(t *testing.T) {

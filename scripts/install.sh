@@ -2,7 +2,7 @@
 {
 set -eu
 
-USAGE="POSIX-portable idempotent installer for topo.
+USAGE="POSIX-portable bootstrap installer for topo.
 Downloads a release from the Arm artifactory server and places the binary
 on the current user's PATH.
 
@@ -109,6 +109,23 @@ build_download_url() {
   echo "${BASE_URL}/${version}/${os}/${archive}"
 }
 
+exit_if_topo_already_installed() {
+  requested_install_dir="$1"
+
+  if [ -n "$requested_install_dir" ]; then
+    return
+  fi
+
+  existing="$(command -v "$BINARY_NAME" 2>/dev/null || true)"
+  if [ -z "$existing" ]; then
+    return
+  fi
+
+  echo "${BINARY_NAME} is already installed at ${existing}." >&2
+  echo "Use '${BINARY_NAME} upgrade' to update the existing installation, or pass --path to download to somewhere else." >&2
+  exit 0
+}
+
 resolve_install_dir() {
   install_dir="$1"
 
@@ -118,15 +135,6 @@ resolve_install_dir() {
       exit 1
     }
     echo "$install_dir"
-    return
-  fi
-
-  existing="$(command -v "$BINARY_NAME" 2>/dev/null || true)"
-  if [ -n "$existing" ]; then
-    dir="$(dirname "$existing")"
-    version="$("$existing" --version 2>/dev/null || true)"
-    echo "Existing installation found at ${dir} (${version}), will update in-place" >&2
-    echo "$dir"
     return
   fi
 
@@ -190,11 +198,13 @@ install_binary() {
 main() {
   parse_args "$@"
 
+  exit_if_topo_already_installed "$ARG_INSTALL_DIR"
+
+  install_dir="$(resolve_install_dir "$ARG_INSTALL_DIR")"
   version="$(resolve_version "$ARG_VERSION")"
   echo "Installing ${BINARY_NAME} ${version}"
 
   url="$(build_download_url "$version")"
-  install_dir="$(resolve_install_dir "$ARG_INSTALL_DIR")"
 
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
