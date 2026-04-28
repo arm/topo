@@ -104,9 +104,9 @@ type CheckRemoteForwardNotExposed struct {
 	Port       string
 }
 
-// Detects a remote sshd with GatewayPorts enabled, which would bind the -R
-// forward to 0.0.0.0 on the target instead of its loopback, exposing the
-// local registry to the target's network.
+// Checks whether the RemoteForward port exposes the registry to the target's
+// network, rather than being limited to target loopback. This can happen when
+// sshd permits non-loopback remote forwards, such as GatewayPorts.
 func NewCheckRemoteForwardNotExposed(targetDest Destination, port string) *CheckRemoteForwardNotExposed {
 	return &CheckRemoteForwardNotExposed{TargetDest: targetDest, Port: port}
 }
