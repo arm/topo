@@ -106,22 +106,22 @@ jobs:
             dist/topo_linux_arm64
           if-no-files-found: error
 
-      - name: Create GitHub App token for signer
-        id: signer-token
+      - name: Create GitHub App token for publisher
+        id: publisher-token
         uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.ML_REPO_ACCESS_APP_ID }}
           private-key: ${{ secrets.ML_REPO_ACCESS_PRIVATE_KEY }}
           owner: Arm-Debug
-          repositories: topo-signer
+          repositories: topo-publisher
 
       - name: Trigger sign-and-release
         env:
-          GH_TOKEN: ${{ steps.signer-token.outputs.token }}
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
           gh workflow run sign-and-release.yml \
-            --repo Arm-Debug/topo-signer \
+            --repo Arm-Debug/topo-publisher \
             --ref v4 \
             --field run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
