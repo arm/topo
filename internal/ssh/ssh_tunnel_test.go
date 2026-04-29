@@ -127,13 +127,65 @@ func TestSSHTunnelStart(t *testing.T) {
 func TestCheckRemoteForwardNotExposed(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns the expected string", func(t *testing.T) {
-			cs := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("user@remote"), "12345")
+			cs := ssh.NewCheckRemoteForwardNotExposed("remote.example", "12345")
 
 			got := cs.Description()
 
 			assert.Equal(t, "Check tunnel port is not exposed on remote network", got)
 		})
 	})
+
+	t.Run("Run", func(t *testing.T) {
+		t.Run("it passes when nothing answers on the remote port", func(t *testing.T) {
+			port := reserveFreePort(t)
+			cs := ssh.NewCheckRemoteForwardNotExposed("127.0.0.1", port)
+			var buf strings.Builder
+
+			err := cs.Run(&buf)
+
+			require.NoError(t, err)
+			assert.Contains(t, buf.String(), fmt.Sprintf("Port %s is bound to remote loopback only", port))
+		})
+
+		t.Run("it fails when a TCP listener is bound on the remote port", func(t *testing.T) {
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = listener.Close() })
+			_, port, err := net.SplitHostPort(listener.Addr().String())
+			require.NoError(t, err)
+			cs := ssh.NewCheckRemoteForwardNotExposed("127.0.0.1", port)
+			var buf strings.Builder
+
+			err = cs.Run(&buf)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), fmt.Sprintf("remote sshd might be exposing the forwarded port %s", port))
+		})
+
+		t.Run("it fails when curl exits with any other non-7 error", func(t *testing.T) {
+			// `.invalid` is reserved by RFC 6761 to never resolve, so curl
+			// exits 6 ("Couldn't resolve host") rather than 7. We can't
+			// certify the tunnel is safe, so we must fail.
+			cs := ssh.NewCheckRemoteForwardNotExposed("nonexistent.invalid", "12345")
+			var buf strings.Builder
+
+			err := cs.Run(&buf)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "remote sshd might be exposing the forwarded port 12345")
+			assert.Empty(t, buf.String())
+		})
+	})
+}
+
+func reserveFreePort(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	_, port, err := net.SplitHostPort(listener.Addr().String())
+	require.NoError(t, err)
+	require.NoError(t, listener.Close())
+	return port
 }
 
 func TestSSHTunnelStop(t *testing.T) {

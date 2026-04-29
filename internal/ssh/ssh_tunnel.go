@@ -34,7 +34,12 @@ func ControlSocketPath(targetHost string) string {
 
 func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	start := NewSSHTunnelStart(targetDest, port, useControlSockets)
-	securityCheck := NewCheckRemoteForwardNotExposed(targetDest, port)
+
+	var probeHost string
+	if !targetDest.IsLocalhost() {
+		probeHost = NewConfig(targetDest).HostName
+	}
+	securityCheck := NewCheckRemoteForwardNotExposed(probeHost, port)
 
 	var stop operation.Operation
 	if useControlSockets {
@@ -100,15 +105,15 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 }
 
 type CheckRemoteForwardNotExposed struct {
-	TargetDest Destination
-	Port       string
+	Host string
+	Port string
 }
 
 // Checks whether the RemoteForward port exposes the registry to the target's
 // network, rather than being limited to target loopback. This can happen when
 // sshd permits non-loopback remote forwards, such as GatewayPorts.
-func NewCheckRemoteForwardNotExposed(targetDest Destination, port string) *CheckRemoteForwardNotExposed {
-	return &CheckRemoteForwardNotExposed{TargetDest: targetDest, Port: port}
+func NewCheckRemoteForwardNotExposed(host, port string) *CheckRemoteForwardNotExposed {
+	return &CheckRemoteForwardNotExposed{Host: host, Port: port}
 }
 
 func (ct *CheckRemoteForwardNotExposed) Description() string {
@@ -116,23 +121,23 @@ func (ct *CheckRemoteForwardNotExposed) Description() string {
 }
 
 func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
-	if ct.TargetDest.IsLocalhost() {
+	if ct.Host == "" {
 		return nil
 	}
 
-	hostName := NewConfig(ct.TargetDest).HostName
-	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", hostName, ct.Port), "--max-time", "1")
-	// curl failing is the success path here; suppress its output so a
-	// "Failed to connect" line doesn't appear in the deployment log.
+	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", ct.Host, ct.Port), "--max-time", "1")
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
+	_ = cmd.Run()
 
-	if err := cmd.Run(); err == nil {
-		return fmt.Errorf("remote sshd is exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry is reachable without SSH auth", ct.Port)
+	// Only curl exit 7 ("Failed to connect to host") proves no TCP listener
+	// answered. Anything else — connection succeeded, DNS failure, timeout,
+	// curl missing — leaves us unable to certify the tunnel is safe.
+	if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 7 {
+		_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
+		return nil
 	}
-
-	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
-	return nil
+	return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", ct.Port)
 }
 
 type SSHTunnelStop struct {
