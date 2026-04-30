@@ -1,8 +1,8 @@
 package version
 
-var (
-	Dev = "dev"
+const Dev = "dev"
 
+var (
 	// Version holds the complete version number. Filled in at linking time via -ldflags.
 	Version = Dev
 
