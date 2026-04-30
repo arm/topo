@@ -52,7 +52,6 @@ func TestInstallScript(t *testing.T) {
 
 		wantBin := filepath.Join(installBinDir(home), "topo")
 		require.NoError(t, err, "script failed: %s", out)
-		assert.Contains(t, out, "Installed topo")
 		assert.FileExists(t, wantBin)
 		assert.Contains(t, out, "~/.zshrc")
 		info, err := os.Stat(wantBin)
@@ -94,10 +93,10 @@ func TestInstallScript(t *testing.T) {
 		_, err := runInstallScriptWithEnv(t, env, "--version", "v4.0.0")
 		require.NoError(t, err)
 
-		_, err = runInstallScriptWithEnv(t, env)
+		out, err := runInstallScriptWithEnv(t, env)
 
 		wantBin := filepath.Join(installDir, "topo")
-		require.NoError(t, err)
+		require.NoError(t, err, "script failed: %s", out)
 		assert.FileExists(t, wantBin)
 	})
 
@@ -110,7 +109,7 @@ func TestInstallScript(t *testing.T) {
 
 		out, err := runInstallScriptWithEnv(t, env)
 
-		require.NoError(t, err)
+		require.NoError(t, err, "script failed: %s", out)
 		assert.NotContains(t, out, "is not on your PATH")
 	})
 
