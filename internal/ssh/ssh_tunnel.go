@@ -35,11 +35,7 @@ func ControlSocketPath(targetHost string) string {
 func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
 	start := NewSSHTunnelStart(targetDest, port, useControlSockets)
 
-	var probeHost string
-	if !targetDest.IsLocalhost() {
-		probeHost = NewConfig(targetDest).HostName
-	}
-	securityCheck := NewCheckRemoteForwardNotExposed(probeHost, port)
+	securityCheck := NewCheckRemoteForwardNotExposed(targetDest, port)
 
 	var stop operation.Operation
 	if useControlSockets {
@@ -105,15 +101,15 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 }
 
 type CheckRemoteForwardNotExposed struct {
-	Host string
+	Dest Destination
 	Port string
 }
 
 // Checks whether the RemoteForward port exposes the registry to the target's
 // network, rather than being limited to target loopback. This can happen when
 // sshd permits non-loopback remote forwards, such as GatewayPorts.
-func NewCheckRemoteForwardNotExposed(host, port string) *CheckRemoteForwardNotExposed {
-	return &CheckRemoteForwardNotExposed{Host: host, Port: port}
+func NewCheckRemoteForwardNotExposed(dest Destination, port string) *CheckRemoteForwardNotExposed {
+	return &CheckRemoteForwardNotExposed{Dest: dest, Port: port}
 }
 
 func (ct *CheckRemoteForwardNotExposed) Description() string {
@@ -121,10 +117,12 @@ func (ct *CheckRemoteForwardNotExposed) Description() string {
 }
 
 func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
-	if ct.Host == "" {
+	if ct.Dest.IsLocalhost() {
 		return nil
 	}
-	if IsRemotePortDefinitelyNotListening(ct.Host, ct.Port) {
+
+	host := NewConfig(ct.Dest).HostName
+	if IsRemotePortDefinitelyNotListening(host, ct.Port) {
 		_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
 		return nil
 	}

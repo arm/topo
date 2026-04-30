@@ -127,7 +127,7 @@ func TestSSHTunnelStart(t *testing.T) {
 func TestCheckRemoteForwardNotExposed(t *testing.T) {
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns the expected string", func(t *testing.T) {
-			cs := ssh.NewCheckRemoteForwardNotExposed("remote.example", "12345")
+			cs := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("user@remote"), "12345")
 
 			got := cs.Description()
 
