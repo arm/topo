@@ -137,7 +137,7 @@ jobs:
         run: |
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
-            --ref use-publisher \
+            --ref v5 \
             --field run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
             --field release-tag=${VERSION} \
