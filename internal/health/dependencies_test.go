@@ -138,6 +138,27 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, "turn Anakin into a bad man", got[0].Fix)
 	})
 
+	t.Run("captures FixCommand from failing check", func(t *testing.T) {
+		dep := health.Dependency{
+			Binary: "remoteproc-runtime",
+			Label:  "Remoteproc Runtime",
+			Checks: []health.Check{
+				health.BinaryExists{
+					Severity:   health.SeverityWarning,
+					Fix:        "run `topo install remoteproc-runtime`",
+					FixCommand: "topo install remoteproc-runtime",
+				},
+			},
+		}
+		runner := &runner.Fake{}
+
+		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, runner)
+
+		assert.Len(t, got, 1)
+		assert.Equal(t, "topo install remoteproc-runtime", got[0].FixCommand)
+		assert.Equal(t, "run `topo install remoteproc-runtime`", got[0].Fix)
+	})
+
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {
 		deps := []health.Dependency{
 			{Binary: "standalone", Label: "Tools", Checks: []health.Check{health.BinaryExists{}}},

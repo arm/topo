@@ -29,10 +29,11 @@ const (
 )
 
 type HealthCheck struct {
-	Name   string      `json:"name"`
-	Status CheckStatus `json:"status"`
-	Value  string      `json:"value"`
-	Fix    string      `json:"fix,omitempty"`
+	Name       string      `json:"name"`
+	Status     CheckStatus `json:"status"`
+	Value      string      `json:"value"`
+	Fix        string      `json:"fix,omitempty"`
+	FixCommand string      `json:"fixCommand,omitempty"`
 }
 
 type HostReport struct {
@@ -159,11 +160,14 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 	check.Value = status.Error.Error()
 	switch {
 	case errors.Is(status.Error, probe.ErrAuthFailed):
-		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` to configure ssh keys", status.Destination)
+		check.FixCommand = fmt.Sprintf("topo setup-keys --target %s", status.Destination)
+		check.Fix = fmt.Sprintf("run `%s` to configure ssh keys", check.FixCommand)
 	case errors.Is(status.Error, probe.ErrHostKeyUnknown):
-		check.Fix = fmt.Sprintf("run `topo health --target %s --accept-new-host-keys` to trust the target's identity", status.Destination)
+		check.FixCommand = fmt.Sprintf("topo health --target %s --accept-new-host-keys", status.Destination)
+		check.Fix = fmt.Sprintf("run `%s` to trust the target's identity", check.FixCommand)
 	case errors.Is(status.Error, probe.ErrHostKeyChanged):
-		check.Fix = fmt.Sprintf("run `ssh-keygen -R %s` to remove the old host key, then retry", status.Destination.Host)
+		check.FixCommand = fmt.Sprintf("ssh-keygen -R %s", status.Destination.Host)
+		check.Fix = fmt.Sprintf("run `%s` to remove the old host key, then retry", check.FixCommand)
 	}
 	return check
 }
@@ -185,6 +189,7 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 			}
 			hc.Value = ds.Error.Error()
 			hc.Fix = ds.Fix
+			hc.FixCommand = ds.FixCommand
 		}
 		res = append(res, hc)
 	}

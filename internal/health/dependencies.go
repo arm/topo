@@ -52,6 +52,7 @@ var HostRequiredDependencies = []Dependency{
 			},
 			CurrentVersion: version.Version,
 			Fix:            "run `topo upgrade`",
+			FixCommand:     "topo upgrade",
 		}},
 	},
 	{
@@ -100,8 +101,9 @@ var TargetRequiredDependencies = []Dependency{
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
 		Checks: []Check{
 			BinaryExists{
-				Severity: SeverityWarning,
-				Fix:      "run `topo install remoteproc-runtime`",
+				Severity:   SeverityWarning,
+				Fix:        "run `topo install remoteproc-runtime`",
+				FixCommand: "topo install remoteproc-runtime",
 			},
 		},
 	},
@@ -112,8 +114,9 @@ var TargetRequiredDependencies = []Dependency{
 		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
 		Checks: []Check{
 			BinaryExists{
-				Severity: SeverityWarning,
-				Fix:      "run `topo install remoteproc-runtime`",
+				Severity:   SeverityWarning,
+				Fix:        "run `topo install remoteproc-runtime`",
+				FixCommand: "topo install remoteproc-runtime",
 			},
 		},
 	},
@@ -129,6 +132,7 @@ type DependencyStatus struct {
 	Dependency Dependency
 	Error      error
 	Fix        string
+	FixCommand string
 }
 
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
@@ -160,6 +164,7 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 		}
 
 		var fix string
+		var fixCommand string
 		var err error
 		for _, check := range dep.Checks {
 			fix, err = check.Run(ctx, runner, dep)
@@ -168,6 +173,9 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 			}
 
 			if err != nil {
+				if provider, ok := check.(fixCommandProvider); ok {
+					fixCommand = provider.fixCommand()
+				}
 				break
 			}
 		}
@@ -176,6 +184,7 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 			Dependency: dep,
 			Error:      err,
 			Fix:        fix,
+			FixCommand: fixCommand,
 		})
 	}
 	return result
