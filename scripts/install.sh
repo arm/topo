@@ -3,15 +3,15 @@
 set -eu
 
 USAGE="POSIX-portable idempotent installer for topo.
-Downloads a release from the Arm artifactory server and places the binary
-on the current user's PATH.
+Downloads a release from the Arm artifactory server and installs the binary
+to \$HOME/.local/bin.
 
 Usage:
   sh install.sh [--version VERSION] [--path DIRECTORY]
 
 Options:
   --version VERSION   Install a specific version (e.g. v4.0.0). Default: latest.
-  --path DIRECTORY    Install the binary into DIRECTORY instead of auto-detecting."
+  --path DIRECTORY    Install the binary into DIRECTORY instead of \$HOME/.local/bin."
 
 BASE_URL="https://artifacts.tools.arm.com/topo"
 BINARY_NAME="topo"
@@ -112,40 +112,41 @@ build_download_url() {
 resolve_install_dir() {
   install_dir="$1"
 
-  if [ -n "$install_dir" ]; then
-    mkdir -p "$install_dir" 2>/dev/null || {
-      echo "Error: cannot create directory: ${install_dir}" >&2
-      exit 1
-    }
-    echo "$install_dir"
-    return
+  if [ -z "$install_dir" ]; then
+    install_dir="$HOME/.local/bin"
   fi
 
-  existing="$(command -v "$BINARY_NAME" 2>/dev/null || true)"
-  if [ -n "$existing" ]; then
-    dir="$(dirname "$existing")"
-    version="$("$existing" --version 2>/dev/null || true)"
-    echo "Existing installation found at ${dir} (${version}), will update in-place" >&2
-    echo "$dir"
-    return
-  fi
+  mkdir -p "$install_dir" 2>/dev/null || {
+    echo "Error: cannot create directory: ${install_dir}" >&2
+    exit 1
+  }
+  echo "$install_dir"
+}
 
-  preferred_dir="$HOME/.local/bin"
+is_dir_on_path() {
+  install_dir="$1"
 
-  # try conventional user-local directories already on PATH.
-  for candidate in "$preferred_dir" "$HOME/bin"; do
-    case ":${PATH}:" in
-      *":${candidate}:"*)
-        mkdir -p "$candidate" 2>/dev/null && echo "$candidate" && return
-        ;;
-    esac
-  done
+  case ":${PATH:-}:" in
+    *":${install_dir}:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
-  echo "Error: could not find a user-writable directory on PATH." >&2
-  echo "Provide one explicitly with --path, or add $preferred_dir to your PATH with the following command:" >&2
-  echo "  export PATH=\"\$PATH:$preferred_dir\"" >&2
-  echo "To persist across terminal restarts, add the export line to your shell's configuration file (e.g. ~/.bashrc, ~/.zshrc)" >&2
-  exit 1
+path_setup_command() {
+  case "${SHELL:-}" in
+    */zsh)
+      echo "export PATH=\"\$PATH:\$HOME/.local/bin\"; grep -qxF 'export PATH=\"\$PATH:\$HOME/.local/bin\"' ~/.zshrc 2>/dev/null || printf '\\nexport PATH=\"\$PATH:\$HOME/.local/bin\"\\n' >> ~/.zshrc"
+      ;;
+    */bash)
+      echo "export PATH=\"\$PATH:\$HOME/.local/bin\"; grep -qxF 'export PATH=\"\$PATH:\$HOME/.local/bin\"' ~/.bashrc 2>/dev/null || printf '\\nexport PATH=\"\$PATH:\$HOME/.local/bin\"\\n' >> ~/.bashrc"
+      ;;
+    */fish)
+      echo "fish_add_path -U \"\$HOME/.local/bin\""
+      ;;
+    *)
+      echo "export PATH=\"\$PATH:\$HOME/.local/bin\"; grep -qxF 'export PATH=\"\$PATH:\$HOME/.local/bin\"' ~/.profile 2>/dev/null || printf '\\nexport PATH=\"\$PATH:\$HOME/.local/bin\"\\n' >> ~/.profile"
+      ;;
+  esac
 }
 
 download_and_extract() {
@@ -174,15 +175,14 @@ install_binary() {
   install -m 0755 "$src" "${install_dir}/${BINARY_NAME}"
   echo "Installed ${BINARY_NAME} ${version} to ${install_dir}/${BINARY_NAME}"
 
-  if has_cmd "$BINARY_NAME"; then
+  if is_dir_on_path "$install_dir"; then
     echo "Run '${BINARY_NAME} --help' to get started"
   else
     abs_dir=$(cd "$install_dir" && pwd -L)
     echo ""
     echo "Warning: ${abs_dir} is not on your PATH"
-    echo "Add it to your current session with:"
-    echo "  export PATH=\"\$PATH:${abs_dir}\""
-    echo "To persist across terminal restarts, add the export line to your shell's configuration file (e.g. ~/.bashrc, ~/.zshrc)"
+    echo "Add it for the current session and future sessions with:"
+    echo "  $(path_setup_command)"
     echo ""
   fi
 }
