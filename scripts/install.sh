@@ -110,16 +110,15 @@ build_download_url() {
 }
 
 resolve_install_dir() {
-  install_dir="$1"
-
-  if [ -z "$install_dir" ]; then
-    install_dir="$HOME/.local/bin"
-  fi
-
-  mkdir -p "$install_dir" 2>/dev/null || {
+  install_dir="${1:-$HOME/.local/bin}"
+  if ! mkdir -p "$install_dir" 2>/dev/null; then
     echo "Error: cannot create directory: ${install_dir}" >&2
     exit 1
-  }
+  fi
+  if ! install_dir="$(cd "$install_dir" && pwd -L)"; then
+    echo "Error: cannot resolve directory: ${install_dir}" >&2
+    exit 1
+  fi
   echo "$install_dir"
 }
 
@@ -133,18 +132,20 @@ is_dir_on_path() {
 }
 
 path_setup_command() {
+  install_dir="$1"
+
   case "${SHELL:-}" in
     */zsh)
-      echo "export PATH=\"\$PATH:\$HOME/.local/bin\"; grep -qxF 'export PATH=\"\$PATH:\$HOME/.local/bin\"' ~/.zshrc 2>/dev/null || printf '\\nexport PATH=\"\$PATH:\$HOME/.local/bin\"\\n' >> ~/.zshrc"
+      echo "echo 'export PATH=\"\$PATH:${install_dir}\"' >> ~/.zshrc; export PATH=\"\$PATH:${install_dir}\""
       ;;
     */bash)
-      echo "export PATH=\"\$PATH:\$HOME/.local/bin\"; grep -qxF 'export PATH=\"\$PATH:\$HOME/.local/bin\"' ~/.bashrc 2>/dev/null || printf '\\nexport PATH=\"\$PATH:\$HOME/.local/bin\"\\n' >> ~/.bashrc"
+      echo "echo 'export PATH=\"\$PATH:${install_dir}\"' >> ~/.bashrc; export PATH=\"\$PATH:${install_dir}\""
       ;;
     */fish)
-      echo "fish_add_path -U \"\$HOME/.local/bin\""
+      echo "fish_add_path -U \"${install_dir}\""
       ;;
     *)
-      echo "export PATH=\"\$PATH:\$HOME/.local/bin\"; grep -qxF 'export PATH=\"\$PATH:\$HOME/.local/bin\"' ~/.profile 2>/dev/null || printf '\\nexport PATH=\"\$PATH:\$HOME/.local/bin\"\\n' >> ~/.profile"
+      echo "echo 'export PATH=\"\$PATH:${install_dir}\"' >> ~/.profile; export PATH=\"\$PATH:${install_dir}\""
       ;;
   esac
 }
@@ -173,16 +174,15 @@ install_binary() {
   version="$3"
 
   install -m 0755 "$src" "${install_dir}/${BINARY_NAME}"
-  echo "Installed ${BINARY_NAME} ${version} to ${install_dir}/${BINARY_NAME}"
+  echo "Downloaded ${BINARY_NAME} ${version} to ${install_dir}/${BINARY_NAME}"
 
   if is_dir_on_path "$install_dir"; then
     echo "Run '${BINARY_NAME} --help' to get started"
   else
-    abs_dir=$(cd "$install_dir" && pwd -L)
     echo ""
-    echo "Warning: ${abs_dir} is not on your PATH"
+    echo "Warning: ${install_dir} is not on your PATH"
     echo "Add it for the current session and future sessions with:"
-    echo "  $(path_setup_command)"
+    echo "  $(path_setup_command "$install_dir")"
     echo ""
   fi
 }

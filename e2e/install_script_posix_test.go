@@ -47,19 +47,21 @@ func TestInstallScript(t *testing.T) {
 
 		out, err := runInstallScriptWithEnv(t, []string{
 			"HOME=" + home,
+			"SHELL=/bin/zsh",
 		})
 
 		wantBin := filepath.Join(installBinDir(home), "topo")
 		require.NoError(t, err, "script failed: %s", out)
 		assert.Contains(t, out, "Installed topo")
 		assert.FileExists(t, wantBin)
+		assert.Contains(t, out, "~/.zshrc")
 		info, err := os.Stat(wantBin)
 		require.NoError(t, err)
 		assert.NotZero(t, info.Mode()&0o111, "binary should be executable")
 	})
 
 	t.Run("installs a specific version", func(t *testing.T) {
-		version := "v4.0.0"
+		version := "4.0.0"
 		dir := t.TempDir()
 
 		out, err := runInstallScript(t, "--version", version, "--path", dir)
@@ -68,7 +70,10 @@ func TestInstallScript(t *testing.T) {
 		require.NoError(t, err, "script failed: %s", out)
 		assert.Contains(t, out, version)
 		assert.FileExists(t, wantBin)
-		// TODO assert that the version of the installed binary matches the requested version
+		cmd := exec.Command(wantBin, "--version")
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err)
+		assert.Contains(t, string(output), version)
 	})
 
 	t.Run("installs to custom path when requested", func(t *testing.T) {
@@ -102,6 +107,7 @@ func TestInstallScript(t *testing.T) {
 			"HOME=" + home,
 			"PATH=" + installBinDir(home) + string(os.PathListSeparator) + os.Getenv("PATH"),
 		}
+
 		out, err := runInstallScriptWithEnv(t, env)
 
 		require.NoError(t, err)
