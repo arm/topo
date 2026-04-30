@@ -3,15 +3,14 @@
 set -eu
 
 USAGE="POSIX-portable idempotent installer for topo.
-Downloads a release from the Arm artifactory server and installs the binary
-to \$HOME/.local/bin.
+Downloads a release from the Arm artifactory server and installs the application.
 
 Usage:
   sh install.sh [--version VERSION] [--path DIRECTORY]
 
 Options:
   --version VERSION   Install a specific version (e.g. v4.0.0). Default: latest.
-  --path DIRECTORY    Install the binary into DIRECTORY instead of \$HOME/.local/bin."
+  --path DIRECTORY    Install to a custom directory. Default: \$HOME/.local/bin."
 
 BASE_URL="https://artifacts.tools.arm.com/topo"
 BINARY_NAME="topo"
