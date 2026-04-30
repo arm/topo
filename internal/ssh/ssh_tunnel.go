@@ -124,21 +124,27 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 	if ct.Host == "" {
 		return nil
 	}
+	if IsRemotePortDefinitelyNotListening(ct.Host, ct.Port) {
+		_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
+		return nil
+	}
+	return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", ct.Port)
+}
 
+func IsRemotePortDefinitelyNotListening(host, port string) bool {
 	// TODO: use curl.exe on windows
-	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", ct.Host, ct.Port), "--max-time", "1")
+	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", host, port), "--max-time", "1")
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	_ = cmd.Run()
 
 	// Only curl exit 7 ("Failed to connect to host") proves no TCP listener
 	// answered. Anything else — connection succeeded, DNS failure, timeout,
-	// curl missing — leaves us unable to certify the tunnel is safe.
+	// curl missing — leaves us unable to certify the port is not not listening.
 	if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 7 {
-		_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
-		return nil
+		return true
 	}
-	return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", ct.Port)
+	return false
 }
 
 type SSHTunnelStop struct {
