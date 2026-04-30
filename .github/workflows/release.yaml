@@ -2,6 +2,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Create a pre-release candidate'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,11 +35,20 @@ jobs:
 
       - name: Calculate next version
         id: calculate_next_version
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          if ! next="$(svu next)"; then
-            echo "svu failed" >&2
-            exit 1
+          if [[ "$PRERELEASE" == "true" ]]; then
+            current="$(svu current)"
+            if [[ "$current" == *-rc.* ]]; then
+              next="$(svu prerelease --prerelease rc)"
+            else
+              next="$(svu next --prerelease rc.1)"
+            fi
+          else
+            next="$(svu next)"
           fi
+
           echo "next_version=$next" >> "$GITHUB_OUTPUT"
 
       - name: Set git config
