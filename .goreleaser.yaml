@@ -26,6 +26,7 @@ builds:
 
 release:
   skip_upload: true
+  prerelease: auto
 
 archives:
   - id: archive
