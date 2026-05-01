@@ -60,6 +60,13 @@ var HostRequiredDependencies = []Dependency{
 		Checks: []Check{BinaryExists{}},
 	},
 	{
+		Binary: "curl",
+		Label:  "Curl",
+		Checks: []Check{
+			BinaryExists{},
+		},
+	},
+	{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,

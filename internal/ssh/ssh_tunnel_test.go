@@ -136,6 +136,41 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 	})
 }
 
+func TestRemotePortRefusedConnection(t *testing.T) {
+	t.Run("it returns true when nothing answers on the remote port", func(t *testing.T) {
+		port := reserveFreePort(t)
+
+		assert.True(t, ssh.RemotePortRefusedConnection("127.0.0.1", port))
+	})
+
+	t.Run("it returns false when a TCP listener is bound on the remote port", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = listener.Close() })
+		_, port, err := net.SplitHostPort(listener.Addr().String())
+		require.NoError(t, err)
+
+		assert.False(t, ssh.RemotePortRefusedConnection("127.0.0.1", port))
+	})
+
+	t.Run("it returns false when curl exits with any other non-7 error", func(t *testing.T) {
+		// `.invalid` is reserved by RFC 6761 to never resolve, so curl
+		// exits 6 ("Couldn't resolve host") rather than 7. We can't
+		// certify the tunnel is safe, so we must fail.
+		assert.False(t, ssh.RemotePortRefusedConnection("nonexistent.invalid", "12345"))
+	})
+}
+
+func reserveFreePort(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	_, port, err := net.SplitHostPort(listener.Addr().String())
+	require.NoError(t, err)
+	require.NoError(t, listener.Close())
+	return port
+}
+
 func TestSSHTunnelStop(t *testing.T) {
 	t.Run("Command", func(t *testing.T) {
 		t.Run("it generates correct ssh command", func(t *testing.T) {
