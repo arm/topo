@@ -3,7 +3,7 @@
 set -eu
 
 USAGE="POSIX-portable idempotent installer for topo.
-Downloads a release from the Arm artifactory server and installs the application.
+Downloads and installs a topo release from the Arm Artifactory server.
 
 Usage:
   sh install.sh [--version VERSION] [--path DIRECTORY]
