@@ -227,6 +227,36 @@ services:
 		assert.ElementsMatch(t, []string{filepath.Base(dir) + "-api", "nginx:1.27"}, got)
 	})
 
+	t.Run("resolves image names from extended services", func(t *testing.T) {
+		dir := t.TempDir()
+		basePath := filepath.Join(dir, "base.yaml")
+		path := filepath.Join(dir, "compose.yaml")
+		testutil.RequireWriteFile(t, basePath, `
+services:
+  image-base:
+    image: duff:latest
+  build-base:
+    build: .
+`)
+		testutil.RequireWriteFile(t, path, `
+name: springfield
+services:
+  duff:
+    extends:
+      file: base.yaml
+      service: image-base
+  api:
+    extends:
+      file: base.yaml
+      service: build-base
+`)
+
+		got, err := compose.ImageNames(path)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"duff:latest", "springfield-api"}, got)
+	})
+
 	t.Run("returns sorted output", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "compose.yaml")
 		testutil.RequireWriteFile(t, path, `
