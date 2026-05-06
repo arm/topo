@@ -2,6 +2,7 @@ package compose_test
 
 import (
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
@@ -185,6 +186,76 @@ func TestRegisterVolumes(t *testing.T) {
 			"existing": types.VolumeConfig{Name: "existing", Driver: "local"},
 			"new":      types.VolumeConfig{},
 		}, project.Volumes)
+	})
+}
+
+func TestImageNames(t *testing.T) {
+	t.Run("returns explicit and generated image names in sorted order", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `
+name: springfield
+services:
+  api:
+    build: .
+  web:
+    image: nginx:1.27
+  worker:
+    build: .
+    image: worker:dev
+`)
+
+		got, err := compose.ImageNames(path)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"nginx:1.27", "springfield-api", "worker:dev"}, got)
+	})
+
+	t.Run("uses the compose file directory when project name is omitted", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "compose.yaml")
+		testutil.RequireWriteFile(t, path, `
+services:
+  api:
+    build: .
+  web:
+    image: nginx:1.27
+`)
+
+		got, err := compose.ImageNames(path)
+
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{filepath.Base(dir) + "-api", "nginx:1.27"}, got)
+	})
+
+	t.Run("returns sorted output", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `
+name: springfield
+services:
+  zulu:
+    build: .
+  alpha:
+    image: alpine:3.20
+  mike:
+    build: .
+    image: mike:dev
+  beta:
+    image: busybox:1.36
+`)
+
+		got, err := compose.ImageNames(path)
+
+		require.NoError(t, err)
+		assert.True(t, sort.StringsAreSorted(got))
+	})
+
+	t.Run("returns error for invalid yaml", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "compose.yaml")
+		testutil.RequireWriteFile(t, path, `{invalid`)
+
+		_, err := compose.ImageNames(path)
+
+		assert.Error(t, err)
 	})
 }
 
