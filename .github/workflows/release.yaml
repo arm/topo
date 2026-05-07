@@ -36,10 +36,44 @@ jobs:
       - name: Calculate next version
         id: calculate_next_version
         run: |
-          if ! next="$(svu next)"; then
+          open_pre_base="$(
+            git tag --list 'v*-pre.*' |
+              sed -n 's/^\(v[0-9][^-]*\)-pre\.[0-9][0-9]*$/\1/p' |
+              sort -u -V |
+              while IFS= read -r candidate; do
+                if ! git rev-parse -q --verify "refs/tags/${candidate}" >/dev/null; then
+                  echo "$candidate"
+                fi
+              done |
+              tail -n1
+          )"
+
+          if ! base="$(svu next)"; then
             echo "svu failed" >&2
             exit 1
           fi
+          base="${base%%-pre.*}"
+
+          if [ -n "$open_pre_base" ]; then
+            base="$open_pre_base"
+          fi
+
+          if [ "${{ inputs.pre-release }}" = "true" ]; then
+            next_pre=1
+            for tag in $(git tag --list "${base}-pre.*"); do
+              suffix="${tag#"${base}-pre."}"
+              case "$suffix" in
+                ''|*[!0-9]*) continue ;;
+              esac
+              if [ "$suffix" -ge "$next_pre" ]; then
+                next_pre=$((suffix + 1))
+              fi
+            done
+            next="${base}-pre.${next_pre}"
+          else
+            next="$base"
+          fi
+
           echo "next_version=$next" >> "$GITHUB_OUTPUT"
 
       - name: Set git config
