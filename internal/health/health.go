@@ -188,8 +188,8 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 				hc.Status = CheckStatusError
 			}
 			hc.Value = ds.Error.Error()
-			hc.Fix = ds.Fix
-			hc.FixCommand = ds.FixCommand
+			hc.Fix = ds.Fix.Text
+			hc.FixCommand = ds.Fix.Command
 		}
 		res = append(res, hc)
 	}

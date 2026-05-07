@@ -211,8 +211,10 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 			{
 				Dependency: health.Dependency{Binary: "pizza", Label: "Food"},
 				Error:      health.WarningError{Err: errors.New("not enough pineapple")},
-				Fix:        "add more pineapple",
-				FixCommand: "pizza --pineapple",
+				Fix: health.Fix{
+					Text:    "add more pineapple",
+					Command: "pizza --pineapple",
+				},
 			},
 		}
 
