@@ -24,6 +24,7 @@
     ]
   },
   "target": {
+    "destination": "ssh://root@localhost:32797",
     "isLocalhost": false,
     "connectivity": {
       "name": "Connectivity",
