@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/testutil"
@@ -41,8 +42,10 @@ func TestHealthCheck(t *testing.T) {
 	t.Run("outputs JSON when specified", func(t *testing.T) {
 		out, err := runCheckHealth(topo, container, "--output", "json")
 
+		normalizedOut := strings.ReplaceAll(out, container.SSHDestination, "ssh://root@localhost:<port>")
 		assert.NoError(t, err)
-		testutil.AssertJsonGoldenFile(t, out, "testdata/TestHealthCheckJson.golden")
+		assert.Contains(t, out, container.SSHDestination)
+		testutil.AssertJsonGoldenFile(t, normalizedOut, "testdata/TestHealthCheckJson.golden")
 	})
 }
 
