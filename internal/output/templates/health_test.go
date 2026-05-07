@@ -121,6 +121,18 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "❌")
 		})
 
+		t.Run("it renders the target destination", func(t *testing.T) {
+			toPrint := templates.PrintableHealthReport{
+				Target: &health.TargetReport{Destination: "ssh://user@my-target"},
+			}
+			var out bytes.Buffer
+
+			err := printable.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "Destination: ssh://user@my-target")
+		})
+
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
 			toPrint := templates.PrintableHealthReport{
 				Target: &health.TargetReport{
@@ -179,6 +191,7 @@ func TestPrintHealthReport(t *testing.T) {
 					},
 				},
 				Target: &health.TargetReport{
+					Destination: "ssh://user@my-target",
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
 						Status: health.CheckStatusOK,
@@ -200,6 +213,7 @@ func TestPrintHealthReport(t *testing.T) {
 					]
 				},
 				"target": {
+					"destination": "ssh://user@my-target",
 					"isLocalhost": false,
 					"connectivity": {"name":"Connected","status":"ok","value":""},
 					"dependencies": [],

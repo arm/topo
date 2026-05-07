@@ -31,6 +31,7 @@ Host
 Target
 ------
 {{- if .Target }}
+Destination: {{ .Target.Destination }}
   {{- if not .Target.IsLocalhost }}
 {{ template "checkRow" .Target.Connectivity }}
   {{- end }}
