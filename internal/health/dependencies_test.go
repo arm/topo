@@ -146,7 +146,7 @@ func TestPerformChecks(t *testing.T) {
 				health.BinaryExists{
 					Severity: health.SeverityWarning,
 					Fix: &health.Fix{
-						Description: "run `topo install remoteproc-runtime`",
+						Description: "Install the remoteproc runtime",
 						Command:     "topo install remoteproc-runtime",
 					},
 				},
@@ -158,7 +158,7 @@ func TestPerformChecks(t *testing.T) {
 
 		assert.Len(t, got, 1)
 		assert.Equal(t, "topo install remoteproc-runtime", got[0].Fix.Command)
-		assert.Equal(t, "run `topo install remoteproc-runtime`", got[0].Fix.Description)
+		assert.Equal(t, "Install the remoteproc runtime", got[0].Fix.Description)
 	})
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {

@@ -161,19 +161,19 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 	case errors.Is(status.Error, probe.ErrAuthFailed):
 		command := fmt.Sprintf("topo setup-keys --target %s", status.Destination)
 		check.Fix = &Fix{
-			Description: fmt.Sprintf("run `%s` to configure ssh keys", command),
+			Description: "Configure SSH keys on remote target",
 			Command:     command,
 		}
 	case errors.Is(status.Error, probe.ErrHostKeyUnknown):
 		command := fmt.Sprintf("topo health --target %s --accept-new-host-keys", status.Destination)
 		check.Fix = &Fix{
-			Description: fmt.Sprintf("run `%s` to trust the target's identity", command),
+			Description: "Trust the target's SSH host key",
 			Command:     command,
 		}
 	case errors.Is(status.Error, probe.ErrHostKeyChanged):
 		command := fmt.Sprintf("ssh-keygen -R %s", status.Destination.Host)
 		check.Fix = &Fix{
-			Description: fmt.Sprintf("run `%s` to remove the old host key, then retry", command),
+			Description: "Remove the old SSH host key from known_hosts, then retry",
 			Command:     command,
 		}
 	}

@@ -52,7 +52,7 @@ var HostRequiredDependencies = []Dependency{
 			},
 			CurrentVersion: version.Version,
 			Fix: &Fix{
-				Description: "run `topo upgrade`",
+				Description: "Upgrade Topo",
 				Command:     "topo upgrade",
 			},
 		}},
@@ -105,7 +105,7 @@ var TargetRequiredDependencies = []Dependency{
 			BinaryExists{
 				Severity: SeverityWarning,
 				Fix: &Fix{
-					Description: "run `topo install remoteproc-runtime`",
+					Description: "Install the remoteproc runtime",
 					Command:     "topo install remoteproc-runtime",
 				},
 			},
@@ -120,7 +120,7 @@ var TargetRequiredDependencies = []Dependency{
 			BinaryExists{
 				Severity: SeverityWarning,
 				Fix: &Fix{
-					Description: "run `topo install remoteproc-runtime`",
+					Description: "Install the remoteproc runtime",
 					Command:     "topo install remoteproc-runtime",
 				},
 			},

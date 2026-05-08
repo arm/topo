@@ -87,7 +87,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Contains(t, got.Connectivity.Fix.Description, "topo setup-keys --target ssh://user@my-target")
+		assert.Equal(t, "Configure SSH keys on remote target", got.Connectivity.Fix.Description)
 		assert.Equal(t, "topo setup-keys --target ssh://user@my-target", got.Connectivity.Fix.Command)
 	})
 
@@ -102,7 +102,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Equal(t, "run `topo health --target ssh://user@my-target --accept-new-host-keys` to trust the target's identity", got.Connectivity.Fix.Description)
+		assert.Equal(t, "Trust the target's SSH host key", got.Connectivity.Fix.Description)
 		assert.Equal(t, "topo health --target ssh://user@my-target --accept-new-host-keys", got.Connectivity.Fix.Command)
 	})
 
@@ -117,7 +117,7 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Equal(t, "run `ssh-keygen -R my-target` to remove the old host key, then retry", got.Connectivity.Fix.Description)
+		assert.Equal(t, "Remove the old SSH host key from known_hosts, then retry", got.Connectivity.Fix.Description)
 		assert.Equal(t, "ssh-keygen -R my-target", got.Connectivity.Fix.Command)
 	})
 }
@@ -141,7 +141,7 @@ func TestHostReport(t *testing.T) {
 					Status: health.CheckStatusInfo,
 					Value:  "out of date",
 					Fix: &health.Fix{
-						Description: "run `topo upgrade`",
+						Description: "Upgrade Topo",
 						Command:     "topo upgrade",
 					},
 				},
@@ -157,7 +157,7 @@ func TestHostReport(t *testing.T) {
 						"status": "info",
 						"value": "out of date",
 						"fix": {
-							"description": "run \u0060topo upgrade\u0060",
+							"description": "Upgrade Topo",
 							"command": "topo upgrade"
 						}
 					}
