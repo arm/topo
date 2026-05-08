@@ -134,15 +134,14 @@ func TestHostReport(t *testing.T) {
 			assert.JSONEq(t, want, string(b))
 		})
 
-		t.Run("includes command when fix is set", func(t *testing.T) {
+		t.Run("omits command when fix has no command", func(t *testing.T) {
 			tr := health.HostReport{Dependencies: []health.HealthCheck{
 				{
-					Name:   "Topo",
-					Status: health.CheckStatusInfo,
-					Value:  "out of date",
+					Name:   "Container Engine",
+					Status: health.CheckStatusError,
+					Value:  "permission denied",
 					Fix: &health.Fix{
-						Description: "Upgrade Topo",
-						Command:     "topo upgrade",
+						Description: "Ensure current user can run docker commands",
 					},
 				},
 			}}
@@ -153,12 +152,11 @@ func TestHostReport(t *testing.T) {
 			want := `{
 				"dependencies": [
 					{
-						"name": "Topo",
-						"status": "info",
-						"value": "out of date",
+						"name": "Container Engine",
+						"status": "error",
+						"value": "permission denied",
 						"fix": {
-							"description": "Upgrade Topo",
-							"command": "topo upgrade"
+							"description": "Ensure current user can run docker commands"
 						}
 					}
 				]
