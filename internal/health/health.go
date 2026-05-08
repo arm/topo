@@ -29,11 +29,10 @@ const (
 )
 
 type HealthCheck struct {
-	Name       string      `json:"name"`
-	Status     CheckStatus `json:"status"`
-	Value      string      `json:"value"`
-	Fix        string      `json:"fix,omitempty"`
-	FixCommand string      `json:"fixCommand,omitempty"`
+	Name   string      `json:"name"`
+	Status CheckStatus `json:"status"`
+	Value  string      `json:"value"`
+	Fix    *Fix        `json:"fix,omitempty"`
 }
 
 type HostReport struct {
@@ -160,14 +159,23 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 	check.Value = status.Error.Error()
 	switch {
 	case errors.Is(status.Error, probe.ErrAuthFailed):
-		check.FixCommand = fmt.Sprintf("topo setup-keys --target %s", status.Destination)
-		check.Fix = fmt.Sprintf("run `%s` to configure ssh keys", check.FixCommand)
+		command := fmt.Sprintf("topo setup-keys --target %s", status.Destination)
+		check.Fix = &Fix{
+			Description: fmt.Sprintf("run `%s` to configure ssh keys", command),
+			Command:     command,
+		}
 	case errors.Is(status.Error, probe.ErrHostKeyUnknown):
-		check.FixCommand = fmt.Sprintf("topo health --target %s --accept-new-host-keys", status.Destination)
-		check.Fix = fmt.Sprintf("run `%s` to trust the target's identity", check.FixCommand)
+		command := fmt.Sprintf("topo health --target %s --accept-new-host-keys", status.Destination)
+		check.Fix = &Fix{
+			Description: fmt.Sprintf("run `%s` to trust the target's identity", command),
+			Command:     command,
+		}
 	case errors.Is(status.Error, probe.ErrHostKeyChanged):
-		check.FixCommand = fmt.Sprintf("ssh-keygen -R %s", status.Destination.Host)
-		check.Fix = fmt.Sprintf("run `%s` to remove the old host key, then retry", check.FixCommand)
+		command := fmt.Sprintf("ssh-keygen -R %s", status.Destination.Host)
+		check.Fix = &Fix{
+			Description: fmt.Sprintf("run `%s` to remove the old host key, then retry", command),
+			Command:     command,
+		}
 	}
 	return check
 }
@@ -188,8 +196,7 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 				hc.Status = CheckStatusError
 			}
 			hc.Value = ds.Error.Error()
-			hc.Fix = ds.Fix.Text
-			hc.FixCommand = ds.Fix.Command
+			hc.Fix = ds.Fix
 		}
 		res = append(res, hc)
 	}

@@ -87,8 +87,8 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Contains(t, got.Connectivity.Fix, "topo setup-keys --target ssh://user@my-target")
-		assert.Equal(t, "topo setup-keys --target ssh://user@my-target", got.Connectivity.FixCommand)
+		assert.Contains(t, got.Connectivity.Fix.Description, "topo setup-keys --target ssh://user@my-target")
+		assert.Equal(t, "topo setup-keys --target ssh://user@my-target", got.Connectivity.Fix.Command)
 	})
 
 	t.Run("when host key is new, Connectivity includes an accept-new-host-keys fix", func(t *testing.T) {
@@ -102,8 +102,8 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Equal(t, "run `topo health --target ssh://user@my-target --accept-new-host-keys` to trust the target's identity", got.Connectivity.Fix)
-		assert.Equal(t, "topo health --target ssh://user@my-target --accept-new-host-keys", got.Connectivity.FixCommand)
+		assert.Equal(t, "run `topo health --target ssh://user@my-target --accept-new-host-keys` to trust the target's identity", got.Connectivity.Fix.Description)
+		assert.Equal(t, "topo health --target ssh://user@my-target --accept-new-host-keys", got.Connectivity.Fix.Command)
 	})
 
 	t.Run("when host key has changed, Connectivity includes a known_hosts fix", func(t *testing.T) {
@@ -117,8 +117,8 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Equal(t, "run `ssh-keygen -R my-target` to remove the old host key, then retry", got.Connectivity.Fix)
-		assert.Equal(t, "ssh-keygen -R my-target", got.Connectivity.FixCommand)
+		assert.Equal(t, "run `ssh-keygen -R my-target` to remove the old host key, then retry", got.Connectivity.Fix.Description)
+		assert.Equal(t, "ssh-keygen -R my-target", got.Connectivity.Fix.Command)
 	})
 }
 
@@ -134,14 +134,16 @@ func TestHostReport(t *testing.T) {
 			assert.JSONEq(t, want, string(b))
 		})
 
-		t.Run("includes fixCommand when set", func(t *testing.T) {
+		t.Run("includes command when fix is set", func(t *testing.T) {
 			tr := health.HostReport{Dependencies: []health.HealthCheck{
 				{
-					Name:       "Topo",
-					Status:     health.CheckStatusInfo,
-					Value:      "out of date",
-					Fix:        "run `topo upgrade`",
-					FixCommand: "topo upgrade",
+					Name:   "Topo",
+					Status: health.CheckStatusInfo,
+					Value:  "out of date",
+					Fix: &health.Fix{
+						Description: "run `topo upgrade`",
+						Command:     "topo upgrade",
+					},
 				},
 			}}
 
@@ -154,8 +156,10 @@ func TestHostReport(t *testing.T) {
 						"name": "Topo",
 						"status": "info",
 						"value": "out of date",
-						"fix": "run \u0060topo upgrade\u0060",
-						"fixCommand": "topo upgrade"
+						"fix": {
+							"description": "run \u0060topo upgrade\u0060",
+							"command": "topo upgrade"
+						}
 					}
 				]
 			}`
@@ -211,9 +215,9 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 			{
 				Dependency: health.Dependency{Binary: "pizza", Label: "Food"},
 				Error:      health.WarningError{Err: errors.New("not enough pineapple")},
-				Fix: health.Fix{
-					Text:    "add more pineapple",
-					Command: "pizza --pineapple",
+				Fix: &health.Fix{
+					Description: "add more pineapple",
+					Command:     "pizza --pineapple",
 				},
 			},
 		}
@@ -221,7 +225,15 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 		got := extract(statuses)
 
 		want := []health.HealthCheck{
-			{Name: "Food", Status: health.CheckStatusWarning, Value: "not enough pineapple", Fix: "add more pineapple", FixCommand: "pizza --pineapple"},
+			{
+				Name:   "Food",
+				Status: health.CheckStatusWarning,
+				Value:  "not enough pineapple",
+				Fix: &health.Fix{
+					Description: "add more pineapple",
+					Command:     "pizza --pineapple",
+				},
+			},
 		}
 		assert.Equal(t, want, got)
 	})

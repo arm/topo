@@ -142,7 +142,7 @@ func TestPrintHealthReport(t *testing.T) {
 			toPrint := templates.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
-						{Fix: "Apply Working Hands Cream"},
+						{Fix: &health.Fix{Description: "Apply Working Hands Cream"}},
 					},
 				},
 			}

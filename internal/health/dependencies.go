@@ -51,9 +51,9 @@ var HostRequiredDependencies = []Dependency{
 				return version.FetchLatest(ctx, version.ArtifactoryBaseURL)
 			},
 			CurrentVersion: version.Version,
-			Fix: Fix{
-				Text:    "run `topo upgrade`",
-				Command: "topo upgrade",
+			Fix: &Fix{
+				Description: "run `topo upgrade`",
+				Command:     "topo upgrade",
 			},
 		}},
 	},
@@ -77,7 +77,7 @@ var HostRequiredDependencies = []Dependency{
 			BinaryExists{},
 			CommandSuccessful{
 				Cmd: "docker info",
-				Fix: Fix{Text: "Ensure current user can run docker commands"},
+				Fix: &Fix{Description: "Ensure current user can run docker commands"},
 			},
 		},
 	},
@@ -92,7 +92,7 @@ var TargetRequiredDependencies = []Dependency{
 			BinaryExists{},
 			CommandSuccessful{
 				Cmd: "docker info",
-				Fix: Fix{Text: "Ensure current user can run docker commands"},
+				Fix: &Fix{Description: "Ensure current user can run docker commands"},
 			},
 		},
 	},
@@ -104,9 +104,9 @@ var TargetRequiredDependencies = []Dependency{
 		Checks: []Check{
 			BinaryExists{
 				Severity: SeverityWarning,
-				Fix: Fix{
-					Text:    "run `topo install remoteproc-runtime`",
-					Command: "topo install remoteproc-runtime",
+				Fix: &Fix{
+					Description: "run `topo install remoteproc-runtime`",
+					Command:     "topo install remoteproc-runtime",
 				},
 			},
 		},
@@ -119,9 +119,9 @@ var TargetRequiredDependencies = []Dependency{
 		Checks: []Check{
 			BinaryExists{
 				Severity: SeverityWarning,
-				Fix: Fix{
-					Text:    "run `topo install remoteproc-runtime`",
-					Command: "topo install remoteproc-runtime",
+				Fix: &Fix{
+					Description: "run `topo install remoteproc-runtime`",
+					Command:     "topo install remoteproc-runtime",
 				},
 			},
 		},
@@ -137,7 +137,7 @@ var TargetRequiredDependencies = []Dependency{
 type DependencyStatus struct {
 	Dependency Dependency
 	Error      error
-	Fix        Fix
+	Fix        *Fix
 }
 
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
@@ -168,7 +168,7 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 			continue
 		}
 
-		var fix Fix
+		var fix *Fix
 		var err error
 		for _, check := range dep.Checks {
 			fix, err = check.Run(ctx, runner, dep)

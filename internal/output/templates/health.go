@@ -19,7 +19,7 @@ const healthCheckTemplate = `
 {{- define "checkRow" -}}
   {{ .Name }}:{{ statusIcon .Status }}{{- if .Value }} ({{ .Value }}){{- end }}
 {{- if .Fix }}
-  → {{ .Fix }}
+  → {{ .Fix.Description }}
 {{- end -}}
 {{- end -}}
 Host

@@ -126,7 +126,7 @@ func TestPerformChecks(t *testing.T) {
 			Checks: []health.Check{
 				health.BinaryExists{
 					Severity: health.SeverityWarning,
-					Fix:      health.Fix{Text: "turn Anakin into a bad man"},
+					Fix:      &health.Fix{Description: "turn Anakin into a bad man"},
 				},
 			},
 		}
@@ -135,19 +135,19 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, runner)
 
 		assert.Len(t, got, 1)
-		assert.Equal(t, health.Fix{Text: "turn Anakin into a bad man"}, got[0].Fix)
+		assert.Equal(t, &health.Fix{Description: "turn Anakin into a bad man"}, got[0].Fix)
 	})
 
-	t.Run("captures FixCommand from failing check", func(t *testing.T) {
+	t.Run("captures fix command from failing check", func(t *testing.T) {
 		dep := health.Dependency{
 			Binary: "remoteproc-runtime",
 			Label:  "Remoteproc Runtime",
 			Checks: []health.Check{
 				health.BinaryExists{
 					Severity: health.SeverityWarning,
-					Fix: health.Fix{
-						Text:    "run `topo install remoteproc-runtime`",
-						Command: "topo install remoteproc-runtime",
+					Fix: &health.Fix{
+						Description: "run `topo install remoteproc-runtime`",
+						Command:     "topo install remoteproc-runtime",
 					},
 				},
 			},
@@ -158,7 +158,7 @@ func TestPerformChecks(t *testing.T) {
 
 		assert.Len(t, got, 1)
 		assert.Equal(t, "topo install remoteproc-runtime", got[0].Fix.Command)
-		assert.Equal(t, "run `topo install remoteproc-runtime`", got[0].Fix.Text)
+		assert.Equal(t, "run `topo install remoteproc-runtime`", got[0].Fix.Description)
 	})
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {
@@ -183,7 +183,7 @@ func TestPerformChecks(t *testing.T) {
 			Label:  "Air Fryer Engine",
 			Checks: []health.Check{health.BinaryExists{}, health.CommandSuccessful{
 				Cmd: "potatoes --cook-well",
-				Fix: health.Fix{Text: "Ensure current user can run the potatoe cooker"},
+				Fix: &health.Fix{Description: "Ensure current user can run the potatoe cooker"},
 			}},
 		}
 		runner := &runner.Fake{
@@ -201,7 +201,7 @@ func TestPerformChecks(t *testing.T) {
 			{
 				Dependency: dep,
 				Error:      errors.New("permission denied"),
-				Fix:        health.Fix{Text: "Ensure current user can run the potatoe cooker"},
+				Fix:        &health.Fix{Description: "Ensure current user can run the potatoe cooker"},
 			},
 		}
 		assert.Equal(t, want, got)

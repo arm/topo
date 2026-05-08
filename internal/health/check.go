@@ -11,12 +11,12 @@ import (
 )
 
 type Check interface {
-	Run(ctx context.Context, r runner.Runner, dep Dependency) (Fix, error)
+	Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error)
 }
 
 type Fix struct {
-	Text    string
-	Command string
+	Description string `json:"description"`
+	Command     string `json:"command,omitempty"`
 }
 
 type CheckSeverity int
@@ -28,46 +28,46 @@ const (
 
 type CommandSuccessful struct {
 	Cmd string
-	Fix Fix
+	Fix *Fix
 }
 
-func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Dependency) (Fix, error) {
+func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
 	_, err := r.Run(ctx, c.Cmd)
 	return c.Fix, err
 }
 
 type BinaryExists struct {
 	Severity CheckSeverity
-	Fix      Fix
+	Fix      *Fix
 }
 
-func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) (Fix, error) {
+func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
 	if err := r.BinaryExists(ctx, dep.Binary); err != nil {
 		if errors.Is(err, runner.ErrTimeout) {
-			return Fix{}, err
+			return nil, err
 		}
 		if b.Severity == SeverityWarning {
 			err = WarningError{Err: err}
 		}
 		return b.Fix, err
 	}
-	return Fix{}, nil
+	return nil, nil
 }
 
 type VersionMatches struct {
 	CurrentVersion string
 	FetchLatest    func(ctx context.Context) (string, error)
-	Fix            Fix
+	Fix            *Fix
 }
 
-func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) (Fix, error) {
+func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) (*Fix, error) {
 	latest, err := v.FetchLatest(ctx)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
-		return Fix{}, nil
+		return nil, nil
 	}
 	if latest == v.CurrentVersion {
-		return Fix{}, nil
+		return nil, nil
 	}
 
 	return v.Fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
