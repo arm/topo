@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"os/exec"
 	"testing"
 
@@ -42,11 +43,9 @@ func TestHealthCheck(t *testing.T) {
 		out, err := runCheckHealth(topo, container, "--output", "json")
 
 		assert.NoError(t, err)
-		testutil.AssertJsonGoldenFileWithOverrides(t, out, "testdata/TestHealthCheckJson.golden", map[string]any{
-			"target": map[string]any{
-				"destination": container.SSHDestination,
-			},
-		})
+		assert.Contains(t, out, container.SSHDestination)
+		wantDest := fmt.Sprintf("\"%s\"", container.SSHDestination)
+		testutil.AssertJsonGoldenFile(t, out, "testdata/TestHealthCheckJson.golden", "\"ssh://.*\"", wantDest)
 	})
 }
 
