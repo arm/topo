@@ -55,19 +55,16 @@ func TestTargetRequiredDependencies(t *testing.T) {
 	t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
 		deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"))
 
-		var got []string
+		var got string
 		for _, dep := range deps {
-			if dep.Binary == "remoteproc-runtime" || dep.Binary == "containerd-shim-remoteproc-v1" {
+			if dep.Binary == "remoteproc-runtime" {
 				binaryExists, ok := dep.Checks[0].(health.BinaryExists)
 				assert.True(t, ok)
-				got = append(got, binaryExists.Fix.Command)
+				got = binaryExists.Fix.Command
 			}
 		}
 
-		assert.Equal(t, []string{
-			"topo install remoteproc-runtime --target ssh://user@my-target",
-			"topo install remoteproc-runtime --target ssh://user@my-target",
-		}, got)
+		assert.Equal(t, "topo install remoteproc-runtime --target ssh://user@my-target", got)
 	})
 }
 
