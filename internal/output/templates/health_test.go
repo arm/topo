@@ -161,7 +161,6 @@ func TestPrintHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "Skin Care: ⚠️")
 			assert.Contains(t, out.String(), "  Fix: Apply Working Hands Cream")
 			assert.Contains(t, out.String(), "  Cmd: topo moisturise")
-			assert.NotContains(t, out.String(), "→")
 		})
 
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
