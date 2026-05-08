@@ -142,7 +142,14 @@ func TestPrintHealthReport(t *testing.T) {
 			toPrint := templates.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
-						{Fix: &health.Fix{Description: "Apply Working Hands Cream"}},
+						{
+							Name:   "Skin Care",
+							Status: health.CheckStatusWarning,
+							Fix: &health.Fix{
+								Description: "Apply Working Hands Cream",
+								Command:     "topo moisturise",
+							},
+						},
 					},
 				},
 			}
@@ -151,7 +158,10 @@ func TestPrintHealthReport(t *testing.T) {
 			err := printable.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "Apply Working Hands Cream")
+			assert.Contains(t, out.String(), "Skin Care: ⚠️")
+			assert.Contains(t, out.String(), "  Fix: Apply Working Hands Cream")
+			assert.Contains(t, out.String(), "  Cmd: topo moisturise")
+			assert.NotContains(t, out.String(), "→")
 		})
 
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
