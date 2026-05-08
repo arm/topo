@@ -24,7 +24,6 @@
     ]
   },
   "target": {
-    "isLocalhost": false,
     "connectivity": {
       "name": "Connectivity",
       "status": "ok",
@@ -42,6 +41,8 @@
         "value": "lscpu"
       }
     ],
+    "destination": "TARGET_DESTINATION",
+    "isLocalhost": false,
     "subsystemDriver": {
       "name": "Subsystem Driver (remoteproc)",
       "status": "info",

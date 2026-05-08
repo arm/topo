@@ -48,6 +48,7 @@ func (r HostReport) MarshalJSON() ([]byte, error) {
 }
 
 type TargetReport struct {
+	Destination     string        `json:"destination"`
 	IsLocalhost     bool          `json:"isLocalhost"`
 	Connectivity    HealthCheck   `json:"connectivity"`
 	Dependencies    []HealthCheck `json:"dependencies"`
@@ -143,6 +144,7 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	}
 
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
+	report.Destination = targetStatus.Connection.Destination.String()
 
 	return report
 }
