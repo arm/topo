@@ -96,7 +96,7 @@ func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bo
 	r, connErr := prepareRunner(ctx, dest, acceptNewHostKeys)
 	status := Status{Connection: ConnectionStatus{Destination: dest, Error: connErr}}
 	if connErr == nil {
-		hs := ProbeHealthStatus(ctx, r)
+		hs := ProbeHealthStatus(ctx, r, dest)
 		status.Dependencies = hs.Dependencies
 		status.Hardware = hs.Hardware
 	}
