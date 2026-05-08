@@ -3,7 +3,6 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/template"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -112,10 +110,10 @@ func AssertFileContents(t *testing.T, wantContents string, path string) {
 
 func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string) {
 	t.Helper()
-	AssertJsonGoldenFileWithOverrides(t, got, goldenPath, nil)
+	AssertJsonGoldenFileWithOverrides(t, got, goldenPath, map[string]any{})
 }
 
-func AssertJsonGoldenFileWithOverrides(t *testing.T, got string, goldenPath string, overrides any) {
+func AssertJsonGoldenFileWithOverrides(t *testing.T, got string, goldenPath string, overrides map[string]any) {
 	t.Helper()
 
 	if os.Getenv("UPDATE_GOLDEN") == "1" {
@@ -124,75 +122,37 @@ func AssertJsonGoldenFileWithOverrides(t *testing.T, got string, goldenPath stri
 		t.Skipf("Updated golden file: %s", goldenPath)
 	}
 
+	gotObj := make(map[string]any)
+	err := json.Unmarshal([]byte(got), &gotObj)
+	require.NoError(t, err)
+
 	wantBytes, err := os.ReadFile(goldenPath)
 	require.NoError(t, err)
 
-	var wantValue any
-	err = json.Unmarshal(wantBytes, &wantValue)
+	wantObj := make(map[string]any)
+	err = json.Unmarshal(wantBytes, &wantObj)
 	require.NoError(t, err)
 
-	if hasJSONOverrides(overrides) {
-		wantValue = MergeJSONValues(wantValue, overrides)
-	}
+	deepMergeMaps(wantObj, overrides)
 
-	wantWithOverrides, err := json.Marshal(wantValue)
-	require.NoError(t, err)
-
-	assert.JSONEq(t, string(wantWithOverrides), got, "output did not match golden file %s", goldenPath)
+	require.Equal(t, wantObj, gotObj, "output did not match golden file %s", goldenPath)
 }
 
-func hasJSONOverrides(value any) bool {
-	switch typedValue := value.(type) {
-	case nil:
-		return false
-	case map[string]any:
-		return len(typedValue) > 0
-	case []any:
-		return len(typedValue) > 0
-	default:
-		return true
-	}
-}
-
-func MergeJSONValues(base, override any) any {
-	baseObj, baseIsObj := base.(map[string]any)
-	overrideObj, overrideIsObj := override.(map[string]any)
-	if baseIsObj && overrideIsObj {
-		return mergeJSONMaps(baseObj, overrideObj)
-	}
-
-	baseArray, baseIsArray := base.([]any)
-	overrideArray, overrideIsArray := override.([]any)
-	if baseIsArray && overrideIsArray {
-		return mergeJSONArrays(baseArray, overrideArray)
-	}
-
-	return override
-}
-
-func mergeJSONMaps(base, override map[string]any) map[string]any {
-	merged := maps.Clone(base)
+func deepMergeMaps(base, override map[string]any) {
 	for key, overrideValue := range override {
-		baseValue, ok := merged[key]
+		baseValue, ok := base[key]
 		if !ok {
-			merged[key] = overrideValue
+			base[key] = overrideValue
 			continue
 		}
 
-		merged[key] = MergeJSONValues(baseValue, overrideValue)
-	}
-	return merged
-}
-
-func mergeJSONArrays(base, override []any) []any {
-	merged := slices.Clone(base)
-	for index, overrideValue := range override {
-		if index >= len(merged) {
-			merged = append(merged, overrideValue)
+		baseObj, baseIsObj := baseValue.(map[string]any)
+		overrideObj, overrideIsObj := overrideValue.(map[string]any)
+		if baseIsObj && overrideIsObj {
+			deepMergeMaps(baseObj, overrideObj)
 			continue
 		}
 
-		merged[index] = MergeJSONValues(merged[index], overrideValue)
+		base[key] = overrideValue
 	}
-	return merged
 }
