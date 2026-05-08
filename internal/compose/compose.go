@@ -177,6 +177,23 @@ func RegisterVolumes(targetProject *types.Project, volumes []types.ServiceVolume
 	}
 }
 
+func ImageNames(composeFilePath string) ([]string, error) {
+	project, err := ReadProject(composeFilePath)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for name, svc := range project.Services {
+		if svc.Image != "" {
+			names = append(names, svc.Image)
+		} else {
+			names = append(names, fmt.Sprintf("%s-%s", project.Name, name))
+		}
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 func PullableServices(composeFilePath string) ([]string, error) {
 	project, err := ReadProject(composeFilePath)
 	if err != nil {

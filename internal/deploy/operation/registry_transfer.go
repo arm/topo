@@ -6,9 +6,9 @@ import (
 	"io"
 	"os/exec"
 	"regexp"
-	"sort"
 	"strings"
 
+	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/deploy/command"
 )
 
@@ -30,7 +30,7 @@ func (r *RegistryTransfer) Description() string {
 }
 
 func (r *RegistryTransfer) Run(w io.Writer) error {
-	images, err := r.getImagesFromCompose(w)
+	images, err := compose.ImageNames(r.composeFile)
 	if err != nil {
 		return err
 	}
@@ -40,21 +40,6 @@ func (r *RegistryTransfer) Run(w io.Writer) error {
 		}
 	}
 	return nil
-}
-
-func (r *RegistryTransfer) getImagesFromCompose(w io.Writer) ([]string, error) {
-	cmd := command.DockerCompose(r.source, r.composeFile, "config", "--images")
-	cmd.Stderr = w
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image names: %w", err)
-	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	for i := range lines {
-		lines[i] = strings.TrimSpace(lines[i])
-	}
-	sort.Strings(lines)
-	return lines, nil
 }
 
 func (r *RegistryTransfer) transferImage(w io.Writer, image string) error {
