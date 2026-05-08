@@ -1,11 +1,11 @@
 package testutil
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -108,26 +108,51 @@ func AssertFileContents(t *testing.T, wantContents string, path string) {
 	require.Equal(t, wantContents, string(got))
 }
 
-func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string, replacements ...string) {
+func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string) {
+	t.Helper()
+	AssertJsonGoldenFileWithOverrides(t, got, goldenPath, map[string]any{})
+}
+
+func AssertJsonGoldenFileWithOverrides(t *testing.T, got string, goldenPath string, overrides map[string]any) {
 	t.Helper()
 
 	if os.Getenv("UPDATE_GOLDEN") == "1" {
 		err := os.WriteFile(goldenPath, []byte(got), 0o644)
 		require.NoError(t, err)
-		return
+		t.Skipf("Updated golden file: %s", goldenPath)
 	}
+
+	gotObj := make(map[string]any)
+	err := json.Unmarshal([]byte(got), &gotObj)
+	require.NoError(t, err)
 
 	wantBytes, err := os.ReadFile(goldenPath)
 	require.NoError(t, err)
-	want := string(wantBytes)
 
-	require.True(t, len(replacements)%2 == 0, "replacements should be in pairs of placeholder and value")
-	for i := 0; i < len(replacements); i += 2 {
-		placeholder := replacements[i]
-		value := replacements[i+1]
-		regexpPlaceholder := regexp.MustCompile(placeholder)
-		want = regexpPlaceholder.ReplaceAllString(want, value)
+	wantObj := make(map[string]any)
+	err = json.Unmarshal(wantBytes, &wantObj)
+	require.NoError(t, err)
+
+	deepMergeMaps(wantObj, overrides)
+
+	require.Equal(t, wantObj, gotObj, "output did not match golden file %s", goldenPath)
+}
+
+func deepMergeMaps(base, override map[string]any) {
+	for key, overrideValue := range override {
+		baseValue, ok := base[key]
+		if !ok {
+			base[key] = overrideValue
+			continue
+		}
+
+		baseObj, baseIsObj := baseValue.(map[string]any)
+		overrideObj, overrideIsObj := overrideValue.(map[string]any)
+		if baseIsObj && overrideIsObj {
+			deepMergeMaps(baseObj, overrideObj)
+			continue
+		}
+
+		base[key] = overrideValue
 	}
-
-	require.JSONEq(t, want, got, "output did not match golden file %s", goldenPath)
 }
