@@ -157,8 +157,11 @@ func TestPerformChecks(t *testing.T) {
 		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, runner)
 
 		assert.Len(t, got, 1)
-		assert.Equal(t, "topo install remoteproc-runtime", got[0].Fix.Command)
-		assert.Equal(t, "Install the remoteproc runtime", got[0].Fix.Description)
+		want := &health.Fix{
+			Description: "Install the remoteproc runtime",
+			Command:     "topo install remoteproc-runtime",
+		}
+		assert.Equal(t, want, got[0].Fix)
 	})
 
 	t.Run("checks dependency with no SoftwarePrerequisites unconditionally", func(t *testing.T) {
