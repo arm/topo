@@ -32,7 +32,7 @@ type HealthCheck struct {
 	Name   string      `json:"name"`
 	Status CheckStatus `json:"status"`
 	Value  string      `json:"value"`
-	Fix    string      `json:"fix,omitempty"`
+	Fix    *Fix        `json:"fix,omitempty"`
 }
 
 type HostReport struct {
@@ -161,11 +161,20 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 	check.Value = status.Error.Error()
 	switch {
 	case errors.Is(status.Error, probe.ErrAuthFailed):
-		check.Fix = fmt.Sprintf("run `topo setup-keys --target %s` to configure ssh keys", status.Destination)
+		check.Fix = &Fix{
+			Description: "Configure SSH keys on remote target",
+			Command:     fmt.Sprintf("topo setup-keys --target %s", status.Destination),
+		}
 	case errors.Is(status.Error, probe.ErrHostKeyUnknown):
-		check.Fix = fmt.Sprintf("run `topo health --target %s --accept-new-host-keys` to trust the target's identity", status.Destination)
+		check.Fix = &Fix{
+			Description: "Trust the target's SSH host key",
+			Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", status.Destination),
+		}
 	case errors.Is(status.Error, probe.ErrHostKeyChanged):
-		check.Fix = fmt.Sprintf("run `ssh-keygen -R %s` to remove the old host key, then retry", status.Destination.Host)
+		check.Fix = &Fix{
+			Description: "Remove the old SSH host key from known_hosts, then retry",
+			Command:     fmt.Sprintf("ssh-keygen -R %s", status.Destination.Host),
+		}
 	}
 	return check
 }

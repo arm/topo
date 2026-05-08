@@ -51,7 +51,10 @@ var HostRequiredDependencies = []Dependency{
 				return version.FetchLatest(ctx, version.ArtifactoryBaseURL)
 			},
 			CurrentVersion: version.Version,
-			Fix:            "run `topo upgrade`",
+			Fix: &Fix{
+				Description: "Upgrade Topo",
+				Command:     "topo upgrade",
+			},
 		}},
 	},
 	{
@@ -74,7 +77,7 @@ var HostRequiredDependencies = []Dependency{
 			BinaryExists{},
 			CommandSuccessful{
 				Cmd: "docker info",
-				Fix: "Ensure current user can run docker commands",
+				Fix: &Fix{Description: "Ensure current user can run docker commands"},
 			},
 		},
 	},
@@ -89,7 +92,7 @@ var TargetRequiredDependencies = []Dependency{
 			BinaryExists{},
 			CommandSuccessful{
 				Cmd: "docker info",
-				Fix: "Ensure current user can run docker commands",
+				Fix: &Fix{Description: "Ensure current user can run docker commands"},
 			},
 		},
 	},
@@ -101,7 +104,10 @@ var TargetRequiredDependencies = []Dependency{
 		Checks: []Check{
 			BinaryExists{
 				Severity: SeverityWarning,
-				Fix:      "run `topo install remoteproc-runtime`",
+				Fix: &Fix{
+					Description: "Install the remoteproc runtime",
+					Command:     "topo install remoteproc-runtime",
+				},
 			},
 		},
 	},
@@ -113,7 +119,10 @@ var TargetRequiredDependencies = []Dependency{
 		Checks: []Check{
 			BinaryExists{
 				Severity: SeverityWarning,
-				Fix:      "run `topo install remoteproc-runtime`",
+				Fix: &Fix{
+					Description: "Install the remoteproc runtime",
+					Command:     "topo install remoteproc-runtime",
+				},
 			},
 		},
 	},
@@ -128,7 +137,7 @@ var TargetRequiredDependencies = []Dependency{
 type DependencyStatus struct {
 	Dependency Dependency
 	Error      error
-	Fix        string
+	Fix        *Fix
 }
 
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
@@ -159,7 +168,7 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 			continue
 		}
 
-		var fix string
+		var fix *Fix
 		var err error
 		for _, check := range dep.Checks {
 			fix, err = check.Run(ctx, runner, dep)

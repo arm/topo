@@ -20,14 +20,14 @@ func TestSetupKeysJourney(t *testing.T) {
 	Step(t, "health reports unknown host key and suggests accept-new-host-keys")
 	out := runTopo(t, topo, "health", "--target", container.SSHDestination)
 	assert.Contains(t, out, "Connectivity: ❌ (ssh host key is unknown)")
-	wantFix := fmt.Sprintf("run `topo health --target %s --accept-new-host-keys", container.SSHDestination)
-	assert.Contains(t, out, wantFix)
+	assert.Contains(t, out, "Fix: Trust the target's SSH host key")
+	assert.Contains(t, out, fmt.Sprintf("Cmd: topo health --target %s --accept-new-host-keys", container.SSHDestination))
 
 	Step(t, "health with accept-new-host-keys trusts host and suggests setup-keys")
 	out = runTopo(t, topo, "health", "--target", container.SSHDestination, "--accept-new-host-keys")
 	assert.Contains(t, out, "Connectivity: ❌ (ssh authentication failed)")
-	wantFix = fmt.Sprintf("run `topo setup-keys --target %s`", container.SSHDestination)
-	assert.Contains(t, out, wantFix)
+	assert.Contains(t, out, "Fix: Configure SSH keys on remote target")
+	assert.Contains(t, out, fmt.Sprintf("Cmd: topo setup-keys --target %s", container.SSHDestination))
 
 	Step(t, "setup-keys generates keys and installs them on the target")
 	askpass := writeAskPassScript(t, sshRootPassword)

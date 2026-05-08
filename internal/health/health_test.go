@@ -87,7 +87,8 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Contains(t, got.Connectivity.Fix, "topo setup-keys --target ssh://user@my-target")
+		assert.Equal(t, "Configure SSH keys on remote target", got.Connectivity.Fix.Description)
+		assert.Equal(t, "topo setup-keys --target ssh://user@my-target", got.Connectivity.Fix.Command)
 	})
 
 	t.Run("when host key is new, Connectivity includes an accept-new-host-keys fix", func(t *testing.T) {
@@ -101,7 +102,8 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Equal(t, "run `topo health --target ssh://user@my-target --accept-new-host-keys` to trust the target's identity", got.Connectivity.Fix)
+		assert.Equal(t, "Trust the target's SSH host key", got.Connectivity.Fix.Description)
+		assert.Equal(t, "topo health --target ssh://user@my-target --accept-new-host-keys", got.Connectivity.Fix.Command)
 	})
 
 	t.Run("when host key has changed, Connectivity includes a known_hosts fix", func(t *testing.T) {
@@ -115,7 +117,8 @@ func TestGenerateTargetReport(t *testing.T) {
 		got := health.GenerateTargetReport(ts)
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
-		assert.Equal(t, "run `ssh-keygen -R my-target` to remove the old host key, then retry", got.Connectivity.Fix)
+		assert.Equal(t, "Remove the old SSH host key from known_hosts, then retry", got.Connectivity.Fix.Description)
+		assert.Equal(t, "ssh-keygen -R my-target", got.Connectivity.Fix.Command)
 	})
 }
 
@@ -128,6 +131,36 @@ func TestHostReport(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{ "dependencies": [] }`
+			assert.JSONEq(t, want, string(b))
+		})
+
+		t.Run("omits command when fix has no command", func(t *testing.T) {
+			tr := health.HostReport{Dependencies: []health.HealthCheck{
+				{
+					Name:   "Container Engine",
+					Status: health.CheckStatusError,
+					Value:  "permission denied",
+					Fix: &health.Fix{
+						Description: "Ensure current user can run docker commands",
+					},
+				},
+			}}
+
+			b, err := json.Marshal(tr)
+
+			require.NoError(t, err)
+			want := `{
+				"dependencies": [
+					{
+						"name": "Container Engine",
+						"status": "error",
+						"value": "permission denied",
+						"fix": {
+							"description": "Ensure current user can run docker commands"
+						}
+					}
+				]
+			}`
 			assert.JSONEq(t, want, string(b))
 		})
 	})
@@ -180,14 +213,25 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 			{
 				Dependency: health.Dependency{Binary: "pizza", Label: "Food"},
 				Error:      health.WarningError{Err: errors.New("not enough pineapple")},
-				Fix:        "add more pineapple",
+				Fix: &health.Fix{
+					Description: "add more pineapple",
+					Command:     "pizza --pineapple",
+				},
 			},
 		}
 
 		got := extract(statuses)
 
 		want := []health.HealthCheck{
-			{Name: "Food", Status: health.CheckStatusWarning, Value: "not enough pineapple", Fix: "add more pineapple"},
+			{
+				Name:   "Food",
+				Status: health.CheckStatusWarning,
+				Value:  "not enough pineapple",
+				Fix: &health.Fix{
+					Description: "add more pineapple",
+					Command:     "pizza --pineapple",
+				},
+			},
 		}
 		assert.Equal(t, want, got)
 	})
