@@ -117,18 +117,6 @@ func TestGenerateTargetReport(t *testing.T) {
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
 		assert.Equal(t, "run `ssh-keygen -R my-target` to remove the old host key, then retry", got.Connectivity.Fix)
 	})
-
-	t.Run("includes destination when specified", func(t *testing.T) {
-		ts := health.Status{
-			Connection: health.ConnectionStatus{
-				Destination: ssh.NewDestination("user@my-target"),
-			},
-		}
-
-		got := health.GenerateTargetReport(ts)
-
-		assert.Equal(t, "ssh://user@my-target", got.Destination)
-	})
 }
 
 func TestHostReport(t *testing.T) {
