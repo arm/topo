@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -108,7 +107,7 @@ func AssertFileContents(t *testing.T, wantContents string, path string) {
 	require.Equal(t, wantContents, string(got))
 }
 
-func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string, replacements ...string) {
+func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string) {
 	t.Helper()
 
 	if os.Getenv("UPDATE_GOLDEN") == "1" {
@@ -120,14 +119,6 @@ func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string, replaceme
 	wantBytes, err := os.ReadFile(goldenPath)
 	require.NoError(t, err)
 	want := string(wantBytes)
-
-	require.True(t, len(replacements)%2 == 0, "replacements should be in pairs of placeholder and value")
-	for i := 0; i < len(replacements); i += 2 {
-		placeholder := replacements[i]
-		value := replacements[i+1]
-		regexpPlaceholder := regexp.MustCompile(placeholder)
-		want = regexpPlaceholder.ReplaceAllString(want, value)
-	}
 
 	require.JSONEq(t, want, got, "output did not match golden file %s", goldenPath)
 }
