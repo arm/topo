@@ -190,7 +190,7 @@ func TestRegisterVolumes(t *testing.T) {
 }
 
 func TestImageNames(t *testing.T) {
-	t.Run("returns explicit and generated image names in sorted order", func(t *testing.T) {
+	t.Run("returns explicit and generated image names", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "compose.yaml")
 		testutil.RequireWriteFile(t, path, `
 name: springfield
@@ -207,7 +207,7 @@ services:
 		got, err := compose.ImageNames(path)
 
 		require.NoError(t, err)
-		assert.Equal(t, []string{"nginx:1.27", "springfield-api", "worker:dev"}, got)
+		assert.ElementsMatch(t, []string{"nginx:1.27", "springfield-api", "worker:dev"}, got)
 	})
 
 	t.Run("uses the compose file directory when project name is omitted", func(t *testing.T) {
@@ -254,7 +254,7 @@ services:
 		got, err := compose.ImageNames(path)
 
 		require.NoError(t, err)
-		assert.Equal(t, []string{"duff:latest", "springfield-api"}, got)
+		assert.ElementsMatch(t, []string{"duff:latest", "springfield-api"}, got)
 	})
 
 	t.Run("returns sorted output", func(t *testing.T) {
