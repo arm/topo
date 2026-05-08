@@ -2,8 +2,10 @@ package health
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/version"
 )
 
@@ -83,55 +85,57 @@ var HostRequiredDependencies = []Dependency{
 	},
 }
 
-var TargetRequiredDependencies = []Dependency{
-	{
-		Binary:         "docker",
-		Label:          "Container Engine",
-		SoftwareEnumID: Docker,
-		Checks: []Check{
-			BinaryExists{},
-			CommandSuccessful{
-				Cmd: "docker info",
-				Fix: &Fix{Description: "Ensure current user can run docker commands"},
-			},
-		},
-	},
-	{
-		Binary:                "remoteproc-runtime",
-		Label:                 "Remoteproc Runtime",
-		SoftwarePrerequisites: []SoftwareDependency{Docker},
-		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks: []Check{
-			BinaryExists{
-				Severity: SeverityWarning,
-				Fix: &Fix{
-					Description: "Install the remoteproc runtime",
-					Command:     "topo install remoteproc-runtime",
+func TargetRequiredDependencies(target ssh.Destination) []Dependency {
+	return []Dependency{
+		{
+			Binary:         "docker",
+			Label:          "Container Engine",
+			SoftwareEnumID: Docker,
+			Checks: []Check{
+				BinaryExists{},
+				CommandSuccessful{
+					Cmd: "docker info",
+					Fix: &Fix{Description: "Ensure current user can run docker commands"},
 				},
 			},
 		},
-	},
-	{
-		Binary:                "containerd-shim-remoteproc-v1",
-		Label:                 "Remoteproc Shim",
-		SoftwarePrerequisites: []SoftwareDependency{Docker},
-		HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-		Checks: []Check{
-			BinaryExists{
-				Severity: SeverityWarning,
-				Fix: &Fix{
-					Description: "Install the remoteproc runtime",
-					Command:     "topo install remoteproc-runtime",
+		{
+			Binary:                "remoteproc-runtime",
+			Label:                 "Remoteproc Runtime",
+			SoftwarePrerequisites: []SoftwareDependency{Docker},
+			HardwarePrerequisite:  []HardwareCapability{Remoteproc},
+			Checks: []Check{
+				BinaryExists{
+					Severity: SeverityWarning,
+					Fix: &Fix{
+						Description: "Install the remoteproc runtime",
+						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
+					},
 				},
 			},
 		},
-	},
-	{
-		Binary:         "lscpu",
-		Label:          "Hardware Info",
-		SoftwareEnumID: Lscpu,
-		Checks:         []Check{BinaryExists{}},
-	},
+		{
+			Binary:                "containerd-shim-remoteproc-v1",
+			Label:                 "Remoteproc Shim",
+			SoftwarePrerequisites: []SoftwareDependency{Docker},
+			HardwarePrerequisite:  []HardwareCapability{Remoteproc},
+			Checks: []Check{
+				BinaryExists{
+					Severity: SeverityWarning,
+					Fix: &Fix{
+						Description: "Install the remoteproc runtime",
+						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
+					},
+				},
+			},
+		},
+		{
+			Binary:         "lscpu",
+			Label:          "Hardware Info",
+			SoftwareEnumID: Lscpu,
+			Checks:         []Check{BinaryExists{}},
+		},
+	}
 }
 
 type DependencyStatus struct {

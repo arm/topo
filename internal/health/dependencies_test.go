@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +20,7 @@ func TestDependencyFormat(t *testing.T) {
 	})
 
 	t.Run("target dependencies are of the correct format", func(t *testing.T) {
-		for _, dep := range health.TargetRequiredDependencies {
+		for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("user@my-target")) {
 			assert.NoError(t, command.ValidateBinaryName(dep.Binary))
 		}
 	})
@@ -29,7 +30,7 @@ func TestDependencyFormat(t *testing.T) {
 		seenEnums := make(map[health.SoftwareDependency]string)
 
 		t.Run("There are no duplicate SoftwareEnumID assignments", func(t *testing.T) {
-			for _, dep := range health.TargetRequiredDependencies {
+			for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("user@my-target")) {
 				if dep.SoftwareEnumID != health.UnsetSoftwareDependency {
 					if existingDep, exists := seenEnums[dep.SoftwareEnumID]; exists {
 						t.Errorf("Duplicate SoftwareEnumID %d assigned to both %q and %q", dep.SoftwareEnumID, existingDep, dep.Binary)
@@ -41,12 +42,29 @@ func TestDependencyFormat(t *testing.T) {
 		})
 
 		t.Run("all SoftwarePrerequisites reference valid SoftwareEnumID", func(t *testing.T) {
-			for _, dep := range health.TargetRequiredDependencies {
+			for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("user@my-target")) {
 				for _, prereq := range dep.SoftwarePrerequisites {
 					assert.True(t, availableEnums[prereq], "%q has SoftwarePrerequisites %v which is not provided by any dependency's SoftwareEnumID", dep.Binary, prereq)
 				}
 			}
 		})
+	})
+}
+
+func TestTargetRequiredDependencies(t *testing.T) {
+	t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
+		deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"))
+
+		var got string
+		for _, dep := range deps {
+			if dep.Binary == "remoteproc-runtime" {
+				binaryExists, ok := dep.Checks[0].(health.BinaryExists)
+				assert.True(t, ok)
+				got = binaryExists.Fix.Command
+			}
+		}
+
+		assert.Equal(t, "topo install remoteproc-runtime --target ssh://user@my-target", got)
 	})
 }
 
