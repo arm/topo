@@ -12,18 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func findDependencyByBinary(t *testing.T, deps []health.Dependency, binary string) (health.Dependency, error) {
-	t.Helper()
-
-	for _, dep := range deps {
-		if dep.Binary == binary {
-			return dep, nil
-		}
-	}
-
-	return health.Dependency{}, errors.New("dependency not found")
-}
-
 func TestDependencyFormat(t *testing.T) {
 	t.Run("host dependencies are of the correct format", func(t *testing.T) {
 		for _, dep := range health.HostRequiredDependencies {
@@ -340,4 +328,16 @@ func TestFilterByHardware(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 	})
+}
+
+func findDependencyByBinary(t *testing.T, deps []health.Dependency, binary string) (health.Dependency, error) {
+	t.Helper()
+
+	for _, dep := range deps {
+		if dep.Binary == binary {
+			return dep, nil
+		}
+	}
+
+	return health.Dependency{}, errors.New("dependency not found")
 }
