@@ -28,7 +28,9 @@ var upgradeCmd = &cobra.Command{
 		defer cancel()
 
 		newVersion, err := upgrade.Upgrade(ctx, spinner)
-		spinner.Stop()
+		if spinner != nil {
+			spinner.Stop()
+		}
 		if err != nil {
 			return err
 		}
