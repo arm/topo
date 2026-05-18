@@ -6,6 +6,7 @@ import (
 
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/upgrade"
 	"github.com/arm/topo/internal/version"
 )
 
@@ -53,9 +54,18 @@ var HostRequiredDependencies = []Dependency{
 				return version.FetchLatest(ctx, version.ArtifactoryBaseURL)
 			},
 			CurrentVersion: version.Version,
-			Fix: &Fix{
-				Description: "Upgrade Topo",
-				Command:     "topo upgrade",
+			BuildFix: func() Fix {
+				fix := Fix{
+					Description: "Upgrade Topo",
+				}
+
+				binPath, err := upgrade.CurrentBinaryPath()
+				if err != nil {
+					return fix
+				}
+
+				_, fix.Command = upgrade.GetUpgradeCommand(binPath)
+				return fix
 			},
 		}},
 	},

@@ -57,7 +57,7 @@ func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) 
 type VersionMatches struct {
 	CurrentVersion string
 	FetchLatest    func(ctx context.Context) (string, error)
-	Fix            *Fix
+	BuildFix       func() Fix
 }
 
 func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) (*Fix, error) {
@@ -70,7 +70,9 @@ func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) 
 		return nil, nil
 	}
 
-	return v.Fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
+	fix := v.BuildFix()
+
+	return &fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
 }
 
 func RemoveVersionChecks(deps []Dependency) []Dependency {
