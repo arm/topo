@@ -123,11 +123,6 @@ resolve_install_dir() {
     echo "Error: cannot resolve directory: ${install_dir}" >&2
     exit 1
   fi
-  if is_homebrew_managed_dir "$install_dir"; then
-    echo "Error: ${install_dir} is managed by Homebrew" >&2
-    echo "Install with Homebrew instead, or choose a non-Homebrew path such as \$HOME/.local/bin." >&2
-    exit 1
-  fi
   echo "$install_dir"
 }
 
