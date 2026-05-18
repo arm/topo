@@ -36,7 +36,10 @@ func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
 	if err := tmpl.Execute(w, r.Containers); err != nil {
 		return "", err
 	}
-	w.Flush()
+	err = w.Flush()
+	if err != nil {
+		return "", err
+	}
 
 	return buf.String(), nil
 }
