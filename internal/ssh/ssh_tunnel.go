@@ -4,27 +4,16 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
 )
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"
-
-func isPortTaken(port string) bool {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%s", port), 2*time.Second)
-	if err != nil {
-		return false
-	}
-	conn.Close() // nolint:errcheck
-	return true
-}
 
 func ControlSocketPath(targetHost string) string {
 	hash := sha256.Sum256([]byte(targetHost))
@@ -70,7 +59,7 @@ func (s *SSHTunnelStart) Command() *exec.Cmd {
 		)
 	}
 	args = append(args,
-		"-R", fmt.Sprintf("%s:127.0.0.1:%s", s.Port, s.Port),
+		"-R", fmt.Sprintf("127.0.0.1:%s:127.0.0.1:%s", s.Port, s.Port),
 		s.TargetDest.String(),
 	)
 	// #nosec -- arguments are validated
@@ -86,12 +75,8 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 		run = cmd.Run
 	}
 	if err := run(); err != nil {
-		if isPortTaken(s.Port) {
-			return fmt.Errorf("port already in use: %s - specify a different port or stop the existing process", s.Port)
-		}
-
 		formattedError := command.FormatError(cmd.Args, err)
-		return fmt.Errorf("failed to open ssh tunnel: %w", formattedError)
+		return fmt.Errorf("failed to open ssh tunnel: %w - ensure port %s is free or specify a different one with `--registry-port`", formattedError, s.Port)
 	}
 	if cmd.Process != nil {
 		s.Process = cmd.Process

@@ -85,34 +85,6 @@ func TestSSHTunnelStart(t *testing.T) {
 		})
 	})
 
-	t.Run("Run", func(t *testing.T) {
-		t.Run("it returns port in use error when port is taken", func(t *testing.T) {
-			listener, err := net.Listen("tcp", "127.0.0.1:0")
-			require.NoError(t, err)
-			defer listener.Close() //nolint:errcheck
-			_, port, err := net.SplitHostPort(listener.Addr().String())
-			require.NoError(t, err)
-			var buf strings.Builder
-			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), port, true)
-
-			err = st.Run(&buf)
-
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "port already in use: "+port)
-		})
-
-		t.Run("it returns generic tunnel error when port is free", func(t *testing.T) {
-			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), "99010", true)
-			var buf strings.Builder
-
-			err := st.Run(&buf)
-
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "failed to open ssh tunnel:")
-			assert.NotContains(t, err.Error(), "port already in use")
-		})
-	})
-
 	t.Run("Description", func(t *testing.T) {
 		t.Run("it returns expected string", func(t *testing.T) {
 			st := ssh.NewSSHTunnelStart(ssh.NewDestination("user@remote"), "12345", true)
