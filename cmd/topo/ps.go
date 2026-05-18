@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 
-	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/output/printable"
+	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/ssh"
-
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +23,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
+		outputFormat := resolveOutput(cmd)
 
 		targetArg, err := requireTarget(cmd)
 		if err != nil {
@@ -33,9 +37,27 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		dest := command.NewHostFromDestination(ssh.NewDestination(targetArg))
 
-		ps := deploy.NewDeploymentPs(composeFile, dest)
+		ps := operation.NewDockerComposePs(composeFile, dest)
 
-		return ps.Run(os.Stdout)
+		var rawPsOut bytes.Buffer
+
+		if err := ps.Run(&rawPsOut); err != nil {
+			return err
+		}
+
+		decoder := json.NewDecoder(&rawPsOut)
+		var containers []templates.ContainerStatus
+		for decoder.More() {
+			var container templates.ContainerStatus
+			if err := decoder.Decode(&container); err != nil {
+				return err
+			}
+			containers = append(containers, container)
+		}
+
+		toPrint := templates.PrintablePSReport{Containers: containers}
+
+		return printable.Print(toPrint, os.Stdout, outputFormat)
 	},
 }
 
