@@ -70,7 +70,10 @@ func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) 
 		return nil, nil
 	}
 
-	fix := v.BuildFix()
+	fix := Fix{}
+	if v.BuildFix != nil {
+		fix = v.BuildFix()
+	}
 
 	return &fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
 }
