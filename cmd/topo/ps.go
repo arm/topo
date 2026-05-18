@@ -47,7 +47,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 		}
 
 		decoder := json.NewDecoder(&rawPsOut)
-		var containers []templates.ContainerStatus
+		containers := []templates.ContainerStatus{}
 		for decoder.More() {
 			var container templates.ContainerStatus
 			if err := decoder.Decode(&container); err != nil {

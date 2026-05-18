@@ -71,7 +71,6 @@ func TestPrintPSReport(t *testing.T) {
 						Ports:  "localhost:8080",
 					},
 				},
-				Target: "localhost",
 			}
 			var out bytes.Buffer
 
@@ -79,8 +78,7 @@ func TestPrintPSReport(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{
-				"containers": [{"Image": "my-app", "Status": "Up 5 minutes", "Ports": "localhost:8080"}],
-				"targetHost": "localhost"
+				"containers": [{"Image": "my-app", "Status": "Up 5 minutes", "Ports": "localhost:8080"}]
 			}`
 			assert.JSONEq(t, want, out.String())
 		})
@@ -88,7 +86,6 @@ func TestPrintPSReport(t *testing.T) {
 		t.Run("renders empty containers as empty array", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
 				Containers: []templates.ContainerStatus{},
-				Target:     "localhost",
 			}
 			var out bytes.Buffer
 
