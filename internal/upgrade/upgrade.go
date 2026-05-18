@@ -21,8 +21,8 @@ func Upgrade(ctx context.Context, reporter term.ProgressReporter) (string, error
 	if err != nil {
 		return "", fmt.Errorf("failed to determine current binary path: %w", err)
 	}
-	if IsTopoBinaryManagedExternally(binPath) {
-		return "", fmt.Errorf("topo was installed by Homebrew; upgrade it with: brew upgrade topo")
+	if isManagedByUs, cmd := GetUpgradeCommand(binPath); !isManagedByUs {
+		return "", fmt.Errorf("topo was installed via external tool; upgrade it by running: %s", cmd)
 	}
 
 	if reporter != nil {
