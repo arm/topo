@@ -16,7 +16,6 @@ type ContainerStatus struct {
 
 type PrintablePSReport struct {
 	Containers []ContainerStatus `json:"containers"`
-	Target     string            `json:"targetHost"`
 }
 
 const PSTemplate = `{{if .}}Image	Status	Ports
