@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       pre-release:
-        description: Publish signed artifacts under the pre-release Artifactory layout.
+        description: Pre-release
         required: false
         type: boolean
         default: false
