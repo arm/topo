@@ -17,6 +17,14 @@ import (
 )
 
 func Upgrade(ctx context.Context, reporter term.ProgressReporter) (string, error) {
+	binPath, err := CurrentBinaryPath()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine current binary path: %w", err)
+	}
+	if IsTopoBinaryManagedExternally(binPath) {
+		return "", fmt.Errorf("topo was installed by Homebrew; upgrade it with: brew upgrade topo")
+	}
+
 	if reporter != nil {
 		reporter.Step("Checking for latest version...")
 	}
@@ -27,11 +35,6 @@ func Upgrade(ctx context.Context, reporter term.ProgressReporter) (string, error
 
 	if version.Version == version.Dev || latest == version.Version {
 		return version.Version, nil
-	}
-
-	binPath, err := CurrentBinaryPath()
-	if err != nil {
-		return "", fmt.Errorf("failed to determine current binary path: %w", err)
 	}
 
 	downloadURL := ArtifactoryDownloadURL(runtime.GOOS, runtime.GOARCH, latest)
