@@ -19,11 +19,10 @@ type PrintablePSReport struct {
 	Target     string            `json:"targetHost"`
 }
 
-const PSTemplate = `Image	Status	Ports
+const PSTemplate = `{{if .}}Image	Status	Ports
 {{- range .}}
 {{.Image}}	{{.Status}}	{{.Ports}}
-{{- end }}
-`
+{{- end }}{{else}}No containers deployed from this project are running.{{end}}`
 
 func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
 	tmpl, err := template.
