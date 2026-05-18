@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"strings"
 
 	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/operation"
@@ -52,6 +53,10 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 			if err := decoder.Decode(&container); err != nil {
 				return err
 			}
+			if i := strings.Index(container.Ports, "->"); i != -1 {
+				container.Ports = container.Ports[:i]
+			}
+			container.Ports = strings.ReplaceAll(container.Ports, "0.0.0.0", targetArg)
 			containers = append(containers, container)
 		}
 
