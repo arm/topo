@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"text/tabwriter"
 	"text/template"
 )
 
@@ -18,10 +19,10 @@ type PrintablePSReport struct {
 	Target     string            `json:"targetHost"`
 }
 
-const PSTemplate = `
-{{ range .}}
-{{.Image}}
-{{ end }}
+const PSTemplate = `Image	Status	Ports
+{{- range .}}
+{{.Image}}	{{.Status}}	{{.Ports}}
+{{- end }}
 `
 
 func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
@@ -32,9 +33,11 @@ func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, r.Containers); err != nil {
+	w := tabwriter.NewWriter(&buf, 0, 0, 3, ' ', 0)
+	if err := tmpl.Execute(w, r.Containers); err != nil {
 		return "", err
 	}
+	w.Flush()
 
 	return buf.String(), nil
 }
