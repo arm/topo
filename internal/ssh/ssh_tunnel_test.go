@@ -69,7 +69,7 @@ func TestSSHTunnelStart(t *testing.T) {
 			st := ssh.NewSSHTunnelStart(dest, port, true)
 			got := strings.Join(st.Command().Args, " ")
 
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R %s:127.0.0.1:%s ssh://user@remote", ssh.ControlSocketPath(dest.String()), port, port)
+			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -fMS %s -R 127.0.0.1:%s:127.0.0.1:%s ssh://user@remote", ssh.ControlSocketPath(dest.String()), port, port)
 			assert.Equal(t, want, got)
 		})
 
@@ -80,7 +80,7 @@ func TestSSHTunnelStart(t *testing.T) {
 			st := ssh.NewSSHTunnelStart(dest, port, false)
 			got := strings.Join(st.Command().Args, " ")
 
-			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -R %s:127.0.0.1:%s ssh://user@remote", port, port)
+			want := fmt.Sprintf("ssh -N -o ExitOnForwardFailure=yes -R 127.0.0.1:%s:127.0.0.1:%s ssh://user@remote", port, port)
 			assert.Equal(t, want, got)
 		})
 	})
