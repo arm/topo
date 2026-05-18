@@ -56,7 +56,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 			if i := strings.Index(container.Ports, "->"); i != -1 {
 				container.Ports = container.Ports[:i]
 			}
-			container.Ports = strings.ReplaceAll(container.Ports, "0.0.0.0", targetArg)
+			container.Ports = strings.ReplaceAll(container.Ports, "0.0.0.0", ssh.NewConfig(ssh.NewDestination(targetArg)).HostName)
 			containers = append(containers, container)
 		}
 
