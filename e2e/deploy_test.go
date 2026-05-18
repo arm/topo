@@ -36,6 +36,7 @@ func TestDeploy(t *testing.T) {
 		port, err := testutil.GetContainerPublicPort(container.Name, "8080")
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
+		requirePS(t, topo, projectDir, container.SSHDestination)
 	})
 
 	t.Run("Clone and deploy", func(t *testing.T) {
@@ -53,6 +54,7 @@ func TestDeploy(t *testing.T) {
 		port, err := testutil.GetContainerPublicPort(container.Name, "8080")
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
+		requirePS(t, topo, cloneDir, container.SSHDestination)
 	})
 }
 
@@ -123,6 +125,18 @@ func assertResponseBody(t *testing.T, url, wantBody string) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.Equal(t, wantBody, string(body))
+}
+
+func requirePS(t *testing.T, topo, projectDir, sshDestination string) {
+	t.Helper()
+	psCmd := exec.Command(topo, "ps", "--target", sshDestination)
+	psCmd.Dir = projectDir
+
+	out, err := psCmd.CombinedOutput()
+
+	require.NoErrorf(t, err, "ps failed: %s", out)
+	assert.Contains(t, string(out), "hello-server")
+	assert.Contains(t, string(out), "8080")
 }
 
 func composeDown(t *testing.T, composeFile, sshDestination string) {
