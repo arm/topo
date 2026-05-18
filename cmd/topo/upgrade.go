@@ -46,6 +46,10 @@ var upgradeCmd = &cobra.Command{
 }
 
 func init() {
+	binPath, err := upgrade.CurrentBinaryPath()
+	if err == nil {
+		upgradeCmd.Hidden = upgrade.IsTopoBinaryManagedExternally(binPath)
+	}
 	addTimeoutFlag(upgradeCmd, 0)
 	rootCmd.AddCommand(upgradeCmd)
 }
