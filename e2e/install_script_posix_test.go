@@ -113,6 +113,13 @@ func TestInstallScript(t *testing.T) {
 		assert.NotContains(t, out, "is not on your PATH")
 	})
 
+	t.Run("refuses to install into Homebrew managed directory", func(t *testing.T) {
+		out, err := runInstallScript(t, "--version", "v4.0.0", "--path", "/opt/homebrew/bin")
+
+		assert.Error(t, err)
+		assert.Contains(t, out, "managed by Homebrew")
+	})
+
 	t.Run("fails on unknown flag", func(t *testing.T) {
 		out, err := runInstallScript(t, "--bogus")
 
