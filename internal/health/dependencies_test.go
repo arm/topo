@@ -12,6 +12,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func findDependencyByBinary(t *testing.T, deps []health.Dependency, binary string) (health.Dependency, error) {
+	t.Helper()
+
+	for _, dep := range deps {
+		if dep.Binary == binary {
+			return dep, nil
+		}
+	}
+
+	return health.Dependency{}, errors.New("dependency not found")
+}
+
 func TestDependencyFormat(t *testing.T) {
 	t.Run("host dependencies are of the correct format", func(t *testing.T) {
 		for _, dep := range health.HostRequiredDependencies {
@@ -20,7 +32,7 @@ func TestDependencyFormat(t *testing.T) {
 	})
 
 	t.Run("target dependencies are of the correct format", func(t *testing.T) {
-		for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("user@my-target")) {
+		for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test")) {
 			assert.NoError(t, command.ValidateBinaryName(dep.Binary))
 		}
 	})
@@ -55,16 +67,16 @@ func TestTargetRequiredDependencies(t *testing.T) {
 	t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
 		deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"))
 
-		var got string
-		for _, dep := range deps {
-			if dep.Binary == "remoteproc-runtime" {
-				binaryExists, ok := dep.Checks[0].(health.BinaryExists)
-				assert.True(t, ok)
-				got = binaryExists.Fix.Command
-			}
+		dep, err := findDependencyByBinary(t, deps, "remoteproc-runtime")
+		assert.NoError(t, err)
+		wantBinaryExistsCheck := health.BinaryExists{
+			Severity: health.SeverityWarning,
+			Fix: &health.Fix{
+				Description: "Install the remoteproc runtime",
+				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+			},
 		}
-
-		assert.Equal(t, "topo install remoteproc-runtime --target ssh://user@my-target", got)
+		assert.Contains(t, dep.Checks, wantBinaryExistsCheck)
 	})
 }
 
