@@ -21,8 +21,8 @@ const skipVersionChecksEnvVar = "TOPO_SKIP_VERSION_CHECKS"
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Check the target host environment",
-	Long:  "Check the target host environment, including container engines and SSH availability.",
+	Short: "Check the target environment",
+	Long:  "Check the target environment, including container engines and SSH availability.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true

@@ -53,7 +53,7 @@ services:
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "linux/amd64")
 	})
-	t.Run("skips remoteproc runtime without platform", func(t *testing.T) {
+	t.Run("skips remoteproc-runtime without platform", func(t *testing.T) {
 		composeFile := writeComposeFile(t, `
 services:
   firmware:
@@ -63,7 +63,7 @@ services:
 
 		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
 	})
-	t.Run("succeeds with valid remoteproc runtime", func(t *testing.T) {
+	t.Run("succeeds with valid remoteproc-runtime", func(t *testing.T) {
 		composeFile := writeComposeFile(t, `
 services:
   rtos-firmware:

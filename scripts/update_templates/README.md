@@ -1,10 +1,10 @@
 # Update Templates Script
 
-This repository includes a Go script used to keep the templates list JSON up to date.
+This repository includes a Go script used to keep the Templates list JSON up to date.
 
 ## Overview
 
-The script regenerates the templates list JSON from a fixed set of repositories. It should be run whenever repositories are added, removed, or changed. Template definitions are sourced from each repository’s x-Topo metadata.
+The script regenerates the Templates list JSON from a fixed set of repositories. It should be run whenever repositories are added, removed, or changed. Template definitions are sourced from each repository’s x-Topo metadata.
 
 ## Usage
 
@@ -14,12 +14,12 @@ Run the script from the root of the repository:
 
 When executed, this command will:
 - Iterate over the configured repository list
-- Collect template metadata
-- Regenerate and update the templates list JSON file
+- Collect Template metadata
+- Regenerate and update the Templates list JSON file
 
 ## Adding a Repository
 
-To include a new repository in the templates list, update the `repoList` variable in the main:
+To include a new repository in the Templates list, update the `repoList` variable in the main:
 
     var repoList = []string{
         "topo-cortexa-welcome#main",
@@ -42,4 +42,3 @@ Example:
 After modifying the list, re-run the script to apply the changes.
 
 Note that this only supports the arm-debug org right now
-

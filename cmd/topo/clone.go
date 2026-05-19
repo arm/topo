@@ -29,7 +29,7 @@ interactive prompts.`,
   topo clone git:ubuntu@example.com:repo.git
   topo clone git:builder@host:tools/platform.git#v2
 
-  # Local directory (must contain a Topo template)
+  # Local directory (must contain a Topo Template)
   topo clone dir:/path/to/template/folder
   topo clone dir:./relative/path
 

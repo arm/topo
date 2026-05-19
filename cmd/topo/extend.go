@@ -12,13 +12,13 @@ import (
 
 var extendCmd = &cobra.Command{
 	Use:   "extend <compose-filepath> <source> [flags] [-- ARG=VALUE ...]",
-	Short: "Add services from a template to the compose file",
+	Short: "Add services from a Template to the compose file",
 	Long: `Add all services from a source to the compose file.
 
 The source argument uses scheme prefixes to specify the source type.
 The git: prefix is optional for git@host and https:// URLs.
 
-Service templates may require build arguments. You can provide them after --
+Topo Templates may require build arguments. You can provide them after --
 or answer interactive prompts.`,
 	Example: `  # Git repository
   topo extend compose.yaml git:https://github.com/user/repo.git
