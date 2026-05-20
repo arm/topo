@@ -22,10 +22,11 @@ type Service struct {
 }
 
 type Metadata struct {
-	Name        string
-	Description string
-	Features    []string
-	Args        []Arg
+	Name           string
+	Description    string
+	SuccessMessage string
+	Features       []string
+	Args           []Arg
 }
 
 type Arg struct {
@@ -75,10 +76,11 @@ func FromDir(destDir string) (Template, error) {
 }
 
 type rawMetadata struct {
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"description"`
-	Features    []string          `yaml:"features,omitempty"`
-	Args        map[string]rawArg `yaml:"args,omitempty"`
+	Name          string            `yaml:"name"`
+	Description   string            `yaml:"description"`
+	SuccessMesage string            `yaml:"success_message"`
+	Features      []string          `yaml:"features,omitempty"`
+	Args          map[string]rawArg `yaml:"args,omitempty"`
 }
 
 type rawArg struct {
@@ -96,6 +98,7 @@ func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
 
 	t.Name = raw.Name
 	t.Description = raw.Description
+	t.SuccessMessage = raw.SuccessMesage
 	t.Features = raw.Features
 	t.Args = parseArgsInOrder(node, raw.Args)
 

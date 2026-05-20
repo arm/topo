@@ -3,6 +3,7 @@ package deploy
 import (
 	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/deploy/post_deploy"
 	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
 )
@@ -53,5 +54,6 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 		}
 	}
 	ops = append(ops, operation.NewDockerComposeUp(composeFile, targetHost, opts.RecreateMode))
+	ops = append(ops, post_deploy.NewPostDeployMessage(composeFile, targetHost))
 	return goperation.NewSequence(ops...), cleanup
 }

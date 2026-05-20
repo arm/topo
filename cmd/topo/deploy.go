@@ -102,6 +102,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 		if err != nil {
 			return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
 		}
+
 		return nil
 	},
 }
