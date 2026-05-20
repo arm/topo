@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/template"
 )
 
@@ -15,7 +14,7 @@ type PostDeployMessage struct {
 	host        command.Host
 }
 
-func NewPostDeployMessage(composeFile string, h command.Host) operation.Operation {
+func NewPostDeployMessage(composeFile string, h command.Host) *PostDeployMessage {
 	return &PostDeployMessage{
 		composeFile: composeFile,
 		host:        h,
