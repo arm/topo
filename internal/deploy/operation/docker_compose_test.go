@@ -97,4 +97,3 @@ func TestNewDockerComposeRun(t *testing.T) {
 		assert.Equal(t, "Start services", got)
 	})
 }
-
