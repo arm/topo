@@ -110,13 +110,13 @@ build_download_url() {
 
 resolve_install_dir() {
   install_dir="${1:-$HOME/.local/bin}"
+  if ! mkdir -p "$install_dir" 2>/dev/null; then
+    echo "Error: cannot create directory: ${install_dir}" >&2
+    exit 1
+  fi
   if is_homebrew_managed_dir "$install_dir"; then
     echo "Error: ${install_dir} is managed by Homebrew" >&2
     echo "Install with Homebrew instead, or choose a non-Homebrew path such as \$HOME/.local/bin." >&2
-    exit 1
-  fi
-  if ! mkdir -p "$install_dir" 2>/dev/null; then
-    echo "Error: cannot create directory: ${install_dir}" >&2
     exit 1
   fi
   if ! install_dir="$(cd "$install_dir" && pwd -L)"; then
@@ -127,18 +127,9 @@ resolve_install_dir() {
 }
 
 is_homebrew_managed_dir() {
-  install_dir="$1"
-
-  case "$install_dir" in
+  case "$1" in
     /opt/homebrew|/opt/homebrew/*|/home/linuxbrew/.linuxbrew|/home/linuxbrew/.linuxbrew/*|/usr/local/Cellar|/usr/local/Cellar/*|/usr/local/Homebrew|/usr/local/Homebrew/*)
       return 0 ;;
-  esac
-
-  case "$(uname -s)" in
-    Darwin*)
-      case "$install_dir" in
-        /usr/local/bin|/usr/local/sbin) return 0 ;;
-      esac ;;
   esac
 
   return 1
