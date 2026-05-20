@@ -9,48 +9,70 @@ import (
 	"github.com/arm/topo/internal/deploy/command"
 )
 
+type RawContainer struct {
+	Image  string `json:"Image"`
+	Status string `json:"Status"`
+	Ports  string `json:"Ports"`
+}
+
 type Container struct {
 	Image   string `json:"Image"`
 	Status  string `json:"Status"`
 	Address string `json:"Address"`
 }
 
-type rawContainer struct {
-	Image  string `json:"Image"`
-	Status string `json:"Status"`
-	Ports  string `json:"Ports"`
+func ListRunningContainers(composeFile string, h command.Host, hostName string) ([]Container, error) {
+	rawJSON, err := getRunningContainers(composeFile, h)
+	if err != nil {
+		return nil, err
+	}
+	raws, err := ParseRunningContainers(rawJSON)
+	if err != nil {
+		return nil, err
+	}
+	return RemapAddresses(raws, hostName), nil
 }
 
-func ListRunningContainers(composeFile string, h command.Host, hostName string) ([]Container, error) {
+func getRunningContainers(composeFile string, h command.Host) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := command.DockerCompose(h, composeFile, "ps", "--format", "json")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("docker compose ps: %w: %s", err, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("docker compose ps: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
+	return stdout.String(), nil
+}
 
-	containers := []Container{}
-	decoder := json.NewDecoder(&stdout)
+func ParseRunningContainers(rawJSON string) ([]RawContainer, error) {
+	raws := []RawContainer{}
+	decoder := json.NewDecoder(strings.NewReader(rawJSON))
 	for decoder.More() {
-		var raw rawContainer
+		var raw RawContainer
 		if err := decoder.Decode(&raw); err != nil {
 			return nil, err
 		}
-		address := raw.Ports
-		if hostName != "" {
-			address = publishedAddress(raw.Ports, hostName)
-		}
-		containers = append(containers, Container{
+		raws = append(raws, raw)
+	}
+	return raws, nil
+}
+
+func RemapAddresses(raws []RawContainer, hostName string) []Container {
+	containers := make([]Container, len(raws))
+	for i, raw := range raws {
+		containers[i] = Container{
 			Image:   raw.Image,
 			Status:  raw.Status,
-			Address: address,
-		})
+			Address: publishedAddress(raw.Ports, hostName),
+		}
 	}
-	return containers, nil
+	return containers
 }
 
 func publishedAddress(rawPorts, hostName string) string {
+	if hostName == "" {
+		return rawPorts
+	}
 	address := rawPorts
 	if i := strings.Index(address, "->"); i != -1 {
 		address = address[:i]
