@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"os"
-	"strings"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/ssh"
@@ -16,10 +13,10 @@ import (
 
 var topoPsCmd = &cobra.Command{
 	Use:   "ps",
-	Short: "List services in a currently running deployment",
-	Long: `List services that are already running on the target host using definitions in the compose file.
+	Short: "List project containers running on the target",
+	Long: `List running containers on the target host for the current Compose project.
 
-The compose file (compose.yaml) must be in the current working directory, as this is used to select containers to be viewed.
+The compose.yaml must be in the current working directory, as this is used to select containers to be viewed.
 `,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -36,33 +33,23 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 			return err
 		}
 
-		dest := command.NewHostFromDestination(ssh.NewDestination(targetArg))
-
-		ps := operation.NewDockerComposePs(composeFile, dest)
-
-		var rawPsOut bytes.Buffer
-
-		if err := ps.Run(&rawPsOut); err != nil {
+		dest := ssh.NewDestination(targetArg)
+		containers, err := deploy.ListRunningContainers(composeFile, command.NewHostFromDestination(dest))
+		if err != nil {
 			return err
 		}
 
-		decoder := json.NewDecoder(&rawPsOut)
-		containers := []templates.ContainerStatus{}
-		for decoder.More() {
-			var container templates.ContainerStatus
-			if err := decoder.Decode(&container); err != nil {
-				return err
+		hostName := ssh.NewConfig(dest).HostName
+		rows := make([]templates.ContainerStatus, len(containers))
+		for i, c := range containers {
+			rows[i] = templates.ContainerStatus{
+				Image:   c.Image,
+				Status:  c.Status,
+				Address: deploy.PublishedAddress(c.Ports, hostName),
 			}
-			if i := strings.Index(container.Ports, "->"); i != -1 {
-				container.Ports = container.Ports[:i]
-			}
-			container.Ports = strings.ReplaceAll(container.Ports, "0.0.0.0", ssh.NewConfig(ssh.NewDestination(targetArg)).HostName)
-			containers = append(containers, container)
 		}
 
-		toPrint := templates.PrintablePSReport{Containers: containers}
-
-		return printable.Print(toPrint, os.Stdout, outputFormat)
+		return printable.Print(templates.PrintablePSReport{Containers: rows}, os.Stdout, outputFormat)
 	},
 }
 

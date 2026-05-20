@@ -14,13 +14,13 @@ import (
 
 func TestPrintPSReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
-		t.Run("renders container image, status, and ports", func(t *testing.T) {
+		t.Run("renders container image, status, and address", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
 				Containers: []templates.ContainerStatus{
 					{
 						Image:  "my-app",
 						Status: "Up 5 minutes",
-						Ports:  "localhost:8080",
+						Address: "localhost:8080",
 					},
 				},
 			}
@@ -68,7 +68,7 @@ func TestPrintPSReport(t *testing.T) {
 					{
 						Image:  "my-app",
 						Status: "Up 5 minutes",
-						Ports:  "localhost:8080",
+						Address: "localhost:8080",
 					},
 				},
 			}
@@ -78,7 +78,7 @@ func TestPrintPSReport(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{
-				"containers": [{"Image": "my-app", "Status": "Up 5 minutes", "Ports": "localhost:8080"}]
+				"containers": [{"Image": "my-app", "Status": "Up 5 minutes", "Address": "localhost:8080"}]
 			}`
 			assert.JSONEq(t, want, out.String())
 		})

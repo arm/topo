@@ -69,10 +69,6 @@ func NewDockerComposeUp(composeFile string, h command.Host, mode RecreateMode) *
 	return NewDockerCompose("Start services", composeFile, h, args)
 }
 
-func NewDockerComposePs(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("List running services", composeFile, h, []string{"ps", "--format", "json"})
-}
-
 func (dc *DockerCompose) Description() string {
 	return dc.description
 }

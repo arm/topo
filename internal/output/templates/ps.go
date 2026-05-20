@@ -9,18 +9,18 @@ import (
 )
 
 type ContainerStatus struct {
-	Image  string `json:"Image"`
-	Status string `json:"Status"`
-	Ports  string `json:"Ports"`
+	Image   string `json:"Image"`
+	Status  string `json:"Status"`
+	Address string `json:"Address"`
 }
 
 type PrintablePSReport struct {
 	Containers []ContainerStatus `json:"containers"`
 }
 
-const PSTemplate = `{{if .}}Image	Status	Ports
+const PSTemplate = `{{if .}}Image	Status	Address
 {{- range .}}
-{{.Image}}	{{.Status}}	{{.Ports}}
+{{.Image}}	{{.Status}}	{{.Address}}
 {{- end }}{{else}}No containers deployed from this project are running.{{end}}`
 
 func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {

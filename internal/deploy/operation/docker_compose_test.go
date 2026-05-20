@@ -98,12 +98,3 @@ func TestNewDockerComposeRun(t *testing.T) {
 	})
 }
 
-func TestNewDockerComposePs(t *testing.T) {
-	op := operation.NewDockerComposePs("/path/to/compose.yaml", command.LocalHost)
-
-	t.Run("Description", func(t *testing.T) {
-		got := op.Description()
-
-		assert.Equal(t, "List running services", got)
-	})
-}
