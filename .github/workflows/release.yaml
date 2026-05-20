@@ -206,3 +206,10 @@ jobs:
 
           echo "::error::Timed out waiting for $ARTIFACT_NAME artifact from topo-publisher run $PUBLISHER_RUN_ID"
           exit 1
+
+      - name: Upload release links artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-links
+          path: publisher-artifacts/release_links.md
+          if-no-files-found: error
