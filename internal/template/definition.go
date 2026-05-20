@@ -78,7 +78,7 @@ func FromDir(destDir string) (Template, error) {
 type rawMetadata struct {
 	Name          string            `yaml:"name"`
 	Description   string            `yaml:"description"`
-	SuccessMesage string            `yaml:"success_message"`
+	SuccessMessage string            `yaml:"success_message"`
 	Features      []string          `yaml:"features,omitempty"`
 	Args          map[string]rawArg `yaml:"args,omitempty"`
 }
@@ -98,7 +98,7 @@ func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
 
 	t.Name = raw.Name
 	t.Description = raw.Description
-	t.SuccessMessage = raw.SuccessMesage
+	t.SuccessMessage = raw.SuccessMessage
 	t.Features = raw.Features
 	t.Args = parseArgsInOrder(node, raw.Args)
 
