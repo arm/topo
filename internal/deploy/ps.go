@@ -3,6 +3,7 @@ package deploy
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/arm/topo/internal/deploy/command"
@@ -21,16 +22,16 @@ type rawContainer struct {
 }
 
 func ListRunningContainers(composeFile string, h command.Host, hostName string) ([]Container, error) {
-	var buf bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	cmd := command.DockerCompose(h, composeFile, "ps", "--format", "json")
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("docker compose ps: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 
 	containers := []Container{}
-	decoder := json.NewDecoder(&buf)
+	decoder := json.NewDecoder(&stdout)
 	for decoder.More() {
 		var raw rawContainer
 		if err := decoder.Decode(&raw); err != nil {
