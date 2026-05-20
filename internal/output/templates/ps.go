@@ -6,16 +6,12 @@ import (
 	"fmt"
 	"text/tabwriter"
 	"text/template"
+
+	"github.com/arm/topo/internal/deploy"
 )
 
-type ContainerStatus struct {
-	Image   string `json:"Image"`
-	Status  string `json:"Status"`
-	Address string `json:"Address"`
-}
-
 type PrintablePSReport struct {
-	Containers []ContainerStatus `json:"containers"`
+	Containers []deploy.Container `json:"containers"`
 }
 
 const PSTemplate = `{{if .}}Image	Status	Address

@@ -34,22 +34,13 @@ The compose.yaml must be in the current working directory, as this is used to se
 		}
 
 		dest := ssh.NewDestination(targetArg)
-		containers, err := deploy.ListRunningContainers(composeFile, command.NewHostFromDestination(dest))
+		hostName := ssh.NewConfig(dest).HostName
+		containers, err := deploy.ListRunningContainers(composeFile, command.NewHostFromDestination(dest), hostName)
 		if err != nil {
 			return err
 		}
 
-		hostName := ssh.NewConfig(dest).HostName
-		rows := make([]templates.ContainerStatus, len(containers))
-		for i, c := range containers {
-			rows[i] = templates.ContainerStatus{
-				Image:   c.Image,
-				Status:  c.Status,
-				Address: deploy.PublishedAddress(c.Ports, hostName),
-			}
-		}
-
-		return printable.Print(templates.PrintablePSReport{Containers: rows}, os.Stdout, outputFormat)
+		return printable.Print(templates.PrintablePSReport{Containers: containers}, os.Stdout, outputFormat)
 	},
 }
 

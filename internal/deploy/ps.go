@@ -9,12 +9,18 @@ import (
 )
 
 type Container struct {
+	Image   string `json:"Image"`
+	Status  string `json:"Status"`
+	Address string `json:"Address"`
+}
+
+type rawContainer struct {
 	Image  string `json:"Image"`
 	Status string `json:"Status"`
 	Ports  string `json:"Ports"`
 }
 
-func ListRunningContainers(composeFile string, h command.Host) ([]Container, error) {
+func ListRunningContainers(composeFile string, h command.Host, hostName string) ([]Container, error) {
 	var buf bytes.Buffer
 	cmd := command.DockerCompose(h, composeFile, "ps", "--format", "json")
 	cmd.Stdout = &buf
@@ -26,16 +32,24 @@ func ListRunningContainers(composeFile string, h command.Host) ([]Container, err
 	containers := []Container{}
 	decoder := json.NewDecoder(&buf)
 	for decoder.More() {
-		var c Container
-		if err := decoder.Decode(&c); err != nil {
+		var raw rawContainer
+		if err := decoder.Decode(&raw); err != nil {
 			return nil, err
 		}
-		containers = append(containers, c)
+		address := raw.Ports
+		if hostName != "" {
+			address = publishedAddress(raw.Ports, hostName)
+		}
+		containers = append(containers, Container{
+			Image:   raw.Image,
+			Status:  raw.Status,
+			Address: address,
+		})
 	}
 	return containers, nil
 }
 
-func PublishedAddress(rawPorts, hostName string) string {
+func publishedAddress(rawPorts, hostName string) string {
 	address := rawPorts
 	if i := strings.Index(address, "->"); i != -1 {
 		address = address[:i]

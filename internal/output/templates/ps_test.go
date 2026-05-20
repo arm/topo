@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/output/printable"
 	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
@@ -16,10 +17,10 @@ func TestPrintPSReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("renders container image, status, and address", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
-				Containers: []templates.ContainerStatus{
+				Containers: []deploy.Container{
 					{
-						Image:  "my-app",
-						Status: "Up 5 minutes",
+						Image:   "my-app",
+						Status:  "Up 5 minutes",
 						Address: "localhost:8080",
 					},
 				},
@@ -36,7 +37,7 @@ func TestPrintPSReport(t *testing.T) {
 
 		t.Run("renders multiple containers", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
-				Containers: []templates.ContainerStatus{
+				Containers: []deploy.Container{
 					{Image: "web"},
 					{Image: "db"},
 				},
@@ -64,10 +65,10 @@ func TestPrintPSReport(t *testing.T) {
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
-				Containers: []templates.ContainerStatus{
+				Containers: []deploy.Container{
 					{
-						Image:  "my-app",
-						Status: "Up 5 minutes",
+						Image:   "my-app",
+						Status:  "Up 5 minutes",
 						Address: "localhost:8080",
 					},
 				},
@@ -85,7 +86,7 @@ func TestPrintPSReport(t *testing.T) {
 
 		t.Run("renders empty containers as empty array", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
-				Containers: []templates.ContainerStatus{},
+				Containers: []deploy.Container{},
 			}
 			var out bytes.Buffer
 
