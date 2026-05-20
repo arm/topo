@@ -128,6 +128,8 @@ jobs:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
+          dispatched_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
             --ref v7 \
@@ -204,10 +206,3 @@ jobs:
 
           echo "::error::Timed out waiting for $ARTIFACT_NAME artifact from topo-publisher run $PUBLISHER_RUN_ID"
           exit 1
-
-      - name: Upload release links artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-links
-          path: publisher-artifacts/release_links.md
-          if-no-files-found: error
