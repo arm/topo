@@ -40,9 +40,6 @@ func getSuccessMessage(composeFile string) (string, error) {
 }
 
 func (p *PostDeployMessage) Run(w io.Writer) error {
-	if w == nil {
-		return nil
-	}
 	successMessage, err := getSuccessMessage(p.composeFile)
 	if err != nil {
 		return err
