@@ -123,10 +123,13 @@ jobs:
           repositories: topo-publisher
 
       - name: Trigger sign-and-release
+        id: trigger_sign_and_release
         env:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
+          dispatched_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
             --ref v6 \
@@ -134,3 +137,71 @@ jobs:
             --field release-version=${VERSION} \
             --field release-tag=${VERSION} \
             --field pre-release=${{ inputs.pre-release }}
+
+          echo "Waiting for topo-publisher sign-and-release run to be created"
+          publisher_run_id=""
+          for attempt in {1..30}; do
+            publisher_run_id="$(gh run list \
+              --repo Arm-Debug/topo-publisher \
+              --branch v6 \
+              --event workflow_dispatch \
+              --created ">=$dispatched_at" \
+              --limit 20 \
+              --json createdAt,databaseId,workflowName \
+              --jq 'map(select(.workflowName == "sign-and-release")) | sort_by(.createdAt) | reverse | .[0].databaseId // empty')"
+
+            if [ -n "$publisher_run_id" ]; then
+              echo "publisher_run_id=$publisher_run_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Publisher workflow run is not visible yet; retrying in 10 seconds ($attempt/30)"
+            sleep 10
+          done
+
+          echo "::error::Timed out waiting for topo-publisher sign-and-release run to be created"
+          exit 1
+
+      - name: Wait for publisher release links artifact
+        env:
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
+          PUBLISHER_RUN_ID: ${{ steps.trigger_sign_and_release.outputs.publisher_run_id }}
+          ARTIFACT_NAME: release-links
+        run: |
+          echo "Waiting for $ARTIFACT_NAME artifact from topo-publisher run $PUBLISHER_RUN_ID"
+
+          for attempt in {1..30}; do
+            artifact_id="$(gh api \
+              "repos/Arm-Debug/topo-publisher/actions/runs/$PUBLISHER_RUN_ID/artifacts" \
+              --jq ".artifacts | map(select(.name == \"$ARTIFACT_NAME\")) | .[0].id // empty")"
+
+            if [ -n "$artifact_id" ]; then
+              echo "Found $ARTIFACT_NAME artifact: $artifact_id"
+              gh run download "$PUBLISHER_RUN_ID" \
+                --repo Arm-Debug/topo-publisher \
+                --name "$ARTIFACT_NAME" \
+                --dir publisher-artifacts
+              exit 0
+            fi
+
+            status="$(gh run view "$PUBLISHER_RUN_ID" \
+              --repo Arm-Debug/topo-publisher \
+              --json status \
+              --jq .status)"
+
+            conclusion="$(gh run view "$PUBLISHER_RUN_ID" \
+              --repo Arm-Debug/topo-publisher \
+              --json conclusion \
+              --jq '.conclusion // ""')"
+
+            if [ "$status" = "completed" ]; then
+              echo "::error::topo-publisher run completed with conclusion '$conclusion' before producing $ARTIFACT_NAME"
+              exit 1
+            fi
+
+            echo "$ARTIFACT_NAME is not available yet; publisher run status is $status; retrying in 60 seconds ($attempt/30)"
+            sleep 60
+          done
+
+          echo "::error::Timed out waiting for $ARTIFACT_NAME artifact from topo-publisher run $PUBLISHER_RUN_ID"
+          exit 1
