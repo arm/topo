@@ -106,12 +106,12 @@ x-topo:
 		require.NoError(t, err)
 		want := template.Metadata{
 			Name:           "test-service",
-			SuccessMessage: "Deployment complete!",
+			DeploymentSuccessMessage: "Deployment complete!",
 		}
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("leaves SuccessMessage empty when deployment_success_message absent from x-topo", func(t *testing.T) {
+	t.Run("leaves DeploymentSuccessMessage empty when deployment_success_message absent from x-topo", func(t *testing.T) {
 		composeFileContents := `
 x-topo:
   name: "test-service"
@@ -120,7 +120,7 @@ x-topo:
 		got := tpl.Metadata
 
 		require.NoError(t, err)
-		assert.Empty(t, got.SuccessMessage)
+		assert.Empty(t, got.DeploymentSuccessMessage)
 	})
 
 	t.Run("errors when compose.yaml missing", func(t *testing.T) {

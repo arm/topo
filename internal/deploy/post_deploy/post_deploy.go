@@ -38,7 +38,7 @@ func getSuccessMessage(composeFile string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return tpl.Metadata.SuccessMessage, nil
+	return tpl.Metadata.DeploymentSuccessMessage, nil
 }
 
 func (p *DeploySuccess) Run(w io.Writer) error {
