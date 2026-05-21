@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -63,11 +64,20 @@ func FetchTemplatesJSON(ctx context.Context, url string) ([]byte, error) {
 	return data, nil
 }
 
-func httpGet(ctx context.Context, url string) ([]byte, error) {
+func httpGet(ctx context.Context, rawURL string) ([]byte, error) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("unsupported URL scheme: %s", parsedURL.Scheme)
+	}
+
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		url,
+		parsedURL.String(),
 		nil,
 	)
 	if err != nil {
@@ -75,7 +85,7 @@ func httpGet(ctx context.Context, url string) ([]byte, error) {
 	}
 
 	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is explicitly provided by the CLI user and scheme-validated above.
 	if err != nil {
 		return nil, err
 	}
