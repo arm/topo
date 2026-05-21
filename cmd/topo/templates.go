@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/arm/topo/internal/catalog"
@@ -12,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const sourceFlag = "source"
+
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
 	Short: "List available Topo Templates",
@@ -19,7 +22,15 @@ var templatesCmd = &cobra.Command{
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
 
-		repos, err := catalog.ListBuiltinTemplates()
+		var repos []catalog.Repo
+		var err error
+		source := getSource(cmd)
+		switch source {
+		case "":
+			repos, err = catalog.ListBuiltinTemplates()
+		default:
+			repos, err = catalog.ListTemplatesFromURL(source)
+		}
 		if err != nil {
 			return err
 		}
@@ -45,8 +56,18 @@ func init() {
 	addTargetFlag(templatesCmd)
 	addTimeoutFlag(templatesCmd, defaultTimeout)
 	if experimentalFeaturesEnabled() {
-		const defaultSource = ""
-		templatesCmd.Flags().StringP("source", "s", "", "where to source templates' data from")
+		templatesCmd.Flags().StringP(sourceFlag, "s", "", "where to source templates' data from")
 	}
 	rootCmd.AddCommand(templatesCmd)
+}
+
+func getSource(cmd *cobra.Command) string {
+	if experimentalFeaturesEnabled() {
+		flagValue, err := cmd.Flags().GetString("source")
+		if err != nil {
+			panic(fmt.Sprintf("internal error: source flag not registered: %v", err))
+		}
+		return flagValue
+	}
+	return ""
 }
