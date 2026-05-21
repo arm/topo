@@ -33,7 +33,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposePull(composeFile, localHost),
 			operation.NewDockerComposePipeTransfer(composeFile, localHost, remoteHost),
 			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
-			post_deploy.NewPostDeployMessage(composeFile, remoteHost),
+			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
 		}
 		assert.Equal(t, want, got)
 	})
@@ -59,7 +59,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
 			wantTunnelStop,
 			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
-			post_deploy.NewPostDeployMessage(composeFile, remoteHost),
+			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
 		)
 		assert.Equal(t, want, got)
 	})
@@ -96,7 +96,7 @@ func TestNewDeployment(t *testing.T) {
 					operation.NewDockerComposeBuild(composeFile, localHost),
 					operation.NewDockerComposePull(composeFile, localHost),
 					operation.NewDockerComposeUp(composeFile, localHost, tt.recreateMode),
-					post_deploy.NewPostDeployMessage(composeFile, localHost),
+					post_deploy.NewDeploySuccess(composeFile, localHost, "Run `topo ps` to see deployed containers"),
 				}
 				assert.Equal(t, want, got)
 			})
@@ -144,7 +144,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
 			wantTunnelEnd,
 			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
-			post_deploy.NewPostDeployMessage(composeFile, remoteHost),
+			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
 		)
 		assert.Equal(t, want, got)
 	})

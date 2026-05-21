@@ -9,20 +9,22 @@ import (
 	"github.com/arm/topo/internal/template"
 )
 
-type PostDeployMessage struct {
-	composeFile string
-	host        command.Host
+type DeploySuccess struct {
+	composeFile    string
+	host           command.Host
+	defaultMessage string
 }
 
-func NewPostDeployMessage(composeFile string, h command.Host) *PostDeployMessage {
-	return &PostDeployMessage{
-		composeFile: composeFile,
-		host:        h,
+func NewDeploySuccess(composeFile string, h command.Host, defaultMessage string) *DeploySuccess {
+	return &DeploySuccess{
+		composeFile:    composeFile,
+		host:           h,
+		defaultMessage: defaultMessage,
 	}
 }
 
-func (t *PostDeployMessage) Description() string {
-	return "Deploy Success"
+func (t *DeploySuccess) Description() string {
+	return "Deployment Success"
 }
 
 func getSuccessMessage(composeFile string) (string, error) {
@@ -39,13 +41,13 @@ func getSuccessMessage(composeFile string) (string, error) {
 	return tpl.Metadata.SuccessMessage, nil
 }
 
-func (p *PostDeployMessage) Run(w io.Writer) error {
+func (p *DeploySuccess) Run(w io.Writer) error {
 	successMessage, err := getSuccessMessage(p.composeFile)
 	if err != nil {
 		return err
 	}
 	if successMessage == "" {
-		successMessage = "Run `topo ps` to see deployed containers"
+		successMessage = p.defaultMessage
 	}
 
 	_, err = fmt.Fprintln(w, successMessage)

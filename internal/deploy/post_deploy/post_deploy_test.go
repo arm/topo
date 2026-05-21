@@ -12,18 +12,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPostDeployMessage(t *testing.T) {
-	t.Run("Run writes deploy_success_message from compose file", func(t *testing.T) {
+func TestDeploySuccess(t *testing.T) {
+	t.Run("Run writes success_message from compose file", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFile := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, composeFile, `
 x-topo:
-  deploy_success_message: "Deployment complete!"
+  success_message: "Deployment complete!"
 services:
   app:
     image: nginx
 `)
-		op := post_deploy.NewPostDeployMessage(composeFile, command.LocalHost)
+		op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "Run `topo ps` to see deployed containers")
 		var buf bytes.Buffer
 
 		err := op.Run(&buf)
@@ -32,7 +32,7 @@ services:
 		assert.Equal(t, "Deployment complete!\n", buf.String())
 	})
 
-	t.Run("Run writes default message when deploy_success_message is absent", func(t *testing.T) {
+	t.Run("Run writes default message when success_message is absent", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFile := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, composeFile, `
@@ -40,7 +40,7 @@ services:
   app:
     image: nginx
 `)
-		op := post_deploy.NewPostDeployMessage(composeFile, command.LocalHost)
+		op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "Run `topo ps` to see deployed containers")
 		var buf bytes.Buffer
 
 		err := op.Run(&buf)
@@ -50,7 +50,7 @@ services:
 	})
 
 	t.Run("Run returns error when compose file does not exist", func(t *testing.T) {
-		op := post_deploy.NewPostDeployMessage("nonexistent.yaml", command.LocalHost)
+		op := post_deploy.NewDeploySuccess("nonexistent.yaml", command.LocalHost, "Run `topo ps` to see deployed containers")
 		var buf bytes.Buffer
 
 		err := op.Run(&buf)
