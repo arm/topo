@@ -39,16 +39,22 @@ func TestParseRunningContainers(t *testing.T) {
 
 func TestRemapAddresses(t *testing.T) {
 	t.Run("strips the container-side port mapping and substitutes the hostname", func(t *testing.T) {
-		input := []deploy.RawContainer{
-			{Image: "web", Status: "Up", Ports: "0.0.0.0:8080->80/tcp"},
-		}
+		input := []deploy.RawContainer{{Ports: "0.0.0.0:8080->80/tcp"}}
 
 		got := deploy.RemapAddresses(input, "myhost")
 
-		assert.Equal(t, []deploy.Container{{Image: "web", Status: "Up", Address: "myhost:8080"}}, got)
+		assert.Equal(t, []deploy.Container{{Address: "myhost:8080"}}, got)
 	})
 
-	t.Run("leaves ports untouched when hostName is empty", func(t *testing.T) {
+	t.Run("retains image and status fields", func(t *testing.T) {
+		input := []deploy.RawContainer{{Image: "web", Status: "Up", Ports: ""}}
+
+		got := deploy.RemapAddresses(input, "myhost")
+
+		assert.Equal(t, []deploy.Container{{Image: "web", Status: "Up"}}, got)
+	})
+
+	t.Run("leaves ports untouched when hostname is empty", func(t *testing.T) {
 		input := []deploy.RawContainer{{Ports: "0.0.0.0:8080->80/tcp"}}
 
 		got := deploy.RemapAddresses(input, "")
@@ -64,12 +70,12 @@ func TestRemapAddresses(t *testing.T) {
 		assert.Equal(t, []deploy.Container{{Address: "127.0.0.1:8080"}}, got)
 	})
 
-	t.Run("keeps only the first mapping when several are published", func(t *testing.T) {
+	t.Run("remaps all published ports", func(t *testing.T) {
 		input := []deploy.RawContainer{{Ports: "0.0.0.0:8080->80/tcp, 0.0.0.0:8443->443/tcp"}}
 
 		got := deploy.RemapAddresses(input, "myhost")
 
-		assert.Equal(t, []deploy.Container{{Address: "myhost:8080"}}, got)
+		assert.Equal(t, []deploy.Container{{Address: "myhost:8080, myhost:8443"}}, got)
 	})
 
 	t.Run("returns an empty slice when given no containers", func(t *testing.T) {

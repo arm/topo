@@ -73,9 +73,12 @@ func publishedAddress(rawPorts, hostName string) string {
 	if hostName == "" {
 		return rawPorts
 	}
-	address := rawPorts
-	if i := strings.Index(address, "->"); i != -1 {
-		address = address[:i]
+	parts := strings.Split(rawPorts, ", ")
+	for i, part := range parts {
+		if idx := strings.Index(part, "->"); idx != -1 {
+			part = part[:idx]
+		}
+		parts[i] = strings.ReplaceAll(part, "0.0.0.0", hostName)
 	}
-	return strings.ReplaceAll(address, "0.0.0.0", hostName)
+	return strings.Join(parts, ", ")
 }
