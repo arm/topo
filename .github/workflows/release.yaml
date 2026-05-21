@@ -128,12 +128,10 @@ jobs:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
-          dispatched_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
             --ref v6 \
-            --field run-id=${{ github.run_id }} \
+            --field source-run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
             --field release-tag=${VERSION} \
             --field pre-release=${{ inputs.pre-release }}
@@ -147,10 +145,9 @@ jobs:
               --workflow sign-and-release.yml \
               --branch v6 \
               --event workflow_dispatch \
-              --created ">=$dispatched_at" \
-              --limit 20 \
+              --limit 5 \
               --json createdAt,databaseId,displayTitle \
-              --jq "map(select(.displayTitle == \"$publisher_run_title\")) | sort_by(.createdAt) | reverse | .[0].databaseId // empty")"
+              --jq "map(select(.displayTitle == \"$publisher_run_title\")) | .[0].databaseId // empty")"
 
             if [ -n "$publisher_run_id" ]; then
               echo "publisher_run_id=$publisher_run_id" >> "$GITHUB_OUTPUT"
