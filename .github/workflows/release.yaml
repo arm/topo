@@ -139,16 +139,18 @@ jobs:
             --field pre-release=${{ inputs.pre-release }}
 
           echo "Waiting for topo-publisher sign-and-release run to be created"
+          publisher_run_title="sign-and-release ${{ github.run_id }}"
           publisher_run_id=""
           for attempt in {1..30}; do
             publisher_run_id="$(gh run list \
               --repo Arm-Debug/topo-publisher \
+              --workflow sign-and-release.yml \
               --branch v6 \
               --event workflow_dispatch \
               --created ">=$dispatched_at" \
               --limit 20 \
-              --json createdAt,databaseId,workflowName \
-              --jq 'map(select(.workflowName == "sign-and-release")) | sort_by(.createdAt) | reverse | .[0].databaseId // empty')"
+              --json createdAt,databaseId,displayTitle \
+              --jq "map(select(.displayTitle == \"$publisher_run_title\")) | sort_by(.createdAt) | reverse | .[0].databaseId // empty")"
 
             if [ -n "$publisher_run_id" ]; then
               echo "publisher_run_id=$publisher_run_id" >> "$GITHUB_OUTPUT"
