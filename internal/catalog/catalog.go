@@ -28,16 +28,3 @@ func ParseRepos(b []byte) ([]Repo, error) {
 	}
 	return templates, nil
 }
-
-func GetRepo(name string, b []byte) (*Repo, error) {
-	repos, err := ParseRepos(b)
-	if err != nil {
-		return nil, err
-	}
-	for i := range repos {
-		if repos[i].Name == name {
-			return &repos[i], nil
-		}
-	}
-	return nil, fmt.Errorf("repo with name %q not found", name)
-}
