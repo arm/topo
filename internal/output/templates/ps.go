@@ -27,7 +27,8 @@ func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
 		return "", err
 	}
 	var buf bytes.Buffer
-	w := tabwriter.NewWriter(&buf, 0, 0, 3, ' ', 0)
+	const columnPadding = 3
+	w := tabwriter.NewWriter(&buf, 0, 0, columnPadding, ' ', 0)
 	if err := tmpl.Execute(w, r.Containers); err != nil {
 		return "", err
 	}
