@@ -81,6 +81,6 @@ func TestRemapAddresses(t *testing.T) {
 	t.Run("returns an empty slice when given no containers", func(t *testing.T) {
 		got := deploy.RemapAddresses(nil, "myhost")
 
-		assert.Equal(t, []deploy.Container{}, got)
+		assert.Empty(t, got)
 	})
 }
