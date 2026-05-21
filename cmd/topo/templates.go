@@ -19,7 +19,7 @@ var templatesCmd = &cobra.Command{
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
 
-		repos, err := catalog.ParseRepos(catalog.TemplatesJSON)
+		repos, err := catalog.ListBuiltinTemplates()
 		if err != nil {
 			return err
 		}
