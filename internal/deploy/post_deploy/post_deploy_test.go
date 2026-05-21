@@ -13,12 +13,12 @@ import (
 )
 
 func TestPostDeployMessage(t *testing.T) {
-	t.Run("Run writes success_message from compose file", func(t *testing.T) {
+	t.Run("Run writes deploy_success_message from compose file", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFile := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, composeFile, `
 x-topo:
-  success_message: "Deployment complete!"
+  deploy_success_message: "Deployment complete!"
 services:
   app:
     image: nginx
@@ -32,7 +32,7 @@ services:
 		assert.Equal(t, "Deployment complete!\n", buf.String())
 	})
 
-	t.Run("Run writes default message when success_message is absent", func(t *testing.T) {
+	t.Run("Run writes default message when deploy_success_message is absent", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFile := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, composeFile, `

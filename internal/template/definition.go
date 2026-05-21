@@ -78,7 +78,7 @@ func FromDir(destDir string) (Template, error) {
 type rawMetadata struct {
 	Name           string            `yaml:"name"`
 	Description    string            `yaml:"description"`
-	SuccessMessage string            `yaml:"success_message"`
+	SuccessMessage string            `yaml:"deploy_success_message"`
 	Features       []string          `yaml:"features,omitempty"`
 	Args           map[string]rawArg `yaml:"args,omitempty"`
 }
