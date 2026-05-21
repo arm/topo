@@ -44,5 +44,9 @@ var templatesCmd = &cobra.Command{
 func init() {
 	addTargetFlag(templatesCmd)
 	addTimeoutFlag(templatesCmd, defaultTimeout)
+	if experimentalFeaturesEnabled() {
+		const defaultSource = ""
+		templatesCmd.Flags().StringP("source", "s", "", "where to source templates' data from")
+	}
 	rootCmd.AddCommand(templatesCmd)
 }

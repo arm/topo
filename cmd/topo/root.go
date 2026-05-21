@@ -94,3 +94,8 @@ func resolveOutput(cmd *cobra.Command) term.Format {
 	}
 	return term.Plain
 }
+
+func experimentalFeaturesEnabled() bool {
+	const experimentalFeaturesEnvVar = "TOPO_EXPERIMENTAL_FEATURES"
+	return strings.TrimSpace(os.Getenv(experimentalFeaturesEnvVar)) == "1"
+}
