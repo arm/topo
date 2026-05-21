@@ -128,8 +128,6 @@ jobs:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
-          dispatched_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
             --ref v7 \
