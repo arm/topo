@@ -16,9 +16,9 @@ type RawContainer struct {
 }
 
 type Container struct {
-	Image   string `json:"Image"`
-	Status  string `json:"Status"`
-	Address string `json:"Address"`
+	Image   string `json:"image"`
+	Status  string `json:"status"`
+	Address string `json:"address"`
 }
 
 func ListRunningContainers(composeFile string, h command.Host, hostName string) ([]Container, error) {

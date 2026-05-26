@@ -13,8 +13,8 @@ import (
 
 var topoPsCmd = &cobra.Command{
 	Use:   "ps",
-	Short: "List project containers running on the target",
-	Long: `List running containers on the target host for the current Compose project.
+	Short: "List running containers on the target for the current Compose project.",
+	Long: `List running containers on the target for the current Compose project.
 
 The compose.yaml must be in the current working directory, as this is used to select containers to be viewed.
 `,

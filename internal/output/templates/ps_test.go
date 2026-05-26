@@ -79,7 +79,7 @@ func TestPrintPSReport(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{
-				"containers": [{"Image": "my-app", "Status": "Up 5 minutes", "Address": "localhost:8080"}]
+				"containers": [{"image": "my-app", "status": "Up 5 minutes", "address": "localhost:8080"}]
 			}`
 			assert.JSONEq(t, want, out.String())
 		})
