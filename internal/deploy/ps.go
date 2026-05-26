@@ -9,16 +9,35 @@ import (
 	"github.com/arm/topo/internal/deploy/command"
 )
 
-type RawContainer struct {
+const (
+	remoteprocRuntimeName    = "io.containerd.remoteproc.v1"
+	remoteprocNameAnnotation = "remoteproc.name"
+	hostProcessingDomain     = "Linux Host"
+)
+
+type PSContainer struct {
+	ID     string `json:"ID"`
 	Image  string `json:"Image"`
 	Status string `json:"Status"`
 	Ports  string `json:"Ports"`
 }
 
 type Container struct {
-	Image   string `json:"image"`
-	Status  string `json:"status"`
-	Address string `json:"address"`
+	Image            string `json:"image"`
+	Status           string `json:"status"`
+	ProcessingDomain string `json:"processingDomain"`
+	Address          string `json:"address"`
+}
+
+type InspectedContainer struct {
+	ID         string              `json:"Id"`
+	Name       string              `json:"Name"`
+	HostConfig InspectedHostConfig `json:"HostConfig"`
+}
+
+type InspectedHostConfig struct {
+	Runtime     string            `json:"Runtime"`
+	Annotations map[string]string `json:"Annotations"`
 }
 
 func ListRunningContainers(composeFile string, h command.Host, hostName string) ([]Container, error) {
@@ -30,7 +49,17 @@ func ListRunningContainers(composeFile string, h command.Host, hostName string) 
 	if err != nil {
 		return nil, err
 	}
-	return RemapAddresses(raws, hostName), nil
+	containers := RemapAddresses(raws, hostName)
+
+	domains, err := getProcessingDomains(raws, h)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, raw := range raws {
+		containers[i].ProcessingDomain = processingDomainFromLookup(raw, domains)
+	}
+	return containers, nil
 }
 
 func getRunningContainers(composeFile string, h command.Host) (string, error) {
@@ -44,11 +73,11 @@ func getRunningContainers(composeFile string, h command.Host) (string, error) {
 	return stdout.String(), nil
 }
 
-func ParseRunningContainers(rawJSON string) ([]RawContainer, error) {
-	raws := []RawContainer{}
+func ParseRunningContainers(rawJSON string) ([]PSContainer, error) {
+	raws := []PSContainer{}
 	decoder := json.NewDecoder(strings.NewReader(rawJSON))
 	for decoder.More() {
-		var raw RawContainer
+		var raw PSContainer
 		if err := decoder.Decode(&raw); err != nil {
 			return nil, err
 		}
@@ -57,7 +86,75 @@ func ParseRunningContainers(rawJSON string) ([]RawContainer, error) {
 	return raws, nil
 }
 
-func RemapAddresses(raws []RawContainer, hostName string) []Container {
+func getProcessingDomains(raws []PSContainer, h command.Host) (map[string]string, error) {
+	targets := make([]string, 0, len(raws))
+	for _, raw := range raws {
+		if raw.ID != "" {
+			targets = append(targets, raw.ID)
+		}
+	}
+	if len(targets) == 0 {
+		return map[string]string{}, nil
+	}
+
+	rawJSON, err := inspectContainers(targets, h)
+	if err != nil {
+		return nil, err
+	}
+
+	inspected, err := ParseInspectedContainers(rawJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return BuildProcessingDomainLookup(inspected), nil
+}
+
+func inspectContainers(targets []string, h command.Host) (string, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := command.Docker(h, append([]string{"inspect"}, targets...)...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("docker inspect: %w: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	return stdout.String(), nil
+}
+
+func ParseInspectedContainers(rawJSON string) ([]InspectedContainer, error) {
+	if strings.TrimSpace(rawJSON) == "" {
+		return []InspectedContainer{}, nil
+	}
+
+	inspected := []InspectedContainer{}
+	if err := json.Unmarshal([]byte(rawJSON), &inspected); err != nil {
+		return nil, err
+	}
+	return inspected, nil
+}
+
+func BuildProcessingDomainLookup(inspected []InspectedContainer) map[string]string {
+	lookup := map[string]string{}
+
+	for _, container := range inspected {
+		if container.HostConfig.Runtime != remoteprocRuntimeName {
+			continue
+		}
+
+		processingDomain := strings.TrimSpace(container.HostConfig.Annotations[remoteprocNameAnnotation])
+		if processingDomain == "" {
+			continue
+		}
+
+		if id := strings.TrimSpace(container.ID); id != "" {
+			lookup[id] = processingDomain
+		}
+	}
+
+	return lookup
+}
+
+func RemapAddresses(raws []PSContainer, hostName string) []Container {
 	containers := make([]Container, len(raws))
 	for i, raw := range raws {
 		containers[i] = Container{
@@ -67,6 +164,13 @@ func RemapAddresses(raws []RawContainer, hostName string) []Container {
 		}
 	}
 	return containers
+}
+
+func processingDomainFromLookup(raw PSContainer, lookup map[string]string) string {
+	if domain, ok := lookup[raw.ID]; ok {
+		return domain
+	}
+	return hostProcessingDomain
 }
 
 func publishedAddress(rawPorts, hostName string) string {
