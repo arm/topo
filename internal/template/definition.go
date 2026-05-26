@@ -22,11 +22,11 @@ type Service struct {
 }
 
 type Metadata struct {
-	Name           string
-	Description    string
+	Name                     string
+	Description              string
 	DeploymentSuccessMessage string
-	Features       []string
-	Args           []Arg
+	Features                 []string
+	Args                     []Arg
 }
 
 type Arg struct {
@@ -76,11 +76,11 @@ func FromDir(destDir string) (Template, error) {
 }
 
 type rawMetadata struct {
-	Name           string            `yaml:"name"`
-	Description    string            `yaml:"description"`
-	DeploymentSuccessMessage string   `yaml:"deployment_success_message"`
-	Features       []string          `yaml:"features,omitempty"`
-	Args           map[string]rawArg `yaml:"args,omitempty"`
+	Name                     string            `yaml:"name"`
+	Description              string            `yaml:"description"`
+	DeploymentSuccessMessage string            `yaml:"deployment_success_message"`
+	Features                 []string          `yaml:"features,omitempty"`
+	Args                     map[string]rawArg `yaml:"args,omitempty"`
 }
 
 type rawArg struct {

@@ -105,7 +105,7 @@ x-topo:
 
 		require.NoError(t, err)
 		want := template.Metadata{
-			Name:           "test-service",
+			Name:                     "test-service",
 			DeploymentSuccessMessage: "Deployment complete!",
 		}
 		assert.Equal(t, want, got)
