@@ -15,13 +15,14 @@ import (
 
 func TestPrintPSReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
-		t.Run("renders container image, status, and address", func(t *testing.T) {
+		t.Run("renders container image, status, processing domain, and address", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
 				Containers: []deploy.Container{
 					{
-						Image:   "my-app",
-						Status:  "Up 5 minutes",
-						Address: "localhost:8080",
+						Image:            "my-app",
+						Status:           "Up 5 minutes",
+						ProcessingDomain: "m0",
+						Address:          "localhost:8080",
 					},
 				},
 			}
@@ -32,14 +33,16 @@ func TestPrintPSReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "my-app")
 			assert.Contains(t, out.String(), "Up 5 minutes")
+			assert.Contains(t, out.String(), "m0")
 			assert.Contains(t, out.String(), "localhost:8080")
+			assert.Contains(t, out.String(), "Processing Domain")
 		})
 
 		t.Run("renders multiple containers", func(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
 				Containers: []deploy.Container{
-					{Image: "web"},
-					{Image: "db"},
+					{Image: "web", ProcessingDomain: "Linux Host"},
+					{Image: "db", ProcessingDomain: "Linux Host"},
 				},
 			}
 			var out bytes.Buffer
@@ -49,6 +52,7 @@ func TestPrintPSReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "web")
 			assert.Contains(t, out.String(), "db")
+			assert.Contains(t, out.String(), "Linux Host")
 		})
 
 		t.Run("renders empty message when no containers", func(t *testing.T) {
@@ -67,9 +71,10 @@ func TestPrintPSReport(t *testing.T) {
 			toPrint := templates.PrintablePSReport{
 				Containers: []deploy.Container{
 					{
-						Image:   "my-app",
-						Status:  "Up 5 minutes",
-						Address: "localhost:8080",
+						Image:            "my-app",
+						Status:           "Up 5 minutes",
+						ProcessingDomain: "m0",
+						Address:          "localhost:8080",
 					},
 				},
 			}
@@ -79,7 +84,7 @@ func TestPrintPSReport(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{
-				"containers": [{"image": "my-app", "status": "Up 5 minutes", "address": "localhost:8080"}]
+				"containers": [{"image": "my-app", "status": "Up 5 minutes", "processingDomain": "m0", "address": "localhost:8080"}]
 			}`
 			assert.JSONEq(t, want, out.String())
 		})

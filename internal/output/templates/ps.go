@@ -14,9 +14,9 @@ type PrintablePSReport struct {
 	Containers []deploy.Container `json:"containers"`
 }
 
-const PSTemplate = `{{if .}}Image	Status	Address
+const PSTemplate = `{{if .}}Image	Status	Processing Domain	Address
 {{- range .}}
-{{.Image}}	{{.Status}}	{{.Address}}
+{{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
 {{- end }}{{else}}No containers deployed from this project are running.{{end}}`
 
 func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
