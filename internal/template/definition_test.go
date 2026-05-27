@@ -94,6 +94,35 @@ services:
 		assert.Equal(t, want, got)
 	})
 
+	t.Run("parses deployment_success_message from x-topo metadata", func(t *testing.T) {
+		composeFileContents := `
+x-topo:
+  name: "test-service"
+  deployment_success_message: "Deployment complete!"
+`
+		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
+		got := tpl.Metadata
+
+		require.NoError(t, err)
+		want := template.Metadata{
+			Name:                     "test-service",
+			DeploymentSuccessMessage: "Deployment complete!",
+		}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("leaves DeploymentSuccessMessage empty when deployment_success_message absent from x-topo", func(t *testing.T) {
+		composeFileContents := `
+x-topo:
+  name: "test-service"
+`
+		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
+		got := tpl.Metadata
+
+		require.NoError(t, err)
+		assert.Empty(t, got.DeploymentSuccessMessage)
+	})
+
 	t.Run("errors when compose.yaml missing", func(t *testing.T) {
 		dir := t.TempDir()
 
