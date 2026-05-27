@@ -120,7 +120,6 @@ func TestBuildProcessingDomainLookup(t *testing.T) {
 		got := deploy.BuildProcessingDomainLookup(input)
 
 		want := map[string]string{
-			"0ccbbb5c98961db4e650d8db70b0154c3cf5bbfcd4a44450b019fea11a6afb9a": "m33",
 			"0ccbbb5c9896": "m33",
 		}
 		assert.Equal(t, want, got)

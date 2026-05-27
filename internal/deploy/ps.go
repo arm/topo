@@ -148,10 +148,10 @@ func BuildProcessingDomainLookup(inspected []InspectedContainer) map[string]stri
 		}
 
 		if id := strings.TrimSpace(container.ID); id != "" {
-			lookup[id] = processingDomain
 			if len(id) > dockerShortIDLength {
-				lookup[id[:dockerShortIDLength]] = processingDomain
+				id = id[:dockerShortIDLength]
 			}
+			lookup[id] = processingDomain
 		}
 	}
 
