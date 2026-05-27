@@ -130,7 +130,7 @@ jobs:
         run: |
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
-            --ref v6 \
+            --ref v7 \
             --field source-run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
             --field release-tag=${VERSION} \
@@ -143,7 +143,7 @@ jobs:
             publisher_run_id="$(gh run list \
               --repo Arm-Debug/topo-publisher \
               --workflow sign-and-release.yml \
-              --branch v6 \
+              --branch v7 \
               --event workflow_dispatch \
               --limit 5 \
               --json createdAt,databaseId,displayTitle \
