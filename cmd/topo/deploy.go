@@ -30,13 +30,13 @@ var deployOpts deploy.DeployOptions
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy services using the compose file",
-	Long: `Deploy services to the target host using definitions in the compose file.
+	Long: `Deploy services to the target using definitions in the compose file.
 
 This command performs the following operations in sequence:
-  1. Build - Builds container images defined in the compose file on the local host
-  2. Pull - Pulls any required images from registries to the local host
-  3. Transfer - Transfers built and pulled images and compose file to the target host
-  4. Run - Runs docker compose up on the target host
+  1. Build - Builds container images defined in the compose file on the host
+  2. Pull - Pulls any required images from registries to the host
+  3. Transfer - Transfers built and pulled images and compose file to the target
+  4. Run - Runs docker compose up on the target
 
 The compose file (compose.yaml) must be in the current working directory, as this is used to select the containers to be deployed.`,
 	Args: cobra.ExactArgs(0),

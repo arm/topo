@@ -90,10 +90,10 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		}
 	}()
 
-	logger.Info(fmt.Sprintf("copying service template to %q", destDir))
+	logger.Info(fmt.Sprintf("copying topo template to %q", destDir))
 
 	if err := src.CopyTo(destDir); err != nil {
-		return fmt.Errorf("failed to copy Service Template: %w", err)
+		return fmt.Errorf("failed to copy topo template: %w", err)
 	}
 
 	if info, err := os.Stat(destDir); err != nil || !info.IsDir() {

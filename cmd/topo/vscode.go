@@ -26,8 +26,8 @@ var getProjectCmd = &cobra.Command{
 
 var describeCmd = &cobra.Command{
 	Use:    "describe",
-	Short:  "Describe the hardware characteristics of the target host",
-	Long:   "Print a description of the hardware characteristics of the target host including CPU ISA features and remoteproc capabilities.",
+	Short:  "Describe the hardware characteristics of the target",
+	Long:   "Print a description of the hardware characteristics of the target, including CPU ISA features and remoteproc capabilities.",
 	Hidden: true,
 	Args:   cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {

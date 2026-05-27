@@ -12,7 +12,7 @@ import (
 var topoStopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Stop a currently running deployment",
-	Long: `Stop services that are already running on the target host using definitions in the compose file.
+	Long: `Stop services that are already running on the target using definitions in the compose file.
 
 Executing this command does not remove the containers.
 

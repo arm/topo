@@ -4,7 +4,7 @@
 
 Discover and deploy containerised software to Arm hardware over SSH.
 
-Point Topo at any Arm-based Linux device to discover software templates which showcase its capabilities. Pick one and Topo helps you configure it for your use case, then deploys it in minutes. The result? A standard Docker Compose project to learn from, modify, or use as a starting point for your own work.
+Point Topo at any Arm-based Linux device to discover software Templates which showcase its capabilities. Pick one and Topo helps you configure it for your use case, then deploys it in minutes. The result? A standard Docker Compose project to learn from, modify, or use as a starting point for your own work.
 
 Already have a Compose project? Topo gives you a fast, incremental build-deploy loop over SSH.
 
@@ -14,7 +14,9 @@ Already have a Compose project? Topo gives you a fast, incremental build-deploy 
 
 **You want a faster edit-build-deploy loop.** Build on your laptop and deploy to a Pi or Jetson over SSH. Rebuilds are incremental, so after the first deploy you're often iterating in seconds.
 
-**You have a heterogeneous device and want to use all of it.** Your board has coprocessors like a Cortex-M that normally need separate toolchains and manual firmware loading. Topo and [remoteproc-runtime](https://github.com/arm/remoteproc-runtime) let you orchestrate the whole device as one Docker Compose project.
+**You have a heterogeneous device and want to use all of it.** Your board has remote processors like a Cortex-M that normally need separate toolchains and manual firmware loading. Topo and [Remoteproc Runtime](https://github.com/arm/remoteproc-runtime) let you orchestrate the whole device as one Docker Compose project.
+
+Not sure what these terms mean? The [glossary](docs/glossary.md) defines Topo's core concepts.
 
 ## What does it look like?
 
@@ -22,7 +24,7 @@ Already have a Compose project? Topo gives you a fast, incremental build-deploy 
 # Check your target is ready
 topo health --target pi@raspberrypi
 
-# See which templates match your hardware
+# See which Templates match your hardware
 topo templates --target pi@raspberrypi
 
 # Clone one and configure it for your target
@@ -34,9 +36,9 @@ topo deploy --target pi@raspberrypi
 ## Highlights
 
 - **Fast, incremental deploys** over SSH, with layer caching to keep rebuilds quick
-- **Hardware-aware template discovery** that matches your target's actual capabilities
+- **Hardware-aware Template discovery** that matches your target's actual capabilities
 - **Standard tooling throughout**: Docker Compose, container images, and OCI registries
-- **Whole-device orchestration** of Linux services and coprocessor firmware in a single Compose project
+- **Whole-device orchestration** of Linux services and remote processor firmware in a single Compose project
 
 ## Installation
 
@@ -77,21 +79,21 @@ Alternatively, manually add the appropriate binary from [GitHub Releases](https:
 topo health --target [user@]host
 ```
 
-### 2. Find a template
+### 2. Find a Template
 
 ```sh
 topo templates --target [user@]host
 ```
 
-### 3. Clone your chosen template
+### 3. Clone your chosen Template
 
-Choose a template you wish to try, then clone it:
+Choose a Template you wish to try, then clone it:
 
 ```sh
 topo clone https://github.com/Arm-Examples/topo-welcome.git
 ```
 
-If the template requires build arguments, Topo will prompt you for them.
+If the Template requires build arguments, Topo will prompt you for them.
 
 ### 4. Deploy to your target
 
@@ -104,7 +106,7 @@ Topo builds the container images on your host, transfers them to the target over
 
 ### 5. Review the deployment
 
-Your project is now running on your target. See the template README for details.
+Your project is now running on your target. See the Template README for details.
 
 ### 6. Stop the deployment
 

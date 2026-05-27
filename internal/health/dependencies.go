@@ -118,7 +118,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 				BinaryExists{
 					Severity: SeverityWarning,
 					Fix: &Fix{
-						Description: "Install the remoteproc runtime",
+						Description: "Install the Remoteproc Runtime",
 						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
 					},
 				},
@@ -133,7 +133,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 				BinaryExists{
 					Severity: SeverityWarning,
 					Fix: &Fix{
-						Description: "Install the remoteproc runtime",
+						Description: "Install the Remoteproc Runtime",
 						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
 					},
 				},

@@ -16,7 +16,7 @@ var (
 
 var setupKeysCmd = &cobra.Command{
 	Use:   "setup-keys",
-	Short: "Generate SSH keys for the target and install the public key on the target host",
+	Short: "Generate SSH keys for the target and install the public key on the target",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true

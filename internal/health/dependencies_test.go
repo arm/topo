@@ -60,7 +60,7 @@ func TestTargetRequiredDependencies(t *testing.T) {
 		wantBinaryExistsCheck := health.BinaryExists{
 			Severity: health.SeverityWarning,
 			Fix: &health.Fix{
-				Description: "Install the remoteproc runtime",
+				Description: "Install the Remoteproc Runtime",
 				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
 			},
 		}
@@ -164,7 +164,7 @@ func TestPerformChecks(t *testing.T) {
 				health.BinaryExists{
 					Severity: health.SeverityWarning,
 					Fix: &health.Fix{
-						Description: "Install the remoteproc runtime",
+						Description: "Install the Remoteproc Runtime",
 						Command:     "topo install remoteproc-runtime",
 					},
 				},
@@ -176,7 +176,7 @@ func TestPerformChecks(t *testing.T) {
 
 		assert.Len(t, got, 1)
 		want := &health.Fix{
-			Description: "Install the remoteproc runtime",
+			Description: "Install the Remoteproc Runtime",
 			Command:     "topo install remoteproc-runtime",
 		}
 		assert.Equal(t, want, got[0].Fix)
