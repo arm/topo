@@ -104,6 +104,28 @@ func TestBuildProcessingDomainLookup(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
+	t.Run("indexes remoteproc containers by short docker id", func(t *testing.T) {
+		input := []deploy.InspectedContainer{
+			{
+				ID: "0ccbbb5c98961db4e650d8db70b0154c3cf5bbfcd4a44450b019fea11a6afb9a",
+				HostConfig: deploy.InspectedHostConfig{
+					Runtime: "io.containerd.remoteproc.v1",
+					Annotations: map[string]string{
+						"remoteproc.name": "m33",
+					},
+				},
+			},
+		}
+
+		got := deploy.BuildProcessingDomainLookup(input)
+
+		want := map[string]string{
+			"0ccbbb5c98961db4e650d8db70b0154c3cf5bbfcd4a44450b019fea11a6afb9a": "m33",
+			"0ccbbb5c9896": "m33",
+		}
+		assert.Equal(t, want, got)
+	})
+
 	t.Run("skips non remoteproc containers", func(t *testing.T) {
 		input := []deploy.InspectedContainer{
 			{
