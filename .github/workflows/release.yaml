@@ -137,7 +137,7 @@ jobs:
             --field pre-release=${{ inputs.pre-release }}
 
           echo "Waiting for topo-publisher sign-and-release run to be created"
-          publisher_run_title="sign-and-release ${{ github.run_id }}"
+          publisher_run_title="${{ github.run_id }}"
           publisher_run_id=""
           for attempt in {1..30}; do
             publisher_run_id="$(gh run list \
