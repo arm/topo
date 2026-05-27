@@ -180,7 +180,7 @@ jobs:
                 --repo Arm-Debug/topo-publisher \
                 --name "$ARTIFACT_NAME" \
                 --dir publisher-artifacts
-              exit 0
+              exit $?
             fi
 
             status="$(gh run view "$PUBLISHER_RUN_ID" \
