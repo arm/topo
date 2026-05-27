@@ -63,7 +63,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean --draft
+          args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
@@ -211,3 +211,26 @@ jobs:
           name: release-links
           path: publisher-artifacts/release_links.md
           if-no-files-found: error
+
+      - name: Update and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: arm/topo
+          RELEASE_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
+          PRE_RELEASE: ${{ inputs.pre-release }}
+        run: |
+          gh api repos/{owner}/{repo}/releases/generate-notes \
+            -f tag_name="$RELEASE_TAG" \
+            --jq .body > existing_body.md
+
+          {
+            cat existing_body.md
+            printf '\n\n'
+            cat publisher-artifacts/release_links.md
+          } > combined_notes.md
+
+          if [ "$PRE_RELEASE" = "true" ]; then
+            gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --prerelease --notes-file combined_notes.md
+          else
+            gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file combined_notes.md
+          fi
