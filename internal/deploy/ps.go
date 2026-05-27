@@ -13,6 +13,7 @@ const (
 	remoteprocRuntimeName    = "io.containerd.remoteproc.v1"
 	remoteprocNameAnnotation = "remoteproc.name"
 	hostProcessingDomain     = "Linux Host"
+	dockerShortIDLength      = 12
 )
 
 type PSContainer struct {
@@ -147,6 +148,9 @@ func BuildProcessingDomainLookup(inspected []InspectedContainer) map[string]stri
 		}
 
 		if id := strings.TrimSpace(container.ID); id != "" {
+			if len(id) > dockerShortIDLength {
+				id = id[:dockerShortIDLength]
+			}
 			lookup[id] = processingDomain
 		}
 	}
