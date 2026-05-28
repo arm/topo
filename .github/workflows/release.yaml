@@ -133,7 +133,6 @@ jobs:
             --ref v7 \
             --field source-run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
-            --field release-tag=${VERSION} \
             --field pre-release=${{ inputs.pre-release }}
 
           echo "Waiting for topo-publisher sign-and-release run to be created"
