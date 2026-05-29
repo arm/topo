@@ -14,13 +14,6 @@ import (
 
 type CheckStatus string
 
-func NewCheckStatusFromError(err error) CheckStatus {
-	if err != nil {
-		return CheckStatusError
-	}
-	return CheckStatusOK
-}
-
 const (
 	CheckStatusOK      CheckStatus = "ok"
 	CheckStatusWarning CheckStatus = "warning"
@@ -123,7 +116,11 @@ func GenerateHostReport(statuses []DependencyStatus) HostReport {
 func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.IsLocalhost = targetStatus.Connection.IsPlainLocalhost()
-	report.Connectivity = connectivityCheck(targetStatus.Connection)
+	report.Connectivity = healthCheckWithStatusFromError(
+		HealthCheck{Name: "Connectivity"},
+		targetStatus.Connection.Error,
+		connectivityFix(targetStatus.Connection),
+	)
 
 	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
 	remoteProcessors := targetStatus.Hardware.RemoteProcessors
@@ -149,55 +146,50 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	return report
 }
 
-func connectivityCheck(status ConnectionStatus) HealthCheck {
-	check := HealthCheck{
-		Name:   "Connectivity",
-		Status: NewCheckStatusFromError(status.Error),
-	}
-	if status.Error == nil {
-		return check
-	}
-
-	check.Value = status.Error.Error()
+func connectivityFix(status ConnectionStatus) *Fix {
 	switch {
 	case errors.Is(status.Error, probe.ErrAuthFailed):
-		check.Fix = &Fix{
+		return &Fix{
 			Description: "Configure SSH keys on remote target",
 			Command:     fmt.Sprintf("topo setup-keys --target %s", status.Destination),
 		}
 	case errors.Is(status.Error, probe.ErrHostKeyUnknown):
-		check.Fix = &Fix{
+		return &Fix{
 			Description: "Trust the target's SSH host key",
 			Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", status.Destination),
 		}
 	case errors.Is(status.Error, probe.ErrHostKeyChanged):
-		check.Fix = &Fix{
+		return &Fix{
 			Description: "Remove the old SSH host key from known_hosts, then retry",
 			Command:     fmt.Sprintf("ssh-keygen -R %s", status.Destination.Host),
 		}
 	}
-	return check
+	return nil
 }
 
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	for _, ds := range statuses {
-		hc := HealthCheck{Name: ds.Dependency.Label}
-		if ds.Error == nil {
-			hc.Status = CheckStatusOK
-			hc.Value = ds.Dependency.Binary
-		} else {
-			if _, ok := errors.AsType[WarningError](ds.Error); ok {
-				hc.Status = CheckStatusWarning
-			} else if _, ok := errors.AsType[InfoError](ds.Error); ok {
-				hc.Status = CheckStatusInfo
-			} else {
-				hc.Status = CheckStatusError
-			}
-			hc.Value = ds.Error.Error()
-			hc.Fix = ds.Fix
-		}
-		res = append(res, hc)
+		check := HealthCheck{Name: ds.Dependency.Label, Value: ds.Dependency.Binary}
+		res = append(res, healthCheckWithStatusFromError(check, ds.Error, ds.Fix))
 	}
 	return res
+}
+
+func healthCheckWithStatusFromError(check HealthCheck, err error, fix *Fix) HealthCheck {
+	if err == nil {
+		check.Status = CheckStatusOK
+		return check
+	}
+
+	if _, ok := errors.AsType[WarningError](err); ok {
+		check.Status = CheckStatusWarning
+	} else if _, ok := errors.AsType[InfoError](err); ok {
+		check.Status = CheckStatusInfo
+	} else {
+		check.Status = CheckStatusError
+	}
+	check.Value = err.Error()
+	check.Fix = fix
+	return check
 }

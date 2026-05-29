@@ -178,6 +178,34 @@ func TestTargetReport(t *testing.T) {
 			require.NoError(t, json.Unmarshal(b, &result))
 			assert.JSONEq(t, `[]`, string(result["dependencies"]))
 		})
+
+		t.Run("includes connectivity fix", func(t *testing.T) {
+			tr := health.GenerateTargetReport(health.Status{
+				Connection: health.ConnectionStatus{
+					Destination: ssh.NewDestination("user@my-target"),
+					Error:       probe.ErrAuthFailed,
+				},
+			})
+
+			b, err := json.Marshal(tr)
+
+			require.NoError(t, err)
+			want := `{
+				"connectivity": {
+					"name": "Connectivity",
+					"status": "error",
+					"value": "ssh authentication failed",
+					"fix": {
+						"description": "Configure SSH keys on remote target",
+						"command": "topo setup-keys --target ssh://user@my-target"
+					}
+				},
+				"dependencies": []
+			}`
+			var result map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal(b, &result))
+			assert.JSONEq(t, want, fmt.Sprintf(`{"connectivity": %s, "dependencies": %s}`, result["connectivity"], result["dependencies"]))
+		})
 	})
 }
 
