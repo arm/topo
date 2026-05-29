@@ -217,7 +217,7 @@ jobs:
 
           {
             cat publisher-artifacts/release_links.md
-            printf '\n\n'
+            printf '\n\n## Changelog\n'
             cat existing_body.md
           } > combined_notes.md
 
