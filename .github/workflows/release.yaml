@@ -216,9 +216,9 @@ jobs:
             --jq .body > existing_body.md
 
           {
-            cat existing_body.md
-            printf '\n\n'
             cat publisher-artifacts/release_links.md
+            printf '\n\n'
+            cat existing_body.md
           } > combined_notes.md
 
           if [ "$PRE_RELEASE" = "true" ]; then
