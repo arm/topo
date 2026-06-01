@@ -26,18 +26,18 @@ type Repo struct {
 }
 
 func ListBuiltinTemplates() ([]Repo, error) {
-	return ParseTemplates(TemplatesJSON)
+	return parseTemplates(TemplatesJSON)
 }
 
 func ListTemplatesFromURL(ctx context.Context, url string) ([]Repo, error) {
-	data, err := FetchTemplatesJSON(ctx, url)
+	data, err := fetchTemplatesJSON(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch templates: %w", err)
 	}
-	return ParseTemplates(data)
+	return parseTemplates(data)
 }
 
-func ParseTemplates(b []byte) ([]Repo, error) {
+func parseTemplates(b []byte) ([]Repo, error) {
 	var templates []Repo
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
@@ -47,7 +47,7 @@ func ParseTemplates(b []byte) ([]Repo, error) {
 	return templates, nil
 }
 
-func FetchTemplatesJSON(ctx context.Context, url string) ([]byte, error) {
+func fetchTemplatesJSON(ctx context.Context, url string) ([]byte, error) {
 	const filePrefix = "file://"
 	if path, found := strings.CutPrefix(url, filePrefix); found {
 		data, err := os.ReadFile(path)
