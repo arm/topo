@@ -8,9 +8,9 @@ import (
 	"github.com/arm/topo/internal/catalog"
 )
 
-type RepoCollection []catalog.RepoWithCompatibility
+type TemplateList []catalog.RepoWithCompatibility
 
-const repoTemplate = `
+const templateListTemplate = `
 {{- define "featuresRow" -}}
 {{- if .Features }}
   Features: {{ join .Features ", " }}
@@ -36,7 +36,7 @@ const repoTemplate = `
 {{ end }}
 {{- end }}`
 
-func (r RepoCollection) AsJSON() (string, error) {
+func (r TemplateList) AsJSON() (string, error) {
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return "", err
@@ -44,12 +44,12 @@ func (r RepoCollection) AsJSON() (string, error) {
 	return string(b), nil
 }
 
-func (r RepoCollection) AsPlain(isTTY bool) (string, error) {
+func (r TemplateList) AsPlain(isTTY bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	tmpl, err := template.
 		New("templatesList").
 		Funcs(funcMap).
-		Parse(repoTemplate)
+		Parse(templateListTemplate)
 	if err != nil {
 		return "", err
 	}

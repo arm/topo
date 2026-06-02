@@ -10,7 +10,7 @@ import (
 
 type InstallResults []install.InstallResult
 
-const installTemplate = `
+const installResultsTemplate = `
 {{- if eq (len .) 0 -}}
 No binaries installed
 {{- else -}}
@@ -34,7 +34,7 @@ func (r InstallResults) AsPlain(isTTY bool) (string, error) {
 	tmpl, err := template.
 		New("InstallResults").
 		Funcs(funcMap).
-		Parse(installTemplate)
+		Parse(installResultsTemplate)
 	if err != nil {
 		return "", err
 	}

@@ -40,7 +40,7 @@ var healthCmd = &cobra.Command{
 			spinner = term.StartSpinner(os.Stderr, "Checking health...")
 		}
 
-		toPrint := views.PrintableHealthReport{
+		toPrint := views.HealthReport{
 			Host: health.CheckHost(health.CheckHostOptions{SkipVersionChecks: skipVersionCheck}),
 		}
 

@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPrintHealthReport(t *testing.T) {
+func TestHealthReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("it renders the healthy host dependencies", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -35,7 +35,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -57,7 +57,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -80,7 +80,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders an info icon for info checks", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -103,7 +103,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders connection failures", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -121,7 +121,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders the target destination", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Target: &health.TargetReport{Destination: "ssh://user@my-target"},
 			}
 			var out bytes.Buffer
@@ -133,7 +133,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -150,7 +150,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders the fix hint when a check has a fix", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -176,7 +176,7 @@ func TestPrintHealthReport(t *testing.T) {
 
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
 			hint := "Need to work on your aim"
-			toPrint := views.PrintableHealthReport{TargetHint: hint}
+			toPrint := views.HealthReport{TargetHint: hint}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -189,7 +189,7 @@ func TestPrintHealthReport(t *testing.T) {
 
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
-			toPrint := views.PrintableHealthReport{
+			toPrint := views.HealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{

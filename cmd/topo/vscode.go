@@ -45,7 +45,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		toPrint := views.PrintableTargetDescription{HardwareProfile: hwProfile}
+		toPrint := views.TargetDescription{HardwareProfile: hwProfile}
 		return views.Print(toPrint, os.Stdout, outputFormat)
 	},
 }

@@ -39,7 +39,7 @@ The compose.yaml must be in the current working directory, as this is used to se
 			return err
 		}
 
-		return views.Print(views.PrintablePSReport{Containers: containers}, os.Stdout, outputFormat)
+		return views.Print(views.ContainerList{Containers: containers}, os.Stdout, outputFormat)
 	},
 }
 

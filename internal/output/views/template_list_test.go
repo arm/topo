@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPrintTemplateRepos(t *testing.T) {
+func TestTemplateList(t *testing.T) {
 	t.Run("prints multiple items correctly", func(t *testing.T) {
 		repos := []catalog.RepoWithCompatibility{
 			{
@@ -36,7 +36,7 @@ func TestPrintTemplateRepos(t *testing.T) {
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.RepoCollection(repos),
+			views.TemplateList(repos),
 			&outBuf,
 			term.Plain,
 		)
@@ -67,7 +67,7 @@ name-of-other-project | url.git | main
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.RepoCollection(repos),
+			views.TemplateList(repos),
 			&outBuf,
 			term.Plain,
 		)
@@ -96,7 +96,7 @@ name-of-other-project | url.git | main
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.RepoCollection(repos),
+			views.TemplateList(repos),
 			&outBuf,
 			term.Plain,
 		)
@@ -126,7 +126,7 @@ name-of-other-project | url.git | main
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.RepoCollection(repos),
+			views.TemplateList(repos),
 			&outBuf,
 			term.Plain,
 		)
@@ -157,7 +157,7 @@ name-of-other-project | url.git | main
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.RepoCollection(repos),
+			views.TemplateList(repos),
 			&outBuf,
 			term.Plain,
 		)
@@ -189,7 +189,7 @@ name-of-other-project | url.git | main
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.RepoCollection(repos),
+			views.TemplateList(repos),
 			&outBuf,
 			term.JSON,
 		)
@@ -224,7 +224,7 @@ name-of-other-project | url.git | main
 		}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.RepoCollection(repos), &outBuf, term.Plain)
+		err := views.Print(views.TemplateList(repos), &outBuf, term.Plain)
 		require.NoError(t, err)
 
 		assert.Equal(t, "✅ name-of-project | url.git | main\n\n", outBuf.String())
@@ -242,7 +242,7 @@ name-of-other-project | url.git | main
 		repos := []catalog.RepoWithCompatibility{compatibleRepo, incompatibleRepo}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.RepoCollection(repos), &outBuf, term.Plain)
+		err := views.Print(views.TemplateList(repos), &outBuf, term.Plain)
 		require.NoError(t, err)
 
 		assert.Contains(t, outBuf.String(), "✅ lasagne")
@@ -270,7 +270,7 @@ name-of-other-project | url.git | main
 		}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.RepoCollection(repos), &outBuf, term.JSON)
+		err := views.Print(views.TemplateList(repos), &outBuf, term.JSON)
 		require.NoError(t, err)
 
 		var got any
@@ -310,7 +310,7 @@ name-of-other-project | url.git | main
 		}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.RepoCollection(repos), &outBuf, term.JSON)
+		err := views.Print(views.TemplateList(repos), &outBuf, term.JSON)
 		require.NoError(t, err)
 
 		var got any

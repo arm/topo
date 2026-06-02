@@ -9,11 +9,11 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-type PrintableTargetDescription struct {
+type TargetDescription struct {
 	probe.HardwareProfile
 }
 
-func (d PrintableTargetDescription) AsPlain(_ bool) (string, error) {
+func (d TargetDescription) AsPlain(_ bool) (string, error) {
 	var buf bytes.Buffer
 	if err := yaml.NewEncoder(&buf).Encode(d.HardwareProfile); err != nil {
 		return "", fmt.Errorf("encode target description as yaml: %w", err)
@@ -21,7 +21,7 @@ func (d PrintableTargetDescription) AsPlain(_ bool) (string, error) {
 	return buf.String(), nil
 }
 
-func (d PrintableTargetDescription) AsJSON() (string, error) {
+func (d TargetDescription) AsJSON() (string, error) {
 	b, err := json.MarshalIndent(d.HardwareProfile, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("encode target description as json: %w", err)

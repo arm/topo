@@ -9,13 +9,13 @@ import (
 	"github.com/arm/topo/internal/health"
 )
 
-type PrintableHealthReport struct {
+type HealthReport struct {
 	Host       health.HostReport    `json:"host"`
 	Target     *health.TargetReport `json:"target,omitempty"`
 	TargetHint string               `json:"-"`
 }
 
-const healthCheckTemplate = `
+const healthReportTemplate = `
 {{- define "checkRow" -}}
 {{ .Name }}:{{ statusIcon .Status }}{{- if .Value }} ({{ .Value }}){{- end }}
 {{- if .Fix }}
@@ -49,7 +49,7 @@ Destination: {{ .Target.Destination }}
 {{- end }}
 `
 
-func (r PrintableHealthReport) AsPlain(isTTY bool) (string, error) {
+func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["statusIcon"] = func(s health.CheckStatus) string {
 		switch s {
@@ -69,7 +69,7 @@ func (r PrintableHealthReport) AsPlain(isTTY bool) (string, error) {
 	tmpl, err := template.
 		New("healthcheck").
 		Funcs(funcMap).
-		Parse(healthCheckTemplate)
+		Parse(healthReportTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -81,7 +81,7 @@ func (r PrintableHealthReport) AsPlain(isTTY bool) (string, error) {
 	return buf.String(), nil
 }
 
-func (r PrintableHealthReport) AsJSON() (string, error) {
+func (r HealthReport) AsJSON() (string, error) {
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("encode report as json: %w", err)

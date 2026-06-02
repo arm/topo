@@ -10,19 +10,19 @@ import (
 	"github.com/arm/topo/internal/deploy"
 )
 
-type PrintablePSReport struct {
+type ContainerList struct {
 	Containers []deploy.Container `json:"containers"`
 }
 
-const PSTemplate = `{{if .}}Image	Status	Processing Domain	Address
+const containerListTemplate = `{{if .}}Image	Status	Processing Domain	Address
 {{- range .}}
 {{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
 {{- end }}{{else}}No containers deployed from this project are running.{{end}}`
 
-func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
+func (r ContainerList) AsPlain(isTTY bool) (string, error) {
 	tmpl, err := template.
 		New("ps").
-		Parse(PSTemplate)
+		Parse(containerListTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -40,7 +40,7 @@ func (r PrintablePSReport) AsPlain(isTTY bool) (string, error) {
 	return buf.String(), nil
 }
 
-func (r PrintablePSReport) AsJSON() (string, error) {
+func (r ContainerList) AsJSON() (string, error) {
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("encode report as json: %w", err)

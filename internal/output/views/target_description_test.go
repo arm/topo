@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPrintTargetDescription(t *testing.T) {
+func TestTargetDescription(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("outputs valid yaml that round-trips back to the hardware profile", func(t *testing.T) {
 			profile := probe.HardwareProfile{
@@ -23,7 +23,7 @@ func TestPrintTargetDescription(t *testing.T) {
 				},
 				TotalMemoryKb: 16384,
 			}
-			toPrint := views.PrintableTargetDescription{HardwareProfile: profile}
+			toPrint := views.TargetDescription{HardwareProfile: profile}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -46,7 +46,7 @@ totalMemoryKb: 16384
 
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders valid JSON with all fields", func(t *testing.T) {
-			toPrint := views.PrintableTargetDescription{
+			toPrint := views.TargetDescription{
 				HardwareProfile: probe.HardwareProfile{
 					HostProcessors: []probe.HostProcessor{
 						{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
