@@ -17,7 +17,7 @@ import (
 
 func TestListTemplatesFromURL(t *testing.T) {
 	t.Run("given a remote url, it fetches the catalog json", func(t *testing.T) {
-		repos := []catalog.Repo{{Name: "hi"}}
+		repos := []catalog.Repo{validRepo()}
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/give-json" {
 				w.Write(asJSON(repos)) // nolint:errcheck
@@ -34,7 +34,7 @@ func TestListTemplatesFromURL(t *testing.T) {
 
 	t.Run("given a file:// url, it fetches the catalog json", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "file.json")
-		repos := []catalog.Repo{{Name: "aloha"}}
+		repos := []catalog.Repo{validRepo()}
 		testutil.RequireWriteFile(t, path, string(asJSON(repos)))
 
 		url := fmt.Sprintf("file://%s", path)
@@ -42,6 +42,17 @@ func TestListTemplatesFromURL(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, repos, got)
+	})
+
+	t.Run("errors when template json doesn't validate against schema", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "file.json")
+		repos := []catalog.Repo{{Name: "aloha"}}
+		testutil.RequireWriteFile(t, path, string(asJSON(repos)))
+
+		url := fmt.Sprintf("file://%s", path)
+		_, err := catalog.ListTemplatesFromURL(context.Background(), url)
+
+		require.Error(t, err)
 	})
 
 	t.Run("errors when request fails", func(t *testing.T) {
@@ -75,6 +86,7 @@ func TestListTemplatesFromURL(t *testing.T) {
 				"description": "desc",
 				"features": [],
 				"url": "https://example.com",
+				"ref": "main",
 				"yolo-swag": "value"
 			}
 		]`)
@@ -85,7 +97,7 @@ func TestListTemplatesFromURL(t *testing.T) {
 		_, err := catalog.ListTemplatesFromURL(context.Background(), url)
 
 		require.Error(t, err)
-		assert.ErrorContains(t, err, `unknown field "yolo-swag"`)
+		assert.ErrorContains(t, err, `additional properties 'yolo-swag' not allowed`)
 	})
 }
 
@@ -95,4 +107,13 @@ func asJSON(repos []catalog.Repo) []byte {
 		panic(err)
 	}
 	return data
+}
+
+func validRepo() catalog.Repo {
+	return catalog.Repo{
+		Name:        "hi",
+		Description: "desc",
+		URL:         "https://example.com/template.git",
+		Ref:         "main",
+	}
 }

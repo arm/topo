@@ -8,6 +8,7 @@ require (
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/lmittmann/tint v1.1.3
 	github.com/mholt/archives v0.1.5
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
@@ -38,7 +39,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/sirupsen/logrus v1.9.1 // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
@@ -48,5 +48,5 @@ require (
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )

@@ -11,10 +11,15 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 //go:embed data/templates.json
 var TemplatesJSON []byte
+
+//go:embed data/templates.schema.json
+var templatesSchemaJSON []byte
 
 type Repo struct {
 	Name        string   `json:"name"`
@@ -38,13 +43,37 @@ func ListTemplatesFromURL(ctx context.Context, url string) ([]Repo, error) {
 }
 
 func parseTemplates(b []byte) ([]Repo, error) {
+	if err := validateAgainstSchema(b); err != nil {
+		return nil, fmt.Errorf("failed schema validation: %w", err)
+	}
+
 	var templates []Repo
-	dec := json.NewDecoder(bytes.NewReader(b))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&templates); err != nil {
+	if err := json.Unmarshal(b, &templates); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal templates: %w", err)
 	}
+
 	return templates, nil
+}
+
+func validateAgainstSchema(b []byte) error {
+	compiler := jsonschema.NewCompiler()
+	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(templatesSchemaJSON))
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal schema: %w", err)
+	}
+	if err := compiler.AddResource("templates.schema.json", schemaDoc); err != nil {
+		return fmt.Errorf("failed to add schema resource: %w", err)
+	}
+	schema, err := compiler.Compile("templates.schema.json")
+	if err != nil {
+		return fmt.Errorf("failed to compile schema: %w", err)
+	}
+
+	jsonDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal templates: %w", err)
+	}
+	return schema.Validate(jsonDoc)
 }
 
 func fetchTemplatesJSON(ctx context.Context, url string) ([]byte, error) {
