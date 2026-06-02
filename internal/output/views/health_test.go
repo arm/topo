@@ -1,4 +1,4 @@
-package templates_test
+package views_test
 
 import (
 	"bytes"
@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/output/printable"
-	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/output/views"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +15,7 @@ import (
 func TestPrintHealthReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("it renders the healthy host dependencies", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -28,7 +27,7 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Flux Capacitor")
@@ -36,7 +35,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -49,7 +48,7 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Container Engine")
@@ -58,7 +57,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -73,7 +72,7 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "⚠️")
@@ -81,7 +80,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders an info icon for info checks", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -96,7 +95,7 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "ℹ️")
@@ -104,7 +103,7 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders connection failures", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -114,7 +113,7 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Connected")
@@ -122,19 +121,19 @@ func TestPrintHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders the target destination", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Target: &health.TargetReport{Destination: "ssh://user@my-target"},
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Destination: ssh://user@my-target")
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
 						Name:   "Connected",
@@ -144,14 +143,14 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.NotContains(t, out.String(), "Features (Linux Host)")
 		})
 
 		t.Run("it renders the fix hint when a check has a fix", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -167,7 +166,7 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Skin Care: ⚠️")
@@ -177,10 +176,10 @@ func TestPrintHealthReport(t *testing.T) {
 
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
 			hint := "Need to work on your aim"
-			toPrint := templates.PrintableHealthReport{TargetHint: hint}
+			toPrint := views.PrintableHealthReport{TargetHint: hint}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			want := fmt.Sprintf("ℹ️ %s", hint)
@@ -190,7 +189,7 @@ func TestPrintHealthReport(t *testing.T) {
 
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
-			toPrint := templates.PrintableHealthReport{
+			toPrint := views.PrintableHealthReport{
 				Host: health.HostReport{
 					Dependencies: []health.HealthCheck{
 						{
@@ -212,7 +211,7 @@ func TestPrintHealthReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.JSON)
+			err := views.Print(toPrint, &out, term.JSON)
 
 			require.NoError(t, err)
 			want := `{

@@ -1,4 +1,4 @@
-package templates_test
+package views_test
 
 import (
 	"bytes"
@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/output/printable"
-	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/output/views"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +15,7 @@ import (
 func TestPrintPSReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("renders container image, status, processing domain, and address", func(t *testing.T) {
-			toPrint := templates.PrintablePSReport{
+			toPrint := views.PrintablePSReport{
 				Containers: []deploy.Container{
 					{
 						Image:            "my-app",
@@ -28,7 +27,7 @@ func TestPrintPSReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "my-app")
@@ -39,7 +38,7 @@ func TestPrintPSReport(t *testing.T) {
 		})
 
 		t.Run("renders multiple containers", func(t *testing.T) {
-			toPrint := templates.PrintablePSReport{
+			toPrint := views.PrintablePSReport{
 				Containers: []deploy.Container{
 					{Image: "web", ProcessingDomain: "Linux Host"},
 					{Image: "db", ProcessingDomain: "Linux Host"},
@@ -47,7 +46,7 @@ func TestPrintPSReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "web")
@@ -56,10 +55,10 @@ func TestPrintPSReport(t *testing.T) {
 		})
 
 		t.Run("renders empty message when no containers", func(t *testing.T) {
-			toPrint := templates.PrintablePSReport{Containers: nil}
+			toPrint := views.PrintablePSReport{Containers: nil}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "No containers deployed from this project are running.")
@@ -68,7 +67,7 @@ func TestPrintPSReport(t *testing.T) {
 
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
-			toPrint := templates.PrintablePSReport{
+			toPrint := views.PrintablePSReport{
 				Containers: []deploy.Container{
 					{
 						Image:            "my-app",
@@ -80,7 +79,7 @@ func TestPrintPSReport(t *testing.T) {
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.JSON)
+			err := views.Print(toPrint, &out, term.JSON)
 
 			require.NoError(t, err)
 			want := `{
@@ -90,12 +89,12 @@ func TestPrintPSReport(t *testing.T) {
 		})
 
 		t.Run("renders empty containers as empty array", func(t *testing.T) {
-			toPrint := templates.PrintablePSReport{
+			toPrint := views.PrintablePSReport{
 				Containers: []deploy.Container{},
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.JSON)
+			err := views.Print(toPrint, &out, term.JSON)
 
 			require.NoError(t, err)
 			var got map[string]any

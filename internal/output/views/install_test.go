@@ -1,13 +1,12 @@
-package templates_test
+package views_test
 
 import (
 	"bytes"
 	"testing"
 
 	"github.com/arm/topo/internal/install"
-	"github.com/arm/topo/internal/output/printable"
-	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/output/views"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,11 +14,11 @@ import (
 func TestInstallResults(t *testing.T) {
 	t.Run("AsJSON", func(t *testing.T) {
 		t.Run("returns empty array for no results", func(t *testing.T) {
-			results := templates.InstallResults{}
+			results := views.InstallResults{}
 
 			var out bytes.Buffer
 
-			err := printable.Print(
+			err := views.Print(
 				results,
 				&out,
 				term.JSON,
@@ -30,7 +29,7 @@ func TestInstallResults(t *testing.T) {
 		})
 
 		t.Run("returns JSON array with install locations", func(t *testing.T) {
-			results := templates.InstallResults{
+			results := views.InstallResults{
 				{
 					Location: install.PathCandidate{Path: "/usr/local/bin", OnPath: true},
 					Binary:   "foo",
@@ -43,7 +42,7 @@ func TestInstallResults(t *testing.T) {
 
 			var out bytes.Buffer
 
-			err := printable.Print(
+			err := views.Print(
 				results,
 				&out,
 				term.JSON,
@@ -61,11 +60,11 @@ func TestInstallResults(t *testing.T) {
 
 	t.Run("AsPlain", func(t *testing.T) {
 		t.Run("returns message for no results", func(t *testing.T) {
-			results := templates.InstallResults{}
+			results := views.InstallResults{}
 
 			var out bytes.Buffer
 
-			err := printable.Print(
+			err := views.Print(
 				results,
 				&out,
 				term.Plain,
@@ -76,7 +75,7 @@ func TestInstallResults(t *testing.T) {
 		})
 
 		t.Run("returns success message for single binary on PATH", func(t *testing.T) {
-			results := templates.InstallResults{
+			results := views.InstallResults{
 				{
 					Location: install.PathCandidate{Path: "/usr/local/bin", OnPath: true},
 					Binary:   "my-binary",
@@ -85,7 +84,7 @@ func TestInstallResults(t *testing.T) {
 
 			var out bytes.Buffer
 
-			err := printable.Print(
+			err := views.Print(
 				results,
 				&out,
 				term.Plain,
@@ -98,7 +97,7 @@ func TestInstallResults(t *testing.T) {
 		})
 
 		t.Run("includes PATH warning when installed to directory not on PATH", func(t *testing.T) {
-			results := templates.InstallResults{
+			results := views.InstallResults{
 				{
 					Location: install.PathCandidate{Path: "~/bin", OnPath: false},
 					Binary:   "my-binary",
@@ -107,7 +106,7 @@ func TestInstallResults(t *testing.T) {
 
 			var out bytes.Buffer
 
-			err := printable.Print(
+			err := views.Print(
 				results,
 				&out,
 				term.Plain,
@@ -121,7 +120,7 @@ func TestInstallResults(t *testing.T) {
 		})
 
 		t.Run("groups multiple binaries in same off-PATH directory", func(t *testing.T) {
-			results := templates.InstallResults{
+			results := views.InstallResults{
 				{
 					Location: install.PathCandidate{Path: "~/bin", OnPath: false},
 					Binary:   "foo",
@@ -134,7 +133,7 @@ func TestInstallResults(t *testing.T) {
 
 			var out bytes.Buffer
 
-			err := printable.Print(
+			err := views.Print(
 				results,
 				&out,
 				term.Plain,

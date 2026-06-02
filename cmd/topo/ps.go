@@ -5,8 +5,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/output/printable"
-	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/output/views"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +39,7 @@ The compose.yaml must be in the current working directory, as this is used to se
 			return err
 		}
 
-		return printable.Print(templates.PrintablePSReport{Containers: containers}, os.Stdout, outputFormat)
+		return views.Print(views.PrintablePSReport{Containers: containers}, os.Stdout, outputFormat)
 	},
 }
 

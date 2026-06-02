@@ -1,12 +1,11 @@
-package templates_test
+package views_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/arm/topo/internal/output/printable"
-	"github.com/arm/topo/internal/output/templates"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/output/views"
 	"github.com/arm/topo/internal/probe"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,10 +23,10 @@ func TestPrintTargetDescription(t *testing.T) {
 				},
 				TotalMemoryKb: 16384,
 			}
-			toPrint := templates.PrintableTargetDescription{HardwareProfile: profile}
+			toPrint := views.PrintableTargetDescription{HardwareProfile: profile}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.Plain)
+			err := views.Print(toPrint, &out, term.Plain)
 
 			want := `
 hostProcessors:
@@ -47,7 +46,7 @@ totalMemoryKb: 16384
 
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders valid JSON with all fields", func(t *testing.T) {
-			toPrint := templates.PrintableTargetDescription{
+			toPrint := views.PrintableTargetDescription{
 				HardwareProfile: probe.HardwareProfile{
 					HostProcessors: []probe.HostProcessor{
 						{Model: "Cortex-A55", Cores: 4, Features: []string{"asimd", "sve"}},
@@ -60,7 +59,7 @@ totalMemoryKb: 16384
 			}
 			var out bytes.Buffer
 
-			err := printable.Print(toPrint, &out, term.JSON)
+			err := views.Print(toPrint, &out, term.JSON)
 
 			want := `{
 				"hostProcessors": [

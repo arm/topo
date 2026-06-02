@@ -4,8 +4,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/install"
-	"github.com/arm/topo/internal/output/printable"
-	"github.com/arm/topo/internal/output/templates"
+	"github.com/arm/topo/internal/output/views"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
@@ -36,17 +35,17 @@ Falls back to ~/bin if no suitable locations are automatically found.`,
 		if err != nil {
 			return err
 		}
-		return printable.Print(p, os.Stdout, outputFormat)
+		return views.Print(p, os.Stdout, outputFormat)
 	},
 }
 
-func installRemoteprocRuntime(targetDest ssh.Destination) (printable.Printable, error) {
+func installRemoteprocRuntime(targetDest ssh.Destination) (views.View, error) {
 	r := runner.For(targetDest)
 	results, err := install.InstallBinariesFromGithubRelease(r, remoteprocRuntimeRepoURL, []string{"remoteproc-runtime", "containerd-shim-remoteproc-v1"})
 	if err != nil {
 		return nil, err
 	}
-	return templates.InstallResults(results), nil
+	return views.InstallResults(results), nil
 }
 
 func init() {
