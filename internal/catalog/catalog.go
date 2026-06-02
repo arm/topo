@@ -21,6 +21,11 @@ var TemplatesJSON []byte
 //go:embed data/templates.schema.json
 var templatesSchemaJSON []byte
 
+type catalogDocument struct {
+	Schema    string `json:"$schema,omitempty"`
+	Templates []Repo `json:"templates"`
+}
+
 type Repo struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
@@ -47,24 +52,26 @@ func parseTemplates(b []byte) ([]Repo, error) {
 		return nil, fmt.Errorf("failed schema validation: %w", err)
 	}
 
-	var templates []Repo
-	if err := json.Unmarshal(b, &templates); err != nil {
+	var catalog catalogDocument
+	if err := json.Unmarshal(b, &catalog); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal templates: %w", err)
 	}
 
-	return templates, nil
+	return catalog.Templates, nil
 }
 
 func validateAgainstSchema(b []byte) error {
+	const templatesSchemaURL = "https://topo.arm.com/schemas/templates/1/schema.json"
+
 	compiler := jsonschema.NewCompiler()
 	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(templatesSchemaJSON))
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal schema: %w", err)
 	}
-	if err := compiler.AddResource("templates.schema.json", schemaDoc); err != nil {
+	if err := compiler.AddResource(templatesSchemaURL, schemaDoc); err != nil {
 		return fmt.Errorf("failed to add schema resource: %w", err)
 	}
-	schema, err := compiler.Compile("templates.schema.json")
+	schema, err := compiler.Compile(templatesSchemaURL)
 	if err != nil {
 		return fmt.Errorf("failed to compile schema: %w", err)
 	}

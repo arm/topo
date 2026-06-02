@@ -80,16 +80,19 @@ func TestListTemplatesFromURL(t *testing.T) {
 	})
 
 	t.Run("errors for unknown fields", func(t *testing.T) {
-		jsonData := []byte(`[
-			{
-				"name": "test",
-				"description": "desc",
-				"features": [],
-				"url": "https://example.com",
-				"ref": "main",
-				"yolo-swag": "value"
-			}
-		]`)
+		jsonData := []byte(`{
+			"$schema": "https://topo.arm.com/schemas/templates/1/schema.json",
+			"templates": [
+				{
+					"name": "test",
+					"description": "desc",
+					"features": [],
+					"url": "https://example.com",
+					"ref": "main",
+					"yolo-swag": "value"
+				}
+			]
+		}`)
 		path := filepath.Join(t.TempDir(), "file.json")
 		testutil.RequireWriteFile(t, path, string(jsonData))
 
@@ -102,7 +105,13 @@ func TestListTemplatesFromURL(t *testing.T) {
 }
 
 func asJSON(repos []catalog.Repo) []byte {
-	data, err := json.Marshal(repos)
+	data, err := json.Marshal(struct {
+		Schema    string         `json:"$schema"`
+		Templates []catalog.Repo `json:"templates"`
+	}{
+		Schema:    "https://topo.arm.com/schemas/templates/1/schema.json",
+		Templates: repos,
+	})
 	if err != nil {
 		panic(err)
 	}
