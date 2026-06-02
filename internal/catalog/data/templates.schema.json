@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://topo.arm.com/schemas/templates.schema.json",
+  "title": "Topo Templates Catalog",
+  "description": "A catalog of Topo template repositories.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/template"
+  },
+  "$defs": {
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "url", "ref"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "features": {
+          "description": "Optional list of hardware, runtime, or platform features used by the template.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "min_ram_kb": {
+          "description": "Optional minimum RAM required by the template, in KiB.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "url": {
+          "description": "Repository URL containing the template.",
+          "type": "string",
+          "format": "uri"
+        },
+        "ref": {
+          "description": "Git ref to use when fetching the template repository.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
