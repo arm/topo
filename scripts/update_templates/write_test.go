@@ -11,9 +11,9 @@ import (
 )
 
 func TestWriteTemplates(t *testing.T) {
-	t.Run("writes json", func(t *testing.T) {
+	t.Run("writes catalog json", func(t *testing.T) {
 		tmp := t.TempDir()
-		path := filepath.Join(tmp, "templates.json")
+		path := filepath.Join(tmp, "catalog.json")
 		input := []Template{{
 			Name:        "repo",
 			Description: "Desc",
@@ -26,8 +26,8 @@ func TestWriteTemplates(t *testing.T) {
 		require.NoError(t, err)
 
 		raw := testutil.RequireReadFile(t, path)
-		var decoded []Template
+		var decoded Catalog
 		require.NoError(t, json.Unmarshal([]byte(raw), &decoded))
-		assert.Equal(t, input, decoded)
+		assert.Equal(t, Catalog{Schema: catalogSchemaURL, Templates: input}, decoded)
 	})
 }
