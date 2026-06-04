@@ -16,7 +16,7 @@ import (
 )
 
 //go:embed data/templates.json
-var TemplatesJSON []byte
+var templatesJSON []byte
 
 //go:embed data/templates.schema.json
 var templatesSchemaJSON []byte
@@ -36,7 +36,7 @@ type Repo struct {
 }
 
 func ListBuiltinTemplates() ([]Repo, error) {
-	return parseTemplates(TemplatesJSON)
+	return parseTemplates(templatesJSON)
 }
 
 func ListTemplatesFromURL(ctx context.Context, url string) ([]Repo, error) {
