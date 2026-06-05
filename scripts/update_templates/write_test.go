@@ -26,8 +26,11 @@ func TestWriteTemplates(t *testing.T) {
 		require.NoError(t, err)
 
 		raw := testutil.RequireReadFile(t, path)
-		var decoded []Template
+		var decoded CatalogDocument
 		require.NoError(t, json.Unmarshal([]byte(raw), &decoded))
-		assert.Equal(t, input, decoded)
+		assert.Equal(t, CatalogDocument{
+			Schema:    catalogSchemaURL,
+			Templates: input,
+		}, decoded)
 	})
 }
