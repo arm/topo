@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-const outputJSONPath = "internal/catalog/data/templates.json"
+const outputJSONPath = "internal/catalog/data/catalog.json"
 
 var repoList = []string{
 	"Arm-Examples/topo-welcome#main",

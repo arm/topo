@@ -29,7 +29,6 @@
     "name": "SIMD Visual Benchmark",
     "description": "Visual demonstration of SIMD performance benefits on Arm processors.\nCompare scalar (no SIMD), NEON (128-bit), and SVE (scalable vector)\nimplementations running identical image processing workloads side-by-side.\n\nThis demo shows real hardware acceleration through three C++ services\ncompiled with different architecture flags, processing the same box blur\nalgorithm on images. Performance differences are measured in real-time\nand displayed in an interactive web dashboard.\n\nPerfect for demonstrating to non-technical audiences the concrete benefits\nof SIMD optimizations, with visual results and quantified speedups.\n",
     "features": [
-      "NEON",
       "SVE"
     ],
     "url": "https://github.com/Arm-Examples/topo-simd-visual-benchmark.git",
