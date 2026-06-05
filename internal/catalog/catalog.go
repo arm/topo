@@ -11,10 +11,20 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 //go:embed data/templates.json
-var TemplatesJSON []byte
+var templatesJSON []byte
+
+//go:embed data/templates.schema.json
+var templatesSchemaJSON []byte
+
+type catalogDocument struct {
+	Schema    string `json:"$schema,omitempty"`
+	Templates []Repo `json:"templates"`
+}
 
 type Repo struct {
 	Name        string   `json:"name"`
@@ -26,7 +36,7 @@ type Repo struct {
 }
 
 func ListBuiltinTemplates() ([]Repo, error) {
-	return parseTemplates(TemplatesJSON)
+	return parseTemplates(templatesJSON)
 }
 
 func ListTemplatesFromURL(ctx context.Context, url string) ([]Repo, error) {
@@ -38,13 +48,39 @@ func ListTemplatesFromURL(ctx context.Context, url string) ([]Repo, error) {
 }
 
 func parseTemplates(b []byte) ([]Repo, error) {
-	var templates []Repo
-	dec := json.NewDecoder(bytes.NewReader(b))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&templates); err != nil {
+	if err := validateAgainstSchema(b); err != nil {
+		return nil, fmt.Errorf("failed schema validation: %w", err)
+	}
+
+	var catalog catalogDocument
+	if err := json.Unmarshal(b, &catalog); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal templates: %w", err)
 	}
-	return templates, nil
+
+	return catalog.Templates, nil
+}
+
+func validateAgainstSchema(b []byte) error {
+	const templatesSchemaURL = "https://topo.arm.com/schemas/templates/1/schema.json"
+
+	compiler := jsonschema.NewCompiler()
+	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(templatesSchemaJSON))
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal schema: %w", err)
+	}
+	if err := compiler.AddResource(templatesSchemaURL, schemaDoc); err != nil {
+		return fmt.Errorf("failed to add schema resource: %w", err)
+	}
+	schema, err := compiler.Compile(templatesSchemaURL)
+	if err != nil {
+		return fmt.Errorf("failed to compile schema: %w", err)
+	}
+
+	jsonDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal templates: %w", err)
+	}
+	return schema.Validate(jsonDoc)
 }
 
 func fetchTemplatesJSON(ctx context.Context, url string) ([]byte, error) {
