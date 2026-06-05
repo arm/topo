@@ -15,10 +15,10 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-//go:embed data/templates.json
+//go:embed data/catalog.json
 var templatesJSON []byte
 
-//go:embed data/templates.schema.json
+//go:embed data/catalog.schema.json
 var templatesSchemaJSON []byte
 
 type catalogDocument struct {
