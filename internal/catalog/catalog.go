@@ -61,7 +61,7 @@ func parseTemplates(b []byte) ([]Template, error) {
 }
 
 func validateAgainstSchema(b []byte) error {
-	const templatesSchemaURL = "https://topo.arm.com/schemas/templates/1/schema.json"
+	const templatesSchemaURL = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
 
 	compiler := jsonschema.NewCompiler()
 	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(templatesSchemaJSON))
