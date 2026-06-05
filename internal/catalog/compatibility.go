@@ -14,38 +14,38 @@ const (
 	CompatibilityUnsupported CompatibilityStatus = "unsupported"
 )
 
-type RepoWithCompatibility struct {
-	Repo
+type TemplateWithCompatibility struct {
+	Template
 	Compatibility CompatibilityStatus `json:"compatibility,omitempty"`
 }
 
-func AnnotateCompatibility(profile *probe.HardwareProfile, repos []Repo) []RepoWithCompatibility {
+func AnnotateCompatibility(profile *probe.HardwareProfile, templates []Template) []TemplateWithCompatibility {
 	if profile == nil {
-		return withCompatibility(repos)
+		return withCompatibility(templates)
 	}
 
 	hardwareProfile := *profile
 	supportedFeatures := extractSupportedFeatures(hardwareProfile)
 
-	checked := make([]RepoWithCompatibility, len(repos))
-	for i, repo := range repos {
-		checked[i].Repo = repo
-		checked[i].Compatibility = compatibilityStatus(hardwareProfile, supportedFeatures, repo)
+	checked := make([]TemplateWithCompatibility, len(templates))
+	for i, template := range templates {
+		checked[i].Template = template
+		checked[i].Compatibility = compatibilityStatus(hardwareProfile, supportedFeatures, template)
 	}
 
 	return checked
 }
 
-func withCompatibility(repos []Repo) []RepoWithCompatibility {
-	withCompatibility := make([]RepoWithCompatibility, len(repos))
-	for i, repo := range repos {
-		withCompatibility[i] = RepoWithCompatibility{Repo: repo}
+func withCompatibility(templates []Template) []TemplateWithCompatibility {
+	withCompatibility := make([]TemplateWithCompatibility, len(templates))
+	for i, template := range templates {
+		withCompatibility[i] = TemplateWithCompatibility{Template: template}
 	}
 	return withCompatibility
 }
 
-func compatibilityStatus(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) CompatibilityStatus {
-	if isRepoSupported(profile, supportedFeatures, repo) {
+func compatibilityStatus(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, template Template) CompatibilityStatus {
+	if isTemplateSupported(profile, supportedFeatures, template) {
 		return CompatibilitySupported
 	}
 	return CompatibilityUnsupported
@@ -65,14 +65,14 @@ func extractSupportedFeatures(profile probe.HardwareProfile) map[string]struct{}
 	return supportedFeatures
 }
 
-func isRepoSupported(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, repo Repo) bool {
-	if repo.MinRAMKb > 0 && profile.TotalMemoryKb < repo.MinRAMKb {
+func isTemplateSupported(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, template Template) bool {
+	if template.MinRAMKb > 0 && profile.TotalMemoryKb < template.MinRAMKb {
 		return false
 	}
 
-	atLeastOneFeatureIsSupported := len(repo.Features) == 0
+	atLeastOneFeatureIsSupported := len(template.Features) == 0
 
-	for _, feature := range repo.Features {
+	for _, feature := range template.Features {
 		normalized := strings.ToLower(strings.TrimSpace(feature))
 		if _, ok := supportedFeatures[normalized]; ok {
 			atLeastOneFeatureIsSupported = true

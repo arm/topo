@@ -8,7 +8,7 @@ import (
 	"github.com/arm/topo/internal/catalog"
 )
 
-type TemplateList []catalog.RepoWithCompatibility
+type TemplateList []catalog.TemplateWithCompatibility
 
 const templateListTemplate = `
 {{- define "featuresRow" -}}
@@ -23,15 +23,15 @@ const templateListTemplate = `
 {{- end }}
 {{- end }}
 
-{{- define "repoRow" }}
+{{- define "templateRow" }}
 {{- if .Compatibility }}{{ compatibilityMark .Compatibility }} {{ end }}{{ cyan .Name }} | {{ blue .URL }} | {{ yellow .Ref }}
 {{- template "featuresRow" . }}
 {{- template "descriptionRow" . }}
 {{- end }}
 
-{{- define "repoList" }}
+{{- define "templateList" }}
 {{- range . }}
-{{- template "repoRow" . }}
+{{- template "templateRow" . }}
 
 {{ end }}
 {{- end }}`
@@ -54,7 +54,7 @@ func (r TemplateList) AsPlain(isTTY bool) (string, error) {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.ExecuteTemplate(&buf, "repoList", r); err != nil {
+	if err := tmpl.ExecuteTemplate(&buf, "templateList", r); err != nil {
 		return "", err
 	}
 
