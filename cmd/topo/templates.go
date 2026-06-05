@@ -24,14 +24,14 @@ var templatesCmd = &cobra.Command{
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 
-		var repos []catalog.Repo
+		var templates []catalog.Template
 		var err error
 		source := getSource(cmd)
 		switch source {
 		case builtinTemplates:
-			repos, err = catalog.ListBuiltinTemplates()
+			templates, err = catalog.ListBuiltinTemplates()
 		default:
-			repos, err = catalog.ListTemplatesFromURL(ctx, source)
+			templates, err = catalog.ListTemplatesFromURL(ctx, source)
 		}
 		if err != nil {
 			return err
@@ -47,8 +47,8 @@ var templatesCmd = &cobra.Command{
 			profile = &hwProfile
 		}
 
-		reposWithCompatibility := catalog.AnnotateCompatibility(profile, repos)
-		return views.Print(views.TemplateList(reposWithCompatibility), os.Stdout, outputFormat)
+		templatesWithCompatibility := catalog.AnnotateCompatibility(profile, templates)
+		return views.Print(views.TemplateList(templatesWithCompatibility), os.Stdout, outputFormat)
 	},
 }
 

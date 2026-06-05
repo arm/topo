@@ -22,11 +22,11 @@ var templatesJSON []byte
 var templatesSchemaJSON []byte
 
 type catalogDocument struct {
-	Schema    string `json:"$schema,omitempty"`
-	Templates []Repo `json:"templates"`
+	Schema    string     `json:"$schema,omitempty"`
+	Templates []Template `json:"templates"`
 }
 
-type Repo struct {
+type Template struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Features    []string `json:"features"`
@@ -35,11 +35,11 @@ type Repo struct {
 	Ref         string   `json:"ref"`
 }
 
-func ListBuiltinTemplates() ([]Repo, error) {
+func ListBuiltinTemplates() ([]Template, error) {
 	return parseTemplates(templatesJSON)
 }
 
-func ListTemplatesFromURL(ctx context.Context, url string) ([]Repo, error) {
+func ListTemplatesFromURL(ctx context.Context, url string) ([]Template, error) {
 	data, err := fetchTemplatesJSON(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch templates: %w", err)
@@ -47,7 +47,7 @@ func ListTemplatesFromURL(ctx context.Context, url string) ([]Repo, error) {
 	return parseTemplates(data)
 }
 
-func parseTemplates(b []byte) ([]Repo, error) {
+func parseTemplates(b []byte) ([]Template, error) {
 	if err := validateAgainstSchema(b); err != nil {
 		return nil, fmt.Errorf("failed schema validation: %w", err)
 	}
