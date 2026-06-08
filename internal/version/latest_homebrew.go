@@ -20,6 +20,7 @@ func FetchLatestHomebrew(ctx context.Context, formulaURL string) (string, error)
 		return "", fmt.Errorf("creating Homebrew formula request: %w", err)
 	}
 
+	// #nosec G704 -- request to a hardcoded, trusted URL
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("fetching Homebrew formula: %w", err)
