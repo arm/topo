@@ -16,6 +16,15 @@ func TestBuildTemplate(t *testing.T) {
   features:
     - SME
     - NEON
+  args:
+    MODEL:
+      description: Model ID
+      required: true
+      default: qwen3:7B
+      example: qwen3:0.6B
+      hints:
+        org.example.kind: model
+        org.example.tags: [llm, cpu]
 `
 		compose := strings.NewReader(composeContent)
 
@@ -26,7 +35,19 @@ func TestBuildTemplate(t *testing.T) {
 			Name:        "Example Template",
 			Description: "Example description",
 			Features:    []string{"SME", "NEON"},
-			URL:         "git@github.com:Arm-Debug/example.git",
+			Args: map[string]Arg{
+				"MODEL": {
+					Description: "Model ID",
+					Required:    true,
+					Default:     "qwen3:7B",
+					Example:     "qwen3:0.6B",
+					Hints: map[string]any{
+						"org.example.kind": "model",
+						"org.example.tags": []any{"llm", "cpu"},
+					},
+				},
+			},
+			URL: "git@github.com:Arm-Debug/example.git",
 		}, tpl)
 	})
 
