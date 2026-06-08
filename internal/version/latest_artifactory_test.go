@@ -50,9 +50,9 @@ func createTestServerWithBody(t *testing.T, body string) *httptest.Server {
 	return srv
 }
 
-func TestFetchLatest(t *testing.T) {
+func TestFetchLatestArtifactory(t *testing.T) {
 	t.Run("can reach real artifactory index page", func(t *testing.T) {
-		_, err := version.FetchLatest(context.Background(), version.ArtifactoryBaseURL)
+		_, err := version.FetchLatestArtifactory(context.Background(), version.ArtifactoryBaseURL)
 
 		require.NoError(t, err)
 	})
@@ -60,7 +60,7 @@ func TestFetchLatest(t *testing.T) {
 	t.Run("returns highest version from artifactory index", func(t *testing.T) {
 		srv := createTestServerWithBody(t, artifactoryHTML)
 
-		got, err := version.FetchLatest(context.Background(), srv.URL)
+		got, err := version.FetchLatestArtifactory(context.Background(), srv.URL)
 
 		require.NoError(t, err)
 		assert.Equal(t, "4.1.0", got)
@@ -73,7 +73,7 @@ func TestFetchLatest(t *testing.T) {
 <a href="v2.1.0/">v2.1.0/</a>`
 		srv := createTestServerWithBody(t, body)
 
-		got, err := version.FetchLatest(context.Background(), srv.URL)
+		got, err := version.FetchLatestArtifactory(context.Background(), srv.URL)
 
 		require.NoError(t, err)
 		assert.Equal(t, "10.0.0", got)
@@ -84,7 +84,7 @@ func TestFetchLatest(t *testing.T) {
 <a href="v1.0.0-2026-03-13/">v1.0.0-2026-03-13/</a>`
 		srv := createTestServerWithBody(t, body)
 
-		got, err := version.FetchLatest(context.Background(), srv.URL)
+		got, err := version.FetchLatestArtifactory(context.Background(), srv.URL)
 
 		require.NoError(t, err)
 		assert.Equal(t, "1.0.0", got)
@@ -93,7 +93,7 @@ func TestFetchLatest(t *testing.T) {
 	t.Run("returns error when no versions found", func(t *testing.T) {
 		srv := createTestServerWithBody(t, "no versions here")
 
-		_, err := version.FetchLatest(context.Background(), srv.URL)
+		_, err := version.FetchLatestArtifactory(context.Background(), srv.URL)
 
 		assert.ErrorContains(t, err, "no versions found")
 	})
@@ -104,13 +104,13 @@ func TestFetchLatest(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		_, err := version.FetchLatest(context.Background(), srv.URL)
+		_, err := version.FetchLatestArtifactory(context.Background(), srv.URL)
 
 		assert.ErrorContains(t, err, "HTTP 500")
 	})
 
 	t.Run("returns error on connection failure", func(t *testing.T) {
-		_, err := version.FetchLatest(context.Background(), "something-invalid")
+		_, err := version.FetchLatestArtifactory(context.Background(), "something-invalid")
 		assert.Error(t, err)
 	})
 
@@ -119,7 +119,7 @@ func TestFetchLatest(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		_, err := version.FetchLatest(ctx, srv.URL)
+		_, err := version.FetchLatestArtifactory(ctx, srv.URL)
 
 		assert.Error(t, err)
 	})

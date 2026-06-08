@@ -51,7 +51,7 @@ var HostRequiredDependencies = []Dependency{
 					return version.Version, nil
 				}
 
-				return version.FetchLatest(ctx, version.ArtifactoryBaseURL)
+				return version.FetchLatestArtifactory(ctx, version.ArtifactoryBaseURL)
 			},
 			CurrentVersion: version.Version,
 			BuildFix: func() Fix {
