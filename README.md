@@ -59,6 +59,14 @@ The host and target can be the same system. If you're working directly on an Arm
 
 ### Linux and macOS
 
+Using [Homebrew](https://github.com/arm/homebrew-topo):
+
+```sh
+brew install arm/topo/topo
+```
+
+Or use the install script:
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
 ```
