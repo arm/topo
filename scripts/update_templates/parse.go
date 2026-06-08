@@ -41,16 +41,9 @@ func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {
 }
 
 func parseArgs(compose []byte) (map[string]Arg, error) {
-	type rawArg struct {
-		Description string         `yaml:"description"`
-		Required    bool           `yaml:"required"`
-		Default     string         `yaml:"default"`
-		Example     string         `yaml:"example"`
-		Hints       map[string]any `yaml:"hints"`
-	}
 	type rawCompose struct {
 		XTopo struct {
-			Args map[string]rawArg `yaml:"args"`
+			Args map[string]Arg `yaml:"args"`
 		} `yaml:"x-topo"`
 	}
 
@@ -62,17 +55,7 @@ func parseArgs(compose []byte) (map[string]Arg, error) {
 		return nil, nil
 	}
 
-	args := make(map[string]Arg, len(parsed.XTopo.Args))
-	for name, arg := range parsed.XTopo.Args {
-		args[name] = Arg{
-			Description: arg.Description,
-			Required:    arg.Required,
-			Default:     arg.Default,
-			Example:     arg.Example,
-			Hints:       arg.Hints,
-		}
-	}
-	return args, nil
+	return parsed.XTopo.Args, nil
 }
 
 func parseRepoSpec(spec string) (repo, ref string) {
