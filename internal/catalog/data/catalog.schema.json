@@ -48,11 +48,6 @@
             }
           ]
         },
-        "min_ram_kb": {
-          "description": "Optional minimum RAM required by the template, in KiB.",
-          "type": "integer",
-          "minimum": 0
-        },
         "url": {
           "description": "Repository URL containing the template.",
           "type": "string",
