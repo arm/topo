@@ -28,7 +28,7 @@ func Upgrade(ctx context.Context, reporter term.ProgressReporter) (string, error
 	if reporter != nil {
 		reporter.Step("Checking for latest version...")
 	}
-	latest, err := version.FetchLatest(ctx, version.ArtifactoryBaseURL)
+	latest, err := version.FetchLatestArtifactory(ctx, version.ArtifactoryBaseURL)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch latest version: %w", err)
 	}

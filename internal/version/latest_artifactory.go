@@ -19,7 +19,7 @@ const ArtifactoryBaseURL = "https://artifacts.tools.arm.com/topo"
 
 var semverRe = regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)`)
 
-func FetchLatest(ctx context.Context, url string) (string, error) {
+func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("creating request: %w", err)
