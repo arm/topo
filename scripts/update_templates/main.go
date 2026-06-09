@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// TODO: Move files out of internal when we extract this to a separate repo
+const relativeCatalogOutputPath = "internal/catalog/data/catalog.json"
+
 func main() {
 	githubToken := os.Getenv("GITHUB_TOKEN")
 	if githubToken == "" {
@@ -28,7 +31,7 @@ func main() {
 
 	outputPath, err := catalogOutputPath()
 	if err != nil {
-		log.Fatalf("failed to find catalog output path: %v\n", err)
+		log.Fatalf("failed to calculate catalog output path: %v\n", err)
 	}
 
 	if err := WriteTemplates(outputPath, templates); err != nil {
@@ -44,7 +47,7 @@ func catalogOutputPath() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(repoRoot, "internal", "catalog", "data", "catalog.json"), nil
+	return filepath.Join(repoRoot, filepath.FromSlash(relativeCatalogOutputPath)), nil
 }
 
 func findRepoRoot() (string, error) {
