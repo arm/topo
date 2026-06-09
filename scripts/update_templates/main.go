@@ -9,23 +9,6 @@ import (
 
 const outputJSONPath = "internal/catalog/data/catalog.json"
 
-type Template struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Features    []string       `json:"features"`
-	Args        map[string]Arg `json:"args,omitempty"`
-	URL         string         `json:"url"`
-	Ref         string         `json:"ref"`
-}
-
-type Arg struct {
-	Description string         `json:"description,omitempty"`
-	Required    bool           `json:"required,omitempty"`
-	Default     string         `json:"default,omitempty"`
-	Example     string         `json:"example,omitempty"`
-	Hints       map[string]any `json:"hints,omitempty"`
-}
-
 func main() {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
