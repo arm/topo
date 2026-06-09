@@ -21,6 +21,7 @@ func NewGitHubClient(token string) GitHubClient {
 }
 
 func (c GitHubClient) FetchFile(source GitHubSource, repoFilePath string) ([]byte, error) {
+	// #nosec G704 -- URL is constructed from static GitHub source metadata.
 	req, err := http.NewRequest(http.MethodGet, c.fileURL(source, repoFilePath), nil)
 	if err != nil {
 		return nil, err
@@ -32,7 +33,7 @@ func (c GitHubClient) FetchFile(source GitHubSource, repoFilePath string) ([]byt
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3.raw")
 
-	// #nosec G704 -- request is validated, false positive warning
+	// #nosec G704 -- URL is constructed from static GitHub source metadata.
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
