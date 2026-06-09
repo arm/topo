@@ -1,36 +1,53 @@
 package main
 
 import (
-	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWriteTemplates(t *testing.T) {
-	t.Run("writes json", func(t *testing.T) {
-		tmp := t.TempDir()
-		path := filepath.Join(tmp, "templates.json")
-		input := []Template{{
-			Name:        "repo",
-			Description: "Desc",
-			Features:    []string{"SME", "NEON"},
-			URL:         "ssh://example",
-			Ref:         "main",
-		}}
+	t.Run("writes expected json", func(t *testing.T) {
+		writeTo := filepath.Join(t.TempDir(), "templates.json")
+		input := []Template{
+			{
+				XTopo: XTopo{
+					Name:        "death-star-trench-run",
+					Description: "Use the Force to benchmark impossible shots",
+					Features:    []string{"X-wing", "Astromech", "Proton torpedoes"},
+				},
+				URL: "ssh://death-star.example",
+				Ref: "rebellion",
+			},
+		}
 
-		err := WriteTemplates(path, input)
+		err := WriteTemplates(writeTo, input)
 		require.NoError(t, err)
 
-		raw := testutil.RequireReadFile(t, path)
-		var decoded CatalogDocument
-		require.NoError(t, json.Unmarshal([]byte(raw), &decoded))
-		assert.Equal(t, CatalogDocument{
-			Schema:    catalogSchemaURL,
-			Templates: input,
-		}, decoded)
+		want := `
+{
+	"$schema": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
+	"templates": [
+		{
+			"name": "death-star-trench-run",
+			"description": "Use the Force to benchmark impossible shots",
+			"features": ["X-wing", "Astromech", "Proton torpedoes"],
+			"url": "ssh://death-star.example",
+			"ref": "rebellion"
+		}
+	]
+}
+`
+		assert.JSONEq(t, want, requireReadFile(t, writeTo))
 	})
+}
+
+func requireReadFile(t testing.TB, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return string(data)
 }
