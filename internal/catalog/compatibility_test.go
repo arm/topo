@@ -133,18 +133,6 @@ func TestAnnotateCompatibility(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("marks template unsupported when RAM is below requirement", func(t *testing.T) {
-		template := catalog.Template{Name: "ram-template", MinRAMKb: 1024}
-		templates := []catalog.Template{template}
-		profile := probe.HardwareProfile{TotalMemoryKb: 512}
-
-		got := catalog.AnnotateCompatibility(&profile, templates)
-		want := []catalog.TemplateWithCompatibility{
-			{Template: template, Compatibility: catalog.CompatibilityUnsupported},
-		}
-		assert.Equal(t, want, got)
-	})
-
 	t.Run("supports template with no requirements and does not mutate input", func(t *testing.T) {
 		template := catalog.Template{Name: "plain"}
 		templates := []catalog.Template{template}

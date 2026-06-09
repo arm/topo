@@ -66,10 +66,6 @@ func extractSupportedFeatures(profile probe.HardwareProfile) map[string]struct{}
 }
 
 func isTemplateSupported(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, template Template) bool {
-	if template.MinRAMKb > 0 && profile.TotalMemoryKb < template.MinRAMKb {
-		return false
-	}
-
 	atLeastOneFeatureIsSupported := len(template.Features) == 0
 
 	for _, feature := range template.Features {
