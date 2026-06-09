@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/arm/topo/internal/template"
 	"gopkg.in/yaml.v3"
@@ -57,13 +56,4 @@ func parseArgs(compose []byte) (map[string]Arg, error) {
 	}
 
 	return parsed.XTopo.Args, nil
-}
-
-func parseRepoSpec(spec string) (repo, ref string) {
-	parts := strings.SplitN(spec, "#", 2)
-	repo = parts[0]
-	if len(parts) == 2 {
-		ref = parts[1]
-	}
-	return
 }
