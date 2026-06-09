@@ -5,23 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"path"
 )
 
 func fetchComposeFile(client *http.Client, githubToken string, source Source) (io.Reader, error) {
-	base, err := url.Parse("https://api.github.com")
-	if err != nil {
-		return nil, err
-	}
-
-	base.Path = path.Join("repos", source.Repo, "contents", "compose.yaml")
-
-	q := base.Query()
-	q.Set("ref", source.SHA)
-	base.RawQuery = q.Encode()
-
-	req, err := http.NewRequest(http.MethodGet, base.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, source.FileURL("compose.yaml"), nil)
 	if err != nil {
 		return nil, err
 	}
