@@ -4,11 +4,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // TODO: Move files out of internal when we extract this to a separate repo
 const relativeCatalogOutputPath = "internal/catalog/data/catalog.json"
+
+const relativeSourcesPath = "scripts/update_templates/sources.json"
 
 func main() {
 	githubToken := os.Getenv("GITHUB_TOKEN")
@@ -18,8 +19,14 @@ func main() {
 
 	githubClient := NewGitHubClient(githubToken)
 
+	sourcesFile, err := openGitHubSources()
+	if err != nil {
+		log.Fatalf("failed to open GitHub sources: %v\n", err)
+	}
+	defer sourcesFile.Close()
+
 	var templates []Template
-	for _, source := range ListGitHubSources(strings.NewReader(sourcesJSON)) {
+	for _, source := range ListGitHubSources(sourcesFile) {
 		template, err := FetchTemplate(githubClient, source)
 		if err != nil {
 			log.Printf("failed to fetch %s (%v)\n", source, err)
@@ -48,6 +55,15 @@ func catalogOutputPath() (string, error) {
 	}
 
 	return filepath.Join(repoRoot, filepath.FromSlash(relativeCatalogOutputPath)), nil
+}
+
+func openGitHubSources() (*os.File, error) {
+	repoRoot, err := findRepoRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	return os.Open(filepath.Join(repoRoot, filepath.FromSlash(relativeSourcesPath)))
 }
 
 func findRepoRoot() (string, error) {
