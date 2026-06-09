@@ -23,6 +23,10 @@ func (s Source) String() string {
 	return fmt.Sprintf("%s@%s", s.Repo, s.SHA)
 }
 
+func (s Source) URL() string {
+	return fmt.Sprintf("https://github.com/%s.git", s.Repo)
+}
+
 func ListSources(jsonData io.Reader) []Source {
 	var sources []Source
 	if err := json.NewDecoder(jsonData).Decode(&sources); err != nil {

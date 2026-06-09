@@ -44,9 +44,7 @@ func main() {
 			continue
 		}
 
-		repoURL := fmt.Sprintf("https://github.com/%s.git", source.Repo)
-
-		tmpl, err := BuildTemplate(repoURL, composeBytes)
+		tmpl, err := BuildTemplate(source.URL(), composeBytes)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", source, err)
 			continue
