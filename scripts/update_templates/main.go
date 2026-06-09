@@ -44,12 +44,11 @@ func main() {
 			continue
 		}
 
-		tmpl, err := BuildTemplate(source.URL(), composeBytes)
+		tmpl, err := BuildTemplate(source, composeBytes)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", source, err)
 			continue
 		}
-		tmpl.Ref = source.SHA
 
 		templates = append(templates, tmpl)
 	}

@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {
+func BuildTemplate(source Source, compose io.Reader) (Template, error) {
 	content, err := io.ReadAll(compose)
 	if err != nil {
 		return Template{}, fmt.Errorf("failed to read compose definition: %w", err)
@@ -36,7 +36,8 @@ func BuildTemplate(repoURL string, compose io.Reader) (Template, error) {
 		Description: metadata.Description,
 		Features:    metadata.Features,
 		Args:        args,
-		URL:         repoURL,
+		URL:         source.URL(),
+		Ref:         source.SHA,
 	}, nil
 }
 

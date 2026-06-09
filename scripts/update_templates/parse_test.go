@@ -27,8 +27,9 @@ func TestBuildTemplate(t *testing.T) {
         org.example.tags: [llm, cpu]
 `
 		compose := strings.NewReader(composeContent)
+		source := Source{Repo: "Spaghetti/bolognese", SHA: "fresh"}
 
-		tpl, err := BuildTemplate("git@github.com:Arm-Debug/example.git", compose)
+		tpl, err := BuildTemplate(source, compose)
 		require.NoError(t, err)
 
 		assert.Equal(t, Template{
@@ -47,7 +48,8 @@ func TestBuildTemplate(t *testing.T) {
 					},
 				},
 			},
-			URL: "git@github.com:Arm-Debug/example.git",
+			URL: source.URL(),
+			Ref: source.SHA,
 		}, tpl)
 	})
 
@@ -58,7 +60,7 @@ func TestBuildTemplate(t *testing.T) {
 `
 		compose := strings.NewReader(composeContent)
 
-		_, err := BuildTemplate("git@github.com:Arm-Debug/example.git", compose)
+		_, err := BuildTemplate(Source{}, compose)
 		require.Error(t, err)
 
 		assert.Contains(t, err.Error(), "no valid x-topo")
