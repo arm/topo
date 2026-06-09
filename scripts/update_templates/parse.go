@@ -66,7 +66,9 @@ func FetchTemplate(source Source, githubToken string) (Template, error) {
 	}
 
 	req.Header.Set("User-Agent", "topo-template-update")
-	req.Header.Set("Authorization", "token "+githubToken)
+	if githubToken != "" {
+		req.Header.Set("Authorization", "token "+githubToken)
+	}
 	req.Header.Set("Accept", "application/vnd.github.v3.raw")
 
 	// #nosec G704 -- request is validated, false positive warning
