@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -25,10 +26,42 @@ func main() {
 		templates = append(templates, template)
 	}
 
-	const outputJSONPath = "internal/catalog/data/catalog.json"
-	if err := WriteTemplates(outputJSONPath, templates); err != nil {
+	outputPath, err := catalogOutputPath()
+	if err != nil {
+		log.Fatalf("failed to find catalog output path: %v\n", err)
+	}
+
+	if err := WriteTemplates(outputPath, templates); err != nil {
 		log.Printf("failed to write templates: %v\n", err)
 		os.Exit(1)
 	}
-	log.Printf("written catalog to %s\n", outputJSONPath)
+	log.Printf("written catalog to %s\n", outputPath)
+}
+
+func catalogOutputPath() (string, error) {
+	repoRoot, err := findRepoRoot()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(repoRoot, "internal", "catalog", "data", "catalog.json"), nil
+}
+
+func findRepoRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", os.ErrNotExist
+		}
+		dir = parent
+	}
 }
