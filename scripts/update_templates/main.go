@@ -12,9 +12,11 @@ func main() {
 		log.Println("⚠️ GITHUB_TOKEN is not set: you might get rate limited")
 	}
 
+	githubClient := NewGitHubClient(githubToken)
+
 	var templates []Template
-	for _, source := range ListSources(strings.NewReader(sourcesJSON)) {
-		template, err := FetchTemplate(source, githubToken)
+	for _, source := range ListGitHubSources(strings.NewReader(sourcesJSON)) {
+		template, err := FetchTemplate(githubClient, source)
 		if err != nil {
 			log.Printf("failed to fetch %s (%v)\n", source, err)
 			continue

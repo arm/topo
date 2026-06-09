@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/arm/topo/internal/template"
 	"gopkg.in/yaml.v3"
@@ -58,36 +57,10 @@ func NewTemplate(source GitHubSource, compose io.Reader) (Template, error) {
 	}, nil
 }
 
-func FetchTemplate(source GitHubSource, githubToken string) (Template, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, source.FileURL("compose.yaml"), nil)
+func FetchTemplate(client GitHubClient, source GitHubSource) (Template, error) {
+	yamlBytes, err := client.FetchFile(source, "compose.yaml")
 	if err != nil {
 		return Template{}, err
-	}
-
-	req.Header.Set("User-Agent", "topo-template-update")
-	if githubToken != "" {
-		req.Header.Set("Authorization", "token "+githubToken)
-	}
-	req.Header.Set("Accept", "application/vnd.github.v3.raw")
-
-	// #nosec G704 -- request is validated, false positive warning
-	resp, err := client.Do(req)
-	if err != nil {
-		return Template{}, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	if resp.StatusCode == http.StatusNotFound {
-		return Template{}, fmt.Errorf("compose.yaml not found (status %d)", resp.StatusCode)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return Template{}, fmt.Errorf("unexpected status %d", resp.StatusCode)
-	}
-
-	yamlBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return Template{}, fmt.Errorf("failed to read response body: %w", err)
 	}
 	return NewTemplate(source, bytes.NewReader(yamlBytes))
 }
