@@ -9,21 +9,17 @@ import (
 	"path"
 )
 
-func fetchComposeFile(client *http.Client, githubToken string, repoSpec string) (io.Reader, error) {
-	repo, ref := parseRepoSpec(repoSpec)
-
+func fetchComposeFile(client *http.Client, githubToken string, source Source) (io.Reader, error) {
 	base, err := url.Parse("https://api.github.com")
 	if err != nil {
 		return nil, err
 	}
 
-	base.Path = path.Join("repos", repo, "contents", "compose.yaml")
+	base.Path = path.Join("repos", source.Repo, "contents", "compose.yaml")
 
-	if ref != "" {
-		q := base.Query()
-		q.Set("ref", ref)
-		base.RawQuery = q.Encode()
-	}
+	q := base.Query()
+	q.Set("ref", source.SHA)
+	base.RawQuery = q.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, base.String(), nil)
 	if err != nil {

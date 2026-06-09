@@ -4,16 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 const outputJSONPath = "internal/catalog/data/catalog.json"
-
-var repoList = []string{
-	"Arm-Examples/topo-welcome#main",
-	"Arm-Examples/topo-lightbulb-moment#main",
-	"Arm-Examples/topo-cpu-ai-chat#main",
-	"Arm-Examples/topo-simd-visual-benchmark#main",
-}
 
 type Template struct {
 	Name        string         `json:"name"`
@@ -43,31 +37,22 @@ func main() {
 
 	var templates []Template
 
-	seenNames := make(map[string]struct{})
-
-	for _, spec := range repoList {
-		repo, ref := parseRepoSpec(spec)
-
-		composeBytes, err := fetchComposeFile(client, token, spec)
+	for _, source := range ListSources(strings.NewReader(sourcesJSON)) {
+		composeBytes, err := fetchComposeFile(client, token, source)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", spec, err)
+			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", source, err)
 			continue
 		}
 
-		repoURL := fmt.Sprintf("https://github.com/%s.git", repo)
+		repoURL := fmt.Sprintf("https://github.com/%s.git", source.Repo)
 
 		tmpl, err := BuildTemplate(repoURL, composeBytes)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", spec, err)
+			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", source, err)
 			continue
 		}
-		tmpl.Ref = ref
+		tmpl.Ref = source.SHA
 
-		if _, exists := seenNames[tmpl.Name]; exists {
-			panic(fmt.Sprintf("duplicate template name %q from %s; skipping\n", tmpl.Name, spec))
-		}
-
-		seenNames[tmpl.Name] = struct{}{}
 		templates = append(templates, tmpl)
 	}
 
