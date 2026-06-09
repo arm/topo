@@ -27,7 +27,7 @@ type Arg struct {
 	Hints       map[string]any `json:"hints,omitempty"`
 }
 
-func NewTemplate(source Source, compose io.Reader) (Template, error) {
+func NewTemplate(source GitHubSource, compose io.Reader) (Template, error) {
 	content, err := io.ReadAll(compose)
 	if err != nil {
 		return Template{}, fmt.Errorf("failed to read compose definition: %w", err)
@@ -58,7 +58,7 @@ func NewTemplate(source Source, compose io.Reader) (Template, error) {
 	}, nil
 }
 
-func FetchTemplate(source Source, githubToken string) (Template, error) {
+func FetchTemplate(source GitHubSource, githubToken string) (Template, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodGet, source.FileURL("compose.yaml"), nil)
 	if err != nil {

@@ -27,7 +27,7 @@ func TestBuildTemplate(t *testing.T) {
         org.example.tags: [llm, cpu]
 `
 		compose := strings.NewReader(composeContent)
-		source := Source{Repo: "Spaghetti/bolognese", SHA: "fresh"}
+		source := GitHubSource{Repo: "Spaghetti/bolognese", SHA: "fresh"}
 
 		tpl, err := NewTemplate(source, compose)
 		require.NoError(t, err)
@@ -60,7 +60,7 @@ func TestBuildTemplate(t *testing.T) {
 `
 		compose := strings.NewReader(composeContent)
 
-		_, err := NewTemplate(Source{}, compose)
+		_, err := NewTemplate(GitHubSource{}, compose)
 		require.Error(t, err)
 
 		assert.Contains(t, err.Error(), "no valid x-topo")

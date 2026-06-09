@@ -16,20 +16,20 @@ var sourcesJSON = `[
 	{"repo": "Arm-Examples/topo-simd-visual-benchmark", "sha": "main"}
 ]`
 
-type Source struct {
+type GitHubSource struct {
 	Repo string `json:"repo"`
 	SHA  string `json:"sha"`
 }
 
-func (s Source) String() string {
+func (s GitHubSource) String() string {
 	return fmt.Sprintf("%s@%s", s.Repo, s.SHA)
 }
 
-func (s Source) URL() string {
+func (s GitHubSource) URL() string {
 	return fmt.Sprintf("https://github.com/%s.git", s.Repo)
 }
 
-func (s Source) FileURL(repoFilePath string) string {
+func (s GitHubSource) FileURL(repoFilePath string) string {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "api.github.com",
@@ -41,8 +41,8 @@ func (s Source) FileURL(repoFilePath string) string {
 	return u.String()
 }
 
-func ListSources(jsonData io.Reader) []Source {
-	var sources []Source
+func ListSources(jsonData io.Reader) []GitHubSource {
+	var sources []GitHubSource
 	if err := json.NewDecoder(jsonData).Decode(&sources); err != nil {
 		panic(fmt.Errorf("failed to decode sources: %w", err))
 	}
