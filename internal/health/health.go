@@ -48,11 +48,11 @@ func (r HostReport) MarshalJSON() ([]byte, error) {
 }
 
 type TargetReport struct {
-	Destination     string        `json:"destination"`
-	IsLocalhost     bool          `json:"isLocalhost"`
-	Connectivity    HealthCheck   `json:"connectivity"`
-	Dependencies    []HealthCheck `json:"dependencies"`
-	SubsystemDriver HealthCheck   `json:"subsystemDriver"`
+	Destination            string        `json:"destination"`
+	IsLocalhost            bool          `json:"isLocalhost"`
+	Connectivity           HealthCheck   `json:"connectivity"`
+	Dependencies           []HealthCheck `json:"dependencies"`
+	ProcessingDomainDriver HealthCheck   `json:"processingDomainDriver"`
 }
 
 func (r TargetReport) MarshalJSON() ([]byte, error) {
@@ -125,22 +125,22 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	report.IsLocalhost = targetStatus.Connection.IsPlainLocalhost()
 	report.Connectivity = connectivityCheck(targetStatus.Connection)
 
-	report.SubsystemDriver.Name = "Subsystem Driver (remoteproc)"
+	report.ProcessingDomainDriver.Name = "Processing Domain Driver (remoteproc)"
 	remoteProcessors := targetStatus.Hardware.RemoteProcessors
 	switch {
 	case targetStatus.Hardware.Err != nil:
-		report.SubsystemDriver.Status = CheckStatusError
-		report.SubsystemDriver.Value = targetStatus.Hardware.Err.Error()
+		report.ProcessingDomainDriver.Status = CheckStatusError
+		report.ProcessingDomainDriver.Value = targetStatus.Hardware.Err.Error()
 	case len(remoteProcessors) > 0:
 		names := make([]string, len(remoteProcessors))
 		for i, remoteProc := range remoteProcessors {
 			names[i] = remoteProc.Name
 		}
-		report.SubsystemDriver.Status = CheckStatusOK
-		report.SubsystemDriver.Value = strings.Join(names, ", ")
+		report.ProcessingDomainDriver.Status = CheckStatusOK
+		report.ProcessingDomainDriver.Value = strings.Join(names, ", ")
 	default:
-		report.SubsystemDriver.Status = CheckStatusInfo
-		report.SubsystemDriver.Value = "no remoteproc devices found"
+		report.ProcessingDomainDriver.Status = CheckStatusInfo
+		report.ProcessingDomainDriver.Value = "no remoteproc devices found"
 	}
 
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)

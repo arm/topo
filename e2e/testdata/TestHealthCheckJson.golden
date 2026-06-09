@@ -43,8 +43,8 @@
     ],
     "destination": "TARGET_DESTINATION",
     "isLocalhost": false,
-    "subsystemDriver": {
-      "name": "Subsystem Driver (remoteproc)",
+    "processingDomainDriver": {
+      "name": "Processing Domain Driver (remoteproc)",
       "status": "info",
       "value": "no remoteproc devices found"
     }

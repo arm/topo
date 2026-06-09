@@ -63,8 +63,8 @@ func TestHealthReport(t *testing.T) {
 						Name:   "Connected",
 						Status: health.CheckStatusOK,
 					},
-					SubsystemDriver: health.HealthCheck{
-						Name:   "Subsystem Driver (remoteproc)",
+					ProcessingDomainDriver: health.HealthCheck{
+						Name:   "Processing Domain Driver (remoteproc)",
 						Status: health.CheckStatusWarning,
 						Value:  "no remoteproc devices found",
 					},
@@ -86,8 +86,8 @@ func TestHealthReport(t *testing.T) {
 						Name:   "Connected",
 						Status: health.CheckStatusOK,
 					},
-					SubsystemDriver: health.HealthCheck{
-						Name:   "Subsystem Driver (remoteproc)",
+					ProcessingDomainDriver: health.HealthCheck{
+						Name:   "Processing Domain Driver (remoteproc)",
 						Status: health.CheckStatusInfo,
 						Value:  "no remoteproc devices found",
 					},
@@ -204,7 +204,7 @@ func TestHealthReport(t *testing.T) {
 						Name:   "Connected",
 						Status: health.CheckStatusOK,
 					},
-					SubsystemDriver: health.HealthCheck{
+					ProcessingDomainDriver: health.HealthCheck{
 						Status: health.CheckStatusWarning,
 					},
 				},
@@ -225,7 +225,7 @@ func TestHealthReport(t *testing.T) {
 					"isLocalhost": false,
 					"connectivity": {"name":"Connected","status":"ok","value":""},
 					"dependencies": [],
-					"subsystemDriver": {"name":"","status":"warning","value":""}
+					"processingDomainDriver": {"name":"","status":"warning","value":""}
 				}
 			}`
 			assert.JSONEq(t, want, out.String())

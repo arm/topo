@@ -42,7 +42,7 @@ Destination: {{ .Target.Destination }}
     {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
     {{- end }}
-{{ template "checkRow" .Target.SubsystemDriver }}
+{{ template "checkRow" .Target.ProcessingDomainDriver }}
   {{- end }}
 {{- else }}
 ℹ️ {{ .TargetHint }}
