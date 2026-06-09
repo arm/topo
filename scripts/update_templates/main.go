@@ -1,32 +1,32 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"strings"
 )
 
-const outputJSONPath = "internal/catalog/data/catalog.json"
-
 func main() {
 	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		log.Println("⚠️ GITHUB_TOKEN is not set: you might get rate limited")
+	}
 
 	var templates []Template
-
 	for _, source := range ListSources(strings.NewReader(sourcesJSON)) {
 		template, err := FetchTemplate(source, githubToken)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", source, err)
+			log.Printf("failed to fetch %s (%v)\n", source, err)
 			continue
 		}
-
+		log.Printf("fetched %s\n", source)
 		templates = append(templates, template)
 	}
 
+	const outputJSONPath = "internal/catalog/data/catalog.json"
 	if err := WriteTemplates(outputJSONPath, templates); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write templates: %v\n", err)
+		log.Printf("failed to write templates: %v\n", err)
 		os.Exit(1)
 	}
-
-	fmt.Printf("Wrote %s\n", outputJSONPath)
+	log.Printf("written catalog to %s\n", outputJSONPath)
 }
