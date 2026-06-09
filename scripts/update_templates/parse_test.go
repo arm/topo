@@ -48,7 +48,7 @@ func TestBuildTemplate(t *testing.T) {
 					},
 				},
 			},
-			URL: source.URL(),
+			URL: source.CloneURL(),
 			Ref: source.SHA,
 		}, tpl)
 	})

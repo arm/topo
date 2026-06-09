@@ -53,7 +53,7 @@ func NewTemplate(source GitHubSource, compose io.Reader) (Template, error) {
 		Description: metadata.Description,
 		Features:    metadata.Features,
 		Args:        args,
-		URL:         source.URL(),
+		URL:         source.CloneURL(),
 		Ref:         source.SHA,
 	}, nil
 }
