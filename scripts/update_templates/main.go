@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 )
@@ -16,24 +15,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := &http.Client{}
-
 	var templates []Template
 
 	for _, source := range ListSources(strings.NewReader(sourcesJSON)) {
-		composeBytes, err := fetchComposeFile(client, token, source)
+		template, err := FetchTemplate(source, token)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", source, err)
 			continue
 		}
 
-		tmpl, err := NewTemplate(source, composeBytes)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "skipping %s: %v\n", source, err)
-			continue
-		}
-
-		templates = append(templates, tmpl)
+		templates = append(templates, template)
 	}
 
 	if err := WriteTemplates(outputJSONPath, templates); err != nil {
