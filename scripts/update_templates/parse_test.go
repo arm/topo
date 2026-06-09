@@ -29,7 +29,7 @@ func TestBuildTemplate(t *testing.T) {
 		compose := strings.NewReader(composeContent)
 		source := Source{Repo: "Spaghetti/bolognese", SHA: "fresh"}
 
-		tpl, err := BuildTemplate(source, compose)
+		tpl, err := NewTemplate(source, compose)
 		require.NoError(t, err)
 
 		assert.Equal(t, Template{
@@ -60,7 +60,7 @@ func TestBuildTemplate(t *testing.T) {
 `
 		compose := strings.NewReader(composeContent)
 
-		_, err := BuildTemplate(Source{}, compose)
+		_, err := NewTemplate(Source{}, compose)
 		require.Error(t, err)
 
 		assert.Contains(t, err.Error(), "no valid x-topo")

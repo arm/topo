@@ -26,7 +26,7 @@ type Arg struct {
 	Hints       map[string]any `json:"hints,omitempty"`
 }
 
-func BuildTemplate(source Source, compose io.Reader) (Template, error) {
+func NewTemplate(source Source, compose io.Reader) (Template, error) {
 	content, err := io.ReadAll(compose)
 	if err != nil {
 		return Template{}, fmt.Errorf("failed to read compose definition: %w", err)
