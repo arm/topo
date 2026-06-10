@@ -11,7 +11,7 @@ const relativeCatalogOutputPath = "internal/catalog/data/catalog.json"
 const relativeSourcesPath = "scripts/update_templates/sources.json"
 
 func catalogOutputPath() (string, error) {
-	repoRoot, err := findRepoRoot()
+	repoRoot, err := findModuleRoot()
 	if err != nil {
 		return "", err
 	}
@@ -34,7 +34,7 @@ func createCatalogOutput() (*os.File, string, error) {
 }
 
 func openGitHubSources() (*os.File, error) {
-	repoRoot, err := findRepoRoot()
+	repoRoot, err := findModuleRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func openGitHubSources() (*os.File, error) {
 	return os.Open(filepath.Join(repoRoot, filepath.FromSlash(relativeSourcesPath)))
 }
 
-func findRepoRoot() (string, error) {
+func findModuleRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
