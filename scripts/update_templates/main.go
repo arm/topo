@@ -17,7 +17,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open GitHub sources: %v\n", err)
 	}
-	defer sourcesFile.Close()
+	defer sourcesFile.Close() //nolint:errcheck // Closing a read-only file cannot affect catalog generation.
 
 	var templates []Template
 	for _, source := range ListGitHubSources(sourcesFile) {
