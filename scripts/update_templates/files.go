@@ -19,6 +19,20 @@ func catalogOutputPath() (string, error) {
 	return filepath.Join(repoRoot, filepath.FromSlash(relativeCatalogOutputPath)), nil
 }
 
+func createCatalogOutput() (*os.File, string, error) {
+	path, err := catalogOutputPath()
+	if err != nil {
+		return nil, "", err
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return file, path, nil
+}
+
 func openGitHubSources() (*os.File, error) {
 	repoRoot, err := findRepoRoot()
 	if err != nil {

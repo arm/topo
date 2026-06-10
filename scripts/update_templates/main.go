@@ -30,13 +30,19 @@ func main() {
 		templates = append(templates, template)
 	}
 
-	outputPath, err := catalogOutputPath()
+	outputFile, outputPath, err := createCatalogOutput()
 	if err != nil {
-		log.Fatalf("failed to calculate catalog output path: %v\n", err)
+		log.Fatalf("failed to create catalog output: %v\n", err)
 	}
 
-	if err := WriteTemplates(outputPath, templates); err != nil {
-		log.Printf("failed to write templates: %v\n", err)
+	writeErr := WriteTemplates(outputFile, templates)
+	closeErr := outputFile.Close()
+	if writeErr != nil {
+		log.Printf("failed to write templates: %v\n", writeErr)
+		os.Exit(1)
+	}
+	if closeErr != nil {
+		log.Printf("failed to close catalog output: %v\n", closeErr)
 		os.Exit(1)
 	}
 	log.Printf("written catalog to %s\n", outputPath)

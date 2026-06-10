@@ -1,8 +1,7 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +10,7 @@ import (
 
 func TestWriteTemplates(t *testing.T) {
 	t.Run("writes expected json", func(t *testing.T) {
-		writeTo := filepath.Join(t.TempDir(), "templates.json")
+		var output bytes.Buffer
 		input := []Template{
 			{
 				XTopo: XTopo{
@@ -24,7 +23,7 @@ func TestWriteTemplates(t *testing.T) {
 			},
 		}
 
-		err := WriteTemplates(writeTo, input)
+		err := WriteTemplates(&output, input)
 		require.NoError(t, err)
 
 		want := `
@@ -41,13 +40,6 @@ func TestWriteTemplates(t *testing.T) {
 	]
 }
 `
-		assert.JSONEq(t, want, requireReadFile(t, writeTo))
+		assert.JSONEq(t, want, output.String())
 	})
-}
-
-func requireReadFile(t testing.TB, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	require.NoError(t, err)
-	return string(data)
 }
