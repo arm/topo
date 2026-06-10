@@ -3,8 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
 )
 
 func main() {
@@ -15,8 +13,14 @@ func main() {
 
 	githubClient := NewGitHubClient(githubToken)
 
+	sourcesFile, err := openGitHubSources()
+	if err != nil {
+		log.Fatalf("failed to open GitHub sources: %v\n", err)
+	}
+	defer sourcesFile.Close() //nolint:errcheck // Closing a read-only file cannot affect catalog generation.
+
 	var templates []Template
-	for _, source := range ListGitHubSources(strings.NewReader(sourcesJSON)) {
+	for _, source := range ListGitHubSources(sourcesFile) {
 		template, err := FetchTemplate(githubClient, source)
 		if err != nil {
 			log.Printf("failed to fetch %s (%v)\n", source, err)
@@ -26,42 +30,18 @@ func main() {
 		templates = append(templates, template)
 	}
 
-	outputPath, err := catalogOutputPath()
+	outputFile, outputPath, err := createCatalogOutput()
 	if err != nil {
-		log.Fatalf("failed to find catalog output path: %v\n", err)
+		log.Fatalf("failed to create catalog output: %v\n", err)
 	}
 
-	if err := WriteTemplates(outputPath, templates); err != nil {
-		log.Printf("failed to write templates: %v\n", err)
-		os.Exit(1)
+	writeErr := WriteTemplates(outputFile, templates)
+	closeErr := outputFile.Close()
+	if writeErr != nil {
+		log.Fatalf("failed to write templates: %v\n", writeErr)
+	}
+	if closeErr != nil {
+		log.Fatalf("failed to close catalog output: %v\n", closeErr)
 	}
 	log.Printf("written catalog to %s\n", outputPath)
-}
-
-func catalogOutputPath() (string, error) {
-	repoRoot, err := findRepoRoot()
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(repoRoot, "internal", "catalog", "data", "catalog.json"), nil
-}
-
-func findRepoRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", os.ErrNotExist
-		}
-		dir = parent
-	}
 }
