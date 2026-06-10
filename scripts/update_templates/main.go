@@ -38,12 +38,10 @@ func main() {
 	writeErr := WriteTemplates(outputFile, templates)
 	closeErr := outputFile.Close()
 	if writeErr != nil {
-		log.Printf("failed to write templates: %v\n", writeErr)
-		os.Exit(1)
+		log.Fatalf("failed to write templates: %v\n", writeErr)
 	}
 	if closeErr != nil {
-		log.Printf("failed to close catalog output: %v\n", closeErr)
-		os.Exit(1)
+		log.Fatalf("failed to close catalog output: %v\n", closeErr)
 	}
 	log.Printf("written catalog to %s\n", outputPath)
 }
