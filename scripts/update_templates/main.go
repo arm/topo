@@ -13,14 +13,13 @@ func main() {
 
 	githubClient := NewGitHubClient(githubToken)
 
-	sourcesFile, err := openGitHubSources()
+	sources, err := ListGitHubSources()
 	if err != nil {
-		log.Fatalf("failed to open GitHub sources: %v\n", err)
+		log.Fatalf("failed to list sources: %v\n", err)
 	}
-	defer sourcesFile.Close() //nolint:errcheck // Closing a read-only file cannot affect catalog generation.
 
 	var templates []Template
-	for _, source := range ListGitHubSources(sourcesFile) {
+	for _, source := range sources {
 		template, err := FetchTemplate(githubClient, source)
 		if err != nil {
 			log.Printf("failed to fetch %s (%v)\n", source, err)
