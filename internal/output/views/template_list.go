@@ -11,22 +11,16 @@ import (
 type TemplateList []catalog.TemplateWithCompatibility
 
 const templateListTemplate = `
-{{- define "featuresRow" -}}
+{{- define "templateRow" }}
+{{- if .Compatibility }}{{ compatibilityMark .Compatibility }} {{ end }}{{ cyan .Name }}
+  {{ blue "Clone:" }}    {{ cloneCommand . }}
 {{- if .Features }}
-  Features: {{ join .Features ", " }}
+  {{ blue "Features:" }} {{ join .Features ", " }}
 {{- end }}
-{{- end }}
-
-{{- define "descriptionRow" -}}
 {{- if .Description }}
+
 {{ wrap .Description }}
 {{- end }}
-{{- end }}
-
-{{- define "templateRow" }}
-{{- if .Compatibility }}{{ compatibilityMark .Compatibility }} {{ end }}{{ cyan .Name }} | {{ blue .URL }} | {{ yellow .Ref }}
-{{- template "featuresRow" . }}
-{{- template "descriptionRow" . }}
 {{- end }}
 
 {{- define "templateList" }}

@@ -16,6 +16,7 @@ func getFuncMap(isTTY bool) template.FuncMap {
 		"blue":              func(s string) string { return s },
 		"yellow":            func(s string) string { return s },
 		"compatibilityMark": plainCompatibilityMark,
+		"cloneCommand":      cloneCommand,
 	}
 
 	if isTTY {
@@ -35,4 +36,12 @@ func plainCompatibilityMark(c catalog.CompatibilityStatus) string {
 		return "❌"
 	}
 	return ""
+}
+
+func cloneCommand(template catalog.TemplateWithCompatibility) string {
+	source := template.URL
+	if template.Ref != "" {
+		source += "#" + template.Ref
+	}
+	return "topo clone " + source
 }
