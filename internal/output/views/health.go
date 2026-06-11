@@ -19,9 +19,11 @@ const healthReportTemplate = `
 {{- define "checkRow" -}}
 {{ .Name }}:{{ statusIcon .Status }}{{- if .Value }} ({{ .Value }}){{- end }}
 {{- if .Fix }}
-  Fix: {{ .Fix.Description }}
+  Fix:
+    {{ .Fix.Description }}
   {{- if .Fix.Command }}
-  Cmd: {{ .Fix.Command }}
+  Command:
+    {{ .Fix.Command }}
   {{- end }}
 {{- end -}}
 {{- end -}}

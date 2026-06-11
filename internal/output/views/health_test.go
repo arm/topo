@@ -170,8 +170,8 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Skin Care: ⚠️")
-			assert.Contains(t, out.String(), "  Fix: Apply Working Hands Cream")
-			assert.Contains(t, out.String(), "  Cmd: topo moisturise")
+			assert.Contains(t, out.String(), "  Fix:\n    Apply Working Hands Cream")
+			assert.Contains(t, out.String(), "  Command:\n    topo moisturise")
 		})
 
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
