@@ -13,9 +13,13 @@ type TemplateList []catalog.TemplateWithCompatibility
 const templateListTemplate = `
 {{- define "templateRow" }}
 {{- if .Compatibility }}{{ compatibilityMark .Compatibility }} {{ end }}{{ cyan .Name }}
-  {{ blue "Clone:" }}    {{ cloneCommand . }}
+  {{ blue "Clone:" }}
+    {{ cloneCommand . }}
 {{- if .Features }}
-  {{ blue "Features:" }} {{ join .Features ", " }}
+  {{ blue "Features:" }}
+  {{- range .Features }}
+    {{ . }}
+  {{- end }}
 {{- end }}
 {{- if .Description }}
 

@@ -43,12 +43,14 @@ func TestTemplateList(t *testing.T) {
 		require.NoError(t, err)
 
 		want := `name-of-project
-  Clone:    topo clone url.git#main
+  Clone:
+    topo clone url.git#main
 
   blah blah blah
 
 name-of-other-project
-  Clone:    topo clone url.git#main
+  Clone:
+    topo clone url.git#main
 
   blah blah blah
 
@@ -78,7 +80,8 @@ name-of-other-project
 		require.NoError(t, err)
 
 		want := `name-of-project
-  Clone:    topo clone url.git#main
+  Clone:
+    topo clone url.git#main
 
   blah blah blah
 
@@ -109,8 +112,11 @@ name-of-other-project
 		require.NoError(t, err)
 
 		want := `name-of-project
-  Clone:    topo clone url.git#main
-  Features: walnut, almond
+  Clone:
+    topo clone url.git#main
+  Features:
+    walnut
+    almond
 
   blah blah blah
 
@@ -141,8 +147,11 @@ name-of-other-project
 		require.NoError(t, err)
 
 		want := `name-of-project
-  Clone:    topo clone url.git#main
-  Features: walnut, almond
+  Clone:
+    topo clone url.git#main
+  Features:
+    walnut
+    almond
 
   This sentence exists purely to verify that text wrapping behaves correctly
   when the content is long enough to span multiple lines.
@@ -174,8 +183,11 @@ name-of-other-project
 		require.NoError(t, err)
 
 		want := `name-of-project
-  Clone:    topo clone url.git#main
-  Features: walnut, almond
+  Clone:
+    topo clone url.git#main
+  Features:
+    walnut
+    almond
 
   blah blah blah
 
@@ -205,7 +217,8 @@ name-of-other-project
 		require.NoError(t, err)
 
 		want := `name-of-project
-  Clone:    topo clone url.git
+  Clone:
+    topo clone url.git
 
 `
 		assert.Equal(t, want, outBuf.String())
@@ -265,7 +278,7 @@ name-of-other-project
 		err := views.Print(views.TemplateList(templates), &outBuf, term.Plain)
 		require.NoError(t, err)
 
-		assert.Equal(t, "✅ name-of-project\n  Clone:    topo clone url.git#main\n\n", outBuf.String())
+		assert.Equal(t, "✅ name-of-project\n  Clone:\n    topo clone url.git#main\n\n", outBuf.String())
 	})
 
 	t.Run("prints compatibility marker if project is compatible and vice versa", func(t *testing.T) {
