@@ -6,13 +6,6 @@ import (
 )
 
 func main() {
-	githubToken := os.Getenv("GITHUB_TOKEN")
-	if githubToken == "" {
-		log.Println("⚠️ GITHUB_TOKEN is not set: you might get rate limited")
-	}
-
-	githubClient := NewGitHubClient(githubToken)
-
 	sources, err := ListGitHubSources()
 	if err != nil {
 		log.Fatalf("failed to list sources: %v\n", err)
@@ -35,6 +28,12 @@ func main() {
 		len(plan.ToRemove),
 		len(plan.Unchanged),
 	)
+
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		log.Println("⚠️ GITHUB_TOKEN is not set: you might get rate limited")
+	}
+	githubClient := NewGitHubClient(githubToken)
 
 	templates := append([]Template{}, plan.Unchanged...)
 	for _, source := range append(plan.ToAdd, plan.ToUpdate...) {
