@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"strings"
+)
+
 type UpdatePlan struct {
 	ToAdd     []GitHubSource
 	ToUpdate  []GitHubSource
@@ -9,6 +14,32 @@ type UpdatePlan struct {
 
 func (p UpdatePlan) HasChanges() bool {
 	return len(p.ToAdd) > 0 || len(p.ToUpdate) > 0 || len(p.ToRemove) > 0
+}
+
+func (p UpdatePlan) String() string {
+	var lines []string
+	lines = append(lines, fmt.Sprintf("🆕 %d to add", len(p.ToAdd)))
+	lines = appendSourceURLs(lines, p.ToAdd)
+	lines = append(lines, fmt.Sprintf("🔄 %d to update", len(p.ToUpdate)))
+	lines = appendSourceURLs(lines, p.ToUpdate)
+	lines = append(lines, fmt.Sprintf("🗑️ %d to remove", len(p.ToRemove)))
+	lines = appendTemplateURLs(lines, p.ToRemove)
+	lines = append(lines, fmt.Sprintf("☑️ %d unchanged", len(p.Unchanged)))
+	return strings.Join(lines, "\n")
+}
+
+func appendSourceURLs(lines []string, sources []GitHubSource) []string {
+	for _, source := range sources {
+		lines = append(lines, fmt.Sprintf("  - %s", source.URL()))
+	}
+	return lines
+}
+
+func appendTemplateURLs(lines []string, templates []Template) []string {
+	for _, template := range templates {
+		lines = append(lines, fmt.Sprintf("  - %s", template.URL))
+	}
+	return lines
 }
 
 func PlanUpdate(sources []GitHubSource, current []Template) UpdatePlan {

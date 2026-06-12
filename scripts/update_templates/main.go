@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -17,17 +18,11 @@ func main() {
 	}
 
 	plan := PlanUpdate(sources, currentTemplates)
+	log.Printf("update plan:\n%s", indent(plan.String()))
 	if !plan.HasChanges() {
 		log.Println("catalog already up to date")
 		return
 	}
-	log.Printf(
-		"template update plan:\n  🆕 %d to add\n  🔄 %d to update\n  🗑️ %d to remove\n  ☑️ %d unchanged",
-		len(plan.ToAdd),
-		len(plan.ToUpdate),
-		len(plan.ToRemove),
-		len(plan.Unchanged),
-	)
 
 	githubToken := os.Getenv("GITHUB_TOKEN")
 	if githubToken == "" {
@@ -51,4 +46,8 @@ func main() {
 		log.Fatalf("failed to write catalog file: %v\n", err)
 	}
 	log.Printf("written catalog to %s\n", filePath)
+}
+
+func indent(text string) string {
+	return "  " + strings.ReplaceAll(text, "\n", "\n  ")
 }
