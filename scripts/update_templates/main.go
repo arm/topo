@@ -41,6 +41,7 @@ func main() {
 		log.Printf("fetched %s\n", source)
 		templates = append(templates, template)
 	}
+	templates = TemplatesInSourceOrder(sources, templates)
 
 	filePath, err := WriteCatalogFile(templates)
 	if err != nil {
