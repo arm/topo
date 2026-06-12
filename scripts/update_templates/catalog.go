@@ -13,9 +13,32 @@ const (
 	catalogSchemaURL          = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
 )
 
-type CatalogDocument struct {
+type Catalog struct {
 	Schema    string     `json:"$schema"`
 	Templates []Template `json:"templates"`
+}
+
+func ReadCatalogFile() (Catalog, error) {
+	path, err := catalogOutputPath()
+	if err != nil {
+		return Catalog{}, err
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return Catalog{}, err
+	}
+	defer file.Close() //nolint:errcheck // Closing a read-only file cannot affect catalog generation.
+
+	return ReadCatalog(file)
+}
+
+func ReadCatalog(r io.Reader) (Catalog, error) {
+	var document Catalog
+	if err := json.NewDecoder(r).Decode(&document); err != nil {
+		return Catalog{}, err
+	}
+	return document, nil
 }
 
 func WriteCatalogFile(templates []Template) (string, error) {
@@ -35,7 +58,7 @@ func WriteCatalogFile(templates []Template) (string, error) {
 }
 
 func WriteCatalog(w io.Writer, templates []Template) error {
-	document := CatalogDocument{
+	document := Catalog{
 		Schema:    catalogSchemaURL,
 		Templates: templates,
 	}

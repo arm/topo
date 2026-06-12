@@ -18,12 +18,25 @@ func main() {
 		log.Fatalf("failed to list sources: %v\n", err)
 	}
 
-	var templates []Template
-	for _, source := range sources {
+	catalog, err := ReadCatalogFile()
+	if err != nil {
+		log.Fatalf("failed to read catalog file: %v\n", err)
+	}
+
+	plan := PlanUpdate(sources, catalog.Templates)
+	log.Printf(
+		"template update plan: %d add, %d update, %d remove, %d unchanged",
+		len(plan.ToAdd),
+		len(plan.ToUpdate),
+		len(plan.ToRemove),
+		len(plan.Unchanged),
+	)
+
+	templates := append([]Template{}, plan.Unchanged...)
+	for _, source := range append(plan.ToAdd, plan.ToUpdate...) {
 		template, err := FetchTemplate(githubClient, source)
 		if err != nil {
-			log.Printf("failed to fetch %s (%v)\n", source, err)
-			continue
+			log.Fatalf("failed to fetch %s: %v\n", source, err)
 		}
 		log.Printf("fetched %s\n", source)
 		templates = append(templates, template)
