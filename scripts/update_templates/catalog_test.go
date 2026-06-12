@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWriteTemplates(t *testing.T) {
-	t.Run("writes expected json", func(t *testing.T) {
+func TestWriteCatalog(t *testing.T) {
+	t.Run("writes templates to catalog file", func(t *testing.T) {
 		var output bytes.Buffer
 		input := []Template{
 			{
@@ -23,7 +23,7 @@ func TestWriteTemplates(t *testing.T) {
 			},
 		}
 
-		err := WriteTemplates(&output, input)
+		err := WriteCatalog(&output, input)
 		require.NoError(t, err)
 
 		want := `
