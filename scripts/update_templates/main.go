@@ -36,11 +36,19 @@ func main() {
 		return
 	}
 
+	validator, err := NewCatalogSchema()
+	if err != nil {
+		log.Fatalf("failed to create schema validator: %v\n", err)
+	}
+
 	templates := append([]Template{}, plan.Unchanged...)
 	for _, source := range append(plan.ToAdd, plan.ToUpdate...) {
 		template, err := FetchTemplate(githubClient, source)
 		if err != nil {
 			log.Fatalf("failed to fetch %s: %v\n", source, err)
+		}
+		if err := validator.ValidateTemplate(template); err != nil {
+			log.Fatalf("invalid template %s: %v\n", source, err)
 		}
 		log.Printf("fetched %s\n", source)
 		templates = append(templates, template)
