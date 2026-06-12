@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestReadCatalog(t *testing.T) {
+func TestReadCatalogFile(t *testing.T) {
 	t.Run("reads templates from catalog input", func(t *testing.T) {
 		input := bytes.NewBufferString(`
 {
@@ -25,7 +25,7 @@ func TestReadCatalog(t *testing.T) {
 }
 `)
 
-		got, err := ReadCatalog(input)
+		got, err := ReadCatalogFile(input)
 
 		require.NoError(t, err)
 		want := Catalog{
@@ -46,7 +46,7 @@ func TestReadCatalog(t *testing.T) {
 	})
 }
 
-func TestWriteCatalog(t *testing.T) {
+func TestWriteTemplatesToCatalogFile(t *testing.T) {
 	t.Run("writes templates to catalog file", func(t *testing.T) {
 		var output bytes.Buffer
 		input := []Template{
@@ -61,7 +61,7 @@ func TestWriteCatalog(t *testing.T) {
 			},
 		}
 
-		err := WriteCatalog(&output, input)
+		err := WriteTemplatesToCatalogFile(&output, input)
 		require.NoError(t, err)
 
 		want := `

@@ -11,12 +11,12 @@ func main() {
 		log.Fatalf("failed to list sources: %v\n", err)
 	}
 
-	catalog, err := ReadCatalogFile()
+	currentTemplates, err := ReadTemplates()
 	if err != nil {
 		log.Fatalf("failed to read catalog file: %v\n", err)
 	}
 
-	plan := PlanUpdate(sources, catalog.Templates)
+	plan := PlanUpdate(sources, currentTemplates)
 	if !plan.HasChanges() {
 		log.Println("catalog already up to date")
 		return
@@ -46,7 +46,7 @@ func main() {
 	}
 	templates = TemplatesInSourceOrder(sources, templates)
 
-	filePath, err := WriteCatalogFile(templates)
+	filePath, err := WriteTemplates(templates)
 	if err != nil {
 		log.Fatalf("failed to write catalog file: %v\n", err)
 	}

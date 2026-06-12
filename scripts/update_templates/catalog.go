@@ -18,22 +18,26 @@ type Catalog struct {
 	Templates []Template `json:"templates"`
 }
 
-func ReadCatalogFile() (Catalog, error) {
+func ReadTemplates() ([]Template, error) {
 	path, err := catalogOutputPath()
 	if err != nil {
-		return Catalog{}, err
+		return nil, err
 	}
 
 	file, err := os.Open(path)
 	if err != nil {
-		return Catalog{}, err
+		return nil, err
 	}
 	defer file.Close() //nolint:errcheck // Closing a read-only file cannot affect catalog generation.
 
-	return ReadCatalog(file)
+	catalog, err := ReadCatalogFile(file)
+	if err != nil {
+		return nil, err
+	}
+	return catalog.Templates, nil
 }
 
-func ReadCatalog(r io.Reader) (Catalog, error) {
+func ReadCatalogFile(r io.Reader) (Catalog, error) {
 	var document Catalog
 	if err := json.NewDecoder(r).Decode(&document); err != nil {
 		return Catalog{}, err
@@ -41,12 +45,12 @@ func ReadCatalog(r io.Reader) (Catalog, error) {
 	return document, nil
 }
 
-func WriteCatalogFile(templates []Template) (string, error) {
+func WriteTemplates(templates []Template) (string, error) {
 	outputFile, outputFilePath, err := createCatalogOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to create catalog output: %w", err)
 	}
-	writeErr := WriteCatalog(outputFile, templates)
+	writeErr := WriteTemplatesToCatalogFile(outputFile, templates)
 	closeErr := outputFile.Close()
 	if writeErr != nil {
 		return "", fmt.Errorf("failed to write templates: %w", writeErr)
@@ -57,7 +61,7 @@ func WriteCatalogFile(templates []Template) (string, error) {
 	return outputFilePath, nil
 }
 
-func WriteCatalog(w io.Writer, templates []Template) error {
+func WriteTemplatesToCatalogFile(w io.Writer, templates []Template) error {
 	document := Catalog{
 		Schema:    catalogSchemaURL,
 		Templates: templates,
