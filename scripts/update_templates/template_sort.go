@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 func TemplatesInSourceOrder(sources []GitHubSource, templates []Template) []Template {
 	templateByID := make(map[TemplateSourceID]Template, len(templates))
 	for _, template := range templates {
@@ -10,7 +12,7 @@ func TemplatesInSourceOrder(sources []GitHubSource, templates []Template) []Temp
 	for _, source := range sources {
 		template, exists := templateByID[source.ID()]
 		if !exists {
-			continue
+			panic(fmt.Sprintf("missing template for source %s", source))
 		}
 		ordered = append(ordered, template)
 	}

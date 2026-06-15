@@ -29,4 +29,15 @@ func TestTemplatesInSourceOrder(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("panics when source has no matching template", func(t *testing.T) {
+		sources := []GitHubSource{
+			{Repo: "example/missing", SHA: "missing-sha"},
+		}
+		templates := []Template{}
+
+		assert.PanicsWithValue(t, "missing template for source example/missing@missing-sha", func() {
+			TemplatesInSourceOrder(sources, templates)
+		})
+	})
 }
