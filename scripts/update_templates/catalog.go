@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 )
@@ -25,19 +24,11 @@ func ReadTemplates(path string) ([]Template, error) {
 	}
 	defer file.Close() //nolint:errcheck // Closing a read-only file cannot affect catalog generation.
 
-	catalog, err := ReadCatalogFile(file)
-	if err != nil {
+	var document Catalog
+	if err := json.NewDecoder(file).Decode(&document); err != nil {
 		return nil, err
 	}
-	return catalog.Templates, nil
-}
-
-func ReadCatalogFile(r io.Reader) (Catalog, error) {
-	var document Catalog
-	if err := json.NewDecoder(r).Decode(&document); err != nil {
-		return Catalog{}, err
-	}
-	return document, nil
+	return document.Templates, nil
 }
 
 func WriteTemplates(path string, templates []Template, validator CatalogSchema) error {
@@ -53,7 +44,9 @@ func WriteTemplates(path string, templates []Template, validator CatalogSchema) 
 	if err != nil {
 		return fmt.Errorf("failed to create catalog output: %w", err)
 	}
-	writeErr := WriteCatalogFile(outputFile, document)
+	enc := json.NewEncoder(outputFile)
+	enc.SetIndent("", "  ")
+	writeErr := enc.Encode(document)
 	closeErr := outputFile.Close()
 	if writeErr != nil {
 		return fmt.Errorf("failed to write templates: %w", writeErr)
@@ -62,12 +55,6 @@ func WriteTemplates(path string, templates []Template, validator CatalogSchema) 
 		return fmt.Errorf("failed to close catalog output: %w", closeErr)
 	}
 	return nil
-}
-
-func WriteCatalogFile(w io.Writer, document Catalog) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(document)
 }
 
 func CatalogFilePath() (string, error) {
