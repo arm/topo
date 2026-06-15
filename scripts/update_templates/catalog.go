@@ -9,7 +9,6 @@ import (
 
 const (
 	relativeCatalogOutputPath = "internal/catalog/data/catalog.json"
-	catalogSchemaURL          = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
 )
 
 type Catalog struct {

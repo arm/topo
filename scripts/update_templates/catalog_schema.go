@@ -10,7 +10,10 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-const relativeCatalogSchemaPath = "internal/catalog/data/catalog.schema.json"
+const (
+	relativeCatalogSchemaPath = "internal/catalog/data/catalog.schema.json"
+	catalogSchemaURL          = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
+)
 
 type CatalogSchema struct {
 	schemaURL string
