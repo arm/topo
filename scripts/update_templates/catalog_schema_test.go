@@ -8,6 +8,17 @@ import (
 )
 
 func TestCatalogSchema(t *testing.T) {
+	t.Run("SchemaURL returns catalog schema URL", func(t *testing.T) {
+		schemaJSON, err := readCatalogSchema()
+		require.NoError(t, err)
+		validator, err := NewCatalogSchemaFromBytes(schemaJSON)
+		require.NoError(t, err)
+
+		got := validator.SchemaURL()
+
+		assert.Equal(t, catalogSchemaURL, got)
+	})
+
 	t.Run("ValidateTemplate accepts template that matches catalog schema", func(t *testing.T) {
 		schemaJSON, err := readCatalogSchema()
 		require.NoError(t, err)

@@ -13,7 +13,8 @@ import (
 const relativeCatalogSchemaPath = "internal/catalog/data/catalog.schema.json"
 
 type CatalogSchema struct {
-	schema *jsonschema.Schema
+	schemaURL string
+	schema    *jsonschema.Schema
 }
 
 func NewCatalogSchema() (CatalogSchema, error) {
@@ -38,12 +39,19 @@ func NewCatalogSchemaFromBytes(schemaJSON []byte) (CatalogSchema, error) {
 		return CatalogSchema{}, fmt.Errorf("failed to compile schema: %w", err)
 	}
 
-	return CatalogSchema{schema: schema}, nil
+	return CatalogSchema{
+		schemaURL: catalogSchemaURL,
+		schema:    schema,
+	}, nil
+}
+
+func (v CatalogSchema) SchemaURL() string {
+	return v.schemaURL
 }
 
 func (v CatalogSchema) ValidateTemplate(template Template) error {
 	document := Catalog{
-		Schema:    catalogSchemaURL,
+		Schema:    v.SchemaURL(),
 		Templates: []Template{template},
 	}
 	if err := v.ValidateCatalog(document); err != nil {

@@ -47,7 +47,7 @@ func ReadCatalogFile(r io.Reader) (Catalog, error) {
 
 func WriteTemplates(templates []Template, validator CatalogSchema) (string, error) {
 	document := Catalog{
-		Schema:    catalogSchemaURL,
+		Schema:    validator.SchemaURL(),
 		Templates: templates,
 	}
 	if err := validator.ValidateCatalog(document); err != nil {
