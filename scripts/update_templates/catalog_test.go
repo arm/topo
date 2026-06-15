@@ -46,22 +46,25 @@ func TestReadCatalogFile(t *testing.T) {
 	})
 }
 
-func TestWriteTemplatesToCatalogFile(t *testing.T) {
-	t.Run("writes templates to catalog file", func(t *testing.T) {
+func TestWriteCatalogFile(t *testing.T) {
+	t.Run("writes catalog document", func(t *testing.T) {
 		var output bytes.Buffer
-		input := []Template{
-			{
-				XTopo: XTopo{
-					Name:        "death-star-trench-run",
-					Description: "Use the Force to benchmark impossible shots",
-					Features:    []string{"X-wing", "Astromech", "Proton torpedoes"},
+		input := Catalog{
+			Schema: catalogSchemaURL,
+			Templates: []Template{
+				{
+					XTopo: XTopo{
+						Name:        "death-star-trench-run",
+						Description: "Use the Force to benchmark impossible shots",
+						Features:    []string{"X-wing", "Astromech", "Proton torpedoes"},
+					},
+					URL: "ssh://death-star.example",
+					Ref: "rebellion",
 				},
-				URL: "ssh://death-star.example",
-				Ref: "rebellion",
 			},
 		}
 
-		err := WriteTemplatesToCatalogFile(&output, input)
+		err := WriteCatalogFile(&output, input)
 		require.NoError(t, err)
 
 		want := `

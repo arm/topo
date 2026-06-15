@@ -69,14 +69,6 @@ func WriteTemplates(templates []Template, validator CatalogSchema) (string, erro
 	return outputFilePath, nil
 }
 
-func WriteTemplatesToCatalogFile(w io.Writer, templates []Template) error {
-	document := Catalog{
-		Schema:    catalogSchemaURL,
-		Templates: templates,
-	}
-	return WriteCatalogFile(w, document)
-}
-
 func WriteCatalogFile(w io.Writer, document Catalog) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
