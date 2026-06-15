@@ -46,17 +46,8 @@ func (v CatalogSchema) ValidateTemplate(template Template) error {
 		Schema:    catalogSchemaURL,
 		Templates: []Template{template},
 	}
-	jsonBytes, err := json.Marshal(document)
-	if err != nil {
-		return fmt.Errorf("failed to marshal template: %w", err)
-	}
-
-	jsonDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(jsonBytes))
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal template: %w", err)
-	}
-	if err := v.schema.Validate(jsonDoc); err != nil {
-		return fmt.Errorf("failed schema validation: %w", err)
+	if err := v.ValidateCatalog(document); err != nil {
+		return fmt.Errorf("invalid template document: %w", err)
 	}
 	return nil
 }
