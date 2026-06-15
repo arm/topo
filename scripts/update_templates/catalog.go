@@ -45,7 +45,7 @@ func ReadCatalogFile(r io.Reader) (Catalog, error) {
 	return document, nil
 }
 
-func WriteTemplates(templates []Template) (string, error) {
+func WriteTemplates(templates []Template, validator CatalogSchema) (string, error) {
 	outputFile, outputFilePath, err := createCatalogOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to create catalog output: %w", err)

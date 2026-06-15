@@ -55,7 +55,7 @@ func main() {
 	}
 	templates = TemplatesInSourceOrder(sources, templates)
 
-	filePath, err := WriteTemplates(templates)
+	filePath, err := WriteTemplates(templates, validator)
 	if err != nil {
 		log.Fatalf("failed to write catalog file: %v\n", err)
 	}
