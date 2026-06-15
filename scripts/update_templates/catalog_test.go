@@ -50,7 +50,8 @@ func TestReadTemplates(t *testing.T) {
 func TestWriteTemplates(t *testing.T) {
 	t.Run("writes valid templates to catalog file", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "catalog.json")
-		validator := newTestCatalogSchema(t)
+		validator, err := NewCatalogSchema()
+		require.NoError(t, err)
 		input := []Template{
 			{
 				XTopo: XTopo{
@@ -63,7 +64,7 @@ func TestWriteTemplates(t *testing.T) {
 			},
 		}
 
-		err := WriteTemplates(path, input, validator)
+		err = WriteTemplates(path, input, validator)
 
 		require.NoError(t, err)
 		gotBytes, err := os.ReadFile(path)
@@ -83,7 +84,8 @@ func TestWriteTemplates(t *testing.T) {
 		want := []byte("existing catalog")
 		err := os.WriteFile(path, want, 0o600)
 		require.NoError(t, err)
-		validator := newTestCatalogSchema(t)
+		validator, err := NewCatalogSchema()
+		require.NoError(t, err)
 		input := []Template{
 			{
 				XTopo: XTopo{

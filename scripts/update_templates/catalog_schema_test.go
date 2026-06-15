@@ -10,7 +10,8 @@ import (
 func TestCatalogSchema(t *testing.T) {
 	t.Run("SchemaURL", func(t *testing.T) {
 		t.Run("returns catalog schema URL", func(t *testing.T) {
-			validator := newTestCatalogSchema(t)
+			validator, err := NewCatalogSchema()
+			require.NoError(t, err)
 
 			got := validator.SchemaURL()
 
@@ -20,7 +21,8 @@ func TestCatalogSchema(t *testing.T) {
 
 	t.Run("ValidateTemplate", func(t *testing.T) {
 		t.Run("accepts template that matches catalog schema", func(t *testing.T) {
-			validator := newTestCatalogSchema(t)
+			validator, err := NewCatalogSchema()
+			require.NoError(t, err)
 			template := Template{
 				XTopo: XTopo{
 					Name:        "Hello World",
@@ -31,13 +33,14 @@ func TestCatalogSchema(t *testing.T) {
 				Ref: "main",
 			}
 
-			err := validator.ValidateTemplate(template)
+			err = validator.ValidateTemplate(template)
 
 			assert.NoError(t, err)
 		})
 
 		t.Run("rejects template that does not match catalog schema", func(t *testing.T) {
-			validator := newTestCatalogSchema(t)
+			validator, err := NewCatalogSchema()
+			require.NoError(t, err)
 			template := Template{
 				XTopo: XTopo{
 					Description: "Missing a name",
@@ -46,7 +49,7 @@ func TestCatalogSchema(t *testing.T) {
 				Ref: "main",
 			}
 
-			err := validator.ValidateTemplate(template)
+			err = validator.ValidateTemplate(template)
 
 			assert.Error(t, err)
 		})
@@ -54,7 +57,8 @@ func TestCatalogSchema(t *testing.T) {
 
 	t.Run("ValidateCatalog", func(t *testing.T) {
 		t.Run("accepts document that matches catalog schema", func(t *testing.T) {
-			validator := newTestCatalogSchema(t)
+			validator, err := NewCatalogSchema()
+			require.NoError(t, err)
 			document := Catalog{
 				Schema: catalogSchemaURL,
 				Templates: []Template{
@@ -69,13 +73,14 @@ func TestCatalogSchema(t *testing.T) {
 				},
 			}
 
-			err := validator.ValidateCatalog(document)
+			err = validator.ValidateCatalog(document)
 
 			assert.NoError(t, err)
 		})
 
 		t.Run("rejects document that does not match catalog schema", func(t *testing.T) {
-			validator := newTestCatalogSchema(t)
+			validator, err := NewCatalogSchema()
+			require.NoError(t, err)
 			document := Catalog{
 				Schema: "https://example.com/catalog.schema.json",
 				Templates: []Template{
@@ -90,19 +95,9 @@ func TestCatalogSchema(t *testing.T) {
 				},
 			}
 
-			err := validator.ValidateCatalog(document)
+			err = validator.ValidateCatalog(document)
 
 			assert.Error(t, err)
 		})
 	})
-}
-
-func newTestCatalogSchema(t *testing.T) CatalogSchema {
-	t.Helper()
-
-	schemaJSON, err := readCatalogSchema()
-	require.NoError(t, err)
-	validator, err := NewCatalogSchemaFromBytes(schemaJSON)
-	require.NoError(t, err)
-	return validator
 }
