@@ -24,7 +24,12 @@ func main() {
 		log.Fatalf("failed to list sources: %v\n", err)
 	}
 
-	currentTemplates, err := ReadTemplates()
+	catalogFilePath, err := CatalogFilePath()
+	if err != nil {
+		log.Fatalf("failed to find catalog file: %v\n", err)
+	}
+
+	currentTemplates, err := ReadTemplates(catalogFilePath)
 	if err != nil {
 		log.Fatalf("failed to read catalog file: %v\n", err)
 	}
@@ -55,11 +60,10 @@ func main() {
 	}
 	templates = TemplatesInSourceOrder(sources, templates)
 
-	filePath, err := WriteTemplates(templates, validator)
-	if err != nil {
+	if err := WriteTemplates(catalogFilePath, templates, validator); err != nil {
 		log.Fatalf("failed to write catalog file: %v\n", err)
 	}
-	log.Printf("written catalog to %s\n", filePath)
+	log.Printf("written catalog to %s\n", catalogFilePath)
 }
 
 func indent(text string) string {

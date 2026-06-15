@@ -18,12 +18,7 @@ type Catalog struct {
 	Templates []Template `json:"templates"`
 }
 
-func ReadTemplates() ([]Template, error) {
-	path, err := catalogOutputPath()
-	if err != nil {
-		return nil, err
-	}
-
+func ReadTemplates(path string) ([]Template, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -45,28 +40,28 @@ func ReadCatalogFile(r io.Reader) (Catalog, error) {
 	return document, nil
 }
 
-func WriteTemplates(templates []Template, validator CatalogSchema) (string, error) {
+func WriteTemplates(path string, templates []Template, validator CatalogSchema) error {
 	document := Catalog{
 		Schema:    validator.SchemaURL(),
 		Templates: templates,
 	}
 	if err := validator.ValidateCatalog(document); err != nil {
-		return "", fmt.Errorf("invalid catalog document: %w", err)
+		return fmt.Errorf("invalid catalog document: %w", err)
 	}
 
-	outputFile, outputFilePath, err := createCatalogOutput()
+	outputFile, err := os.Create(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to create catalog output: %w", err)
+		return fmt.Errorf("failed to create catalog output: %w", err)
 	}
 	writeErr := WriteCatalogFile(outputFile, document)
 	closeErr := outputFile.Close()
 	if writeErr != nil {
-		return "", fmt.Errorf("failed to write templates: %w", writeErr)
+		return fmt.Errorf("failed to write templates: %w", writeErr)
 	}
 	if closeErr != nil {
-		return "", fmt.Errorf("failed to close catalog output: %w", closeErr)
+		return fmt.Errorf("failed to close catalog output: %w", closeErr)
 	}
-	return outputFilePath, nil
+	return nil
 }
 
 func WriteCatalogFile(w io.Writer, document Catalog) error {
@@ -75,25 +70,11 @@ func WriteCatalogFile(w io.Writer, document Catalog) error {
 	return enc.Encode(document)
 }
 
-func catalogOutputPath() (string, error) {
+func CatalogFilePath() (string, error) {
 	repoRoot, err := findModuleRoot()
 	if err != nil {
 		return "", err
 	}
 
 	return filepath.Join(repoRoot, filepath.FromSlash(relativeCatalogOutputPath)), nil
-}
-
-func createCatalogOutput() (*os.File, string, error) {
-	path, err := catalogOutputPath()
-	if err != nil {
-		return nil, path, err
-	}
-
-	file, err := os.Create(path)
-	if err != nil {
-		return nil, path, err
-	}
-
-	return file, path, nil
 }
