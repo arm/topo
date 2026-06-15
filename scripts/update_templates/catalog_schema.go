@@ -61,6 +61,22 @@ func (v CatalogSchema) ValidateTemplate(template Template) error {
 	return nil
 }
 
+func (v CatalogSchema) ValidateCatalog(document Catalog) error {
+	jsonBytes, err := json.Marshal(document)
+	if err != nil {
+		return fmt.Errorf("failed to marshal catalog: %w", err)
+	}
+
+	jsonDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(jsonBytes))
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal catalog: %w", err)
+	}
+	if err := v.schema.Validate(jsonDoc); err != nil {
+		return fmt.Errorf("failed schema validation: %w", err)
+	}
+	return nil
+}
+
 func readCatalogSchema() ([]byte, error) {
 	repoRoot, err := findModuleRoot()
 	if err != nil {
