@@ -46,17 +46,25 @@ func ReadCatalogFile(r io.Reader) (Catalog, error) {
 }
 
 func WriteTemplates(templates []Template, validator CatalogSchema) (string, error) {
+	document := Catalog{
+		Schema:    catalogSchemaURL,
+		Templates: templates,
+	}
+	if err := validator.ValidateCatalog(document); err != nil {
+		return "", fmt.Errorf("invalid catalog document: %w", err)
+	}
+
 	outputFile, outputFilePath, err := createCatalogOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to create catalog output: %w", err)
 	}
-	writeErr := WriteTemplatesToCatalogFile(outputFile, templates)
+	writeErr := WriteCatalogFile(outputFile, document)
 	closeErr := outputFile.Close()
 	if writeErr != nil {
 		return "", fmt.Errorf("failed to write templates: %w", writeErr)
 	}
 	if closeErr != nil {
-		return "", fmt.Errorf("failed to close catalog output: %w", writeErr)
+		return "", fmt.Errorf("failed to close catalog output: %w", closeErr)
 	}
 	return outputFilePath, nil
 }
@@ -66,7 +74,10 @@ func WriteTemplatesToCatalogFile(w io.Writer, templates []Template) error {
 		Schema:    catalogSchemaURL,
 		Templates: templates,
 	}
+	return WriteCatalogFile(w, document)
+}
 
+func WriteCatalogFile(w io.Writer, document Catalog) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(document)
