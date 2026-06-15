@@ -41,7 +41,12 @@ func main() {
 		return
 	}
 
-	validator, err := NewCatalogSchema()
+	catalogSchemaFilePath, err := CatalogSchemaFilePath()
+	if err != nil {
+		log.Fatalf("failed to find catalog schema file: %v\n", err)
+	}
+
+	validator, err := NewCatalogSchema(catalogSchemaFilePath)
 	if err != nil {
 		log.Fatalf("failed to create schema validator: %v\n", err)
 	}

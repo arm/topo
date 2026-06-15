@@ -10,7 +10,9 @@ import (
 func TestCatalogSchema(t *testing.T) {
 	t.Run("SchemaURL", func(t *testing.T) {
 		t.Run("returns catalog schema URL", func(t *testing.T) {
-			validator, err := NewCatalogSchema()
+			schemaPath, err := CatalogSchemaFilePath()
+			require.NoError(t, err)
+			validator, err := NewCatalogSchema(schemaPath)
 			require.NoError(t, err)
 
 			got := validator.SchemaURL()
@@ -21,7 +23,9 @@ func TestCatalogSchema(t *testing.T) {
 
 	t.Run("ValidateTemplate", func(t *testing.T) {
 		t.Run("accepts template that matches catalog schema", func(t *testing.T) {
-			validator, err := NewCatalogSchema()
+			schemaPath, err := CatalogSchemaFilePath()
+			require.NoError(t, err)
+			validator, err := NewCatalogSchema(schemaPath)
 			require.NoError(t, err)
 			template := Template{
 				XTopo: XTopo{
@@ -39,7 +43,9 @@ func TestCatalogSchema(t *testing.T) {
 		})
 
 		t.Run("rejects template that does not match catalog schema", func(t *testing.T) {
-			validator, err := NewCatalogSchema()
+			schemaPath, err := CatalogSchemaFilePath()
+			require.NoError(t, err)
+			validator, err := NewCatalogSchema(schemaPath)
 			require.NoError(t, err)
 			template := Template{
 				XTopo: XTopo{
@@ -57,7 +63,9 @@ func TestCatalogSchema(t *testing.T) {
 
 	t.Run("ValidateCatalog", func(t *testing.T) {
 		t.Run("accepts document that matches catalog schema", func(t *testing.T) {
-			validator, err := NewCatalogSchema()
+			schemaPath, err := CatalogSchemaFilePath()
+			require.NoError(t, err)
+			validator, err := NewCatalogSchema(schemaPath)
 			require.NoError(t, err)
 			document := Catalog{
 				Schema: catalogSchemaURL,
@@ -79,7 +87,9 @@ func TestCatalogSchema(t *testing.T) {
 		})
 
 		t.Run("rejects document that does not match catalog schema", func(t *testing.T) {
-			validator, err := NewCatalogSchema()
+			schemaPath, err := CatalogSchemaFilePath()
+			require.NoError(t, err)
+			validator, err := NewCatalogSchema(schemaPath)
 			require.NoError(t, err)
 			document := Catalog{
 				Schema: "https://example.com/catalog.schema.json",

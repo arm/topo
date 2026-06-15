@@ -20,8 +20,8 @@ type CatalogSchema struct {
 	schema    *jsonschema.Schema
 }
 
-func NewCatalogSchema() (CatalogSchema, error) {
-	schemaJSON, err := readCatalogSchema()
+func NewCatalogSchema(path string) (CatalogSchema, error) {
+	schemaJSON, err := os.ReadFile(path)
 	if err != nil {
 		return CatalogSchema{}, fmt.Errorf("failed to read catalog schema: %w", err)
 	}
@@ -79,11 +79,11 @@ func (v CatalogSchema) ValidateCatalog(document Catalog) error {
 	return nil
 }
 
-func readCatalogSchema() ([]byte, error) {
+func CatalogSchemaFilePath() (string, error) {
 	repoRoot, err := findModuleRoot()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(relativeCatalogSchemaPath)))
+	return filepath.Join(repoRoot, filepath.FromSlash(relativeCatalogSchemaPath)), nil
 }
