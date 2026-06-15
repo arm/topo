@@ -8,6 +8,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type TemplateSourceID string
+
 type Template struct {
 	XTopo
 	URL string `json:"url"`
@@ -42,7 +44,7 @@ func NewTemplate(source GitHubSource, composeFile io.Reader) (Template, error) {
 
 	return Template{
 		XTopo: parsed.XTopo,
-		URL:   source.CloneURL(),
+		URL:   source.URL(),
 		Ref:   source.SHA,
 	}, nil
 }
@@ -53,4 +55,8 @@ func FetchTemplate(client GitHubClient, source GitHubSource) (Template, error) {
 		return Template{}, err
 	}
 	return NewTemplate(source, bytes.NewReader(yamlBytes))
+}
+
+func (t Template) SourceID() TemplateSourceID {
+	return TemplateSourceID(t.URL)
 }

@@ -99,7 +99,7 @@
           }
         },
         "url": {
-          "description": "Repository URL containing the template.",
+          "description": "Repository URL containing the template. This URL is the stable source identifier used to match catalog entries to configured sources.",
           "type": "string",
           "format": "uri"
         },

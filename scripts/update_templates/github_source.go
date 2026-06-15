@@ -18,12 +18,16 @@ func (s GitHubSource) String() string {
 	return fmt.Sprintf("%s@%s", s.Repo, s.SHA)
 }
 
-func (s GitHubSource) CloneURL() string {
+func (s GitHubSource) ID() TemplateSourceID {
+	return TemplateSourceID(s.URL())
+}
+
+func (s GitHubSource) URL() string {
 	return fmt.Sprintf("https://github.com/%s.git", s.Repo)
 }
 
-func ListGitHubSources() ([]GitHubSource, error) {
-	sourcesFile, err := openGitHubSources()
+func ListGithubSources(path string) ([]GitHubSource, error) {
+	sourcesFile, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -31,16 +35,32 @@ func ListGitHubSources() ([]GitHubSource, error) {
 
 	var sources []GitHubSource
 	if err := json.NewDecoder(sourcesFile).Decode(&sources); err != nil {
-		panic(fmt.Errorf("failed to decode sources: %w", err))
+		return nil, fmt.Errorf("failed to decode sources: %w", err)
+	}
+	if err := validateUniqueGitHubSourceIDs(sources); err != nil {
+		return nil, err
 	}
 	return sources, nil
 }
 
-func openGitHubSources() (*os.File, error) {
+func GithubSourcesFilePath() (string, error) {
 	repoRoot, err := findModuleRoot()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return os.Open(filepath.Join(repoRoot, filepath.FromSlash(relativeSourcesPath)))
+	return filepath.Join(repoRoot, filepath.FromSlash(relativeSourcesPath)), nil
+}
+
+func validateUniqueGitHubSourceIDs(sources []GitHubSource) error {
+	seen := make(map[TemplateSourceID]GitHubSource, len(sources))
+	for _, source := range sources {
+		id := source.ID()
+		previous, exists := seen[id]
+		if exists {
+			return fmt.Errorf("duplicate source ID %s for %s and %s", id, previous, source)
+		}
+		seen[id] = source
+	}
+	return nil
 }
