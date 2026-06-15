@@ -14,7 +14,12 @@ func main() {
 
 	githubClient := NewGitHubClient(githubToken)
 
-	sources, err := ListGitHubSources()
+	sourcesFilePath, err := GithubSourcesFilePath()
+	if err != nil {
+		log.Fatalf("failed to find sources file: %v\n", err)
+	}
+
+	sources, err := ListGithubSources(sourcesFilePath)
 	if err != nil {
 		log.Fatalf("failed to list sources: %v\n", err)
 	}
