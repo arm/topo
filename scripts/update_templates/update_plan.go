@@ -43,14 +43,14 @@ func appendTemplateURLs(lines []string, templates []Template) []string {
 }
 
 func PlanUpdate(sources []GitHubSource, current []Template) UpdatePlan {
-	currentByID := make(map[TemplateSourceID]Template, len(current))
-	for _, template := range current {
-		currentByID[template.SourceID()] = template
-	}
-
 	sourceByID := make(map[TemplateSourceID]GitHubSource, len(sources))
 	for _, source := range sources {
 		sourceByID[source.ID()] = source
+	}
+
+	currentByID := make(map[TemplateSourceID]Template, len(current))
+	for _, template := range current {
+		currentByID[template.SourceID()] = template
 	}
 
 	var plan UpdatePlan
