@@ -65,7 +65,14 @@ func main() {
 	}
 	templates = TemplatesInSourceOrder(sources, templates)
 
-	if err := WriteTemplates(catalogFilePath, templates, validator); err != nil {
+	document := Catalog{
+		Schema:    validator.SchemaURL(),
+		Templates: templates,
+	}
+	if err := validator.ValidateCatalog(document); err != nil {
+		log.Fatalf("invalid catalog file: %v\n", err)
+	}
+	if err := WriteCatalog(catalogFilePath, document); err != nil {
 		log.Fatalf("failed to write catalog file: %v\n", err)
 	}
 	log.Printf("written catalog to %s\n", catalogFilePath)

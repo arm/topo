@@ -30,15 +30,7 @@ func ReadTemplates(path string) ([]Template, error) {
 	return document.Templates, nil
 }
 
-func WriteTemplates(path string, templates []Template, validator CatalogSchema) error {
-	document := Catalog{
-		Schema:    validator.SchemaURL(),
-		Templates: templates,
-	}
-	if err := validator.ValidateCatalog(document); err != nil {
-		return fmt.Errorf("invalid catalog document: %w", err)
-	}
-
+func WriteCatalog(path string, document Catalog) error {
 	outputFile, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("failed to create catalog output: %w", err)

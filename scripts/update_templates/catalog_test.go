@@ -47,63 +47,31 @@ func TestReadTemplates(t *testing.T) {
 	})
 }
 
-func TestWriteTemplates(t *testing.T) {
-	t.Run("writes valid templates to catalog file", func(t *testing.T) {
+func TestWriteCatalog(t *testing.T) {
+	t.Run("writes catalog document to file", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "catalog.json")
-		schemaPath, err := CatalogSchemaFilePath()
-		require.NoError(t, err)
-		validator, err := NewCatalogSchema(schemaPath)
-		require.NoError(t, err)
-		input := []Template{
-			{
-				XTopo: XTopo{
-					Name:        "death-star-trench-run",
-					Description: "Use the Force to benchmark impossible shots",
-					Features:    []string{"X-wing", "Astromech", "Proton torpedoes"},
+		want := Catalog{
+			Schema: "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
+			Templates: []Template{
+				{
+					XTopo: XTopo{
+						Name:        "death-star-trench-run",
+						Description: "Use the Force to benchmark impossible shots",
+						Features:    []string{"X-wing", "Astromech", "Proton torpedoes"},
+					},
+					URL: "ssh://death-star.example",
+					Ref: "rebellion",
 				},
-				URL: "ssh://death-star.example",
-				Ref: "rebellion",
 			},
 		}
 
-		err = WriteTemplates(path, input, validator)
+		err := WriteCatalog(path, want)
 
 		require.NoError(t, err)
 		gotBytes, err := os.ReadFile(path)
 		require.NoError(t, err)
 		var got Catalog
 		err = json.Unmarshal(gotBytes, &got)
-		require.NoError(t, err)
-		want := Catalog{
-			Schema:    validator.SchemaURL(),
-			Templates: input,
-		}
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("does not overwrite catalog file when templates are invalid", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "catalog.json")
-		want := []byte("existing catalog")
-		err := os.WriteFile(path, want, 0o600)
-		require.NoError(t, err)
-		schemaPath, err := CatalogSchemaFilePath()
-		require.NoError(t, err)
-		validator, err := NewCatalogSchema(schemaPath)
-		require.NoError(t, err)
-		input := []Template{
-			{
-				XTopo: XTopo{
-					Description: "Missing a name",
-				},
-				URL: "https://github.com/Arm-Examples/topo-welcome.git",
-				Ref: "main",
-			},
-		}
-
-		err = WriteTemplates(path, input, validator)
-
-		assert.Error(t, err)
-		got, err := os.ReadFile(path)
 		require.NoError(t, err)
 		assert.Equal(t, want, got)
 	})
