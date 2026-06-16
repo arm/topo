@@ -11,6 +11,7 @@ func TestNewConfigFromBytes(t *testing.T) {
 	t.Run("parses basic config fields", func(t *testing.T) {
 		input := []byte(`hostname springfield.nuclear.gov
 user homer
+port 1234
 `)
 
 		got := ssh.NewConfigFromBytes(input)
@@ -18,6 +19,7 @@ user homer
 		want := ssh.Config{
 			HostName: "springfield.nuclear.gov",
 			User:     "homer",
+			Port:     "1234",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -54,6 +56,38 @@ user homer
 		}
 		assert.Equal(t, want, got)
 	})
+}
+
+func TestAsKnownHostsEntry(t *testing.T) {
+	cases := []struct {
+		desc string
+		cfg  ssh.Config
+		want string
+	}{
+		{
+			desc: "hostname without port",
+			cfg:  ssh.Config{HostName: "my-target"},
+			want: "my-target",
+		},
+		{
+			desc: "hostname with default ssh port",
+			cfg:  ssh.Config{HostName: "my-target", Port: "22"},
+			want: "my-target",
+		},
+		{
+			desc: "hostname with non-standard port",
+			cfg:  ssh.Config{HostName: "my-target", Port: "2222"},
+			want: "[my-target]:2222",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			got := tc.cfg.AsKnownHostsEntry()
+
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func TestResolveConfiguredUser(t *testing.T) {

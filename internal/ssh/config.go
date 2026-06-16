@@ -11,6 +11,7 @@ import (
 type Config struct {
 	HostName string
 	User     string
+	Port     string
 }
 
 func NewConfig(dest Destination) Config {
@@ -19,6 +20,14 @@ func NewConfig(dest Destination) Config {
 		return Config{}
 	}
 	return NewConfigFromBytes(output)
+}
+
+func (c Config) AsKnownHostsEntry() string {
+	if c.Port == "" || c.Port == "22" {
+		return c.HostName
+	}
+
+	return fmt.Sprintf("[%s]:%s", c.HostName, c.Port)
 }
 
 func NewConfigFromBytes(data []byte) Config {
@@ -36,6 +45,8 @@ func NewConfigFromBytes(data []byte) Config {
 			config.HostName = fields[1]
 		case "user":
 			config.User = fields[1]
+		case "port":
+			config.Port = fields[1]
 		}
 	}
 	return config
