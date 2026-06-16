@@ -43,7 +43,7 @@
     },
     {
       "name": "Topo CPU AI Chat",
-      "description": "Complete LLM chat application optimized for Arm CPU inference.\n\nThis project demonstrates running large language models on CPU\nusing llama.cpp compiled with Arm baseline optimizations and \naccelerated using NEON SIMD and SVE (when supported and enabled).\n\nThe stack includes:\n- llama.cpp server with Arm NEON optimizations (SVE optional)\n- Quantized Qwen3.5-0.8B model bundled in the image\n- Simple web-based chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The bundled Qwen3.5-0.8B model allows the\nproject to run immediately without downloading additional models.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies,\nshowcasing how far you can push NEON acceleration. Rebuild with SVE enabled\nwhen wider vectors are available.\n",
+      "description": "Complete LLM chat application optimized for Arm CPU inference.\n\nThis project demonstrates running large language models on CPU\nusing llama.cpp compiled with Arm baseline optimizations and\naccelerated using NEON SIMD and SVE (when supported and enabled).\n\nThe stack includes:\n- llama.cpp server with Arm NEON optimizations (SVE optional)\n- Quantized SmolLM2-135M-Instruct model bundled in the image\n- Simple web-based chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The bundled SmolLM2-135M-Instruct model\nallows the project to run immediately without downloading additional models.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies,\nshowcasing how far you can push NEON acceleration. Rebuild with SVE enabled\nwhen wider vectors are available.\n",
       "features": [
         "SVE",
         "NEON"
@@ -54,18 +54,18 @@
           "default": "OFF",
           "example": "ON"
         },
-        "HF_MODEL": {
-          "description": "Hugging Face model repo ID containing a supported single-file GGUF model",
-          "default": "bartowski/Qwen_Qwen3.5-0.8B-GGUF",
-          "example": "unsloth/SmolLM2-135M-Instruct-GGUF"
-        },
-        "HF_MODEL_FILE": {
-          "description": "Exact supported GGUF filename to download; sharded and mmproj files are rejected",
-          "example": "Qwen_Qwen3.5-0.8B-Q4_0.gguf"
+        "MODEL": {
+          "description": "Model artifact reference. Use a Hugging Face GGUF repo ID, repo ID plus filename separated by ':', or a direct .gguf URL.",
+          "default": "unsloth/SmolLM2-135M-Instruct-GGUF",
+          "example": "unsloth/SmolLM2-135M-Instruct-GGUF:SmolLM2-135M-Instruct-Q4_K_M.gguf",
+          "hints": {
+            "file.format": "gguf",
+            "huggingface.task": "text-generation"
+          }
         }
       },
       "url": "https://github.com/Arm-Examples/topo-cpu-ai-chat.git",
-      "ref": "c06f343b9c753231714ac1cdbee7c7be5108e6b7"
+      "ref": "4eeaca0d65d952d4555cf6ac9cbecf75884a3812"
     },
     {
       "name": "SIMD Visual Benchmark",
