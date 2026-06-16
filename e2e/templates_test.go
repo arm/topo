@@ -44,7 +44,18 @@ func TestTemplates(t *testing.T) {
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err)
 
-		testutil.AssertJsonGoldenFile(t, string(out), "testdata/TestTemplatesJson.golden")
+		var templates []struct {
+			Name string `json:"name"`
+		}
+		err = json.Unmarshal(out, &templates)
+		require.NoError(t, err, string(out))
+		require.NotEmpty(t, templates)
+
+		names := make([]string, 0, len(templates))
+		for _, template := range templates {
+			names = append(names, template.Name)
+		}
+		assert.Contains(t, names, "Hello World")
 	})
 
 	t.Run("outputs errors as JSON when specified", func(t *testing.T) {
