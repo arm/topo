@@ -124,7 +124,7 @@ func TestGenerateTargetReport(t *testing.T) {
 	t.Run("when host key has changed, Connectivity includes a known_hosts fix", func(t *testing.T) {
 		ts := health.Status{
 			Connection: health.ConnectionStatus{
-				Destination: ssh.NewDestination("user@my-target"),
+				Destination: ssh.NewDestination("ssh://user@my-target:2222"),
 				Error:       probe.ErrHostKeyChanged,
 			},
 		}
@@ -133,7 +133,7 @@ func TestGenerateTargetReport(t *testing.T) {
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
 		assert.Equal(t, "Remove the old SSH host key from known_hosts, then retry", got.Connectivity.Fix.Description)
-		assert.Equal(t, "ssh-keygen -R my-target", got.Connectivity.Fix.Command)
+		assert.Equal(t, "ssh-keygen -R \"[my-target]:2222\"", got.Connectivity.Fix.Command)
 	})
 }
 

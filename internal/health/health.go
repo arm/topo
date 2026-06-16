@@ -171,9 +171,10 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 			Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", status.Destination),
 		}
 	case errors.Is(status.Error, probe.ErrHostKeyChanged):
+		sshConfig := ssh.NewConfig(status.Destination)
 		check.Fix = &Fix{
 			Description: "Remove the old SSH host key from known_hosts, then retry",
-			Command:     fmt.Sprintf("ssh-keygen -R %s", status.Destination.Host),
+			Command:     fmt.Sprintf("ssh-keygen -R %q", sshConfig.AsKnownHostsEntry()),
 		}
 	}
 	return check
