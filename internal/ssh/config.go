@@ -22,14 +22,6 @@ func NewConfig(dest Destination) Config {
 	return NewConfigFromBytes(output)
 }
 
-func (c Config) AsKnownHostsEntry() string {
-	if c.Port == "" || c.Port == "22" {
-		return c.HostName
-	}
-
-	return fmt.Sprintf("[%s]:%s", c.HostName, c.Port)
-}
-
 func NewConfigFromBytes(data []byte) Config {
 	var config Config
 	scanner := bufio.NewScanner(bytes.NewReader(data))
@@ -50,6 +42,14 @@ func NewConfigFromBytes(data []byte) Config {
 		}
 	}
 	return config
+}
+
+func (c Config) AsKnownHostsEntry() string {
+	if c.Port == "" || c.Port == "22" {
+		return c.HostName
+	}
+
+	return fmt.Sprintf("[%s]:%s", c.HostName, c.Port)
 }
 
 func GetUserFromConfig(dest Destination) (string, error) {
