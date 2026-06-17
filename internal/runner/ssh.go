@@ -61,5 +61,5 @@ func multiplexArgs() []string {
 	if runtime.GOOS == "windows" {
 		return nil
 	}
-	return []string{"-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%r@%h:%p"}
+	return []string{"-o", "ControlMaster=auto", "-o", "ControlPersist=10s", "-o", "ControlPath=~/.ssh/topo-cm-%C"}
 }
