@@ -282,7 +282,7 @@ type resolveArgsOperation struct {
 }
 
 func (o resolveArgsOperation) Description() string {
-	return "Input args"
+	return "Configure project"
 }
 
 func (o resolveArgsOperation) Run(_ io.Writer) error {
