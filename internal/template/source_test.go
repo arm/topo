@@ -2,8 +2,10 @@ package template_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/template"
@@ -163,12 +165,25 @@ func TestNewSource(t *testing.T) {
 
 func TestGitSource(t *testing.T) {
 	t.Run("CopyTo", func(t *testing.T) {
-		dstDir := t.TempDir()
-		src := template.GitSource{URL: "https://github.com/example/repo.git"}
+		t.Run("errors when destination already exists", func(t *testing.T) {
+			dstDir := t.TempDir()
+			src := template.GitSource{URL: "https://github.com/example/repo.git"}
 
-		err := src.CopyTo(dstDir)
+			err := src.CopyTo(dstDir)
 
-		assert.ErrorIs(t, err, template.DestDirExistsError{Dir: dstDir})
+			assert.ErrorIs(t, err, template.DestDirExistsError{Dir: dstDir})
+		})
+
+		t.Run("checks out a commit object ID as detached HEAD", func(t *testing.T) {
+			repoDir, firstCommit := createGitRepoWithTwoCommits(t)
+			dstDir := filepath.Join(t.TempDir(), "dest")
+			src := template.GitSource{URL: repoDir, Ref: firstCommit}
+
+			err := src.CopyTo(dstDir)
+
+			require.NoError(t, err)
+			assert.Equal(t, firstCommit, gitOutput(t, dstDir, "rev-parse", "HEAD"))
+		})
 	})
 
 	t.Run("String", func(t *testing.T) {
@@ -360,6 +375,44 @@ func TestDirSource(t *testing.T) {
 			assert.Equal(t, "template", name)
 		})
 	})
+}
+
+func createGitRepoWithTwoCommits(t *testing.T) (string, string) {
+	t.Helper()
+
+	repoDir := t.TempDir()
+	runGit(t, repoDir, "init")
+	runGit(t, repoDir, "config", "user.name", "Topo Test")
+	runGit(t, repoDir, "config", "user.email", "topo@example.com")
+	testutil.RequireWriteFile(t, filepath.Join(repoDir, "content.txt"), "first")
+	runGit(t, repoDir, "add", ".")
+	runGit(t, repoDir, "commit", "-m", "first")
+	firstCommit := gitOutput(t, repoDir, "rev-parse", "HEAD")
+
+	testutil.RequireWriteFile(t, filepath.Join(repoDir, "content.txt"), "second")
+	runGit(t, repoDir, "add", ".")
+	runGit(t, repoDir, "commit", "-m", "second")
+
+	return repoDir, firstCommit
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "git %s failed:\n%s", strings.Join(args, " "), string(output))
+}
+
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "git %s failed:\n%s", strings.Join(args, " "), string(output))
+	return strings.TrimSpace(string(output))
 }
 
 func windowsFilePermissions(original os.FileMode) os.FileMode {

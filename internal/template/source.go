@@ -88,16 +88,81 @@ func (g GitSource) CopyTo(destDir string) error {
 		return DestDirExistsError{Dir: destDir}
 	}
 
-	args := []string{"clone", "--depth", "1"}
-	if g.Ref != "" {
-		args = append(args, "--branch", g.Ref)
+	if isFullGitObjectID(g.Ref) {
+		return cloneCommitTo(g.URL, g.Ref, destDir)
 	}
-	args = append(args, g.URL, destDir)
+
+	return cloneRefTo(g.URL, g.Ref, destDir)
+}
+
+func cloneRefTo(url, ref, destDir string) error {
+	args := []string{"clone", "--depth", "1"}
+	if ref != "" {
+		args = append(args, "--branch", ref)
+	}
+	args = append(args, url, destDir)
+
+	if err := runGit("", args...); err != nil {
+		return fmt.Errorf("failed to clone git repository: %w", err)
+	}
+	return nil
+}
+
+func cloneCommitTo(url, commit, destDir string) error {
+	if err := runGit("", "init", "--quiet", destDir); err != nil {
+		return fmt.Errorf("failed to initialize git repository: %w", err)
+	}
+
+	success := false
+	defer func() {
+		if !success {
+			_ = os.RemoveAll(destDir)
+		}
+	}()
+
+	if err := runGit(destDir, "remote", "add", "origin", url); err != nil {
+		return fmt.Errorf("failed to add git remote: %w", err)
+	}
+	if err := runGit(destDir, "fetch", "--depth", "1", "origin", commit); err != nil {
+		return fmt.Errorf("failed to fetch git commit: %w", err)
+	}
+	if err := runGit(destDir, "checkout", "--quiet", "--detach", "FETCH_HEAD"); err != nil {
+		return fmt.Errorf("failed to check out git commit: %w", err)
+	}
+
+	success = true
+	return nil
+}
+
+func runGit(dir string, args ...string) error {
 	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func isFullGitObjectID(ref string) bool {
+	// Git object IDs are full-length hex strings: 40 chars for SHA-1 repos,
+	// or 64 chars for SHA-256 repos. Only these need the commit checkout path;
+	// branches, tags, and short SHAs should use normal ref cloning semantics.
+	if len(ref) != 40 && len(ref) != 64 {
+		return false
+	}
+
+	for _, r := range ref {
+		if !isHexDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func isHexDigit(r rune) bool {
+	return (r >= '0' && r <= '9') ||
+		(r >= 'a' && r <= 'f') ||
+		(r >= 'A' && r <= 'F')
 }
 
 func (g GitSource) String() string {
