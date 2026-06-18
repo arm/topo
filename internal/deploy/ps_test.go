@@ -170,12 +170,12 @@ func TestRemapAddresses(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("retains image and status fields", func(t *testing.T) {
-		input := []deploy.PSContainer{{Image: "web", Status: "Up"}}
+	t.Run("retains unmapped fields", func(t *testing.T) {
+		input := []deploy.PSContainer{{Image: "web", Status: "Up", ID: "such-a-cool-id"}}
 
 		got := deploy.RemapAddresses(input, "myhost")
 
-		want := []deploy.Container{{Image: "web", Status: "Up"}}
+		want := []deploy.Container{{Image: "web", Status: "Up", Id: "such-a-cool-id"}}
 		assert.Equal(t, want, got)
 	})
 
