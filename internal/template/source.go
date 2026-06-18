@@ -126,8 +126,7 @@ func cloneCommitTo(url, commit, destDir string) error {
 	if err := runGit(destDir, "fetch", "--depth", "1", "origin", commit); err != nil {
 		return fmt.Errorf("failed to fetch git commit: %w", err)
 	}
-	branchName := "topo-" + shortGitObjectID(commit)
-	if err := runGit(destDir, "checkout", "--quiet", "-B", branchName, "FETCH_HEAD"); err != nil {
+	if err := runGit(destDir, "checkout", "--quiet", "--detach", "FETCH_HEAD"); err != nil {
 		return fmt.Errorf("failed to check out git commit: %w", err)
 	}
 
@@ -158,14 +157,6 @@ func isFullGitObjectID(ref string) bool {
 		}
 	}
 	return true
-}
-
-func shortGitObjectID(ref string) string {
-	const shortObjectIDLength = 7
-	if len(ref) <= shortObjectIDLength {
-		return ref
-	}
-	return ref[:shortObjectIDLength]
 }
 
 func isHexDigit(r rune) bool {

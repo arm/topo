@@ -174,7 +174,7 @@ func TestGitSource(t *testing.T) {
 			assert.ErrorIs(t, err, template.DestDirExistsError{Dir: dstDir})
 		})
 
-		t.Run("checks out a commit SHA ref", func(t *testing.T) {
+		t.Run("checks out a commit object ID as detached HEAD", func(t *testing.T) {
 			repoDir, firstCommit := createGitRepoWithTwoCommits(t)
 			dstDir := filepath.Join(t.TempDir(), "dest")
 			src := template.GitSource{URL: repoDir, Ref: firstCommit}
@@ -183,7 +183,6 @@ func TestGitSource(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, firstCommit, gitOutput(t, dstDir, "rev-parse", "HEAD"))
-			assert.Equal(t, "topo-"+firstCommit[:7], gitOutput(t, dstDir, "branch", "--show-current"))
 		})
 	})
 
