@@ -70,6 +70,7 @@ func TestContainerList(t *testing.T) {
 			toPrint := views.ContainerList{
 				Containers: []deploy.Container{
 					{
+						Id:               "abcdef123456",
 						Image:            "my-app",
 						Status:           "Up 5 minutes",
 						ProcessingDomain: "m0",
@@ -83,7 +84,7 @@ func TestContainerList(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{
-				"containers": [{"image": "my-app", "status": "Up 5 minutes", "processingDomain": "m0", "address": "localhost:8080"}]
+				"containers": [{"id": "abcdef123456", "image": "my-app", "status": "Up 5 minutes", "processingDomain": "m0", "address": "localhost:8080"}]
 			}`
 			assert.JSONEq(t, want, out.String())
 		})
