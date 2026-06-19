@@ -10,15 +10,15 @@ import (
 
 func TestParseRunningContainers(t *testing.T) {
 	t.Run("decodes the NDJSON stream emitted by docker compose ps", func(t *testing.T) {
-		input := `{"ID":"abc123","Image":"web","Status":"Up 5 minutes","Ports":"0.0.0.0:8080->80/tcp"}
-{"ID":"def456","Image":"db","Status":"Up 5 minutes","Ports":""}`
+		input := `{"ID":"abc123","Names":"project-web-1","Image":"web","Status":"Up 5 minutes","Ports":"0.0.0.0:8080->80/tcp"}
+{"ID":"def456","Names":"project-db-1","Image":"db","Status":"Up 5 minutes","Ports":""}`
 
 		got, err := deploy.ParseRunningContainers(input)
 
 		require.NoError(t, err)
 		want := []deploy.PSContainer{
-			{ID: "abc123", Image: "web", Status: "Up 5 minutes", Ports: "0.0.0.0:8080->80/tcp"},
-			{ID: "def456", Image: "db", Status: "Up 5 minutes", Ports: ""},
+			{ID: "abc123", Names: "project-web-1", Image: "web", Status: "Up 5 minutes", Ports: "0.0.0.0:8080->80/tcp"},
+			{ID: "def456", Names: "project-db-1", Image: "db", Status: "Up 5 minutes", Ports: ""},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -171,11 +171,11 @@ func TestRemapAddresses(t *testing.T) {
 	})
 
 	t.Run("retains unmapped fields", func(t *testing.T) {
-		input := []deploy.PSContainer{{Image: "web", Status: "Up", ID: "such-a-cool-id"}}
+		input := []deploy.PSContainer{{Image: "web", Status: "Up", ID: "such-a-cool-id", Names: "project-web-1"}}
 
 		got := deploy.RemapAddresses(input, "myhost")
 
-		want := []deploy.Container{{Image: "web", Status: "Up", Id: "such-a-cool-id"}}
+		want := []deploy.Container{{Image: "web", Status: "Up", Id: "such-a-cool-id", Names: "project-web-1"}}
 		assert.Equal(t, want, got)
 	})
 
