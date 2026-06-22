@@ -18,6 +18,7 @@ const (
 
 type PSContainer struct {
 	ID     string `json:"ID"`
+	Names  string `json:"Names"`
 	Image  string `json:"Image"`
 	Status string `json:"Status"`
 	Ports  string `json:"Ports"`
@@ -25,6 +26,7 @@ type PSContainer struct {
 
 type Container struct {
 	Id               string `json:"id"`
+	Names            string `json:"names"`
 	Image            string `json:"image"`
 	Status           string `json:"status"`
 	ProcessingDomain string `json:"processingDomain"`
@@ -172,6 +174,7 @@ func RemapAddresses(raws []PSContainer, hostName string) []Container {
 	for i, raw := range raws {
 		containers[i] = Container{
 			Id:      raw.ID,
+			Names:   raw.Names,
 			Image:   raw.Image,
 			Status:  raw.Status,
 			Address: publishedAddress(raw.Ports, hostName),
