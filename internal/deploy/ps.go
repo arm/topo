@@ -20,6 +20,7 @@ type PSContainer struct {
 	ID     string `json:"ID"`
 	Names  string `json:"Names"`
 	Image  string `json:"Image"`
+	State  string `json:"State"`
 	Status string `json:"Status"`
 	Ports  string `json:"Ports"`
 }
@@ -28,6 +29,7 @@ type Container struct {
 	Id               string `json:"id"`
 	Names            string `json:"names"`
 	Image            string `json:"image"`
+	State            string `json:"state"`
 	Status           string `json:"status"`
 	ProcessingDomain string `json:"processingDomain"`
 	Address          string `json:"address"`
@@ -168,6 +170,7 @@ func RemapAddresses(raws []PSContainer, hostName string) []Container {
 			Id:      raw.ID,
 			Names:   raw.Names,
 			Image:   raw.Image,
+			State:   raw.State,
 			Status:  raw.Status,
 			Address: publishedAddress(raw.Ports, hostName),
 		}

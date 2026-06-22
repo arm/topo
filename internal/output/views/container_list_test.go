@@ -21,6 +21,7 @@ func TestContainerList(t *testing.T) {
 						Id:               "abcdef123456",
 						Names:            "project-web-1",
 						Image:            "my-app",
+						State:            "running",
 						Status:           "Up 5 minutes",
 						ProcessingDomain: "m0",
 						Address:          "localhost:8080",
@@ -40,6 +41,8 @@ func TestContainerList(t *testing.T) {
 			assert.Contains(t, out.String(), "localhost:8080")
 			assert.Contains(t, out.String(), "Container ID")
 			assert.Contains(t, out.String(), "Names")
+			assert.NotContains(t, out.String(), "State")
+			assert.NotContains(t, out.String(), "running")
 			assert.Contains(t, out.String(), "Processing Domain")
 		})
 
@@ -79,6 +82,7 @@ func TestContainerList(t *testing.T) {
 						Id:               "abcdef123456",
 						Names:            "project-web-1",
 						Image:            "my-app",
+						State:            "running",
 						Status:           "Up 5 minutes",
 						ProcessingDomain: "m0",
 						Address:          "localhost:8080",
@@ -91,7 +95,7 @@ func TestContainerList(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{
-				"containers": [{"id": "abcdef123456", "names": "project-web-1", "image": "my-app", "status": "Up 5 minutes", "processingDomain": "m0", "address": "localhost:8080"}]
+				"containers": [{"id": "abcdef123456", "names": "project-web-1", "image": "my-app", "state": "running", "status": "Up 5 minutes", "processingDomain": "m0", "address": "localhost:8080"}]
 			}`
 			assert.JSONEq(t, want, out.String())
 		})
