@@ -12,8 +12,8 @@ import (
 
 var topoPsCmd = &cobra.Command{
 	Use:   "ps",
-	Short: "List running containers on the target for the current Compose project.",
-	Long: `List running containers on the target for the current Compose project.
+	Short: "List containers on the target for the current Compose project.",
+	Long: `List containers on the target for the current Compose project.
 
 The compose.yaml must be in the current working directory, as this is used to select containers to be viewed.
 `,
@@ -34,7 +34,13 @@ The compose.yaml must be in the current working directory, as this is used to se
 
 		dest := ssh.NewDestination(targetArg)
 		hostName := ssh.NewConfig(dest).HostName
-		containers, err := deploy.ListRunningContainers(composeFile, command.NewHostFromDestination(dest), hostName)
+		allContainers, err := cmd.Flags().GetBool("all")
+		if err != nil {
+			panic("internal error: all flag not registered: " + err.Error())
+		}
+
+		host := command.NewHostFromDestination(dest)
+		containers, err := deploy.ListContainers(composeFile, host, hostName, allContainers)
 		if err != nil {
 			return err
 		}
@@ -45,5 +51,6 @@ The compose.yaml must be in the current working directory, as this is used to se
 
 func init() {
 	addTargetFlag(topoPsCmd)
+	topoPsCmd.Flags().BoolP("all", "a", false, "show all containers, including stopped")
 	rootCmd.AddCommand(topoPsCmd)
 }

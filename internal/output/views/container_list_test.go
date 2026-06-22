@@ -63,14 +63,14 @@ func TestContainerList(t *testing.T) {
 			assert.Contains(t, out.String(), "Linux Host")
 		})
 
-		t.Run("renders empty message when no containers", func(t *testing.T) {
+		t.Run("renders only the header when no containers", func(t *testing.T) {
 			toPrint := views.ContainerList{Containers: nil}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "No containers deployed from this project are running.")
+			assert.Equal(t, "Container ID   Names   Image   Status   Processing Domain   Address", out.String())
 		})
 	})
 

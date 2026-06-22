@@ -37,7 +37,7 @@ func TestDeploy(t *testing.T) {
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 
-		requirePS(t, topo, projectDir, container.SSHDestination, "hello-server", "8080")
+		requirePS(t, topo, projectDir, container.SSHDestination, nil, "hello-server", "8080")
 	})
 
 	t.Run("Clone and deploy", func(t *testing.T) {
@@ -56,7 +56,26 @@ func TestDeploy(t *testing.T) {
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 
-		requirePS(t, topo, cloneDir, container.SSHDestination, "hello-server", "8080")
+		requirePS(t, topo, cloneDir, container.SSHDestination, nil, "hello-server", "8080")
+	})
+
+	t.Run("ps -a shows stopped containers", func(t *testing.T) {
+		projectDir := t.TempDir()
+		composeFile := testutil.WriteComposeFile(t, projectDir, `services:
+  sleeper:
+    image: busybox
+    command: ["sleep", "300"]
+`)
+		t.Cleanup(func() {
+			composeDown(t, composeFile, container.SSHDestination)
+		})
+
+		requireDeploy(t, topo, projectDir, container.SSHDestination)
+		requireStop(t, topo, projectDir, container.SSHDestination)
+		psOut := requirePS(t, topo, projectDir, container.SSHDestination, nil)
+		assert.NotContains(t, psOut, "busybox")
+
+		requirePS(t, topo, projectDir, container.SSHDestination, []string{"-a"}, "busybox", "Exited")
 	})
 }
 
@@ -109,17 +128,31 @@ func requireDeploy(t *testing.T, topo, projectDir, sshDestination string, extraA
 	require.NoErrorf(t, err, "deploy failed: %s", out)
 }
 
-func requirePS(t *testing.T, topo, projectDir, sshDestination string, expectedOutputs ...string) {
+func requirePS(t *testing.T, topo, projectDir, sshDestination string, extraArgs []string, expectedOutputs ...string) string {
 	t.Helper()
-	psCmd := exec.Command(topo, "ps", "--target", sshDestination)
+	args := []string{"ps", "--target", sshDestination}
+	args = append(args, extraArgs...)
+	psCmd := exec.Command(topo, args...)
 	psCmd.Dir = projectDir
 
 	out, err := psCmd.CombinedOutput()
 
 	require.NoErrorf(t, err, "ps failed: %s", out)
+	output := string(out)
 	for _, expected := range expectedOutputs {
-		assert.Contains(t, string(out), expected)
+		assert.Contains(t, output, expected)
 	}
+	return output
+}
+
+func requireStop(t *testing.T, topo, projectDir, sshDestination string) {
+	t.Helper()
+	stopCmd := exec.Command(topo, "stop", "--target", sshDestination)
+	stopCmd.Dir = projectDir
+
+	out, err := stopCmd.CombinedOutput()
+
+	require.NoErrorf(t, err, "stop failed: %s", out)
 }
 
 func assertResponseBody(t *testing.T, url, wantBody string) {

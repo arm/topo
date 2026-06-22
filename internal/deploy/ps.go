@@ -46,12 +46,12 @@ type InspectedHostConfig struct {
 	Annotations map[string]string `json:"Annotations"`
 }
 
-func ListRunningContainers(composeFile string, h command.Host, hostName string) ([]Container, error) {
-	rawJSON, err := getRunningContainers(composeFile, h)
+func ListContainers(composeFile string, h command.Host, hostName string, all bool) ([]Container, error) {
+	rawJSON, err := getContainers(composeFile, h, all)
 	if err != nil {
 		return nil, err
 	}
-	raws, err := ParseRunningContainers(rawJSON)
+	raws, err := ParseContainers(rawJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +68,9 @@ func ListRunningContainers(composeFile string, h command.Host, hostName string) 
 	return containers, nil
 }
 
-func getRunningContainers(composeFile string, h command.Host) (string, error) {
+func getContainers(composeFile string, h command.Host, all bool) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := command.DockerCompose(h, composeFile, "ps", "--format", "json")
+	cmd := command.DockerCompose(h, composeFile, composePSArgs(all)...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -79,7 +79,15 @@ func getRunningContainers(composeFile string, h command.Host) (string, error) {
 	return stdout.String(), nil
 }
 
-func ParseRunningContainers(rawJSON string) ([]PSContainer, error) {
+func composePSArgs(all bool) []string {
+	args := []string{"ps", "--format", "json"}
+	if all {
+		args = append(args, "--all")
+	}
+	return args
+}
+
+func ParseContainers(rawJSON string) ([]PSContainer, error) {
 	raws := []PSContainer{}
 	decoder := json.NewDecoder(strings.NewReader(rawJSON))
 	for decoder.More() {

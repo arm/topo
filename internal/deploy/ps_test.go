@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseRunningContainers(t *testing.T) {
+func TestParseContainers(t *testing.T) {
 	t.Run("decodes the NDJSON stream emitted by docker compose ps", func(t *testing.T) {
 		input := `{"ID":"abc123","Names":"project-web-1","Image":"web","State":"running","Status":"Up 5 minutes","Ports":"0.0.0.0:8080->80/tcp"}
 {"ID":"def456","Names":"project-db-1","Image":"db","State":"running","Status":"Up 5 minutes","Ports":""}`
 
-		got, err := deploy.ParseRunningContainers(input)
+		got, err := deploy.ParseContainers(input)
 
 		require.NoError(t, err)
 		want := []deploy.PSContainer{
@@ -24,14 +24,14 @@ func TestParseRunningContainers(t *testing.T) {
 	})
 
 	t.Run("returns an empty slice for empty input", func(t *testing.T) {
-		got, err := deploy.ParseRunningContainers("")
+		got, err := deploy.ParseContainers("")
 
 		require.NoError(t, err)
 		assert.Equal(t, []deploy.PSContainer{}, got)
 	})
 
 	t.Run("returns an error on malformed JSON", func(t *testing.T) {
-		_, err := deploy.ParseRunningContainers("{not json")
+		_, err := deploy.ParseContainers("{not json")
 
 		assert.Error(t, err)
 	})

@@ -14,10 +14,10 @@ type ContainerList struct {
 	Containers []deploy.Container `json:"containers"`
 }
 
-const containerListTemplate = `{{if .}}Container ID	Names	Image	Status	Processing Domain	Address
+const containerListTemplate = `Container ID	Names	Image	Status	Processing Domain	Address
 {{- range .}}
 {{.Id}}	{{.Names}}	{{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
-{{- end }}{{else}}No containers deployed from this project are running.{{end}}`
+{{- end }}`
 
 func (r ContainerList) AsPlain(isTTY bool) (string, error) {
 	tmpl, err := template.
