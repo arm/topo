@@ -42,9 +42,9 @@
       "ref": "c2b2e4a672cda67832372f77aeb1d1f71beee9a7"
     },
     {
-      "name": "Topo llama web UI Chat",
-      "description": "LLM chat application with Arm CPU inference provided by llama.cpp.\n\nThis project demonstrates running large language models on CPU\nwith inference provided by the llama.cpp server.\n\nThe upstream Linux Arm64 image includes architecture-specific CPU\nbackend variants for Armv8.0 baseline, Armv8.2 dot product/FP16/SVE,\nArmv8.6 int8 matrix multiply/SVE2, and Armv9.2 SME-capable CPUs.\n\nThe stack includes:\n- llama.cpp\n- Quantized SmolLM2 135M default model loaded through llama.cpp\n- Built-in web chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The default SmolLM2-135M-Instruct model\ngives the project a small ready-to-use model reference by default.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies\nwhile avoiding a source build during Template deployment.",
-      "features": [],
+      "name": "Topo CPU AI Chat",
+      "description": "Complete LLM chat application optimized for Arm CPU inference.\n\nThis project demonstrates running large language models on CPU\nusing the llama.cpp server image.\n\nThe upstream Linux Arm64 image includes architecture-specific CPU\nbackend variants for Armv8.0 baseline, Armv8.2 dot product/FP16/SVE,\nArmv8.6 int8 matrix multiply/SVE2, and Armv9.2 SME-capable CPUs.\n\nThe stack includes:\n- llama.cpp\n- Quantized SmolLM2 135M default model loaded through llama.cpp\n- Built-in web chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The default SmolLM2-135M-Instruct model\ngives the project a small ready-to-use model reference by default.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies\nwhile avoiding a source build during Template deployment.\n",
+      "features": null,
       "args": {
         "MODEL": {
           "description": "Model artifact reference. Use a Hugging Face GGUF repo ID, repo ID plus filename separated by ':', or a direct .gguf URL.",
@@ -57,7 +57,7 @@
         }
       },
       "url": "https://github.com/Arm-Examples/topo-llama-web-ui.git",
-      "ref": "4eeaca0d65d952d4555cf6ac9cbecf75884a3812"
+      "ref": "8831efd5901e0bc0cf4aacb28e8c74792287349a"
     },
     {
       "name": "SIMD Visual Benchmark",
