@@ -57,7 +57,7 @@
         }
       },
       "url": "https://github.com/Arm-Examples/topo-llama-web-ui.git",
-      "ref": "99561df2838081fc7f7af9229b8e677b898bbd88"
+      "ref": "aac7a895bf8fc06f58ede40f93eec20eb1cc6998"
     },
     {
       "name": "SIMD Visual Benchmark",
