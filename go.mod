@@ -3,7 +3,7 @@ module github.com/arm/topo
 go 1.26.4
 
 require (
-	github.com/compose-spec/compose-go/v2 v2.11.0
+	github.com/compose-spec/compose-go/v2 v2.13.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/lmittmann/tint v1.1.3
