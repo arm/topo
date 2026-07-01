@@ -8,7 +8,7 @@ require (
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/lmittmann/tint v1.1.3
 	github.com/mholt/archives v0.1.5
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
