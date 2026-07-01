@@ -130,7 +130,7 @@ jobs:
         run: |
           gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
-            --ref v8 \
+            --ref v9 \
             --field source-run-id=${{ github.run_id }} \
             --field release-version=${VERSION} \
             --field pre-release=${{ inputs.pre-release }}
