@@ -142,7 +142,7 @@ jobs:
             publisher_run_id="$(gh run list \
               --repo Arm-Debug/topo-publisher \
               --workflow sign-and-release.yml \
-              --branch v8 \
+              --branch remove_auth \
               --event workflow_dispatch \
               --limit 5 \
               --json createdAt,databaseId,displayTitle \
