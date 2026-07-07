@@ -1,6 +1,6 @@
 [
-	{"repo": "Arm-Examples/topo-welcome", "sha": "8303e66db59a7a11e64877121f3db1b688d2011f"},
-	{"repo": "Arm-Examples/topo-lightbulb-moment", "sha": "9bb2b0b42b39178afcb225319f989ba85afd68b1"},
-	{"repo": "Arm-Examples/topo-llama-web-ui", "sha": "99561df2838081fc7f7af9229b8e677b898bbd88"},
-	{"repo": "Arm-Examples/topo-simd-visual-benchmark", "sha": "f0cd31621ce79b4643df7e9bdd8eff26c20b338c"}
+	{"repo": "Arm-Examples/topo-welcome", "sha": "main"},
+	{"repo": "Arm-Examples/topo-lightbulb-moment", "sha": "main"},
+	{"repo": "Arm-Examples/topo-llama-web-ui", "sha": "main"},
+	{"repo": "Arm-Examples/topo-simd-visual-benchmark", "sha": "main"}
 ]
