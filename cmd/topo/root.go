@@ -27,8 +27,6 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-const composeFileFlag = "file"
-
 func init() {
 	rootCmd.PersistentFlags().StringP(
 		"output",
@@ -37,6 +35,8 @@ func init() {
 		"output format: plain or json",
 	)
 }
+
+const composeFileFlag = "file"
 
 func addComposeFileFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
