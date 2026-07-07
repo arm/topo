@@ -45,6 +45,26 @@ func TestConfigure(t *testing.T) {
 		assert.YAMLEq(t, want, got)
 	})
 
+	t.Run("respect compose file flag", func(t *testing.T) {
+		projectDir := t.TempDir()
+		composePath := filepath.Join(projectDir, "compose.yaml")
+		customComposePath := filepath.Join(projectDir, "custom-compose.yaml")
+		originalCompose := configurableCompose("Original")
+		testutil.RequireWriteFile(t, composePath, originalCompose)
+		testutil.RequireWriteFile(t, customComposePath, configurableCompose("CustomOriginal"))
+
+		cmd := exec.Command(topo, "configure", "-f", "custom-compose.yaml", "GREETING_NAME=Custom")
+		cmd.Dir = projectDir
+		out, err := cmd.CombinedOutput()
+
+		require.NoErrorf(t, err, "configure failed: %s", out)
+		assert.Empty(t, string(out))
+		want := configurableCompose("Custom")
+		got := testutil.RequireReadFile(t, customComposePath)
+		assert.YAMLEq(t, want, got)
+		assert.Equal(t, originalCompose, testutil.RequireReadFile(t, composePath))
+	})
+
 	t.Run("rejects undeclared parameters without changing the compose file", func(t *testing.T) {
 		projectDir := t.TempDir()
 		composePath := filepath.Join(projectDir, "compose.yaml")

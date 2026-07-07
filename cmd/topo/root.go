@@ -26,12 +26,23 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+const composeFileFlag = "file"
+
 func init() {
 	rootCmd.PersistentFlags().StringP(
 		"output",
 		"o",
 		"plain",
 		"output format: plain or json",
+	)
+}
+
+func addComposeFileFlag(cmd *cobra.Command) {
+	cmd.Flags().StringP(
+		composeFileFlag,
+		"f",
+		"",
+		"compose file to use (default: compose.yaml, then compose.yml)",
 	)
 }
 

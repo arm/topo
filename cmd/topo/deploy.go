@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -38,7 +39,7 @@ This command performs the following operations in sequence:
   3. Transfer - Transfers built and pulled images and compose file to the target
   4. Run - Runs docker compose up on the target
 
-The compose file (compose.yaml) must be in the current working directory, as this is used to select the containers to be deployed.`,
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -53,7 +54,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 			return err
 		}
 
-		composeFile, err := getComposeFileName()
+		composeFile, err := getComposeFileName(cmd)
 		if err != nil {
 			return err
 		}
@@ -106,14 +107,48 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 	},
 }
 
-func getComposeFileName() (string, error) {
+var errComposeFileNotFound = errors.New("compose file not found")
+
+func getComposeFileName(cmd *cobra.Command) (string, error) {
+	flag := cmd.Flag(composeFileFlag)
+	if flag == nil {
+		panic(fmt.Sprintf("internal error: compose file flag not registered: %s", composeFileFlag))
+	}
+
+	if flag.Changed {
+		composeFile := strings.TrimSpace(flag.Value.String())
+		if composeFile == "" {
+			return "", fmt.Errorf("compose file path must not be empty")
+		}
+		return validateComposeFile(composeFile)
+	}
+
 	candidates := []string{"compose.yaml", "compose.yml"}
 	for _, fileName := range candidates {
-		if _, err := os.Stat(fileName); err == nil {
-			return fileName, nil
+		composeFile, err := validateComposeFile(fileName)
+		if err == nil {
+			return composeFile, nil
 		}
+		if errors.Is(err, errComposeFileNotFound) {
+			continue
+		}
+		return "", err
 	}
 	return "", fmt.Errorf("compose file not found in current working directory: looking for compose.yaml or compose.yml")
+}
+
+func validateComposeFile(composeFile string) (string, error) {
+	info, err := os.Stat(composeFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("%w: %s", errComposeFileNotFound, composeFile)
+		}
+		return "", fmt.Errorf("failed to access compose file %s: %w", composeFile, err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("compose file path is a directory: %s", composeFile)
+	}
+	return composeFile, nil
 }
 
 func validatePort(port string) error {
@@ -141,6 +176,7 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 
 func init() {
 	addTargetFlag(deployCmd)
+	addComposeFileFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "force recreation of containers even if their configuration and image haven't changed")
