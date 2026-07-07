@@ -14,7 +14,7 @@
         }
       },
       "url": "https://github.com/Arm-Examples/topo-welcome.git",
-      "ref": "8303e66db59a7a11e64877121f3db1b688d2011f"
+      "ref": "main"
     },
     {
       "name": "Lightbulb Moment",
@@ -39,7 +39,7 @@
         }
       },
       "url": "https://github.com/Arm-Examples/topo-lightbulb-moment.git",
-      "ref": "9bb2b0b42b39178afcb225319f989ba85afd68b1"
+      "ref": "main"
     },
     {
       "name": "Topo llama.cpp WebUI Chat",
@@ -57,7 +57,7 @@
         }
       },
       "url": "https://github.com/Arm-Examples/topo-llama-web-ui.git",
-      "ref": "99561df2838081fc7f7af9229b8e677b898bbd88"
+      "ref": "main"
     },
     {
       "name": "SIMD Visual Benchmark",
@@ -72,7 +72,7 @@
         }
       },
       "url": "https://github.com/Arm-Examples/topo-simd-visual-benchmark.git",
-      "ref": "f0cd31621ce79b4643df7e9bdd8eff26c20b338c"
+      "ref": "main"
     }
   ]
 }
