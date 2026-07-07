@@ -16,7 +16,7 @@ var topoStopCmd = &cobra.Command{
 
 Executing this command does not remove the containers.
 
-The compose file (compose.yaml) must be in the current working directory, as this is used to select the containers to be stopped.`,
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
@@ -26,7 +26,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 			return err
 		}
 
-		composeFile, err := getComposeFileName()
+		composeFile, err := getComposeFileName(cmd)
 		if err != nil {
 			return err
 		}
@@ -41,5 +41,6 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 func init() {
 	addTargetFlag(topoStopCmd)
+	addComposeFileFlag(topoStopCmd)
 	rootCmd.AddCommand(topoStopCmd)
 }

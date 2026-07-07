@@ -15,7 +15,7 @@ var topoPsCmd = &cobra.Command{
 	Short: "List containers on the target for the current Compose project.",
 	Long: `List containers on the target for the current Compose project.
 
-The compose.yaml must be in the current working directory, as this is used to select containers to be viewed.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.
 `,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -27,7 +27,7 @@ The compose.yaml must be in the current working directory, as this is used to se
 			return err
 		}
 
-		composeFile, err := getComposeFileName()
+		composeFile, err := getComposeFileName(cmd)
 		if err != nil {
 			return err
 		}
@@ -51,6 +51,7 @@ The compose.yaml must be in the current working directory, as this is used to se
 
 func init() {
 	addTargetFlag(topoPsCmd)
+	addComposeFileFlag(topoPsCmd)
 	topoPsCmd.Flags().BoolP("all", "a", false, "show all containers, including stopped")
 	rootCmd.AddCommand(topoPsCmd)
 }

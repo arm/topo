@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
@@ -33,6 +34,34 @@ func init() {
 		"plain",
 		"output format: plain or json",
 	)
+}
+
+const composeFileFlag = "file"
+
+func addComposeFileFlag(cmd *cobra.Command) {
+	cmd.Flags().StringP(
+		composeFileFlag,
+		"f",
+		"",
+		"compose file to use (default: compose.yaml, then compose.yml)",
+	)
+}
+
+func getComposeFileName(cmd *cobra.Command) (string, error) {
+	flag := cmd.Flag(composeFileFlag)
+	if flag == nil {
+		panic(fmt.Sprintf("internal error: compose file flag not registered: %s", composeFileFlag))
+	}
+
+	if flag.Changed {
+		composeFile := strings.TrimSpace(flag.Value.String())
+		if composeFile == "" {
+			return "", fmt.Errorf("compose file path must not be empty")
+		}
+		return compose.RequireFile(composeFile)
+	}
+
+	return compose.FindDefaultFile()
 }
 
 const targetEnvVar = "TOPO_TARGET"

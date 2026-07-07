@@ -14,7 +14,7 @@ var configureCmd = &cobra.Command{
 	Short: "Configure project parameters",
 	Long: `Configure project parameters for the Topo project in the current directory.
 
-The compose file (compose.yaml or compose.yml) must be in the current working directory.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.
 
 Some projects require parameters. Supply them on the command line or answer
 interactive prompts.`,
@@ -27,7 +27,7 @@ interactive prompts.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		composeFile, err := getComposeFileName()
+		composeFile, err := getComposeFileName(cmd)
 		if err != nil {
 			return err
 		}
@@ -51,5 +51,6 @@ interactive prompts.`,
 }
 
 func init() {
+	addComposeFileFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
 }
