@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -105,50 +104,6 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 		return nil
 	},
-}
-
-var errComposeFileNotFound = errors.New("compose file not found")
-
-func getComposeFileName(cmd *cobra.Command) (string, error) {
-	flag := cmd.Flag(composeFileFlag)
-	if flag == nil {
-		panic(fmt.Sprintf("internal error: compose file flag not registered: %s", composeFileFlag))
-	}
-
-	if flag.Changed {
-		composeFile := strings.TrimSpace(flag.Value.String())
-		if composeFile == "" {
-			return "", fmt.Errorf("compose file path must not be empty")
-		}
-		return validateComposeFile(composeFile)
-	}
-
-	candidates := []string{"compose.yaml", "compose.yml"}
-	for _, fileName := range candidates {
-		composeFile, err := validateComposeFile(fileName)
-		if err == nil {
-			return composeFile, nil
-		}
-		if errors.Is(err, errComposeFileNotFound) {
-			continue
-		}
-		return "", err
-	}
-	return "", fmt.Errorf("compose file not found in current working directory: looking for compose.yaml or compose.yml")
-}
-
-func validateComposeFile(composeFile string) (string, error) {
-	info, err := os.Stat(composeFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("%w: %s", errComposeFileNotFound, composeFile)
-		}
-		return "", fmt.Errorf("failed to access compose file %s: %w", composeFile, err)
-	}
-	if info.IsDir() {
-		return "", fmt.Errorf("compose file path is a directory: %s", composeFile)
-	}
-	return composeFile, nil
 }
 
 func validatePort(port string) error {
