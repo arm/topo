@@ -6,6 +6,7 @@ import (
 	"os"
 
 	cmdtext "github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/template"
 )
@@ -25,7 +26,7 @@ func NewDeploySuccess(composeFile string, h command.Host, defaultMessage string)
 }
 
 func DefaultMessage(composeFile string) string {
-	if composeFile == "compose.yaml" {
+	if composeFile == compose.DefaultFileName() {
 		return "Run `topo ps` to see deployed containers"
 	}
 

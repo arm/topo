@@ -13,6 +13,11 @@ var errFileNotFound = errors.New("compose file not found")
 
 var defaultFileNames = []string{"compose.yaml", "compose.yml"}
 
+// DefaultFileName returns the first filename used when resolving a default compose file.
+func DefaultFileName() string {
+	return defaultFileNames[0]
+}
+
 // RequireFile returns the path when it exists and is not a directory.
 func RequireFile(composeFile string) (string, error) {
 	info, err := os.Stat(composeFile)
