@@ -32,3 +32,44 @@ func TestBinaryLookupCommand(t *testing.T) {
 		assert.Empty(t, got)
 	})
 }
+
+func TestQuoteArg(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  string
+		want string
+	}{
+		{
+			name: "plain arg",
+			arg:  "compose.yml",
+			want: "compose.yml",
+		},
+		{
+			name: "empty arg",
+			arg:  "",
+			want: "''",
+		},
+		{
+			name: "arg with spaces",
+			arg:  "custom compose.yaml",
+			want: "'custom compose.yaml'",
+		},
+		{
+			name: "arg with apostrophe",
+			arg:  "custom's-compose.yaml",
+			want: `'custom'"'"'s-compose.yaml'`,
+		},
+		{
+			name: "windows path",
+			arg:  `C:\Users\runner\AppData\Local\Temp\custom-compose.yaml`,
+			want: `'C:\Users\runner\AppData\Local\Temp\custom-compose.yaml'`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := command.QuoteArg(tt.arg)
+
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

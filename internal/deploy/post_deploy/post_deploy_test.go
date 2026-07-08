@@ -40,30 +40,13 @@ services:
   app:
     image: nginx
 `)
-		op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "Run `topo ps` to see deployed containers")
+		op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "default message")
 		var buf bytes.Buffer
 
 		err := op.Run(&buf)
 
 		require.NoError(t, err)
-		assert.Equal(t, "Run `topo ps` to see deployed containers\n", buf.String())
-	})
-
-	t.Run("Run writes compose file flag in default message for non-default compose file", func(t *testing.T) {
-		dir := t.TempDir()
-		composeFile := filepath.Join(dir, "custom-compose.yaml")
-		testutil.RequireWriteFile(t, composeFile, `
-services:
-  app:
-    image: nginx
-`)
-		op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, post_deploy.DefaultMessage(composeFile))
-		var buf bytes.Buffer
-
-		err := op.Run(&buf)
-
-		require.NoError(t, err)
-		assert.Equal(t, "Run `topo ps -f "+composeFile+"` to see deployed containers\n", buf.String())
+		assert.Equal(t, "default message\n", buf.String())
 	})
 
 	t.Run("Run returns error when compose file does not exist", func(t *testing.T) {
@@ -96,11 +79,6 @@ func TestDefaultMessage(t *testing.T) {
 			name:        "custom compose file",
 			composeFile: "custom-compose.yaml",
 			want:        "Run `topo ps -f custom-compose.yaml` to see deployed containers",
-		},
-		{
-			name:        "compose file with spaces",
-			composeFile: "custom compose.yaml",
-			want:        "Run `topo ps -f 'custom compose.yaml'` to see deployed containers",
 		},
 	}
 	for _, tt := range tests {
