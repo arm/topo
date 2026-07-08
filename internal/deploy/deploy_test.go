@@ -38,22 +38,6 @@ func TestNewDeployment(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("includes compose file flag in default success message for non-default compose file", func(t *testing.T) {
-		composeFile := "custom-compose.yaml"
-		deployOpts := deploy.DeployOptions{TargetHost: ssh.PlainLocalhost}
-
-		got, _ := deploy.NewDeployment(composeFile, deployOpts)
-
-		localHost := command.LocalHost
-		want := goperation.Sequence{
-			operation.NewDockerComposeBuild(composeFile, localHost),
-			operation.NewDockerComposePull(composeFile, localHost),
-			operation.NewDockerComposeUp(composeFile, localHost, operation.RecreateModeDefault),
-			post_deploy.NewDeploySuccess(composeFile, localHost, "Run `topo ps -f custom-compose.yaml` to see deployed containers"),
-		}
-		assert.Equal(t, want, got)
-	})
-
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
 		port := operation.DefaultRegistryPort

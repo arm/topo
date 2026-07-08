@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/template"
@@ -21,6 +22,26 @@ func NewDeploySuccess(composeFile string, h command.Host, defaultMessage string)
 		host:           h,
 		defaultMessage: defaultMessage,
 	}
+}
+
+func DefaultMessage(composeFile string) string {
+	if composeFile == "compose.yaml" {
+		return "Run `topo ps` to see deployed containers"
+	}
+
+	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", shellQuote(composeFile))
+}
+
+func shellQuote(arg string) string {
+	if arg == "" {
+		return "''"
+	}
+
+	if strings.ContainsAny(arg, " \t\n\"'\\$`") {
+		return "'" + strings.ReplaceAll(arg, "'", `'"'"'`) + "'"
+	}
+
+	return arg
 }
 
 func (t *DeploySuccess) Description() string {
