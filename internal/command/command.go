@@ -24,6 +24,18 @@ func BinaryLookupCommand(bin string) (string, error) {
 	return fmt.Sprintf("command -v %s", bin), nil
 }
 
+func QuoteArg(s string) string {
+	if s == "" {
+		return "''"
+	}
+
+	if strings.ContainsAny(s, " \t\n\"'\\$`") {
+		return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
+	}
+
+	return s
+}
+
 func shellEscapeForDoubleQuotes(s string) string {
 	repl := strings.NewReplacer(
 		`\`, `\\`,

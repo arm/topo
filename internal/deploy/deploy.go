@@ -54,6 +54,6 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 		}
 	}
 	ops = append(ops, operation.NewDockerComposeUp(composeFile, targetHost, opts.RecreateMode))
-	ops = append(ops, post_deploy.NewDeploySuccess(composeFile, targetHost, "Run `topo ps` to see deployed containers"))
+	ops = append(ops, post_deploy.NewDeploySuccess(composeFile, targetHost, post_deploy.DefaultMessage(composeFile)))
 	return goperation.NewSequence(ops...), cleanup
 }
