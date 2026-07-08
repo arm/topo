@@ -1,6 +1,9 @@
 package deploy
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/arm/topo/internal/deploy/post_deploy"
@@ -54,6 +57,26 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 		}
 	}
 	ops = append(ops, operation.NewDockerComposeUp(composeFile, targetHost, opts.RecreateMode))
-	ops = append(ops, post_deploy.NewDeploySuccess(composeFile, targetHost, "Run `topo ps` to see deployed containers"))
+	ops = append(ops, post_deploy.NewDeploySuccess(composeFile, targetHost, defaultDeploySuccessMessage(composeFile)))
 	return goperation.NewSequence(ops...), cleanup
+}
+
+func defaultDeploySuccessMessage(composeFile string) string {
+	if composeFile == "compose.yaml" {
+		return "Run `topo ps` to see deployed containers"
+	}
+
+	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", shellQuote(composeFile))
+}
+
+func shellQuote(arg string) string {
+	if arg == "" {
+		return "''"
+	}
+
+	if strings.ContainsAny(arg, " \t\n\"'\\$`") {
+		return "'" + strings.ReplaceAll(arg, "'", `'"'"'`) + "'"
+	}
+
+	return arg
 }
