@@ -48,7 +48,7 @@ topo deploy --target pi@raspberrypi
 
 - [Docker](https://docs.docker.com/get-docker/)
 - curl
-- SSH client
+- OpenSSH Client
 
 **Target machine** (the remote Arm system):
 
