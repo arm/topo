@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-const relativeSourcesPath = "scripts/update_templates/github_sources.json"
+const relativeSourcesPath = "scripts/update_projects/github_sources.json"
 
 type GitHubSource struct {
 	Repo string `json:"repo"`
