@@ -44,7 +44,7 @@ A containerised sample project that provides a starting point for development. I
 
 ## X-Topo
 
-A metadata extension defined within a Compose file that describes a **Project**'s purpose, hardware requirements, **features**, and configurable arguments. Enables tooling (such as Topo) to provide validation, filtering, and interactive setup.
+A metadata extension defined within a Compose file that describes a **Project**'s purpose, hardware requirements, **features**, and configurable parameters. Enables tooling (such as Topo) to provide validation, filtering, and interactive setup.
 
 ## Feature
 

@@ -39,7 +39,7 @@ func NewClone(path string, src template.Source, argProvider arguments.Provider) 
 func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider) error {
 	resolvedArgs, err := resolveArgs(composeFilePath, argProvider)
 	if err != nil {
-		return fmt.Errorf("failed to resolve args: %w", err)
+		return fmt.Errorf("failed to resolve parameters: %w", err)
 	}
 
 	if len(resolvedArgs) == 0 {
@@ -129,7 +129,7 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 	}
 	for argName := range resolvedArgs {
 		if !usedArgs[argName] {
-			logger.Warn(fmt.Sprintf("arg %q was resolved but not found in any service build args", argName))
+			logger.Warn(fmt.Sprintf("parameter %q was resolved but not found in any service build args", argName))
 		}
 	}
 
@@ -215,7 +215,7 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 
 	err = compose.ApplyArgs(yamlNodes, argsToMap(args))
 	if err != nil {
-		return fmt.Errorf("error applying args to project file: %w", err)
+		return fmt.Errorf("error applying parameters to project file: %w", err)
 	}
 
 	outFile, err := os.Create(composeFilePath)
@@ -225,7 +225,7 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 	defer func() { _ = outFile.Close() }()
 
 	if err := compose.WriteNode(yamlNodes, outFile); err != nil {
-		return fmt.Errorf("failed to write compose file after applying args: %w", err)
+		return fmt.Errorf("failed to write compose file after applying parameters: %w", err)
 	}
 	return nil
 }

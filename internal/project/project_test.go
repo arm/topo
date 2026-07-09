@@ -94,7 +94,7 @@ services:
 		assert.FileExists(t, composeFilePath)
 	})
 
-	t.Run("removes destination directory when args resolution fails", func(t *testing.T) {
+	t.Run("removes destination directory when parameter resolution fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		mockSource := mockSourceWithContent(t, `
@@ -231,7 +231,7 @@ volumes:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("collects and injects project arguments", func(t *testing.T) {
+	t.Run("collects and injects parameters", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "piggy-service"
@@ -272,7 +272,7 @@ services:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("injects arguments only into services that declare them", func(t *testing.T) {
+	t.Run("injects parameters only into services that declare them", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "service-args-scope"
@@ -330,7 +330,7 @@ services:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("does not collect optional arguments into x-topo", func(t *testing.T) {
+	t.Run("does not collect optional parameters into x-topo", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "oyster-service"
@@ -374,7 +374,7 @@ services:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("cleans up service directory when argument collection fails ", func(t *testing.T) {
+	t.Run("cleans up service directory when parameter collection fails ", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
@@ -412,7 +412,7 @@ func TestResolveAndApplyArgs(t *testing.T) {
 		require.ErrorContains(t, err, "can't read compose file")
 	})
 
-	t.Run("updates the compose file with resolved arguments", func(t *testing.T) {
+	t.Run("updates the compose file with resolved parameters", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
 services:
@@ -426,7 +426,7 @@ x-topo:
   name: My Project
   args:
     FOO:
-      description: a dummy argument
+      description: a dummy parameter
       required: true
       example: bar
 `
@@ -450,7 +450,7 @@ x-topo:
   name: My Project
   args:
     FOO:
-      description: a dummy argument
+      description: a dummy parameter
       required: true
       example: bar
 `

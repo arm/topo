@@ -11,14 +11,14 @@ import (
 )
 
 var extendCmd = &cobra.Command{
-	Use:   "extend <compose-filepath> <source> [flags] [-- ARG=VALUE ...]",
+	Use:   "extend <compose-filepath> <source> [flags] [-- PARAMETER=VALUE ...]",
 	Short: "Add services from a Topo Project to the compose file",
 	Long: `Add all services from a source to the compose file.
 
 The source argument uses scheme prefixes to specify the source type.
 The git: prefix is optional for git@host and https:// URLs.
 
-Topo Projects may require project arguments/parameters. You can provide them after --
+Topo Projects may define parameters. You can set them after --
 or answer interactive prompts.`,
 	Example: `  # Git repository
   topo extend compose.yaml git:https://github.com/user/repo.git
@@ -34,10 +34,10 @@ or answer interactive prompts.`,
   topo extend compose.yaml dir:/path/to/project/folder
   topo extend compose.yaml dir:./relative/path
 
-  # Will prompt for required args
+  # Will prompt for required parameters
   topo extend compose.yaml git:url
 
-  # Provide project arguments explicitly
+  # Provide parameters explicitly
   topo extend compose.yaml git:url -- GREETING="Hello" PORT=8080`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {

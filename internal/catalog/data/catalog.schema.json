@@ -20,9 +20,9 @@
     }
   },
   "$defs": {
-    "arg": {
+    "parameter": {
       "type": "object",
-      "description": "Build argument definition.",
+      "description": "Parameter definition.",
       "additionalProperties": false,
       "properties": {
         "description": {
@@ -43,7 +43,7 @@
         },
         "hints": {
           "type": "object",
-          "description": "Advisory metadata that implementations may use to discover, filter, or suggest suitable argument values. Unknown hint keys should be ignored.",
+          "description": "Advisory metadata that implementations may use to discover, filter, or suggest suitable parameter values. Unknown hint keys should be ignored.",
           "patternProperties": {
             "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$": {
               "oneOf": [
@@ -92,10 +92,10 @@
           ]
         },
         "args": {
-          "description": "Optional dictionary of project argument definitions used for parameterized projects.",
+          "description": "Optional dictionary of parameter definitions used for parameterized projects.",
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/$defs/arg"
+            "$ref": "#/$defs/parameter"
           }
         },
         "url": {

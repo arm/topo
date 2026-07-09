@@ -19,7 +19,7 @@ var topoCloneCmd = &cobra.Command{
 The project-source argument uses scheme prefixes to specify the source type.
 The git: prefix is optional for git@host and https:// URLs.
 
-Some projects require arguments/parameters. Supply them on the command line or answer
+Some projects require parameters. Supply them on the command line or answer
 interactive prompts.`,
 	Example: `  # Git repository
   topo clone git@github.com:user/repo.git
@@ -33,10 +33,10 @@ interactive prompts.`,
   topo clone dir:/path/to/project/folder
   topo clone dir:./relative/path
 
-  # Will prompt for required args
+  # Will prompt for required parameters
   topo clone https://github.com/Arm-Examples/topo-welcome.git
 
-  # Provide project arguments explicitly
+  # Provide parameters explicitly
   topo clone https://github.com/Arm-Examples/topo-welcome.git GREETING_NAME="World"
 
   # With an explicit path

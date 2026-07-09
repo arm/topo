@@ -102,7 +102,7 @@ Choose a Topo Project you wish to try, then clone it:
 topo clone https://github.com/Arm-Examples/topo-welcome.git
 ```
 
-If the project requires arguments or parameters, Topo will prompt you for them.
+If the project requires parameters, Topo will prompt you for them.
 
 ### 4. Deploy to your target
 
