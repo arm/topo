@@ -2,19 +2,19 @@ package main
 
 import "fmt"
 
-func TemplatesInSourceOrder(sources []GitHubSource, templates []Template) []Template {
-	templateByID := make(map[TemplateSourceID]Template, len(templates))
-	for _, template := range templates {
-		templateByID[template.SourceID()] = template
+func ProjectsInSourceOrder(sources []GitHubSource, projects []Project) []Project {
+	projectByID := make(map[ProjectSourceID]Project, len(projects))
+	for _, project := range projects {
+		projectByID[project.SourceID()] = project
 	}
 
-	ordered := make([]Template, 0, len(sources))
+	ordered := make([]Project, 0, len(sources))
 	for _, source := range sources {
-		template, exists := templateByID[source.ID()]
+		project, exists := projectByID[source.ID()]
 		if !exists {
-			panic(fmt.Sprintf("missing template for source %s", source))
+			panic(fmt.Sprintf("missing project for source %s", source))
 		}
-		ordered = append(ordered, template)
+		ordered = append(ordered, project)
 	}
 
 	return ordered

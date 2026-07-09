@@ -8,9 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type TemplateSourceID string
+type ProjectSourceID string
 
-type Template struct {
+type Project struct {
 	XTopo
 	URL string `json:"url"`
 	Ref string `json:"ref"`
@@ -31,7 +31,7 @@ type Arg struct {
 	Hints       map[string]any `json:"hints,omitempty"`
 }
 
-func NewTemplate(source GitHubSource, composeFile io.Reader) (Template, error) {
+func NewProject(source GitHubSource, composeFile io.Reader) (Project, error) {
 	type composeDocument struct {
 		XTopo XTopo `yaml:"x-topo"`
 	}
@@ -39,24 +39,24 @@ func NewTemplate(source GitHubSource, composeFile io.Reader) (Template, error) {
 	var parsed composeDocument
 	decoder := yaml.NewDecoder(composeFile)
 	if err := decoder.Decode(&parsed); err != nil {
-		return Template{}, fmt.Errorf("failed to decode compose file: %w", err)
+		return Project{}, fmt.Errorf("failed to decode compose file: %w", err)
 	}
 
-	return Template{
+	return Project{
 		XTopo: parsed.XTopo,
 		URL:   source.URL(),
 		Ref:   source.SHA,
 	}, nil
 }
 
-func FetchTemplate(client GitHubClient, source GitHubSource) (Template, error) {
+func FetchProject(client GitHubClient, source GitHubSource) (Project, error) {
 	yamlBytes, err := client.FetchFile(source, "compose.yaml")
 	if err != nil {
-		return Template{}, err
+		return Project{}, err
 	}
-	return NewTemplate(source, bytes.NewReader(yamlBytes))
+	return NewProject(source, bytes.NewReader(yamlBytes))
 }
 
-func (t Template) SourceID() TemplateSourceID {
-	return TemplateSourceID(t.URL)
+func (t Project) SourceID() ProjectSourceID {
+	return ProjectSourceID(t.URL)
 }

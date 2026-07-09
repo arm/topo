@@ -8,8 +8,8 @@ import (
 type UpdatePlan struct {
 	ToAdd     []GitHubSource
 	ToUpdate  []GitHubSource
-	ToRemove  []Template
-	Unchanged []Template
+	ToRemove  []Project
+	Unchanged []Project
 }
 
 func (p UpdatePlan) HasChanges() bool {
@@ -23,7 +23,7 @@ func (p UpdatePlan) String() string {
 	lines = append(lines, fmt.Sprintf("🔄 %d to update", len(p.ToUpdate)))
 	lines = appendSourceURLs(lines, p.ToUpdate)
 	lines = append(lines, fmt.Sprintf("🗑️ %d to remove", len(p.ToRemove)))
-	lines = appendTemplateURLs(lines, p.ToRemove)
+	lines = appendProjectURLs(lines, p.ToRemove)
 	lines = append(lines, fmt.Sprintf("☑️ %d unchanged", len(p.Unchanged)))
 	return strings.Join(lines, "\n")
 }
@@ -35,43 +35,43 @@ func appendSourceURLs(lines []string, sources []GitHubSource) []string {
 	return lines
 }
 
-func appendTemplateURLs(lines []string, templates []Template) []string {
-	for _, template := range templates {
-		lines = append(lines, fmt.Sprintf("  - %s", template.URL))
+func appendProjectURLs(lines []string, projects []Project) []string {
+	for _, project := range projects {
+		lines = append(lines, fmt.Sprintf("  - %s", project.URL))
 	}
 	return lines
 }
 
-func PlanUpdate(sources []GitHubSource, current []Template) UpdatePlan {
-	sourceByID := make(map[TemplateSourceID]GitHubSource, len(sources))
+func PlanUpdate(sources []GitHubSource, current []Project) UpdatePlan {
+	sourceByID := make(map[ProjectSourceID]GitHubSource, len(sources))
 	for _, source := range sources {
 		sourceByID[source.ID()] = source
 	}
 
-	currentByID := make(map[TemplateSourceID]Template, len(current))
-	for _, template := range current {
-		currentByID[template.SourceID()] = template
+	currentByID := make(map[ProjectSourceID]Project, len(current))
+	for _, project := range current {
+		currentByID[project.SourceID()] = project
 	}
 
 	var plan UpdatePlan
 	for _, source := range sources {
-		template, exists := currentByID[source.ID()]
+		project, exists := currentByID[source.ID()]
 		if !exists {
 			plan.ToAdd = append(plan.ToAdd, source)
 			continue
 		}
 
-		if template.Ref != source.SHA {
+		if project.Ref != source.SHA {
 			plan.ToUpdate = append(plan.ToUpdate, source)
 			continue
 		}
 
-		plan.Unchanged = append(plan.Unchanged, template)
+		plan.Unchanged = append(plan.Unchanged, project)
 	}
 
-	for _, template := range current {
-		if _, exists := sourceByID[template.SourceID()]; !exists {
-			plan.ToRemove = append(plan.ToRemove, template)
+	for _, project := range current {
+		if _, exists := sourceByID[project.SourceID()]; !exists {
+			plan.ToRemove = append(plan.ToRemove, project)
 		}
 	}
 

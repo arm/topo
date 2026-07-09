@@ -21,33 +21,33 @@ func TestCatalogSchema(t *testing.T) {
 		})
 	})
 
-	t.Run("ValidateTemplate", func(t *testing.T) {
-		t.Run("accepts template that matches catalog schema", func(t *testing.T) {
+	t.Run("ValidateProject", func(t *testing.T) {
+		t.Run("accepts project that matches catalog schema", func(t *testing.T) {
 			schemaPath, err := CatalogSchemaFilePath()
 			require.NoError(t, err)
 			validator, err := NewCatalogSchema(schemaPath)
 			require.NoError(t, err)
-			template := Template{
+			project := Project{
 				XTopo: XTopo{
 					Name:        "Hello World",
-					Description: "A friendly template",
+					Description: "A friendly project",
 					Features:    []string{"web"},
 				},
 				URL: "https://github.com/Arm-Examples/topo-welcome.git",
 				Ref: "main",
 			}
 
-			err = validator.ValidateTemplate(template)
+			err = validator.ValidateProject(project)
 
 			assert.NoError(t, err)
 		})
 
-		t.Run("rejects template that does not match catalog schema", func(t *testing.T) {
+		t.Run("rejects project that does not match catalog schema", func(t *testing.T) {
 			schemaPath, err := CatalogSchemaFilePath()
 			require.NoError(t, err)
 			validator, err := NewCatalogSchema(schemaPath)
 			require.NoError(t, err)
-			template := Template{
+			project := Project{
 				XTopo: XTopo{
 					Description: "Missing a name",
 				},
@@ -55,7 +55,7 @@ func TestCatalogSchema(t *testing.T) {
 				Ref: "main",
 			}
 
-			err = validator.ValidateTemplate(template)
+			err = validator.ValidateProject(project)
 
 			assert.Error(t, err)
 		})
@@ -69,11 +69,11 @@ func TestCatalogSchema(t *testing.T) {
 			require.NoError(t, err)
 			document := Catalog{
 				Schema: catalogSchemaURL,
-				Templates: []Template{
+				Projects: []Project{
 					{
 						XTopo: XTopo{
 							Name:        "Hello World",
-							Description: "A friendly template",
+							Description: "A friendly project",
 						},
 						URL: "https://github.com/Arm-Examples/topo-welcome.git",
 						Ref: "main",
@@ -93,11 +93,11 @@ func TestCatalogSchema(t *testing.T) {
 			require.NoError(t, err)
 			document := Catalog{
 				Schema: "https://example.com/catalog.schema.json",
-				Templates: []Template{
+				Projects: []Project{
 					{
 						XTopo: XTopo{
 							Name:        "Hello World",
-							Description: "A friendly template",
+							Description: "A friendly project",
 						},
 						URL: "https://github.com/Arm-Examples/topo-welcome.git",
 						Ref: "main",

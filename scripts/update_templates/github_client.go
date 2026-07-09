@@ -27,7 +27,7 @@ func (c GitHubClient) FetchFile(source GitHubSource, repoFilePath string) ([]byt
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "topo-template-update")
+	req.Header.Set("User-Agent", "topo-project-update")
 	if c.token != "" {
 		req.Header.Set("Authorization", "token "+c.token)
 	}

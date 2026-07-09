@@ -18,8 +18,8 @@ func (s GitHubSource) String() string {
 	return fmt.Sprintf("%s@%s", s.Repo, s.SHA)
 }
 
-func (s GitHubSource) ID() TemplateSourceID {
-	return TemplateSourceID(s.URL())
+func (s GitHubSource) ID() ProjectSourceID {
+	return ProjectSourceID(s.URL())
 }
 
 func (s GitHubSource) URL() string {
@@ -53,7 +53,7 @@ func GithubSourcesFilePath() (string, error) {
 }
 
 func validateUniqueGitHubSourceIDs(sources []GitHubSource) error {
-	seen := make(map[TemplateSourceID]GitHubSource, len(sources))
+	seen := make(map[ProjectSourceID]GitHubSource, len(sources))
 	for _, source := range sources {
 		id := source.ID()
 		previous, exists := seen[id]
