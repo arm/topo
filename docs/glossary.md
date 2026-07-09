@@ -38,17 +38,17 @@ A workload-specific component, such as a GPU or NPU, accessed through drivers, r
 
 A required component (library, service, or another app) that must be available for an application to function. Often also described as a prerequisite, can relate to **target** or **host**.
 
-## Template
+## Topo Project
 
-A containerised sample project that provides a starting point for development. It includes application code, build configuration, and an **x-topo** metadata block describing required hardware **features** and configurable parameters. **Templates** are configured when cloned. Topo allows the discovery and **deployment** of **Templates** for validation.
+A containerised sample project that provides a starting point for development. It includes application code, build configuration, and an **x-topo** metadata block describing required hardware **features** and configurable parameters. **Projects** are configured when cloned. Topo allows the discovery and **deployment** of **Topo Projects** for validation.
 
 ## X-Topo
 
-A metadata extension defined within a Compose file that describes a **Template**'s purpose, hardware requirements, **features**, and configurable arguments. Enables tooling (such as Topo) to provide validation, filtering, and interactive setup.
+A metadata extension defined within a Compose file that describes a **Project**'s purpose, hardware requirements, **features**, and configurable arguments. Enables tooling (such as Topo) to provide validation, filtering, and interactive setup.
 
 ## Feature
 
-A declared hardware capability required or utilised by a **Template** (e.g., NEON support, GPU compute capability, specific **accelerator** support). Used for matching **Templates** to compatible **targets**.
+A declared hardware capability required or utilised by a **Project** (e.g., NEON support, GPU compute capability, specific **accelerator** support). Used for matching **Topo Projects** to compatible **targets**.
 
 ## Deploy
 
