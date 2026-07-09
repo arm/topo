@@ -1,5 +1,80 @@
 {
   "$schema": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
+  "projects": [
+    {
+      "name": "Hello World",
+      "description": "A minimal \"Hello, World\" web app for validating a Topo setup and deployment.\nIt runs a single service that exposes a web page on the target,\nwith the greeting text customizable via the GREETING_NAME parameter.\n",
+      "features": null,
+      "args": {
+        "GREETING_NAME": {
+          "description": "The text to use in the greeting message",
+          "required": true,
+          "default": "World",
+          "example": "Markus"
+        }
+      },
+      "url": "https://github.com/Arm-Examples/topo-welcome.git",
+      "ref": "main"
+    },
+    {
+      "name": "Lightbulb Moment",
+      "description": "Reads a switch over GPIO pins on an M class cpu, reports switch state over Remoteproc Message, then a web application on the A class reads this and displays a lightbulb in either the on or off state. The lightbulb state is described by an LLM in any user-specified style.",
+      "features": [
+        "remoteproc-runtime"
+      ],
+      "args": {
+        "LLM_PROMPT_PRESET": {
+          "description": "The writing style for the LLM to use when generating messages about the light bulb state. Can be any style description (e.g., \"shakespearean english\", \"pirate\", \"haiku\", \"detective noir\").\n",
+          "required": true,
+          "default": "shakespearean english",
+          "example": "shakespearean english"
+        },
+        "PLATFORM": {
+          "description": "The platform to build for. Must be either `stm32mp257` or `imx93`.",
+          "required": true
+        },
+        "REMOTEPROC": {
+          "description": "The remoteproc device to use. Must be `m33` if the stm32 board is used, or `imx-rproc` if the imx93 board is used.",
+          "required": true
+        }
+      },
+      "url": "https://github.com/Arm-Examples/topo-lightbulb-moment.git",
+      "ref": "main"
+    },
+    {
+      "name": "Topo llama.cpp WebUI Chat",
+      "description": "LLM chat application with Arm CPU inference provided by llama.cpp.\n\nThis project demonstrates running large language models on CPU\nwith inference provided by the llama.cpp server.\n\nThe upstream Linux Arm64 image includes architecture-specific CPU\nbackend variants for Armv8.0 baseline, Armv8.2 dot product/FP16/SVE,\nArmv8.6 int8 matrix multiply/SVE2, and Armv9.2 SME-capable CPUs.\n\nThe stack includes:\n- llama.cpp\n- Quantized SmolLM2 135M default model loaded through llama.cpp\n- Built-in web chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The default SmolLM2-135M-Instruct model\ngives the project a small ready-to-use model reference by default.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies\nwhile avoiding a source build during project deployment.\n",
+      "features": null,
+      "args": {
+        "MODEL": {
+          "description": "Model artifact reference. Use a Hugging Face GGUF repo ID, repo ID plus filename separated by ':', or a direct .gguf URL.",
+          "default": "unsloth/SmolLM2-135M-Instruct-GGUF",
+          "example": "unsloth/SmolLM2-135M-Instruct-GGUF:SmolLM2-135M-Instruct-Q4_K_M.gguf",
+          "hints": {
+            "file.format": "gguf",
+            "huggingface.task": "text-generation"
+          }
+        }
+      },
+      "url": "https://github.com/Arm-Examples/topo-llama-web-ui.git",
+      "ref": "main"
+    },
+    {
+      "name": "SIMD Visual Benchmark",
+      "description": "Visual demonstration of SIMD performance benefits on Arm processors.\nCompare scalar (no SIMD), NEON (128-bit), and SVE (scalable vector)\nimplementations running identical image processing workloads side-by-side.\n\nThis demo shows real hardware acceleration through three C++ services\ncompiled with different architecture flags, processing the same box blur\nalgorithm on images. Performance differences are measured in real-time\nand displayed in an interactive web dashboard.\n\nPerfect for demonstrating to non-technical audiences the concrete benefits\nof SIMD optimizations, with visual results and quantified speedups.\n",
+      "features": [
+        "SVE"
+      ],
+      "args": {
+        "PROCESSOR_CLIENT_TIMEOUT_S": {
+          "description": "HTTP timeout in seconds that the dashboard uses when contacting the\nprocessor services. Increase when running very large workloads.\n",
+          "default": "30"
+        }
+      },
+      "url": "https://github.com/Arm-Examples/topo-simd-visual-benchmark.git",
+      "ref": "main"
+    }
+  ],
   "templates": [
     {
       "name": "Hello World",
@@ -43,7 +118,7 @@
     },
     {
       "name": "Topo llama.cpp WebUI Chat",
-      "description": "LLM chat application with Arm CPU inference provided by llama.cpp.\n\nThis project demonstrates running large language models on CPU\nwith inference provided by the llama.cpp server.\n\nThe upstream Linux Arm64 image includes architecture-specific CPU\nbackend variants for Armv8.0 baseline, Armv8.2 dot product/FP16/SVE,\nArmv8.6 int8 matrix multiply/SVE2, and Armv9.2 SME-capable CPUs.\n\nThe stack includes:\n- llama.cpp\n- Quantized SmolLM2 135M default model loaded through llama.cpp\n- Built-in web chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The default SmolLM2-135M-Instruct model\ngives the project a small ready-to-use model reference by default.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies\nwhile avoiding a source build during Template deployment.\n",
+      "description": "LLM chat application with Arm CPU inference provided by llama.cpp.\n\nThis project demonstrates running large language models on CPU\nwith inference provided by the llama.cpp server.\n\nThe upstream Linux Arm64 image includes architecture-specific CPU\nbackend variants for Armv8.0 baseline, Armv8.2 dot product/FP16/SVE,\nArmv8.6 int8 matrix multiply/SVE2, and Armv9.2 SME-capable CPUs.\n\nThe stack includes:\n- llama.cpp\n- Quantized SmolLM2 135M default model loaded through llama.cpp\n- Built-in web chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The default SmolLM2-135M-Instruct model\ngives the project a small ready-to-use model reference by default.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies\nwhile avoiding a source build during project deployment.\n",
       "features": null,
       "args": {
         "MODEL": {

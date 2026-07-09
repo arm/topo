@@ -38,10 +38,10 @@ func plainCompatibilityMark(c catalog.CompatibilityStatus) string {
 	return ""
 }
 
-func cloneCommand(template catalog.TemplateWithCompatibility) string {
-	source := template.URL
-	if template.Ref != "" {
-		source += "#" + template.Ref
+func cloneCommand(project catalog.ProjectWithCompatibility) string {
+	source := project.URL
+	if project.Ref != "" {
+		source += "#" + project.Ref
 	}
 	return "topo clone " + source
 }

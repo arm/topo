@@ -22,11 +22,12 @@ var catalogJSON []byte
 var catalogSchemaJSON []byte
 
 type catalogDocument struct {
-	Schema    string     `json:"$schema,omitempty"`
-	Templates []Template `json:"templates"`
+	Schema    string    `json:"$schema,omitempty"`
+	Projects  []Project `json:"projects"`
+	Templates []Project `json:"templates,omitempty"`
 }
 
-type Template struct {
+type Project struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Features    []string `json:"features"`
@@ -34,67 +35,70 @@ type Template struct {
 	Ref         string   `json:"ref"`
 }
 
-func ListBuiltinTemplates() ([]Template, error) {
-	return parseTemplates(catalogJSON)
+func ListBuiltinProjects() ([]Project, error) {
+	return parseProjects(catalogJSON)
 }
 
-func ListTemplatesFromURL(ctx context.Context, url string) ([]Template, error) {
-	data, err := fetchTemplatesJSON(ctx, url)
+func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
+	data, err := fetchProjectsJSON(ctx, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch templates: %w", err)
+		return nil, fmt.Errorf("failed to fetch projects: %w", err)
 	}
-	return parseTemplates(data)
+	return parseProjects(data)
 }
 
-func parseTemplates(b []byte) ([]Template, error) {
+func parseProjects(b []byte) ([]Project, error) {
 	if err := validateAgainstSchema(b); err != nil {
 		return nil, fmt.Errorf("failed schema validation: %w", err)
 	}
 
 	var catalog catalogDocument
 	if err := json.Unmarshal(b, &catalog); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal templates: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal projects: %w", err)
 	}
 
+	if len(catalog.Projects) > 0 {
+		return catalog.Projects, nil
+	}
 	return catalog.Templates, nil
 }
 
 func validateAgainstSchema(b []byte) error {
-	const templatesSchemaURL = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
+	const projectsSchemaURL = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
 
 	compiler := jsonschema.NewCompiler()
 	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(catalogSchemaJSON))
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal schema: %w", err)
 	}
-	if err := compiler.AddResource(templatesSchemaURL, schemaDoc); err != nil {
+	if err := compiler.AddResource(projectsSchemaURL, schemaDoc); err != nil {
 		return fmt.Errorf("failed to add schema resource: %w", err)
 	}
-	schema, err := compiler.Compile(templatesSchemaURL)
+	schema, err := compiler.Compile(projectsSchemaURL)
 	if err != nil {
 		return fmt.Errorf("failed to compile schema: %w", err)
 	}
 
 	jsonDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal templates: %w", err)
+		return fmt.Errorf("failed to unmarshal projects: %w", err)
 	}
 	return schema.Validate(jsonDoc)
 }
 
-func fetchTemplatesJSON(ctx context.Context, url string) ([]byte, error) {
+func fetchProjectsJSON(ctx context.Context, url string) ([]byte, error) {
 	const filePrefix = "file://"
 	if path, found := strings.CutPrefix(url, filePrefix); found {
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read templates: %w", err)
+			return nil, fmt.Errorf("failed to read projects: %w", err)
 		}
 		return data, nil
 	}
 
 	data, err := httpGet(ctx, url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch template: %w", err)
+		return nil, fmt.Errorf("failed to fetch project: %w", err)
 	}
 	return data, nil
 }

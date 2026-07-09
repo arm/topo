@@ -1,21 +1,31 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
-  "title": "Topo Templates Catalog",
-  "description": "A catalog of Topo Template repositories.",
+  "title": "Topo Project Catalog",
+  "description": "A catalog of Topo Project repositories.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["templates"],
+  "anyOf": [
+    { "required": ["projects"] },
+    { "required": ["templates"] }
+  ],
   "properties": {
     "$schema": {
       "description": "Schema URL for editor and tooling discovery.",
       "type": "string",
       "const": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
     },
-    "templates": {
+    "projects": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/template"
+        "$ref": "#/$defs/project"
+      }
+    },
+    "templates": {
+      "description": "Deprecated compatibility alias for projects.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/project"
       }
     }
   },
@@ -63,7 +73,7 @@
         }
       }
     },
-    "template": {
+    "project": {
       "type": "object",
       "additionalProperties": false,
       "required": ["name", "description", "url", "ref"],
@@ -76,7 +86,7 @@
           "type": "string"
         },
         "features": {
-          "description": "Optional list of hardware, runtime, or platform features used by the template.",
+          "description": "Optional list of hardware, runtime, or platform features used by the project.",
           "oneOf": [
             {
               "type": "array",
@@ -92,19 +102,19 @@
           ]
         },
         "args": {
-          "description": "Optional dictionary of build argument definitions used for parameterized templates.",
+          "description": "Optional dictionary of project argument definitions used for parameterized projects.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/arg"
           }
         },
         "url": {
-          "description": "Repository URL containing the template. This URL is the stable source identifier used to match catalog entries to configured sources.",
+          "description": "Repository URL containing the project. This URL is the stable source identifier used to match catalog entries to configured sources.",
           "type": "string",
           "format": "uri"
         },
         "ref": {
-          "description": "Git ref to use when fetching the template repository.",
+          "description": "Git ref to use when fetching the project repository.",
           "type": "string",
           "minLength": 1
         }

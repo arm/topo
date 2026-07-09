@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTemplates(t *testing.T) {
+func TestProjects(t *testing.T) {
 	bin := buildBinary(t)
 
-	t.Run("lists builtin templates", func(t *testing.T) {
-		cmd := exec.Command(bin, "templates")
+	t.Run("lists builtin projects", func(t *testing.T) {
+		cmd := exec.Command(bin, "projects")
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err)
 
@@ -25,12 +25,20 @@ func TestTemplates(t *testing.T) {
 		assert.Contains(t, output, "Features:")
 	})
 
+	t.Run("keeps templates as a compatibility alias", func(t *testing.T) {
+		cmd := exec.Command(bin, "templates")
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err)
+
+		assert.Contains(t, string(out), "Hello World")
+	})
+
 	t.Run("filtering", func(t *testing.T) {
 		t.Run("correctly handles the --target flag when no target description is provided", func(t *testing.T) {
 			bin := buildBinary(t)
 			target := testutil.StartContainer(t, testutil.DinDContainer)
 
-			cmd := exec.Command(bin, "templates", "--target", target.SSHDestination)
+			cmd := exec.Command(bin, "projects", "--target", target.SSHDestination)
 			out, err := cmd.CombinedOutput()
 			output := string(out)
 
@@ -40,26 +48,26 @@ func TestTemplates(t *testing.T) {
 	})
 
 	t.Run("outputs JSON when specified", func(t *testing.T) {
-		cmd := exec.Command(bin, "templates", "--output", "json")
+		cmd := exec.Command(bin, "projects", "--output", "json")
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err)
 
-		var templates []struct {
+		var projects []struct {
 			Name string `json:"name"`
 		}
-		err = json.Unmarshal(out, &templates)
+		err = json.Unmarshal(out, &projects)
 		require.NoError(t, err, string(out))
-		require.NotEmpty(t, templates)
+		require.NotEmpty(t, projects)
 
-		names := make([]string, 0, len(templates))
-		for _, template := range templates {
-			names = append(names, template.Name)
+		names := make([]string, 0, len(projects))
+		for _, project := range projects {
+			names = append(names, project.Name)
 		}
 		assert.Contains(t, names, "Hello World")
 	})
 
 	t.Run("outputs errors as JSON when specified", func(t *testing.T) {
-		cmd := exec.Command(bin, "templates", "--output", "json", "--target", "invalid-target")
+		cmd := exec.Command(bin, "projects", "--output", "json", "--target", "invalid-target")
 		out, err := cmd.CombinedOutput()
 		require.Error(t, err)
 

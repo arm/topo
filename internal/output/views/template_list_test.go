@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTemplateList(t *testing.T) {
+func TestProjectList(t *testing.T) {
 	t.Run("prints multiple items correctly", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name:        "name-of-project",
 					Description: "blah blah blah",
 					URL:         "url.git",
@@ -24,7 +24,7 @@ func TestTemplateList(t *testing.T) {
 				},
 			},
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name:        "name-of-other-project",
 					Description: "blah blah blah",
 					URL:         "url.git",
@@ -36,7 +36,7 @@ func TestTemplateList(t *testing.T) {
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.TemplateList(templates),
+			views.ProjectList(projects),
 			&outBuf,
 			term.Plain,
 		)
@@ -59,9 +59,9 @@ name-of-other-project
 	})
 
 	t.Run("ignores features when none present", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name:        "name-of-project",
 					Description: "blah blah blah",
 					URL:         "url.git",
@@ -73,7 +73,7 @@ name-of-other-project
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.TemplateList(templates),
+			views.ProjectList(projects),
 			&outBuf,
 			term.Plain,
 		)
@@ -90,9 +90,9 @@ name-of-other-project
 	})
 
 	t.Run("includes features when present", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name:        "name-of-project",
 					Description: "blah blah blah",
 					Features:    []string{"walnut", "almond"},
@@ -105,7 +105,7 @@ name-of-other-project
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.TemplateList(templates),
+			views.ProjectList(projects),
 			&outBuf,
 			term.Plain,
 		)
@@ -125,9 +125,9 @@ name-of-other-project
 	})
 
 	t.Run("correctly wraps long descriptions", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name:        "name-of-project",
 					Description: "This sentence exists purely to verify that text wrapping behaves correctly when the content is long enough to span multiple lines.",
 					Features:    []string{"walnut", "almond"},
@@ -140,7 +140,7 @@ name-of-other-project
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.TemplateList(templates),
+			views.ProjectList(projects),
 			&outBuf,
 			term.Plain,
 		)
@@ -161,9 +161,9 @@ name-of-other-project
 	})
 
 	t.Run("correctly splits paragraphs in the description", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name:        "name-of-project",
 					Description: "blah blah blah\n\nblah blah blah",
 					Features:    []string{"walnut", "almond"},
@@ -176,7 +176,7 @@ name-of-other-project
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.TemplateList(templates),
+			views.ProjectList(projects),
 			&outBuf,
 			term.Plain,
 		)
@@ -198,9 +198,9 @@ name-of-other-project
 	})
 
 	t.Run("omits ref from clone command when ref is empty", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name: "name-of-project",
 					URL:  "url.git",
 				},
@@ -210,7 +210,7 @@ name-of-other-project
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.TemplateList(templates),
+			views.ProjectList(projects),
 			&outBuf,
 			term.Plain,
 		)
@@ -225,9 +225,9 @@ name-of-other-project
 	})
 
 	t.Run("correctly prints json", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name:        "name-of-project",
 					Description: "blah blah blah\n\nblah blah blah",
 					Features:    []string{"walnut", "almond"},
@@ -240,7 +240,7 @@ name-of-other-project
 		var outBuf bytes.Buffer
 
 		err := views.Print(
-			views.TemplateList(templates),
+			views.ProjectList(projects),
 			&outBuf,
 			term.JSON,
 		)
@@ -263,9 +263,9 @@ name-of-other-project
 	})
 
 	t.Run("prints compatibility marker when supported = true", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name: "name-of-project",
 					URL:  "url.git",
 					Ref:  "main",
@@ -275,25 +275,25 @@ name-of-other-project
 		}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.TemplateList(templates), &outBuf, term.Plain)
+		err := views.Print(views.ProjectList(projects), &outBuf, term.Plain)
 		require.NoError(t, err)
 
 		assert.Equal(t, "✅ name-of-project\n  Clone:\n    topo clone url.git#main\n\n", outBuf.String())
 	})
 
 	t.Run("prints compatibility marker if project is compatible and vice versa", func(t *testing.T) {
-		compatibleTemplate := catalog.TemplateWithCompatibility{
-			Template:      catalog.Template{Name: "lasagne"},
+		compatibleProject := catalog.ProjectWithCompatibility{
+			Project:       catalog.Project{Name: "lasagne"},
 			Compatibility: catalog.CompatibilitySupported,
 		}
-		incompatibleTemplate := catalog.TemplateWithCompatibility{
-			Template:      catalog.Template{Name: "spaghetti"},
+		incompatibleProject := catalog.ProjectWithCompatibility{
+			Project:       catalog.Project{Name: "spaghetti"},
 			Compatibility: catalog.CompatibilityUnsupported,
 		}
-		templates := []catalog.TemplateWithCompatibility{compatibleTemplate, incompatibleTemplate}
+		projects := []catalog.ProjectWithCompatibility{compatibleProject, incompatibleProject}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.TemplateList(templates), &outBuf, term.Plain)
+		err := views.Print(views.ProjectList(projects), &outBuf, term.Plain)
 		require.NoError(t, err)
 
 		assert.Contains(t, outBuf.String(), "✅ lasagne")
@@ -301,9 +301,9 @@ name-of-other-project
 	})
 
 	t.Run("json includes compatibility marker if project is compatible and vice versa", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name: "lasagne",
 					URL:  "url.git",
 					Ref:  "main",
@@ -311,7 +311,7 @@ name-of-other-project
 				Compatibility: catalog.CompatibilitySupported,
 			},
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name: "spaghetti",
 					URL:  "url.git",
 					Ref:  "main",
@@ -321,7 +321,7 @@ name-of-other-project
 		}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.TemplateList(templates), &outBuf, term.JSON)
+		err := views.Print(views.ProjectList(projects), &outBuf, term.JSON)
 		require.NoError(t, err)
 
 		var got any
@@ -350,9 +350,9 @@ name-of-other-project
 	})
 
 	t.Run("json omits compatibility when not present", func(t *testing.T) {
-		templates := []catalog.TemplateWithCompatibility{
+		projects := []catalog.ProjectWithCompatibility{
 			{
-				Template: catalog.Template{
+				Project: catalog.Project{
 					Name: "name-of-project",
 					URL:  "url.git",
 					Ref:  "main",
@@ -361,7 +361,7 @@ name-of-other-project
 		}
 
 		var outBuf bytes.Buffer
-		err := views.Print(views.TemplateList(templates), &outBuf, term.JSON)
+		err := views.Print(views.ProjectList(projects), &outBuf, term.JSON)
 		require.NoError(t, err)
 
 		var got any
