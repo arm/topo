@@ -231,7 +231,7 @@ volumes:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("collects and injects build arguments", func(t *testing.T) {
+	t.Run("collects and injects project arguments", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "piggy-service"

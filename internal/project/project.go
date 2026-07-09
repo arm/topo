@@ -90,22 +90,22 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		}
 	}()
 
-	logger.Info(fmt.Sprintf("copying topo template to %q", destDir))
+	logger.Info(fmt.Sprintf("copying Topo Project to %q", destDir))
 
 	if err := src.CopyTo(destDir); err != nil {
-		return fmt.Errorf("failed to copy topo template: %w", err)
+		return fmt.Errorf("failed to copy Topo Project: %w", err)
 	}
 
 	if info, err := os.Stat(destDir); err != nil || !info.IsDir() {
-		return fmt.Errorf("failed to find copied template directory: %w", err)
+		return fmt.Errorf("failed to find copied Topo Project directory: %w", err)
 	}
 
 	tpl, err := template.FromDir(destDir)
 	if err != nil {
-		return fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
+		return fmt.Errorf("failed to load Topo Project from %s: %w", src.String(), err)
 	}
 	if len(tpl.Services) == 0 {
-		return fmt.Errorf("template found in directory %s, has no services", destDir)
+		return fmt.Errorf("Topo Project found in directory %s has no services", destDir)
 	}
 
 	resolvedTemplate, err := template.Resolve(tpl, argProvider)
@@ -271,7 +271,7 @@ func (o copyTemplateOperation) Run(_ io.Writer) error {
 		if errDestDirExists, ok := errors.AsType[template.DestDirExistsError](err); ok {
 			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
 		}
-		return fmt.Errorf("failed to copy Service Template: %w", err)
+		return fmt.Errorf("failed to copy Topo Project: %w", err)
 	}
 	return nil
 }

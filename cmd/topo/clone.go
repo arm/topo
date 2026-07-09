@@ -13,13 +13,13 @@ import (
 
 var topoCloneCmd = &cobra.Command{
 	Use:   "clone <project-source> [<path>]",
-	Short: "Clone an example project",
-	Long: `Clone an example project to the specified path.
+	Short: "Clone a Project",
+	Long: `Clone a Project to the specified path.
 
 The project-source argument uses scheme prefixes to specify the source type.
 The git: prefix is optional for git@host and https:// URLs.
 
-Some projects require build arguments. Supply them on the command line or answer
+Some projects require arguments/parameters. Supply them on the command line or answer
 interactive prompts.`,
 	Example: `  # Git repository
   topo clone git@github.com:user/repo.git
@@ -29,14 +29,14 @@ interactive prompts.`,
   topo clone git:ubuntu@example.com:repo.git
   topo clone git:builder@host:tools/platform.git#v2
 
-  # Local directory (must contain a Topo Template)
-  topo clone dir:/path/to/template/folder
+  # Local directory (must contain a Topo Project)
+  topo clone dir:/path/to/project/folder
   topo clone dir:./relative/path
 
   # Will prompt for required args
   topo clone https://github.com/Arm-Examples/topo-welcome.git
 
-  # Provide build arguments explicitly
+  # Provide project arguments explicitly
   topo clone https://github.com/Arm-Examples/topo-welcome.git GREETING_NAME="World"
 
   # With an explicit path
