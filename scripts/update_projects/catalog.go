@@ -12,9 +12,8 @@ const (
 )
 
 type Catalog struct {
-	Schema    string    `json:"$schema"`
-	Projects  []Project `json:"projects"`
-	Templates []Project `json:"templates,omitempty"`
+	Schema   string    `json:"$schema"`
+	Projects []Project `json:"projects"`
 }
 
 func ReadProjects(path string) ([]Project, error) {
@@ -28,10 +27,7 @@ func ReadProjects(path string) ([]Project, error) {
 	if err := json.NewDecoder(file).Decode(&document); err != nil {
 		return nil, err
 	}
-	if len(document.Projects) > 0 {
-		return document.Projects, nil
-	}
-	return document.Templates, nil
+	return document.Projects, nil
 }
 
 func WriteCatalog(path string, document Catalog) error {

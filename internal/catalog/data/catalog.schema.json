@@ -5,10 +5,7 @@
   "description": "A catalog of Topo Project repositories.",
   "type": "object",
   "additionalProperties": false,
-  "anyOf": [
-    { "required": ["projects"] },
-    { "required": ["templates"] }
-  ],
+  "required": ["projects"],
   "properties": {
     "$schema": {
       "description": "Schema URL for editor and tooling discovery.",
@@ -16,13 +13,6 @@
       "const": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
     },
     "projects": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/project"
-      }
-    },
-    "templates": {
-      "description": "Deprecated compatibility alias for projects.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/project"

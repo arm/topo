@@ -22,9 +22,8 @@ var catalogJSON []byte
 var catalogSchemaJSON []byte
 
 type catalogDocument struct {
-	Schema    string    `json:"$schema,omitempty"`
-	Projects  []Project `json:"projects"`
-	Templates []Project `json:"templates,omitempty"`
+	Schema   string    `json:"$schema,omitempty"`
+	Projects []Project `json:"projects"`
 }
 
 type Project struct {
@@ -57,10 +56,7 @@ func parseProjects(b []byte) ([]Project, error) {
 		return nil, fmt.Errorf("failed to unmarshal projects: %w", err)
 	}
 
-	if len(catalog.Projects) > 0 {
-		return catalog.Projects, nil
-	}
-	return catalog.Templates, nil
+	return catalog.Projects, nil
 }
 
 func validateAgainstSchema(b []byte) error {

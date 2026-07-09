@@ -66,9 +66,8 @@ func main() {
 	projects = ProjectsInSourceOrder(sources, projects)
 
 	document := Catalog{
-		Schema:    validator.SchemaURL(),
-		Projects:  projects,
-		Templates: projects,
+		Schema:   validator.SchemaURL(),
+		Projects: projects,
 	}
 	if err := validator.ValidateCatalog(document); err != nil {
 		log.Fatalf("invalid catalog file: %v\n", err)
