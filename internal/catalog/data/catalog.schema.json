@@ -91,7 +91,7 @@
             }
           ]
         },
-        "args": {
+        "parameters": {
           "description": "Optional dictionary of parameter definitions used for parameterized projects.",
           "type": "object",
           "additionalProperties": {

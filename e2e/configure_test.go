@@ -92,7 +92,7 @@ func configurableCompose(greetingName string) string {
 
 x-topo:
   name: Welcome
-  args:
+  parameters:
     GREETING_NAME:
       description: Name to greet
       required: true

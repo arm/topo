@@ -62,10 +62,10 @@ services:
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("parses args from x-topo metadata", func(t *testing.T) {
+	t.Run("parses parameters from x-topo metadata", func(t *testing.T) {
 		composeFileContents := `
   x-topo:
-    args:
+    parameters:
       GREETING:
         description: "The greeting message to display"
         required: true
@@ -75,10 +75,10 @@ services:
         required: false
   `
 		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata.Args
+		got := tpl.Metadata.Parameters
 
 		require.NoError(t, err)
-		want := []template.Arg{
+		want := []template.Parameter{
 			{
 				Name:        "GREETING",
 				Description: "The greeting message to display",
@@ -142,7 +142,7 @@ services:
     image: nginx:alpine
 
 x-topo:
-  args:
+  parameters:
     GREETING:
       description: "The greeting message to display"
       required: true

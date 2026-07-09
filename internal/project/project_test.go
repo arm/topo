@@ -104,7 +104,7 @@ services:
       args:
         GREETING: ${GREETING}
 x-topo:
-  args:
+  parameters:
     GREETING:
       description: "Greeting"
       required: true
@@ -245,7 +245,7 @@ services:
 
 x-topo:
   name: "piggy-service"
-  args:
+  parameters:
     GREETING:
       description: "The greeting message"
       required: true
@@ -291,7 +291,7 @@ services:
 
 x-topo:
   name: "service-args-scope"
-  args:
+  parameters:
     GREETING:
       description: "Greeting message"
       required: true
@@ -344,7 +344,7 @@ services:
 
 x-topo:
   name: "oyster-service"
-  args:
+  parameters:
     GREETING:
       description: "The greeting message"
       required: true
@@ -386,7 +386,7 @@ services:
 
 x-topo:
   name: "vinegar-service"
-  args:
+  parameters:
     GREETING:
       description: "The greeting message"
       required: true
@@ -424,7 +424,7 @@ services:
 
 x-topo:
   name: My Project
-  args:
+  parameters:
     FOO:
       description: a dummy parameter
       required: true
@@ -448,7 +448,7 @@ services:
 
 x-topo:
   name: My Project
-  args:
+  parameters:
     FOO:
       description: a dummy parameter
       required: true

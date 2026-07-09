@@ -17,13 +17,13 @@ type Project struct {
 }
 
 type XTopo struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Features    []string       `json:"features"`
-	Args        map[string]Arg `json:"args,omitempty"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	Features    []string             `json:"features"`
+	Parameters  map[string]Parameter `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 }
 
-type Arg struct {
+type Parameter struct {
 	Description string         `json:"description,omitempty"`
 	Required    bool           `json:"required,omitempty"`
 	Default     string         `json:"default,omitempty"`

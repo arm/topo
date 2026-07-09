@@ -112,7 +112,7 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 	if err != nil {
 		return err
 	}
-	resolvedArgs := argsToMap(resolvedTemplate.Args)
+	resolvedArgs := argsToMap(resolvedTemplate.Parameters)
 
 	extendedComposeFilePath := filepath.Join(copiedDirName, template.ComposeFilename)
 	usedArgs := map[string]bool{}
@@ -246,7 +246,7 @@ func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]argu
 		return nil, err
 	}
 
-	return resolvedTpl.Args, nil
+	return resolvedTpl.Parameters, nil
 }
 
 func argsToMap(args []arguments.ResolvedArg) map[string]string {

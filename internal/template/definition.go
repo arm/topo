@@ -26,10 +26,10 @@ type Metadata struct {
 	Description              string
 	DeploymentSuccessMessage string
 	Features                 []string
-	Args                     []Arg
+	Parameters               []Parameter
 }
 
-type Arg struct {
+type Parameter struct {
 	Name        string
 	Description string
 	Required    bool
@@ -76,14 +76,14 @@ func FromDir(destDir string) (Template, error) {
 }
 
 type rawMetadata struct {
-	Name                     string            `yaml:"name"`
-	Description              string            `yaml:"description"`
-	DeploymentSuccessMessage string            `yaml:"deployment_success_message"`
-	Features                 []string          `yaml:"features,omitempty"`
-	Args                     map[string]rawArg `yaml:"args,omitempty"`
+	Name                     string                  `yaml:"name"`
+	Description              string                  `yaml:"description"`
+	DeploymentSuccessMessage string                  `yaml:"deployment_success_message"`
+	Features                 []string                `yaml:"features,omitempty"`
+	Parameters               map[string]rawParameter `yaml:"parameters,omitempty"`
 }
 
-type rawArg struct {
+type rawParameter struct {
 	Description string `yaml:"description"`
 	Required    bool   `yaml:"required"`
 	Example     string `yaml:"example,omitempty"`
@@ -100,21 +100,21 @@ func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
 	t.Description = raw.Description
 	t.DeploymentSuccessMessage = raw.DeploymentSuccessMessage
 	t.Features = raw.Features
-	t.Args = parseArgsInOrder(node, raw.Args)
+	t.Parameters = parseParametersInOrder(node, raw.Parameters)
 
 	return nil
 }
 
-func parseArgsInOrder(node *yaml.Node, argsMap map[string]rawArg) []Arg {
-	var result []Arg
+func parseParametersInOrder(node *yaml.Node, parametersMap map[string]rawParameter) []Parameter {
+	var result []Parameter
 
 	for i := 0; i < len(node.Content); i += 2 {
-		if node.Content[i].Value == "args" {
-			argsNode := node.Content[i+1]
-			for j := 0; j < len(argsNode.Content); j += 2 {
-				name := argsNode.Content[j].Value
-				if metadata, ok := argsMap[name]; ok {
-					result = append(result, Arg{
+		if node.Content[i].Value == "parameters" {
+			parametersNode := node.Content[i+1]
+			for j := 0; j < len(parametersNode.Content); j += 2 {
+				name := parametersNode.Content[j].Value
+				if metadata, ok := parametersMap[name]; ok {
+					result = append(result, Parameter{
 						Name:        name,
 						Description: metadata.Description,
 						Required:    metadata.Required,
