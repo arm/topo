@@ -214,7 +214,7 @@ func TestMissingArgsError(t *testing.T) {
 
 		got := err.Error()
 
-		want := `missing required build arguments:
+		want := `missing required parameters:
   GREETING:
     description: The greeting message
     example: Hello
