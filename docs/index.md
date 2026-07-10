@@ -1,8 +1,7 @@
-# Topo CLI
+# Topo
 
-Documentation for developing and maintaining the Topo command-line interface.
+Documentation for the Topo project.
 
 ## Start here
 
-- [Development guide](./DEVELOPMENT.md)
 - [Glossary](./glossary.md)
