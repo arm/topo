@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/arm/topo/internal/output/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -81,6 +82,7 @@ type rawMetadata struct {
 	DeploymentSuccessMessage string                  `yaml:"deployment_success_message"`
 	Features                 []string                `yaml:"features,omitempty"`
 	Parameters               map[string]rawParameter `yaml:"parameters,omitempty"`
+	Args                     map[string]rawParameter `yaml:"args,omitempty"`
 }
 
 type rawParameter struct {
@@ -100,32 +102,55 @@ func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
 	t.Description = raw.Description
 	t.DeploymentSuccessMessage = raw.DeploymentSuccessMessage
 	t.Features = raw.Features
-	t.Parameters = parseParametersInOrder(node, raw.Parameters)
+	parametersNode := findMetadataNode(node, "parameters")
+	parameters := raw.Parameters
+	if len(parameters) == 0 && len(raw.Args) > 0 {
+		logger.Warn("x-topo.args is deprecated; use x-topo.parameters instead")
+		parametersNode = findMetadataNode(node, "args")
+		parameters = raw.Args
+	}
+	t.Parameters = parseParametersInOrder(parametersNode, parameters)
 
 	return nil
 }
 
-func parseParametersInOrder(node *yaml.Node, parametersMap map[string]rawParameter) []Parameter {
-	var result []Parameter
-
+func findMetadataNode(node *yaml.Node, key string) *yaml.Node {
 	for i := 0; i < len(node.Content); i += 2 {
-		if node.Content[i].Value == "parameters" {
-			parametersNode := node.Content[i+1]
-			for j := 0; j < len(parametersNode.Content); j += 2 {
-				name := parametersNode.Content[j].Value
-				if metadata, ok := parametersMap[name]; ok {
-					result = append(result, Parameter{
-						Name:        name,
-						Description: metadata.Description,
-						Required:    metadata.Required,
-						Example:     metadata.Example,
-						Default:     metadata.Default,
-					})
-				}
-			}
-			break
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+
+	return nil
+}
+
+func parseParametersInOrder(parametersNode *yaml.Node, parametersMap map[string]rawParameter) []Parameter {
+	var result []Parameter
+	parametersNode = resolveAlias(parametersNode)
+	if parametersNode == nil {
+		return result
+	}
+
+	for i := 0; i < len(parametersNode.Content); i += 2 {
+		name := parametersNode.Content[i].Value
+		if metadata, ok := parametersMap[name]; ok {
+			result = append(result, Parameter{
+				Name:        name,
+				Description: metadata.Description,
+				Required:    metadata.Required,
+				Example:     metadata.Example,
+				Default:     metadata.Default,
+			})
 		}
 	}
 
 	return result
+}
+
+func resolveAlias(node *yaml.Node) *yaml.Node {
+	if node != nil && node.Kind == yaml.AliasNode {
+		return node.Alias
+	}
+
+	return node
 }
