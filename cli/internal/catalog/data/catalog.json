@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
+  "$schema": "https://raw.githubusercontent.com/arm/topo/main/cli/internal/catalog/data/catalog.schema.json",
   "projects": [
     {
       "name": "Hello World",

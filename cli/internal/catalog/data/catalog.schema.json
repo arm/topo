@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
+  "$id": "https://raw.githubusercontent.com/arm/topo/main/cli/internal/catalog/data/catalog.schema.json",
   "title": "Topo Project Catalog",
   "description": "A catalog of Topo Project repositories.",
   "type": "object",
@@ -10,7 +10,7 @@
     "$schema": {
       "description": "Schema URL for editor and tooling discovery.",
       "type": "string",
-      "const": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
+      "const": "https://raw.githubusercontent.com/arm/topo/main/cli/internal/catalog/data/catalog.schema.json"
     },
     "projects": {
       "type": "array",

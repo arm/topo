@@ -15,7 +15,7 @@ func TestReadProjects(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "catalog.json")
 		err := os.WriteFile(path, []byte(`
 {
-	"$schema": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
+	"$schema": "https://raw.githubusercontent.com/arm/topo/main/cli/internal/catalog/data/catalog.schema.json",
 	"projects": [
 		{
 			"name": "death-star-trench-run",
@@ -51,7 +51,7 @@ func TestWriteCatalog(t *testing.T) {
 	t.Run("writes catalog document to file", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "catalog.json")
 		want := Catalog{
-			Schema: "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
+			Schema: "https://raw.githubusercontent.com/arm/topo/main/cli/internal/catalog/data/catalog.schema.json",
 			Projects: []Project{
 				{
 					XTopo: XTopo{

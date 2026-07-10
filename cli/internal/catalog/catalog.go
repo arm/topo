@@ -60,7 +60,7 @@ func parseProjects(b []byte) ([]Project, error) {
 }
 
 func validateAgainstSchema(b []byte) error {
-	const projectsSchemaURL = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
+	const projectsSchemaURL = "https://raw.githubusercontent.com/arm/topo/main/cli/internal/catalog/data/catalog.schema.json"
 
 	compiler := jsonschema.NewCompiler()
 	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(catalogSchemaJSON))
