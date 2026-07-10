@@ -52,13 +52,13 @@ func (v CatalogSchema) SchemaURL() string {
 	return v.schemaURL
 }
 
-func (v CatalogSchema) ValidateTemplate(template Template) error {
+func (v CatalogSchema) ValidateProject(project Project) error {
 	document := Catalog{
-		Schema:    v.SchemaURL(),
-		Templates: []Template{template},
+		Schema:   v.SchemaURL(),
+		Projects: []Project{project},
 	}
 	if err := v.ValidateCatalog(document); err != nil {
-		return fmt.Errorf("invalid template document: %w", err)
+		return fmt.Errorf("invalid project document: %w", err)
 	}
 	return nil
 }

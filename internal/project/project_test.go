@@ -10,7 +10,6 @@ import (
 
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/template"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
@@ -24,21 +23,21 @@ name: example-project
 services: {}
 `
 
-type mockTemplateSource struct {
+type mockProjectSource struct {
 	mock.Mock
 }
 
-func (m *mockTemplateSource) CopyTo(destDir string) error {
+func (m *mockProjectSource) CopyTo(destDir string) error {
 	args := m.Called(destDir)
 	return args.Error(0)
 }
 
-func (m *mockTemplateSource) String() string {
+func (m *mockProjectSource) String() string {
 	args := m.Called()
 	return args.String(0)
 }
 
-func (m *mockTemplateSource) GetName() (string, error) {
+func (m *mockProjectSource) GetName() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }
@@ -49,7 +48,7 @@ func TestInit(t *testing.T) {
 
 		require.NoError(t, project.Init(dir))
 
-		composeFile := filepath.Join(dir, template.ComposeFilename)
+		composeFile := filepath.Join(dir, project.ComposeFilename)
 		data := testutil.RequireReadFile(t, composeFile)
 		var p types.Project
 		require.NoError(t, yaml.Unmarshal([]byte(data), &p))
@@ -90,11 +89,11 @@ services:
 		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
 
 		require.NoError(t, err)
-		composeFilePath := filepath.Join(destDir, template.ComposeFilename)
+		composeFilePath := filepath.Join(destDir, project.ComposeFilename)
 		assert.FileExists(t, composeFilePath)
 	})
 
-	t.Run("removes destination directory when args resolution fails", func(t *testing.T) {
+	t.Run("removes destination directory when parameter resolution fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		mockSource := mockSourceWithContent(t, `
@@ -104,7 +103,7 @@ services:
       args:
         GREETING: ${GREETING}
 x-topo:
-  args:
+  parameters:
     GREETING:
       description: "Greeting"
       required: true
@@ -118,12 +117,12 @@ x-topo:
 	})
 }
 
-func mockSourceWithContent(t *testing.T, content, sourceName string) *mockTemplateSource {
-	mockSource := &mockTemplateSource{}
+func mockSourceWithContent(t *testing.T, content, sourceName string) *mockProjectSource {
+	mockSource := &mockProjectSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
 		testutil.RequireMkdirAll(t, destDir)
-		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
+		testutil.RequireWriteFile(t, filepath.Join(destDir, project.ComposeFilename), content)
 	})
 	mockSource.On("GetName").Maybe().Return(sourceName, nil)
 	t.Cleanup(func() {
@@ -132,8 +131,8 @@ func mockSourceWithContent(t *testing.T, content, sourceName string) *mockTempla
 	return mockSource
 }
 
-func mockTemplateSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceName string) *mockTemplateSource {
-	mockSource := &mockTemplateSource{}
+func mockProjectSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceName string) *mockProjectSource {
+	mockSource := &mockProjectSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(errToReturn)
 	mockSource.On("GetName").Return(sourceName, nil)
 	t.Cleanup(func() {
@@ -143,9 +142,9 @@ func mockTemplateSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceNa
 }
 
 func TestExtend(t *testing.T) {
-	t.Run("extends service from TemplateSource", func(t *testing.T) {
+	t.Run("extends service from ProjectSource", func(t *testing.T) {
 		dir := t.TempDir()
-		sourceName := "test-template"
+		sourceName := "test-project"
 		projectYAML := `
 name: example-project
 services: {}
@@ -189,7 +188,7 @@ services:
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "test"
 		destDir := filepath.Join(dir, sourceName)
-		mockSource := mockTemplateSourceWithErrorOnCopy(t, template.DestDirExistsError{Dir: destDir}, sourceName)
+		mockSource := mockProjectSourceWithErrorOnCopy(t, project.DestDirExistsError{Dir: destDir}, sourceName)
 		provider := arguments.NewStrictProviderChain()
 
 		err := project.Extend(targetProjectFile, mockSource, provider)
@@ -231,7 +230,7 @@ volumes:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("collects and injects build arguments", func(t *testing.T) {
+	t.Run("collects and injects parameters", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "piggy-service"
@@ -245,7 +244,7 @@ services:
 
 x-topo:
   name: "piggy-service"
-  args:
+  parameters:
     GREETING:
       description: "The greeting message"
       required: true
@@ -272,7 +271,7 @@ services:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("injects arguments only into services that declare them", func(t *testing.T) {
+	t.Run("injects parameters only into services that declare them", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "service-args-scope"
@@ -291,7 +290,7 @@ services:
 
 x-topo:
   name: "service-args-scope"
-  args:
+  parameters:
     GREETING:
       description: "Greeting message"
       required: true
@@ -330,7 +329,7 @@ services:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("does not collect optional arguments into x-topo", func(t *testing.T) {
+	t.Run("does not collect optional parameters into x-topo", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "oyster-service"
@@ -344,7 +343,7 @@ services:
 
 x-topo:
   name: "oyster-service"
-  args:
+  parameters:
     GREETING:
       description: "The greeting message"
       required: true
@@ -374,7 +373,7 @@ services:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("cleans up service directory when argument collection fails ", func(t *testing.T) {
+	t.Run("cleans up service directory when parameter collection fails ", func(t *testing.T) {
 		dir := t.TempDir()
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 
@@ -386,7 +385,7 @@ services:
 
 x-topo:
   name: "vinegar-service"
-  args:
+  parameters:
     GREETING:
       description: "The greeting message"
       required: true
@@ -396,8 +395,8 @@ x-topo:
 		err := project.Extend(targetProjectFile, mockSource, provider)
 
 		assert.EqualError(t, err, "user cancelled")
-		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), sourceName)
-		_, err = os.Stat(copiedTemplateDir)
+		copiedProjectDir := filepath.Join(filepath.Dir(targetProjectFile), sourceName)
+		_, err = os.Stat(copiedProjectDir)
 		assert.True(t, os.IsNotExist(err), "service directory should be cleaned up after failure")
 	})
 }
@@ -412,7 +411,7 @@ func TestResolveAndApplyArgs(t *testing.T) {
 		require.ErrorContains(t, err, "can't read compose file")
 	})
 
-	t.Run("updates the compose file with resolved arguments", func(t *testing.T) {
+	t.Run("updates the compose file with resolved parameters", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
 services:
@@ -424,13 +423,13 @@ services:
 
 x-topo:
   name: My Project
-  args:
+  parameters:
     FOO:
-      description: a dummy argument
+      description: a dummy parameter
       required: true
       example: bar
 `
-		composeFilePath := filepath.Join(dir, template.ComposeFilename)
+		composeFilePath := filepath.Join(dir, project.ComposeFilename)
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
 		argProvider := arguments.NewStrictProviderChain(provider)
@@ -448,9 +447,9 @@ services:
 
 x-topo:
   name: My Project
-  args:
+  parameters:
     FOO:
-      description: a dummy argument
+      description: a dummy parameter
       required: true
       example: bar
 `

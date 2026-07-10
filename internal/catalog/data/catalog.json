@@ -1,20 +1,20 @@
 {
   "$schema": "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json",
-  "templates": [
+  "projects": [
     {
       "name": "Hello World",
       "description": "A minimal \"Hello, World\" web app for validating a Topo setup and deployment.\nIt runs a single service that exposes a web page on the target,\nwith the greeting text customizable via the GREETING_NAME parameter.\n",
       "features": null,
-      "args": {
+      "url": "https://github.com/Arm-Examples/topo-welcome.git",
+      "ref": "main",
+      "parameters": {
         "GREETING_NAME": {
           "description": "The text to use in the greeting message",
           "required": true,
           "default": "World",
           "example": "Markus"
         }
-      },
-      "url": "https://github.com/Arm-Examples/topo-welcome.git",
-      "ref": "main"
+      }
     },
     {
       "name": "Lightbulb Moment",
@@ -22,7 +22,9 @@
       "features": [
         "remoteproc-runtime"
       ],
-      "args": {
+      "url": "https://github.com/Arm-Examples/topo-lightbulb-moment.git",
+      "ref": "main",
+      "parameters": {
         "LLM_PROMPT_PRESET": {
           "description": "The writing style for the LLM to use when generating messages about the light bulb state. Can be any style description (e.g., \"shakespearean english\", \"pirate\", \"haiku\", \"detective noir\").\n",
           "required": true,
@@ -37,15 +39,15 @@
           "description": "The remoteproc device to use. Must be `m33` if the stm32 board is used, or `imx-rproc` if the imx93 board is used.",
           "required": true
         }
-      },
-      "url": "https://github.com/Arm-Examples/topo-lightbulb-moment.git",
-      "ref": "main"
+      }
     },
     {
       "name": "Topo llama.cpp WebUI Chat",
-      "description": "LLM chat application with Arm CPU inference provided by llama.cpp.\n\nThis project demonstrates running large language models on CPU\nwith inference provided by the llama.cpp server.\n\nThe upstream Linux Arm64 image includes architecture-specific CPU\nbackend variants for Armv8.0 baseline, Armv8.2 dot product/FP16/SVE,\nArmv8.6 int8 matrix multiply/SVE2, and Armv9.2 SME-capable CPUs.\n\nThe stack includes:\n- llama.cpp\n- Quantized SmolLM2 135M default model loaded through llama.cpp\n- Built-in web chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The default SmolLM2-135M-Instruct model\ngives the project a small ready-to-use model reference by default.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies\nwhile avoiding a source build during Template deployment.\n",
+      "description": "LLM chat application with Arm CPU inference provided by llama.cpp.\n\nThis project demonstrates running large language models on CPU\nwith inference provided by the llama.cpp server.\n\nThe upstream Linux Arm64 image includes architecture-specific CPU\nbackend variants for Armv8.0 baseline, Armv8.2 dot product/FP16/SVE,\nArmv8.6 int8 matrix multiply/SVE2, and Armv9.2 SME-capable CPUs.\n\nThe stack includes:\n- llama.cpp\n- Quantized SmolLM2 135M default model loaded through llama.cpp\n- Built-in web chat interface\n- No GPU required - pure CPU inference\n\nPerfect for demos and testing! The default SmolLM2-135M-Instruct model\ngives the project a small ready-to-use model reference by default.\n\nIdeal for testing LLM workloads on Arm hardware without GPU dependencies\nwhile avoiding a source build during project deployment.\n",
       "features": null,
-      "args": {
+      "url": "https://github.com/Arm-Examples/topo-llama-web-ui.git",
+      "ref": "main",
+      "parameters": {
         "MODEL": {
           "description": "Model artifact reference. Use a Hugging Face GGUF repo ID, repo ID plus filename separated by ':', or a direct .gguf URL.",
           "default": "unsloth/SmolLM2-135M-Instruct-GGUF",
@@ -55,9 +57,7 @@
             "huggingface.task": "text-generation"
           }
         }
-      },
-      "url": "https://github.com/Arm-Examples/topo-llama-web-ui.git",
-      "ref": "main"
+      }
     },
     {
       "name": "SIMD Visual Benchmark",
@@ -65,14 +65,14 @@
       "features": [
         "SVE"
       ],
-      "args": {
+      "url": "https://github.com/Arm-Examples/topo-simd-visual-benchmark.git",
+      "ref": "main",
+      "parameters": {
         "PROCESSOR_CLIENT_TIMEOUT_S": {
           "description": "HTTP timeout in seconds that the dashboard uses when contacting the\nprocessor services. Increase when running very large workloads.\n",
           "default": "30"
         }
-      },
-      "url": "https://github.com/Arm-Examples/topo-simd-visual-benchmark.git",
-      "ref": "main"
+      }
     }
   ]
 }

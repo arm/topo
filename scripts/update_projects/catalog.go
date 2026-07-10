@@ -12,11 +12,11 @@ const (
 )
 
 type Catalog struct {
-	Schema    string     `json:"$schema"`
-	Templates []Template `json:"templates"`
+	Schema   string    `json:"$schema"`
+	Projects []Project `json:"projects"`
 }
 
-func ReadTemplates(path string) ([]Template, error) {
+func ReadProjects(path string) ([]Project, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func ReadTemplates(path string) ([]Template, error) {
 	if err := json.NewDecoder(file).Decode(&document); err != nil {
 		return nil, err
 	}
-	return document.Templates, nil
+	return document.Projects, nil
 }
 
 func WriteCatalog(path string, document Catalog) error {
@@ -40,7 +40,7 @@ func WriteCatalog(path string, document Catalog) error {
 	writeErr := enc.Encode(document)
 	closeErr := outputFile.Close()
 	if writeErr != nil {
-		return fmt.Errorf("failed to write templates: %w", writeErr)
+		return fmt.Errorf("failed to write projects: %w", writeErr)
 	}
 	if closeErr != nil {
 		return fmt.Errorf("failed to close catalog output: %w", closeErr)

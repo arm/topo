@@ -8,10 +8,10 @@ import (
 	"github.com/arm/topo/internal/catalog"
 )
 
-type TemplateList []catalog.TemplateWithCompatibility
+type ProjectList []catalog.ProjectWithCompatibility
 
-const templateListTemplate = `
-{{- define "templateRow" }}
+const projectListTemplate = `
+{{- define "projectRow" }}
 {{- if .Compatibility }}{{ compatibilityMark .Compatibility }} {{ end }}{{ cyan .Name }}
   {{ blue "Clone:" }}
     {{ cloneCommand . }}
@@ -27,14 +27,14 @@ const templateListTemplate = `
 {{- end }}
 {{- end }}
 
-{{- define "templateList" }}
+{{- define "projectList" }}
 {{- range . }}
-{{- template "templateRow" . }}
+{{- template "projectRow" . }}
 
 {{ end }}
 {{- end }}`
 
-func (r TemplateList) AsJSON() (string, error) {
+func (r ProjectList) AsJSON() (string, error) {
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return "", err
@@ -42,17 +42,17 @@ func (r TemplateList) AsJSON() (string, error) {
 	return string(b), nil
 }
 
-func (r TemplateList) AsPlain(isTTY bool) (string, error) {
+func (r ProjectList) AsPlain(isTTY bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	tmpl, err := template.
-		New("templatesList").
+		New("projectsList").
 		Funcs(funcMap).
-		Parse(templateListTemplate)
+		Parse(projectListTemplate)
 	if err != nil {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.ExecuteTemplate(&buf, "templateList", r); err != nil {
+	if err := tmpl.ExecuteTemplate(&buf, "projectList", r); err != nil {
 		return "", err
 	}
 

@@ -14,38 +14,38 @@ const (
 	CompatibilityUnsupported CompatibilityStatus = "unsupported"
 )
 
-type TemplateWithCompatibility struct {
-	Template
+type ProjectWithCompatibility struct {
+	Project
 	Compatibility CompatibilityStatus `json:"compatibility,omitempty"`
 }
 
-func AnnotateCompatibility(profile *probe.HardwareProfile, templates []Template) []TemplateWithCompatibility {
+func AnnotateCompatibility(profile *probe.HardwareProfile, projects []Project) []ProjectWithCompatibility {
 	if profile == nil {
-		return withCompatibility(templates)
+		return withCompatibility(projects)
 	}
 
 	hardwareProfile := *profile
 	supportedFeatures := extractSupportedFeatures(hardwareProfile)
 
-	checked := make([]TemplateWithCompatibility, len(templates))
-	for i, template := range templates {
-		checked[i].Template = template
-		checked[i].Compatibility = compatibilityStatus(hardwareProfile, supportedFeatures, template)
+	checked := make([]ProjectWithCompatibility, len(projects))
+	for i, project := range projects {
+		checked[i].Project = project
+		checked[i].Compatibility = compatibilityStatus(hardwareProfile, supportedFeatures, project)
 	}
 
 	return checked
 }
 
-func withCompatibility(templates []Template) []TemplateWithCompatibility {
-	withCompatibility := make([]TemplateWithCompatibility, len(templates))
-	for i, template := range templates {
-		withCompatibility[i] = TemplateWithCompatibility{Template: template}
+func withCompatibility(projects []Project) []ProjectWithCompatibility {
+	withCompatibility := make([]ProjectWithCompatibility, len(projects))
+	for i, project := range projects {
+		withCompatibility[i] = ProjectWithCompatibility{Project: project}
 	}
 	return withCompatibility
 }
 
-func compatibilityStatus(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, template Template) CompatibilityStatus {
-	if isTemplateSupported(profile, supportedFeatures, template) {
+func compatibilityStatus(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, project Project) CompatibilityStatus {
+	if isProjectSupported(profile, supportedFeatures, project) {
 		return CompatibilitySupported
 	}
 	return CompatibilityUnsupported
@@ -65,10 +65,10 @@ func extractSupportedFeatures(profile probe.HardwareProfile) map[string]struct{}
 	return supportedFeatures
 }
 
-func isTemplateSupported(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, template Template) bool {
-	atLeastOneFeatureIsSupported := len(template.Features) == 0
+func isProjectSupported(profile probe.HardwareProfile, supportedFeatures map[string]struct{}, project Project) bool {
+	atLeastOneFeatureIsSupported := len(project.Features) == 0
 
-	for _, feature := range template.Features {
+	for _, feature := range project.Features {
 		normalized := strings.ToLower(strings.TrimSpace(feature))
 		if _, ok := supportedFeatures[normalized]; ok {
 			atLeastOneFeatureIsSupported = true

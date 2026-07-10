@@ -1,11 +1,11 @@
-package template_test
+package project_test
 
 import (
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/template"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,11 +20,11 @@ services:
   app2:
     image: redis:alpine
 `
-		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Services
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Services
 
 		require.NoError(t, err)
-		want := []template.Service{
+		want := []project.Service{
 			{
 				Name: "app1",
 				Data: map[string]any{
@@ -50,11 +50,11 @@ services:
       - "SME"
       - "NEON"
 `
-		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata
 
 		require.NoError(t, err)
-		want := template.Metadata{
+		want := project.Metadata{
 			Name:        "test-service",
 			Description: "Test service",
 			Features:    []string{"SME", "NEON"},
@@ -62,10 +62,10 @@ services:
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("parses args from x-topo metadata", func(t *testing.T) {
+	t.Run("parses parameters from x-topo metadata", func(t *testing.T) {
 		composeFileContents := `
   x-topo:
-    args:
+    parameters:
       GREETING:
         description: "The greeting message to display"
         required: true
@@ -74,11 +74,11 @@ services:
         description: "Port number"
         required: false
   `
-		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata.Args
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata.Parameters
 
 		require.NoError(t, err)
-		want := []template.Arg{
+		want := []project.Parameter{
 			{
 				Name:        "GREETING",
 				Description: "The greeting message to display",
@@ -100,11 +100,11 @@ x-topo:
   name: "test-service"
   deployment_success_message: "Deployment complete!"
 `
-		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata
 
 		require.NoError(t, err)
-		want := template.Metadata{
+		want := project.Metadata{
 			Name:                     "test-service",
 			DeploymentSuccessMessage: "Deployment complete!",
 		}
@@ -116,8 +116,8 @@ x-topo:
 x-topo:
   name: "test-service"
 `
-		tpl, err := template.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata
 
 		require.NoError(t, err)
 		assert.Empty(t, got.DeploymentSuccessMessage)
@@ -126,15 +126,15 @@ x-topo:
 	t.Run("errors when compose.yaml missing", func(t *testing.T) {
 		dir := t.TempDir()
 
-		_, err := template.FromDir(dir)
+		_, err := project.FromDir(dir)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), template.ComposeFilename)
+		assert.Contains(t, err.Error(), project.ComposeFilename)
 	})
 }
 
 func TestFromDir(t *testing.T) {
-	t.Run("finds a compose file in directory and parses into template", func(t *testing.T) {
+	t.Run("finds a compose file in directory and parses into project", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
 services:
@@ -142,18 +142,18 @@ services:
     image: nginx:alpine
 
 x-topo:
-  args:
+  parameters:
     GREETING:
       description: "The greeting message to display"
       required: true
       example: "Hello, World"
 `
-		testutil.RequireWriteFile(t, filepath.Join(dir, template.ComposeFilename), composeFileContents)
+		testutil.RequireWriteFile(t, filepath.Join(dir, project.ComposeFilename), composeFileContents)
 
-		got, err := template.FromDir(dir)
+		got, err := project.FromDir(dir)
 
 		require.NoError(t, err)
-		want, _ := template.FromContent(strings.NewReader(composeFileContents))
+		want, _ := project.FromContent(strings.NewReader(composeFileContents))
 		assert.Equal(t, want, got)
 	})
 }

@@ -7,19 +7,18 @@ import (
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/template"
 	"github.com/spf13/cobra"
 )
 
 var topoCloneCmd = &cobra.Command{
 	Use:   "clone <project-source> [<path>]",
-	Short: "Clone an example project",
-	Long: `Clone an example project to the specified path.
+	Short: "Clone a Project",
+	Long: `Clone a Project to the specified path.
 
 The project-source argument uses scheme prefixes to specify the source type.
 The git: prefix is optional for git@host and https:// URLs.
 
-Some projects require build arguments. Supply them on the command line or answer
+Some projects require parameters. Supply them on the command line or answer
 interactive prompts.`,
 	Example: `  # Git repository
   topo clone git@github.com:user/repo.git
@@ -29,14 +28,14 @@ interactive prompts.`,
   topo clone git:ubuntu@example.com:repo.git
   topo clone git:builder@host:tools/platform.git#v2
 
-  # Local directory (must contain a Topo Template)
-  topo clone dir:/path/to/template/folder
+  # Local directory (must contain a Topo Project)
+  topo clone dir:/path/to/project/folder
   topo clone dir:./relative/path
 
-  # Will prompt for required args
+  # Will prompt for required parameters
   topo clone https://github.com/Arm-Examples/topo-welcome.git
 
-  # Provide build arguments explicitly
+  # Provide parameters explicitly
   topo clone https://github.com/Arm-Examples/topo-welcome.git GREETING_NAME="World"
 
   # With an explicit path
@@ -46,7 +45,7 @@ interactive prompts.`,
 		cmd.SilenceUsage = true
 		src := args[0]
 
-		projectSource, err := template.NewSource(src)
+		projectSource, err := project.NewSource(src)
 		if err != nil {
 			return err
 		}

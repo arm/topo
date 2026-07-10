@@ -1,4 +1,4 @@
-package template_test
+package project_test
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/template"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,28 +19,28 @@ func TestNewSource(t *testing.T) {
 		tests := []struct {
 			name  string
 			input string
-			want  template.DirSource
+			want  project.DirSource
 		}{
 			{
 				name:  "absolute path",
-				input: "dir:/path/to/template",
-				want:  template.DirSource{Path: "/path/to/template"},
+				input: "dir:/path/to/project",
+				want:  project.DirSource{Path: "/path/to/project"},
 			},
 			{
 				name:  "relative path",
-				input: "dir:./local/template",
-				want:  template.DirSource{Path: "./local/template"},
+				input: "dir:./local/project",
+				want:  project.DirSource{Path: "./local/project"},
 			},
 			{
 				name:  "path with spaces",
-				input: "dir:/path/with spaces/template",
-				want:  template.DirSource{Path: "/path/with spaces/template"},
+				input: "dir:/path/with spaces/project",
+				want:  project.DirSource{Path: "/path/with spaces/project"},
 			},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				got, err := template.NewSource(tt.input)
+				got, err := project.NewSource(tt.input)
 
 				require.NoError(t, err)
 				assert.Equal(t, tt.want, got)
@@ -52,12 +52,12 @@ func TestNewSource(t *testing.T) {
 		tests := []struct {
 			name  string
 			input string
-			want  template.GitSource
+			want  project.GitSource
 		}{
 			{
 				name:  "HTTPS without prefix",
 				input: "https://github.com/user/repo.git",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "https://github.com/user/repo.git",
 					Ref: "",
 				},
@@ -65,7 +65,7 @@ func TestNewSource(t *testing.T) {
 			{
 				name:  "HTTPS without prefix with # ref",
 				input: "https://github.com/user/repo.git#develop",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "https://github.com/user/repo.git",
 					Ref: "develop",
 				},
@@ -73,7 +73,7 @@ func TestNewSource(t *testing.T) {
 			{
 				name:  "HTTPS without ref",
 				input: "git:https://github.com/user/repo.git",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "https://github.com/user/repo.git",
 					Ref: "",
 				},
@@ -81,7 +81,7 @@ func TestNewSource(t *testing.T) {
 			{
 				name:  "HTTPS with # ref",
 				input: "git:https://github.com/user/repo.git#develop",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "https://github.com/user/repo.git",
 					Ref: "develop",
 				},
@@ -89,7 +89,7 @@ func TestNewSource(t *testing.T) {
 			{
 				name:  "SSH without prefix",
 				input: "git@github.com:user/repo.git",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "git@github.com:user/repo.git",
 					Ref: "",
 				},
@@ -97,7 +97,7 @@ func TestNewSource(t *testing.T) {
 			{
 				name:  "SSH without prefix with # ref",
 				input: "git@github.com:user/repo.git#main",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "git@github.com:user/repo.git",
 					Ref: "main",
 				},
@@ -105,7 +105,7 @@ func TestNewSource(t *testing.T) {
 			{
 				name:  "SSH without ref",
 				input: "git:git@github.com:user/repo.git",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "git@github.com:user/repo.git",
 					Ref: "",
 				},
@@ -113,7 +113,7 @@ func TestNewSource(t *testing.T) {
 			{
 				name:  "SSH with # ref",
 				input: "git:git@github.com:user/repo.git#main",
-				want: template.GitSource{
+				want: project.GitSource{
 					URL: "git@github.com:user/repo.git",
 					Ref: "main",
 				},
@@ -122,7 +122,7 @@ func TestNewSource(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				got, err := template.NewSource(tt.input)
+				got, err := project.NewSource(tt.input)
 
 				require.NoError(t, err)
 				assert.Equal(t, tt.want, got)
@@ -138,7 +138,7 @@ func TestNewSource(t *testing.T) {
 		}{
 			{
 				name:          "missing colon",
-				input:         "template-ubuntu",
+				input:         "project-ubuntu",
 				errorContains: "invalid source format",
 			},
 			{
@@ -155,7 +155,7 @@ func TestNewSource(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				_, err := template.NewSource(tt.input)
+				_, err := project.NewSource(tt.input)
 
 				assert.ErrorContains(t, err, tt.errorContains)
 			})
@@ -167,17 +167,17 @@ func TestGitSource(t *testing.T) {
 	t.Run("CopyTo", func(t *testing.T) {
 		t.Run("errors when destination already exists", func(t *testing.T) {
 			dstDir := t.TempDir()
-			src := template.GitSource{URL: "https://github.com/example/repo.git"}
+			src := project.GitSource{URL: "https://github.com/example/repo.git"}
 
 			err := src.CopyTo(dstDir)
 
-			assert.ErrorIs(t, err, template.DestDirExistsError{Dir: dstDir})
+			assert.ErrorIs(t, err, project.DestDirExistsError{Dir: dstDir})
 		})
 
 		t.Run("checks out a commit object ID as detached HEAD", func(t *testing.T) {
 			repoDir, firstCommit := createGitRepoWithTwoCommits(t)
 			dstDir := filepath.Join(t.TempDir(), "dest")
-			src := template.GitSource{URL: repoDir, Ref: firstCommit}
+			src := project.GitSource{URL: repoDir, Ref: firstCommit}
 
 			err := src.CopyTo(dstDir)
 
@@ -188,7 +188,7 @@ func TestGitSource(t *testing.T) {
 
 	t.Run("String", func(t *testing.T) {
 		t.Run("returns git:URL#ref for HTTPS URLs when ref is set", func(t *testing.T) {
-			src := template.GitSource{
+			src := project.GitSource{
 				URL: "https://github.com/example/test.git",
 				Ref: "v1.0",
 			}
@@ -196,7 +196,7 @@ func TestGitSource(t *testing.T) {
 		})
 
 		t.Run("returns git:URL#ref for SSH URLs when ref is set", func(t *testing.T) {
-			src := template.GitSource{
+			src := project.GitSource{
 				URL: "git@github.com:example/test.git",
 				Ref: "main",
 			}
@@ -204,7 +204,7 @@ func TestGitSource(t *testing.T) {
 		})
 
 		t.Run("returns git:URL when ref is empty", func(t *testing.T) {
-			src := template.GitSource{
+			src := project.GitSource{
 				URL: "https://github.com/example/test.git",
 				Ref: "",
 			}
@@ -212,7 +212,7 @@ func TestGitSource(t *testing.T) {
 		})
 	})
 	t.Run("GetName", func(t *testing.T) {
-		src := template.GitSource{
+		src := project.GitSource{
 			URL: "https://github.com/example/test.git",
 		}
 		name, err := src.GetName()
@@ -224,15 +224,15 @@ func TestGitSource(t *testing.T) {
 func TestDirSource(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		t.Run("returns dir:path format", func(t *testing.T) {
-			src := template.DirSource{Path: "/path/to/template"}
+			src := project.DirSource{Path: "/path/to/project"}
 
-			assert.Equal(t, "dir:/path/to/template", src.String())
+			assert.Equal(t, "dir:/path/to/project", src.String())
 		})
 
 		t.Run("returns dir:path for relative paths", func(t *testing.T) {
-			src := template.DirSource{Path: "./local/template"}
+			src := project.DirSource{Path: "./local/project"}
 
-			assert.Equal(t, "dir:./local/template", src.String())
+			assert.Equal(t, "dir:./local/project", src.String())
 		})
 	})
 
@@ -243,7 +243,7 @@ func TestDirSource(t *testing.T) {
 			testutil.RequireMkdirAll(t, filepath.Join(srcDir, "subdir"))
 			testutil.RequireWriteFile(t, filepath.Join(srcDir, "subdir", "nested.txt"), "nested")
 			dstDir := filepath.Join(t.TempDir(), "dest")
-			src := template.DirSource{Path: srcDir}
+			src := project.DirSource{Path: srcDir}
 
 			err := src.CopyTo(dstDir)
 
@@ -267,7 +267,7 @@ func TestDirSource(t *testing.T) {
 				require.NoError(t, os.WriteFile(filepath.Join(srcDir, f.name), []byte(f.content), f.perm))
 			}
 			dstDir := filepath.Join(t.TempDir(), "dest")
-			src := template.DirSource{Path: srcDir}
+			src := project.DirSource{Path: srcDir}
 
 			err := src.CopyTo(dstDir)
 
@@ -297,7 +297,7 @@ func TestDirSource(t *testing.T) {
 				require.NoError(t, err)
 			}
 			dstDir := filepath.Join(t.TempDir(), "dest")
-			src := template.DirSource{Path: srcDir}
+			src := project.DirSource{Path: srcDir}
 
 			err := src.CopyTo(dstDir)
 
@@ -312,7 +312,7 @@ func TestDirSource(t *testing.T) {
 		})
 
 		t.Run("errors when source does not exist", func(t *testing.T) {
-			src := template.DirSource{Path: "/nonexistent/path"}
+			src := project.DirSource{Path: "/nonexistent/path"}
 			dstDir := filepath.Join(t.TempDir(), "dest")
 
 			err := src.CopyTo(dstDir)
@@ -324,7 +324,7 @@ func TestDirSource(t *testing.T) {
 		t.Run("errors when source is a file", func(t *testing.T) {
 			srcFile := filepath.Join(t.TempDir(), "file.txt")
 			testutil.RequireWriteFile(t, srcFile, "content")
-			src := template.DirSource{Path: srcFile}
+			src := project.DirSource{Path: srcFile}
 			dstDir := filepath.Join(t.TempDir(), "dest")
 
 			err := src.CopyTo(dstDir)
@@ -336,7 +336,7 @@ func TestDirSource(t *testing.T) {
 		t.Run("errors when destination is inside source", func(t *testing.T) {
 			srcDir := t.TempDir()
 			dstDir := filepath.Join(srcDir, "subdir")
-			src := template.DirSource{Path: srcDir}
+			src := project.DirSource{Path: srcDir}
 
 			err := src.CopyTo(dstDir)
 
@@ -349,30 +349,30 @@ func TestDirSource(t *testing.T) {
 			srcDir := t.TempDir()
 			testutil.RequireWriteFile(t, filepath.Join(srcDir, "file.txt"), "content")
 			dstDir := t.TempDir()
-			src := template.DirSource{Path: srcDir}
+			src := project.DirSource{Path: srcDir}
 
 			err := src.CopyTo(dstDir)
 
-			assert.ErrorIs(t, err, template.DestDirExistsError{Dir: dstDir})
+			assert.ErrorIs(t, err, project.DestDirExistsError{Dir: dstDir})
 		})
 	})
 	t.Run("GetName", func(t *testing.T) {
 		t.Run("returns base name of the directory path", func(t *testing.T) {
-			src := template.DirSource{Path: "/path/to/template"}
+			src := project.DirSource{Path: "/path/to/project"}
 
 			name, err := src.GetName()
 
 			require.NoError(t, err)
-			assert.Equal(t, "template", name)
+			assert.Equal(t, "project", name)
 		})
 
 		t.Run("works with relative paths", func(t *testing.T) {
-			src := template.DirSource{Path: "./local/template"}
+			src := project.DirSource{Path: "./local/project"}
 
 			name, err := src.GetName()
 
 			require.NoError(t, err)
-			assert.Equal(t, "template", name)
+			assert.Equal(t, "project", name)
 		})
 	})
 }

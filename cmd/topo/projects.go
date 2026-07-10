@@ -14,9 +14,10 @@ import (
 
 const sourceFlag = "source"
 
-var templatesCmd = &cobra.Command{
-	Use:   "templates",
-	Short: "List available Topo Templates",
+var projectsCmd = &cobra.Command{
+	Use:     "projects",
+	Aliases: []string{"templates"},
+	Short:   "List available Topo Projects",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
@@ -24,14 +25,14 @@ var templatesCmd = &cobra.Command{
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 
-		var templates []catalog.Template
+		var projects []catalog.Project
 		var err error
 		source := getSource(cmd)
 		switch source {
-		case builtinTemplates:
-			templates, err = catalog.ListBuiltinTemplates()
+		case builtinProjects:
+			projects, err = catalog.ListBuiltinProjects()
 		default:
-			templates, err = catalog.ListTemplatesFromURL(ctx, source)
+			projects, err = catalog.ListProjectsFromURL(ctx, source)
 		}
 		if err != nil {
 			return err
@@ -47,21 +48,21 @@ var templatesCmd = &cobra.Command{
 			profile = &hwProfile
 		}
 
-		templatesWithCompatibility := catalog.AnnotateCompatibility(profile, templates)
-		return views.Print(views.TemplateList(templatesWithCompatibility), os.Stdout, outputFormat)
+		projectsWithCompatibility := catalog.AnnotateCompatibility(profile, projects)
+		return views.Print(views.ProjectList(projectsWithCompatibility), os.Stdout, outputFormat)
 	},
 }
 
 func init() {
-	addTargetFlag(templatesCmd)
-	addTimeoutFlag(templatesCmd, defaultTimeout)
+	addTargetFlag(projectsCmd)
+	addTimeoutFlag(projectsCmd, defaultTimeout)
 	if experimentalFeaturesEnabled() {
-		templatesCmd.Flags().StringP(sourceFlag, "s", "", "where to source templates' data from")
+		projectsCmd.Flags().StringP(sourceFlag, "s", "", "where to source projects' data from")
 	}
-	rootCmd.AddCommand(templatesCmd)
+	rootCmd.AddCommand(projectsCmd)
 }
 
-const builtinTemplates = "builtin"
+const builtinProjects = "builtin"
 
 func getSource(cmd *cobra.Command) string {
 	if experimentalFeaturesEnabled() {
@@ -69,7 +70,9 @@ func getSource(cmd *cobra.Command) string {
 		if err != nil {
 			panic(fmt.Sprintf("internal error: %s flag not registered: %v", sourceFlag, err))
 		}
-		return flagValue
+		if flagValue != "" {
+			return flagValue
+		}
 	}
-	return builtinTemplates
+	return builtinProjects
 }

@@ -6,19 +6,18 @@ import (
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/template"
 	"github.com/spf13/cobra"
 )
 
 var extendCmd = &cobra.Command{
-	Use:   "extend <compose-filepath> <source> [flags] [-- ARG=VALUE ...]",
-	Short: "Add services from a Template to the compose file",
+	Use:   "extend <compose-filepath> <source> [flags] [-- PARAMETER=VALUE ...]",
+	Short: "Add services from a Topo Project to the compose file",
 	Long: `Add all services from a source to the compose file.
 
 The source argument uses scheme prefixes to specify the source type.
 The git: prefix is optional for git@host and https:// URLs.
 
-Topo Templates may require build arguments. You can provide them after --
+Topo Projects may define parameters. You can set them after --
 or answer interactive prompts.`,
 	Example: `  # Git repository
   topo extend compose.yaml git:https://github.com/user/repo.git
@@ -31,13 +30,13 @@ or answer interactive prompts.`,
   topo extend compose.yaml git:builder@host:tools/platform.git#v2
 
   # Local directory
-  topo extend compose.yaml dir:/path/to/template/folder
+  topo extend compose.yaml dir:/path/to/project/folder
   topo extend compose.yaml dir:./relative/path
 
-  # Will prompt for required args
+  # Will prompt for required parameters
   topo extend compose.yaml git:url
 
-  # Provide build arguments explicitly
+  # Provide parameters explicitly
   topo extend compose.yaml git:url -- GREETING="Hello" PORT=8080`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -45,7 +44,7 @@ or answer interactive prompts.`,
 		composeFilePath := args[0]
 		sourceArg := args[1]
 
-		src, err := template.NewSource(sourceArg)
+		src, err := project.NewSource(sourceArg)
 		if err != nil {
 			return err
 		}

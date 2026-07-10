@@ -11,18 +11,17 @@ import (
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/template"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
 
-func Clone(path string, src template.Source, argProvider arguments.Provider) error {
+func Clone(path string, src Source, argProvider arguments.Provider) error {
 	return NewClone(path, src, argProvider).Run(nil)
 }
 
-func NewClone(path string, src template.Source, argProvider arguments.Provider) operation.Sequence {
+func NewClone(path string, src Source, argProvider arguments.Provider) operation.Sequence {
 	return operation.NewSequence(
-		copyTemplateOperation{
+		copyProjectOperation{
 			path: path,
 			src:  src,
 		},
@@ -39,7 +38,7 @@ func NewClone(path string, src template.Source, argProvider arguments.Provider) 
 func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider) error {
 	resolvedArgs, err := resolveArgs(composeFilePath, argProvider)
 	if err != nil {
-		return fmt.Errorf("failed to resolve args: %w", err)
+		return fmt.Errorf("failed to resolve parameters: %w", err)
 	}
 
 	if len(resolvedArgs) == 0 {
@@ -49,7 +48,7 @@ func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider)
 	return applyArgs(composeFilePath, resolvedArgs)
 }
 
-func Extend(targetComposeFile string, src template.Source, argProvider arguments.Provider) error {
+func Extend(targetComposeFile string, src Source, argProvider arguments.Provider) error {
 	project, err := compose.ReadProject(targetComposeFile)
 	logger.Info("reading project compose file")
 	if err != nil {
@@ -90,33 +89,33 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		}
 	}()
 
-	logger.Info(fmt.Sprintf("copying topo template to %q", destDir))
+	logger.Info(fmt.Sprintf("copying project to %q", destDir))
 
 	if err := src.CopyTo(destDir); err != nil {
-		return fmt.Errorf("failed to copy topo template: %w", err)
+		return fmt.Errorf("failed to copy project: %w", err)
 	}
 
 	if info, err := os.Stat(destDir); err != nil || !info.IsDir() {
-		return fmt.Errorf("failed to find copied template directory: %w", err)
+		return fmt.Errorf("failed to find copied project directory: %w", err)
 	}
 
-	tpl, err := template.FromDir(destDir)
+	p, err := FromDir(destDir)
 	if err != nil {
-		return fmt.Errorf("failed to load topo template from %s: %w", src.String(), err)
+		return fmt.Errorf("failed to load project from %s: %w", src.String(), err)
 	}
-	if len(tpl.Services) == 0 {
-		return fmt.Errorf("template found in directory %s, has no services", destDir)
+	if len(p.Services) == 0 {
+		return fmt.Errorf("project found in directory %s has no services", destDir)
 	}
 
-	resolvedTemplate, err := template.Resolve(tpl, argProvider)
+	resolvedProject, err := Resolve(p, argProvider)
 	if err != nil {
 		return err
 	}
-	resolvedArgs := argsToMap(resolvedTemplate.Args)
+	resolvedArgs := argsToMap(resolvedProject.Parameters)
 
-	extendedComposeFilePath := filepath.Join(copiedDirName, template.ComposeFilename)
+	extendedComposeFilePath := filepath.Join(copiedDirName, ComposeFilename)
 	usedArgs := map[string]bool{}
-	for _, service := range resolvedTemplate.Services {
+	for _, service := range resolvedProject.Services {
 		serviceArgs := compose.FilterResolvedBuildArgs(service.Data, resolvedArgs)
 		for k := range serviceArgs {
 			usedArgs[k] = true
@@ -129,12 +128,12 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 	}
 	for argName := range resolvedArgs {
 		if !usedArgs[argName] {
-			logger.Warn(fmt.Sprintf("arg %q was resolved but not found in any service build args", argName))
+			logger.Warn(fmt.Sprintf("parameter %q was resolved but not found in any service build args", argName))
 		}
 	}
 
 	var allServicesVolumes []types.ServiceVolumeConfig
-	for _, service := range resolvedTemplate.Services {
+	for _, service := range resolvedProject.Services {
 		volumes, err := compose.ExtractNamedServiceVolumes(service.Data)
 		if err != nil {
 			return err
@@ -182,7 +181,7 @@ func RemoveService(composeFilePath, serviceName string) error {
 }
 
 func Init(projectDir string) error {
-	composePath := filepath.Join(projectDir, template.ComposeFilename)
+	composePath := filepath.Join(projectDir, ComposeFilename)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
 	} else if !os.IsNotExist(err) {
@@ -215,7 +214,7 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 
 	err = compose.ApplyArgs(yamlNodes, argsToMap(args))
 	if err != nil {
-		return fmt.Errorf("error applying args to project file: %w", err)
+		return fmt.Errorf("error applying parameters to project file: %w", err)
 	}
 
 	outFile, err := os.Create(composeFilePath)
@@ -225,7 +224,7 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 	defer func() { _ = outFile.Close() }()
 
 	if err := compose.WriteNode(yamlNodes, outFile); err != nil {
-		return fmt.Errorf("failed to write compose file after applying args: %w", err)
+		return fmt.Errorf("failed to write compose file after applying parameters: %w", err)
 	}
 	return nil
 }
@@ -237,16 +236,16 @@ func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]argu
 	}
 	defer func() { _ = f.Close() }()
 
-	tpl, err := template.FromContent(f)
+	p, err := FromContent(f)
 	if err != nil {
 		return nil, err
 	}
-	resolvedTpl, err := template.Resolve(tpl, argProvider)
+	resolvedProject, err := Resolve(p, argProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	return resolvedTpl.Args, nil
+	return resolvedProject.Parameters, nil
 }
 
 func argsToMap(args []arguments.ResolvedArg) map[string]string {
@@ -257,21 +256,21 @@ func argsToMap(args []arguments.ResolvedArg) map[string]string {
 	return result
 }
 
-type copyTemplateOperation struct {
+type copyProjectOperation struct {
 	path string
-	src  template.Source
+	src  Source
 }
 
-func (o copyTemplateOperation) Description() string {
+func (o copyProjectOperation) Description() string {
 	return "Copy files"
 }
 
-func (o copyTemplateOperation) Run(_ io.Writer) error {
+func (o copyProjectOperation) Run(_ io.Writer) error {
 	if err := o.src.CopyTo(o.path); err != nil {
-		if errDestDirExists, ok := errors.AsType[template.DestDirExistsError](err); ok {
+		if errDestDirExists, ok := errors.AsType[DestDirExistsError](err); ok {
 			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
 		}
-		return fmt.Errorf("failed to copy Service Template: %w", err)
+		return fmt.Errorf("failed to copy project: %w", err)
 	}
 	return nil
 }
@@ -286,7 +285,7 @@ func (o resolveArgsOperation) Description() string {
 }
 
 func (o resolveArgsOperation) Run(_ io.Writer) error {
-	composeFile := filepath.Join(o.path, template.ComposeFilename)
+	composeFile := filepath.Join(o.path, ComposeFilename)
 	if err := ResolveAndApplyArgs(composeFile, o.argProvider); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)
