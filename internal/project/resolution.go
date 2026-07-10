@@ -9,13 +9,13 @@ type ResolvedProject struct {
 	Parameters []arguments.ResolvedArg
 }
 
-func Resolve(template Project, argProvider arguments.Provider) (ResolvedProject, error) {
-	resolvedArgs, err := argProvider.Provide(castParameters(template.Metadata.Parameters))
+func Resolve(p Project, argProvider arguments.Provider) (ResolvedProject, error) {
+	resolvedArgs, err := argProvider.Provide(castParameters(p.Metadata.Parameters))
 	if err != nil {
 		return ResolvedProject{}, err
 	}
 	return ResolvedProject{
-		Services:   template.Services,
+		Services:   p.Services,
 		Parameters: resolvedArgs,
 	}, nil
 }

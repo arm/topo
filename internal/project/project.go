@@ -21,7 +21,7 @@ func Clone(path string, src Source, argProvider arguments.Provider) error {
 
 func NewClone(path string, src Source, argProvider arguments.Provider) operation.Sequence {
 	return operation.NewSequence(
-		copyTemplateOperation{
+		copyProjectOperation{
 			path: path,
 			src:  src,
 		},
@@ -99,23 +99,23 @@ func Extend(targetComposeFile string, src Source, argProvider arguments.Provider
 		return fmt.Errorf("failed to find copied Topo Project directory: %w", err)
 	}
 
-	tpl, err := FromDir(destDir)
+	p, err := FromDir(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to load Topo Project from %s: %w", src.String(), err)
 	}
-	if len(tpl.Services) == 0 {
+	if len(p.Services) == 0 {
 		return fmt.Errorf("Topo Project found in directory %s has no services", destDir)
 	}
 
-	resolvedTemplate, err := Resolve(tpl, argProvider)
+	resolvedProject, err := Resolve(p, argProvider)
 	if err != nil {
 		return err
 	}
-	resolvedArgs := argsToMap(resolvedTemplate.Parameters)
+	resolvedArgs := argsToMap(resolvedProject.Parameters)
 
 	extendedComposeFilePath := filepath.Join(copiedDirName, ComposeFilename)
 	usedArgs := map[string]bool{}
-	for _, service := range resolvedTemplate.Services {
+	for _, service := range resolvedProject.Services {
 		serviceArgs := compose.FilterResolvedBuildArgs(service.Data, resolvedArgs)
 		for k := range serviceArgs {
 			usedArgs[k] = true
@@ -133,7 +133,7 @@ func Extend(targetComposeFile string, src Source, argProvider arguments.Provider
 	}
 
 	var allServicesVolumes []types.ServiceVolumeConfig
-	for _, service := range resolvedTemplate.Services {
+	for _, service := range resolvedProject.Services {
 		volumes, err := compose.ExtractNamedServiceVolumes(service.Data)
 		if err != nil {
 			return err
@@ -236,16 +236,16 @@ func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]argu
 	}
 	defer func() { _ = f.Close() }()
 
-	tpl, err := FromContent(f)
+	p, err := FromContent(f)
 	if err != nil {
 		return nil, err
 	}
-	resolvedTpl, err := Resolve(tpl, argProvider)
+	resolvedProject, err := Resolve(p, argProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	return resolvedTpl.Parameters, nil
+	return resolvedProject.Parameters, nil
 }
 
 func argsToMap(args []arguments.ResolvedArg) map[string]string {
@@ -256,16 +256,16 @@ func argsToMap(args []arguments.ResolvedArg) map[string]string {
 	return result
 }
 
-type copyTemplateOperation struct {
+type copyProjectOperation struct {
 	path string
 	src  Source
 }
 
-func (o copyTemplateOperation) Description() string {
+func (o copyProjectOperation) Description() string {
 	return "Copy files"
 }
 
-func (o copyTemplateOperation) Run(_ io.Writer) error {
+func (o copyProjectOperation) Run(_ io.Writer) error {
 	if err := o.src.CopyTo(o.path); err != nil {
 		if errDestDirExists, ok := errors.AsType[DestDirExistsError](err); ok {
 			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)

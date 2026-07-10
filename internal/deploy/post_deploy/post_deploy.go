@@ -44,11 +44,11 @@ func getSuccessMessage(composeFile string) (string, error) {
 	}
 	defer func() { _ = f.Close() }()
 
-	tpl, err := project.FromContent(f)
+	p, err := project.FromContent(f)
 	if err != nil {
 		return "", err
 	}
-	return tpl.Metadata.DeploymentSuccessMessage, nil
+	return p.Metadata.DeploymentSuccessMessage, nil
 }
 
 func (p *DeploySuccess) Run(w io.Writer) error {

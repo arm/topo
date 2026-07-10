@@ -23,18 +23,18 @@ func TestNewSource(t *testing.T) {
 		}{
 			{
 				name:  "absolute path",
-				input: "dir:/path/to/template",
-				want:  project.DirSource{Path: "/path/to/template"},
+				input: "dir:/path/to/project",
+				want:  project.DirSource{Path: "/path/to/project"},
 			},
 			{
 				name:  "relative path",
-				input: "dir:./local/template",
-				want:  project.DirSource{Path: "./local/template"},
+				input: "dir:./local/project",
+				want:  project.DirSource{Path: "./local/project"},
 			},
 			{
 				name:  "path with spaces",
-				input: "dir:/path/with spaces/template",
-				want:  project.DirSource{Path: "/path/with spaces/template"},
+				input: "dir:/path/with spaces/project",
+				want:  project.DirSource{Path: "/path/with spaces/project"},
 			},
 		}
 
@@ -138,7 +138,7 @@ func TestNewSource(t *testing.T) {
 		}{
 			{
 				name:          "missing colon",
-				input:         "template-ubuntu",
+				input:         "project-ubuntu",
 				errorContains: "invalid source format",
 			},
 			{
@@ -224,15 +224,15 @@ func TestGitSource(t *testing.T) {
 func TestDirSource(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		t.Run("returns dir:path format", func(t *testing.T) {
-			src := project.DirSource{Path: "/path/to/template"}
+			src := project.DirSource{Path: "/path/to/project"}
 
-			assert.Equal(t, "dir:/path/to/template", src.String())
+			assert.Equal(t, "dir:/path/to/project", src.String())
 		})
 
 		t.Run("returns dir:path for relative paths", func(t *testing.T) {
-			src := project.DirSource{Path: "./local/template"}
+			src := project.DirSource{Path: "./local/project"}
 
-			assert.Equal(t, "dir:./local/template", src.String())
+			assert.Equal(t, "dir:./local/project", src.String())
 		})
 	})
 
@@ -358,21 +358,21 @@ func TestDirSource(t *testing.T) {
 	})
 	t.Run("GetName", func(t *testing.T) {
 		t.Run("returns base name of the directory path", func(t *testing.T) {
-			src := project.DirSource{Path: "/path/to/template"}
+			src := project.DirSource{Path: "/path/to/project"}
 
 			name, err := src.GetName()
 
 			require.NoError(t, err)
-			assert.Equal(t, "template", name)
+			assert.Equal(t, "project", name)
 		})
 
 		t.Run("works with relative paths", func(t *testing.T) {
-			src := project.DirSource{Path: "./local/template"}
+			src := project.DirSource{Path: "./local/project"}
 
 			name, err := src.GetName()
 
 			require.NoError(t, err)
-			assert.Equal(t, "template", name)
+			assert.Equal(t, "project", name)
 		})
 	})
 }

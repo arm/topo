@@ -20,8 +20,8 @@ services:
   app2:
     image: redis:alpine
 `
-		tpl, err := project.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Services
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Services
 
 		require.NoError(t, err)
 		want := []project.Service{
@@ -50,8 +50,8 @@ services:
       - "SME"
       - "NEON"
 `
-		tpl, err := project.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata
 
 		require.NoError(t, err)
 		want := project.Metadata{
@@ -74,8 +74,8 @@ services:
         description: "Port number"
         required: false
   `
-		tpl, err := project.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata.Parameters
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata.Parameters
 
 		require.NoError(t, err)
 		want := []project.Parameter{
@@ -100,8 +100,8 @@ x-topo:
   name: "test-service"
   deployment_success_message: "Deployment complete!"
 `
-		tpl, err := project.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata
 
 		require.NoError(t, err)
 		want := project.Metadata{
@@ -116,8 +116,8 @@ x-topo:
 x-topo:
   name: "test-service"
 `
-		tpl, err := project.FromContent(strings.NewReader(composeFileContents))
-		got := tpl.Metadata
+		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		got := p.Metadata
 
 		require.NoError(t, err)
 		assert.Empty(t, got.DeploymentSuccessMessage)
@@ -134,7 +134,7 @@ x-topo:
 }
 
 func TestFromDir(t *testing.T) {
-	t.Run("finds a compose file in directory and parses into template", func(t *testing.T) {
+	t.Run("finds a compose file in directory and parses into project", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
 services:

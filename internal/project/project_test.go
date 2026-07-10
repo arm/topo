@@ -23,21 +23,21 @@ name: example-project
 services: {}
 `
 
-type mockTemplateSource struct {
+type mockProjectSource struct {
 	mock.Mock
 }
 
-func (m *mockTemplateSource) CopyTo(destDir string) error {
+func (m *mockProjectSource) CopyTo(destDir string) error {
 	args := m.Called(destDir)
 	return args.Error(0)
 }
 
-func (m *mockTemplateSource) String() string {
+func (m *mockProjectSource) String() string {
 	args := m.Called()
 	return args.String(0)
 }
 
-func (m *mockTemplateSource) GetName() (string, error) {
+func (m *mockProjectSource) GetName() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }
@@ -117,8 +117,8 @@ x-topo:
 	})
 }
 
-func mockSourceWithContent(t *testing.T, content, sourceName string) *mockTemplateSource {
-	mockSource := &mockTemplateSource{}
+func mockSourceWithContent(t *testing.T, content, sourceName string) *mockProjectSource {
+	mockSource := &mockProjectSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
 		testutil.RequireMkdirAll(t, destDir)
@@ -131,8 +131,8 @@ func mockSourceWithContent(t *testing.T, content, sourceName string) *mockTempla
 	return mockSource
 }
 
-func mockTemplateSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceName string) *mockTemplateSource {
-	mockSource := &mockTemplateSource{}
+func mockProjectSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceName string) *mockProjectSource {
+	mockSource := &mockProjectSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(errToReturn)
 	mockSource.On("GetName").Return(sourceName, nil)
 	t.Cleanup(func() {
@@ -142,9 +142,9 @@ func mockTemplateSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceNa
 }
 
 func TestExtend(t *testing.T) {
-	t.Run("extends service from TemplateSource", func(t *testing.T) {
+	t.Run("extends service from ProjectSource", func(t *testing.T) {
 		dir := t.TempDir()
-		sourceName := "test-template"
+		sourceName := "test-project"
 		projectYAML := `
 name: example-project
 services: {}
@@ -188,7 +188,7 @@ services:
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "test"
 		destDir := filepath.Join(dir, sourceName)
-		mockSource := mockTemplateSourceWithErrorOnCopy(t, project.DestDirExistsError{Dir: destDir}, sourceName)
+		mockSource := mockProjectSourceWithErrorOnCopy(t, project.DestDirExistsError{Dir: destDir}, sourceName)
 		provider := arguments.NewStrictProviderChain()
 
 		err := project.Extend(targetProjectFile, mockSource, provider)
@@ -395,8 +395,8 @@ x-topo:
 		err := project.Extend(targetProjectFile, mockSource, provider)
 
 		assert.EqualError(t, err, "user cancelled")
-		copiedTemplateDir := filepath.Join(filepath.Dir(targetProjectFile), sourceName)
-		_, err = os.Stat(copiedTemplateDir)
+		copiedProjectDir := filepath.Join(filepath.Dir(targetProjectFile), sourceName)
+		_, err = os.Stat(copiedProjectDir)
 		assert.True(t, os.IsNotExist(err), "service directory should be cleaned up after failure")
 	})
 }
