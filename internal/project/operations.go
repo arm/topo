@@ -311,7 +311,7 @@ func (o printSummary) Run(w io.Writer) error {
 
 Now run:
   cd %s
-  topo deploy`, o.path, o.path)
+  topo deploy --target [user@]host`, o.path, o.path)
 
 	_, err := fmt.Fprintln(w, toPrint)
 	return err
