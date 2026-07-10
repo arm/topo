@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "topo-project-specification",
+  "type": "object",
+  "title": "Topo Project Specification",
+  "description": "Schema for Topo Project files, extending the Compose specification.",
+  "allOf": [
+    {
+      "type": "object",
+      "properties": {
+        "x-topo": {
+          "type": "object",
+          "description": "Topo Project extension properties.",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Unique identifier for the Project."
+            },
+            "description": {
+              "type": "string",
+              "description": "Multiline human-readable explanation of what the Project does."
+            },
+            "features": {
+              "type": "array",
+              "description": "Target features required or utilised by the Project (e.g., `SVE`, `NEON`, `SME`).",
+              "items": {
+                "type": "string"
+              }
+            },
+            "deployment_success_message": {
+              "type": "string",
+              "description": "Message displayed to the user after a successful deployment. If omitted, a default message is shown."
+            },
+            "parameters": {
+              "type": "object",
+              "description": "Dictionary of project parameter definitions.",
+              "additionalProperties": {
+                "type": "object",
+                "description": "Project parameter definition.",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Context displayed in user prompts."
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "description": "If `true`, Implementations must enforce input or error"
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "Value used if user skips input (only valid when not required)"
+                  },
+                  "example": {
+                    "type": "string",
+                    "description": "Hint text displayed in help and prompts"
+                  },
+                  "hints": {
+                    "type": "object",
+                    "description": "Advisory metadata that Implementations may use to discover, filter, or suggest suitable parameter values. Unknown hint keys should be ignored.",
+                    "patternProperties": {
+                      "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$": {
+                        "oneOf": [
+                          {
+                            "type": ["string", "number", "boolean"]
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": ["string", "number", "boolean"]
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["name"]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "services": {
+          "type": "object",
+          "description": "The services that will be used by your application.\nEach one must specify `platform: linux/arm64` unless using `runtime: *remoteproc*` or `extends`.",
+          "additionalProperties": {
+            "allOf": [
+              {
+                "if": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": ["runtime"],
+                        "properties": {
+                          "runtime": {
+                            "type": "string",
+                            "pattern": "remoteproc"
+                          }
+                        }
+                      },
+                      {
+                        "required": ["extends"]
+                      }
+                    ]
+                  }
+                },
+                "then": {
+                  "required": ["platform"],
+                  "properties": {
+                    "platform": {
+                      "const": "linux/arm64",
+                      "description": "Project services must default to linux/arm64 to ensure compatibility with the target."
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "$ref": "https://raw.githubusercontent.com/compose-spec/compose-spec/refs/heads/main/schema/compose-spec.json"
+    }
+  ]
+}

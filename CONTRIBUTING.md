@@ -1,10 +1,10 @@
 # Contribution Guidelines
 
-The Arm Topo CLI project is open for external contributors, and welcomes contributions.
+The Arm Topo project is open for external contributors, and welcomes contributions.
 
-Topo CLI is licensed under the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license and all accepted contributions must have the same license.
+Topo is licensed under the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license and all accepted contributions must have the same license.
 
-## Contributing code to Topo CLI
+## Contributing code to Topo
 
 - Before this project accepts your contribution, you need to certify its origin and give us your permission. To manage this process, we use [Developer Certificate of Origin (DCO) V1.1](https://developercertificate.org/).
   To indicate that contributors agree to the terms of the DCO, it's necessary to "sign off" the contribution by adding a line with your name and email address to every git commit message:
@@ -26,4 +26,4 @@ Topo CLI is licensed under the [Apache-2.0](https://spdx.org/licenses/Apache-2.0
 
   ## Continuous integration
 
-  Contributions to Topo CLI must go through testing and formatting before being merged to main. All unit and integration tests must pass, as well as formatting checks, before a contribution is merged. These tests are run through GitHub Actions, which require the permission of a maintainer to run.
+  Contributions to Topo must go through testing and formatting before being merged to main. All unit and integration tests must pass, as well as formatting checks, before a contribution is merged. These tests are run through GitHub Actions, which require the permission of a maintainer to run.
