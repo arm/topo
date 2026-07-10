@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/cli/internal/command"
 	"github.com/stretchr/testify/assert"
 )
 

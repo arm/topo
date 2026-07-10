@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/cli/internal/arguments"
+	"github.com/arm/topo/cli/internal/project"
+	"github.com/arm/topo/cli/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

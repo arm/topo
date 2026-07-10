@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/command"
+	"github.com/arm/topo/cli/internal/ssh"
 )
 
 type SSH struct {

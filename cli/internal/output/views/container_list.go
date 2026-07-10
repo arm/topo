@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 	"text/template"
 
-	"github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/cli/internal/deploy"
 )
 
 type ContainerList struct {

@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/arm/topo/internal/install"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/output/views"
+	"github.com/arm/topo/cli/internal/install"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/output/views"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

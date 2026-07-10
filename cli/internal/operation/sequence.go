@@ -3,7 +3,7 @@ package operation
 import (
 	"io"
 
-	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/cli/internal/output/term"
 )
 
 type Sequence []Operation

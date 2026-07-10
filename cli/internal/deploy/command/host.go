@@ -1,6 +1,6 @@
 package command
 
-import "github.com/arm/topo/internal/ssh"
+import "github.com/arm/topo/cli/internal/ssh"
 
 type Host struct {
 	value string

@@ -3,7 +3,7 @@ package catalog
 import (
 	"strings"
 
-	"github.com/arm/topo/internal/probe"
+	"github.com/arm/topo/cli/internal/probe"
 )
 
 type CompatibilityStatus string

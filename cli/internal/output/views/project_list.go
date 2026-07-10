@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"text/template"
 
-	"github.com/arm/topo/internal/catalog"
+	"github.com/arm/topo/cli/internal/catalog"
 )
 
 type ProjectList []catalog.ProjectWithCompatibility

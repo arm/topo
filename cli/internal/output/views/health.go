@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/cli/internal/health"
 )
 
 type HealthReport struct {

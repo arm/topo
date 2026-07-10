@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/deploy/operation"
-	"github.com/arm/topo/internal/deploy/testutil"
+	"github.com/arm/topo/cli/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/deploy/operation"
+	"github.com/arm/topo/cli/internal/deploy/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

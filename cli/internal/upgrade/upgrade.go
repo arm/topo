@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/version"
+	"github.com/arm/topo/cli/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/version"
 	"github.com/mholt/archives"
 )
 

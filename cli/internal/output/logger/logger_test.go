@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/cli/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/term"
 	"github.com/stretchr/testify/assert"
 )
 

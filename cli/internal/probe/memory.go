@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/cli/internal/runner"
 )
 
 func Memory(ctx context.Context, r runner.Runner) (int64, error) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/runner"
+	"github.com/arm/topo/cli/internal/ssh"
 )
 
 var (

@@ -1,11 +1,11 @@
 package deploy
 
 import (
-	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/deploy/operation"
-	"github.com/arm/topo/internal/deploy/post_deploy"
-	goperation "github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/deploy/operation"
+	"github.com/arm/topo/cli/internal/deploy/post_deploy"
+	goperation "github.com/arm/topo/cli/internal/operation"
+	"github.com/arm/topo/cli/internal/ssh"
 )
 
 type RegistryConfig struct {

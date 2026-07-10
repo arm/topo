@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/cli/internal/arguments"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/project"
 	"github.com/spf13/cobra"
 )
 

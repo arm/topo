@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/upgrade"
-	"github.com/arm/topo/internal/version"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/upgrade"
+	"github.com/arm/topo/cli/internal/version"
 	"github.com/spf13/cobra"
 )
 

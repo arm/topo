@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/cli/internal/operation"
+	"github.com/arm/topo/cli/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 

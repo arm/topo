@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arm/topo/internal/env"
-	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/output/views"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/env"
+	"github.com/arm/topo/cli/internal/health"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/output/views"
+	"github.com/arm/topo/cli/internal/ssh"
 	"github.com/spf13/cobra"
 )
 

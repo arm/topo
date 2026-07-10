@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/command"
+	"github.com/arm/topo/cli/internal/runner"
+	"github.com/arm/topo/cli/internal/ssh"
 	"github.com/mholt/archives"
 )
 

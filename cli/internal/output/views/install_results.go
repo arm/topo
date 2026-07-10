@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"html/template"
 
-	"github.com/arm/topo/internal/install"
+	"github.com/arm/topo/cli/internal/install"
 )
 
 type InstallResults []install.InstallResult

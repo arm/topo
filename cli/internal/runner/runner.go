@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/ssh"
 )
 
 // ErrTimeout is returned when a command fails due to context cancellation or deadline.

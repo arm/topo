@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/compose"
+	"github.com/arm/topo/cli/internal/deploy/command"
 )
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/arm/topo/internal/probe"
+	"github.com/arm/topo/cli/internal/probe"
 	"go.yaml.in/yaml/v4"
 )
 

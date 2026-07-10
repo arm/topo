@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/cli/internal/compose"
 )
 
 func PrintProject(w io.Writer, targetProjectFile string) error {

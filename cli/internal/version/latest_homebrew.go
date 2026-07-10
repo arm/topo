@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/logger"
 )
 
 const HomebrewFormulaURL = "https://raw.githubusercontent.com/arm/homebrew-topo/main/Formula/topo.rb"

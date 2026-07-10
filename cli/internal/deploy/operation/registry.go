@@ -6,8 +6,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/cli/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/operation"
 )
 
 const (

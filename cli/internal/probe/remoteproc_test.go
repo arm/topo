@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/arm/topo/internal/probe"
-	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/cli/internal/probe"
+	"github.com/arm/topo/cli/internal/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

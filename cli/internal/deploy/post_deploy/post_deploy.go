@@ -5,10 +5,10 @@ import (
 	"io"
 	"os"
 
-	cmdtext "github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/project"
+	cmdtext "github.com/arm/topo/cli/internal/command"
+	"github.com/arm/topo/cli/internal/compose"
+	"github.com/arm/topo/cli/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/project"
 )
 
 type DeploySuccess struct {

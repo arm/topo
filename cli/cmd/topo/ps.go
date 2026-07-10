@@ -3,10 +3,10 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/output/views"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/deploy"
+	"github.com/arm/topo/cli/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/output/views"
+	"github.com/arm/topo/cli/internal/ssh"
 	"github.com/spf13/cobra"
 )
 

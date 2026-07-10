@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/arm/topo/internal/version"
+	"github.com/arm/topo/cli/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

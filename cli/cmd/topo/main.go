@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/logger"
 )
 
 func main() {

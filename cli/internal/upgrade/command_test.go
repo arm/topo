@@ -3,7 +3,7 @@ package upgrade_test
 import (
 	"testing"
 
-	"github.com/arm/topo/internal/upgrade"
+	"github.com/arm/topo/cli/internal/upgrade"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/operation"
-	checks "github.com/arm/topo/internal/deploy/project_checks"
-	goperation "github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/deploy"
+	"github.com/arm/topo/cli/internal/deploy/operation"
+	checks "github.com/arm/topo/cli/internal/deploy/project_checks"
+	goperation "github.com/arm/topo/cli/internal/operation"
+	"github.com/arm/topo/cli/internal/output/logger"
+	"github.com/arm/topo/cli/internal/ssh"
 
 	"github.com/spf13/cobra"
 )

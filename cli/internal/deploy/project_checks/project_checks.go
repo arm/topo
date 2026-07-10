@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/cli/internal/compose"
 )
 
 const linuxArm64Platform = "linux/arm64"

@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/setupkeys"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/setupkeys"
+	"github.com/arm/topo/cli/internal/ssh"
 	"github.com/stretchr/testify/require"
 )
 

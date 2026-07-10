@@ -3,8 +3,8 @@ package checks_test
 import (
 	"testing"
 
-	checks "github.com/arm/topo/internal/deploy/project_checks"
-	"github.com/arm/topo/internal/testutil"
+	checks "github.com/arm/topo/cli/internal/deploy/project_checks"
+	"github.com/arm/topo/cli/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 

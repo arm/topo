@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/deploy/command"
 )
 
 const (

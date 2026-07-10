@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/cli/internal/health"
+	"github.com/arm/topo/cli/internal/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

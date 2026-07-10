@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/cli/internal/command"
+	"github.com/arm/topo/cli/internal/operation"
 )
 
 const TunnelPIDPlaceholder = "<ssh tunnel pid>"

@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/output/views"
-	"github.com/arm/topo/internal/probe"
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/vscode"
+	"github.com/arm/topo/cli/internal/output/views"
+	"github.com/arm/topo/cli/internal/probe"
+	"github.com/arm/topo/cli/internal/runner"
+	"github.com/arm/topo/cli/internal/ssh"
+	"github.com/arm/topo/cli/internal/vscode"
 	"github.com/spf13/cobra"
 )
 

@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/arm/topo/internal/arguments"
-	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/cli/internal/arguments"
+	"github.com/arm/topo/cli/internal/compose"
+	"github.com/arm/topo/cli/internal/operation"
+	"github.com/arm/topo/cli/internal/output/logger"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )

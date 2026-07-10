@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/output/views"
+	"github.com/arm/topo/cli/internal/health"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/output/views"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

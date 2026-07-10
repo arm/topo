@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/cli/internal/output/term"
 )
 
 type View interface {

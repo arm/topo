@@ -1,7 +1,7 @@
 package project
 
 import (
-	"github.com/arm/topo/internal/arguments"
+	"github.com/arm/topo/cli/internal/arguments"
 )
 
 type ResolvedProject struct {

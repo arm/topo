@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/upgrade"
-	"github.com/arm/topo/internal/version"
+	"github.com/arm/topo/cli/internal/runner"
+	"github.com/arm/topo/cli/internal/ssh"
+	"github.com/arm/topo/cli/internal/upgrade"
+	"github.com/arm/topo/cli/internal/version"
 )
 
 type WarningError struct{ Err error }

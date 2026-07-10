@@ -3,8 +3,8 @@ package command_test
 import (
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
 

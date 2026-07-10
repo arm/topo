@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/deploy"
+	"github.com/arm/topo/cli/internal/ssh"
 
 	"github.com/spf13/cobra"
 )

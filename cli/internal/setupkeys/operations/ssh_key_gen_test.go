@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/setupkeys/operations"
-	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/cli/internal/setupkeys/operations"
+	"github.com/arm/topo/cli/internal/ssh"
+	"github.com/arm/topo/cli/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 

@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/logger"
 )
 
 const ArtifactoryBaseURL = "https://artifacts.tools.arm.com/topo"

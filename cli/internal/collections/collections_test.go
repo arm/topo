@@ -3,7 +3,7 @@ package collections_test
 import (
 	"testing"
 
-	"github.com/arm/topo/internal/collections"
+	"github.com/arm/topo/cli/internal/collections"
 	"github.com/stretchr/testify/assert"
 )
 

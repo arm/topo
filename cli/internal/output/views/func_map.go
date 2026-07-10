@@ -4,8 +4,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/arm/topo/internal/catalog"
-	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/cli/internal/catalog"
+	"github.com/arm/topo/cli/internal/output/term"
 )
 
 func getFuncMap(isTTY bool) template.FuncMap {

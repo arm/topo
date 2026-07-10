@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/logger"
 	"gopkg.in/yaml.v3"
 )
 

@@ -25,7 +25,7 @@ func TestVersionFlagReportsLinkedVersion(t *testing.T) {
 		"go",
 		"build",
 		"-ldflags",
-		"-X github.com/arm/topo/internal/version.Version=4.1.0 -X github.com/arm/topo/internal/version.GitCommit=deadbeef",
+		"-X github.com/arm/topo/cli/internal/version.Version=4.1.0 -X github.com/arm/topo/cli/internal/version.GitCommit=deadbeef",
 		"-o",
 		binaryPath,
 		".",

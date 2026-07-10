@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/cli/internal/compose"
+	"github.com/arm/topo/cli/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

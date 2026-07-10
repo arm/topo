@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/arm/topo/internal/testutil"
-	"github.com/arm/topo/internal/upgrade"
+	"github.com/arm/topo/cli/internal/testutil"
+	"github.com/arm/topo/cli/internal/upgrade"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/env"
-	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/version"
+	"github.com/arm/topo/cli/internal/compose"
+	"github.com/arm/topo/cli/internal/env"
+	"github.com/arm/topo/cli/internal/output/logger"
+	"github.com/arm/topo/cli/internal/output/term"
+	"github.com/arm/topo/cli/internal/version"
 	"github.com/spf13/cobra"
 )
 

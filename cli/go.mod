@@ -1,4 +1,4 @@
-module github.com/arm/topo
+module github.com/arm/topo/cli
 
 go 1.26.5
 

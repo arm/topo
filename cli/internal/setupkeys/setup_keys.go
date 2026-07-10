@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/setupkeys/operations"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/operation"
+	"github.com/arm/topo/cli/internal/runner"
+	"github.com/arm/topo/cli/internal/setupkeys/operations"
+	"github.com/arm/topo/cli/internal/ssh"
 )
 
 type KeyType string

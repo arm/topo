@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/cli/internal/output/logger"
+	"github.com/arm/topo/cli/internal/runner"
 )
 
 type Check interface {

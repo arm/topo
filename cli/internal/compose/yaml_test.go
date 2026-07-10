@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/cli/internal/compose"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"

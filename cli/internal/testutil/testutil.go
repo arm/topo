@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/cli/internal/project"
 	"github.com/stretchr/testify/require"
 )
 

@@ -3,8 +3,8 @@ package catalog_test
 import (
 	"testing"
 
-	"github.com/arm/topo/internal/catalog"
-	"github.com/arm/topo/internal/probe"
+	"github.com/arm/topo/cli/internal/catalog"
+	"github.com/arm/topo/cli/internal/probe"
 	"github.com/stretchr/testify/assert"
 )
 

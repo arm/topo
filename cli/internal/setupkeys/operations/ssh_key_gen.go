@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/command"
+	"github.com/arm/topo/cli/internal/ssh"
 )
 
 type execSSHKeyGen func(keyType string, keyPath string, targetHost string) *exec.Cmd

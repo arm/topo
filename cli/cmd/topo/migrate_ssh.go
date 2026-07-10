@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/ssh"
 	"github.com/spf13/cobra"
 )
 

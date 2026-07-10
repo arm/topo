@@ -3,9 +3,9 @@ package health
 import (
 	"context"
 
-	"github.com/arm/topo/internal/probe"
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/cli/internal/probe"
+	"github.com/arm/topo/cli/internal/runner"
+	"github.com/arm/topo/cli/internal/ssh"
 )
 
 type HardwareProfile struct {

@@ -5,8 +5,8 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/compose"
+	"github.com/arm/topo/cli/internal/deploy/command"
 	"golang.org/x/sync/errgroup"
 )
 

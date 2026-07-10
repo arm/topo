@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/deploy/operation"
-	"github.com/arm/topo/internal/deploy/testutil"
-	goperation "github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/cli/internal/deploy/command"
+	"github.com/arm/topo/cli/internal/deploy/operation"
+	"github.com/arm/topo/cli/internal/deploy/testutil"
+	goperation "github.com/arm/topo/cli/internal/operation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

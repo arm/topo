@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/cli/internal/runner"
 )
 
 type HostProcessor struct {

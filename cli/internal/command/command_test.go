@@ -3,7 +3,7 @@ package command_test
 import (
 	"testing"
 
-	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/cli/internal/command"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
