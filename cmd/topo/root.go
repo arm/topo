@@ -94,7 +94,7 @@ func lookupTarget(cmd *cobra.Command) (string, bool) {
 func requireTarget(cmd *cobra.Command) (string, error) {
 	t, exists := lookupTarget(cmd)
 	if !exists {
-		return "", fmt.Errorf("target not specified: provide an SSH destination (for example, user@host) using --target or TOPO_TARGET")
+		return "", fmt.Errorf("target not specified: set --target or %s to the SSH destination Topo should connect to (e.g. user@example.local)", targetEnvVar)
 	}
 	return t, nil
 }
