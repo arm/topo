@@ -33,7 +33,7 @@ func TestHealthCheck(t *testing.T) {
 		out, err := runCheckHealth(topo, container)
 		require.NoError(t, err)
 
-		assert.Contains(t, out, "SSH: ✅ (ssh)")
+		assert.Contains(t, out, "OpenSSH: ✅ (ssh)")
 		assert.Contains(t, out, "Container Engine: ✅")
 	})
 

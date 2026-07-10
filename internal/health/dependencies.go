@@ -76,7 +76,7 @@ var HostRequiredDependencies = []Dependency{
 	},
 	{
 		Binary: "ssh",
-		Label:  "SSH",
+		Label:  "OpenSSH",
 		Checks: []Check{BinaryExists{}},
 	},
 	{
