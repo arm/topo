@@ -1,4 +1,4 @@
-package template
+package project
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 
 const ComposeFilename = "compose.yaml"
 
-type Template struct {
+type Project struct {
 	Metadata Metadata
 	Services []Service
 }
@@ -37,7 +37,7 @@ type Parameter struct {
 	Default     string
 }
 
-func FromContent(reader io.Reader) (Template, error) {
+func FromContent(reader io.Reader) (Project, error) {
 	type composeFile struct {
 		Services map[string]any `yaml:"services"`
 		XTopo    Metadata       `yaml:"x-topo"`
@@ -46,7 +46,7 @@ func FromContent(reader io.Reader) (Template, error) {
 	var parsed composeFile
 	decoder := yaml.NewDecoder(reader)
 	if err := decoder.Decode(&parsed); err != nil {
-		return Template{}, fmt.Errorf("failed to decode template: %w", err)
+		return Project{}, fmt.Errorf("failed to decode project: %w", err)
 	}
 
 	var services []Service
@@ -57,18 +57,18 @@ func FromContent(reader io.Reader) (Template, error) {
 		})
 	}
 
-	return Template{
+	return Project{
 		Services: services,
 		Metadata: parsed.XTopo,
 	}, nil
 }
 
-func FromDir(destDir string) (Template, error) {
+func FromDir(destDir string) (Project, error) {
 	composeServicePath := filepath.Join(destDir, ComposeFilename)
 
 	f, err := os.Open(composeServicePath)
 	if err != nil {
-		return Template{}, err
+		return Project{}, err
 	}
 	defer func() { _ = f.Close() }()
 

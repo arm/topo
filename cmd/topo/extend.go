@@ -6,7 +6,6 @@ import (
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +44,7 @@ or answer interactive prompts.`,
 		composeFilePath := args[0]
 		sourceArg := args[1]
 
-		src, err := template.NewSource(sourceArg)
+		src, err := project.NewSource(sourceArg)
 		if err != nil {
 			return err
 		}

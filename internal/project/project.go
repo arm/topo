@@ -11,16 +11,15 @@ import (
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/template"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
 
-func Clone(path string, src template.Source, argProvider arguments.Provider) error {
+func Clone(path string, src Source, argProvider arguments.Provider) error {
 	return NewClone(path, src, argProvider).Run(nil)
 }
 
-func NewClone(path string, src template.Source, argProvider arguments.Provider) operation.Sequence {
+func NewClone(path string, src Source, argProvider arguments.Provider) operation.Sequence {
 	return operation.NewSequence(
 		copyTemplateOperation{
 			path: path,
@@ -49,7 +48,7 @@ func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider)
 	return applyArgs(composeFilePath, resolvedArgs)
 }
 
-func Extend(targetComposeFile string, src template.Source, argProvider arguments.Provider) error {
+func Extend(targetComposeFile string, src Source, argProvider arguments.Provider) error {
 	project, err := compose.ReadProject(targetComposeFile)
 	logger.Info("reading project compose file")
 	if err != nil {
@@ -100,7 +99,7 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		return fmt.Errorf("failed to find copied Topo Project directory: %w", err)
 	}
 
-	tpl, err := template.FromDir(destDir)
+	tpl, err := FromDir(destDir)
 	if err != nil {
 		return fmt.Errorf("failed to load Topo Project from %s: %w", src.String(), err)
 	}
@@ -108,13 +107,13 @@ func Extend(targetComposeFile string, src template.Source, argProvider arguments
 		return fmt.Errorf("Topo Project found in directory %s has no services", destDir)
 	}
 
-	resolvedTemplate, err := template.Resolve(tpl, argProvider)
+	resolvedTemplate, err := Resolve(tpl, argProvider)
 	if err != nil {
 		return err
 	}
 	resolvedArgs := argsToMap(resolvedTemplate.Parameters)
 
-	extendedComposeFilePath := filepath.Join(copiedDirName, template.ComposeFilename)
+	extendedComposeFilePath := filepath.Join(copiedDirName, ComposeFilename)
 	usedArgs := map[string]bool{}
 	for _, service := range resolvedTemplate.Services {
 		serviceArgs := compose.FilterResolvedBuildArgs(service.Data, resolvedArgs)
@@ -182,7 +181,7 @@ func RemoveService(composeFilePath, serviceName string) error {
 }
 
 func Init(projectDir string) error {
-	composePath := filepath.Join(projectDir, template.ComposeFilename)
+	composePath := filepath.Join(projectDir, ComposeFilename)
 	if _, err := os.Stat(composePath); err == nil {
 		return fmt.Errorf("compose file already exists at %s", composePath)
 	} else if !os.IsNotExist(err) {
@@ -237,11 +236,11 @@ func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]argu
 	}
 	defer func() { _ = f.Close() }()
 
-	tpl, err := template.FromContent(f)
+	tpl, err := FromContent(f)
 	if err != nil {
 		return nil, err
 	}
-	resolvedTpl, err := template.Resolve(tpl, argProvider)
+	resolvedTpl, err := Resolve(tpl, argProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +258,7 @@ func argsToMap(args []arguments.ResolvedArg) map[string]string {
 
 type copyTemplateOperation struct {
 	path string
-	src  template.Source
+	src  Source
 }
 
 func (o copyTemplateOperation) Description() string {
@@ -268,7 +267,7 @@ func (o copyTemplateOperation) Description() string {
 
 func (o copyTemplateOperation) Run(_ io.Writer) error {
 	if err := o.src.CopyTo(o.path); err != nil {
-		if errDestDirExists, ok := errors.AsType[template.DestDirExistsError](err); ok {
+		if errDestDirExists, ok := errors.AsType[DestDirExistsError](err); ok {
 			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
 		}
 		return fmt.Errorf("failed to copy Topo Project: %w", err)
@@ -286,7 +285,7 @@ func (o resolveArgsOperation) Description() string {
 }
 
 func (o resolveArgsOperation) Run(_ io.Writer) error {
-	composeFile := filepath.Join(o.path, template.ComposeFilename)
+	composeFile := filepath.Join(o.path, ComposeFilename)
 	if err := ResolveAndApplyArgs(composeFile, o.argProvider); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)

@@ -1,20 +1,20 @@
-package template
+package project
 
 import (
 	"github.com/arm/topo/internal/arguments"
 )
 
-type ResolvedTemplate struct {
+type ResolvedProject struct {
 	Services   []Service
 	Parameters []arguments.ResolvedArg
 }
 
-func Resolve(template Template, argProvider arguments.Provider) (ResolvedTemplate, error) {
+func Resolve(template Project, argProvider arguments.Provider) (ResolvedProject, error) {
 	resolvedArgs, err := argProvider.Provide(castParameters(template.Metadata.Parameters))
 	if err != nil {
-		return ResolvedTemplate{}, err
+		return ResolvedProject{}, err
 	}
-	return ResolvedTemplate{
+	return ResolvedProject{
 		Services:   template.Services,
 		Parameters: resolvedArgs,
 	}, nil

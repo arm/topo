@@ -7,7 +7,6 @@ import (
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/template"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +45,7 @@ interactive prompts.`,
 		cmd.SilenceUsage = true
 		src := args[0]
 
-		projectSource, err := template.NewSource(src)
+		projectSource, err := project.NewSource(src)
 		if err != nil {
 			return err
 		}

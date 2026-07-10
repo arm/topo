@@ -10,7 +10,6 @@ import (
 
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/template"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +48,7 @@ func TestInit(t *testing.T) {
 
 		require.NoError(t, project.Init(dir))
 
-		composeFile := filepath.Join(dir, template.ComposeFilename)
+		composeFile := filepath.Join(dir, project.ComposeFilename)
 		data := testutil.RequireReadFile(t, composeFile)
 		var p types.Project
 		require.NoError(t, yaml.Unmarshal([]byte(data), &p))
@@ -90,7 +89,7 @@ services:
 		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
 
 		require.NoError(t, err)
-		composeFilePath := filepath.Join(destDir, template.ComposeFilename)
+		composeFilePath := filepath.Join(destDir, project.ComposeFilename)
 		assert.FileExists(t, composeFilePath)
 	})
 
@@ -123,7 +122,7 @@ func mockSourceWithContent(t *testing.T, content, sourceName string) *mockTempla
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
 		testutil.RequireMkdirAll(t, destDir)
-		testutil.RequireWriteFile(t, filepath.Join(destDir, template.ComposeFilename), content)
+		testutil.RequireWriteFile(t, filepath.Join(destDir, project.ComposeFilename), content)
 	})
 	mockSource.On("GetName").Maybe().Return(sourceName, nil)
 	t.Cleanup(func() {
@@ -189,7 +188,7 @@ services:
 		targetProjectFile := testutil.WriteComposeFile(t, dir, emptyComposeProject)
 		sourceName := "test"
 		destDir := filepath.Join(dir, sourceName)
-		mockSource := mockTemplateSourceWithErrorOnCopy(t, template.DestDirExistsError{Dir: destDir}, sourceName)
+		mockSource := mockTemplateSourceWithErrorOnCopy(t, project.DestDirExistsError{Dir: destDir}, sourceName)
 		provider := arguments.NewStrictProviderChain()
 
 		err := project.Extend(targetProjectFile, mockSource, provider)
@@ -430,7 +429,7 @@ x-topo:
       required: true
       example: bar
 `
-		composeFilePath := filepath.Join(dir, template.ComposeFilename)
+		composeFilePath := filepath.Join(dir, project.ComposeFilename)
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
 		argProvider := arguments.NewStrictProviderChain(provider)

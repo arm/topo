@@ -8,7 +8,7 @@ import (
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/template"
+	"github.com/arm/topo/internal/project"
 )
 
 type DeploySuccess struct {
@@ -44,7 +44,7 @@ func getSuccessMessage(composeFile string) (string, error) {
 	}
 	defer func() { _ = f.Close() }()
 
-	tpl, err := template.FromContent(f)
+	tpl, err := project.FromContent(f)
 	if err != nil {
 		return "", err
 	}
