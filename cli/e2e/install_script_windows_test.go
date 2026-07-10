@@ -16,7 +16,7 @@ import (
 func runInstallScript(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 
-	path, err := filepath.Abs("../scripts/install.ps1")
+	path, err := filepath.Abs("../../scripts/install.ps1")
 	require.NoError(t, err)
 
 	tmpDir := t.TempDir()

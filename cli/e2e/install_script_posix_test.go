@@ -14,7 +14,7 @@ import (
 
 func scriptPath(t *testing.T) string {
 	t.Helper()
-	path, err := filepath.Abs("../scripts/install.sh")
+	path, err := filepath.Abs("../../scripts/install.sh")
 	require.NoError(t, err)
 	return path
 }
