@@ -128,3 +128,24 @@ topo stop --target [user@]host
 ## Other Commands
 
 Run `topo <command> --help` for full usage details.
+
+## Project Authoring Skills
+
+This repository includes public agent skills that help authors create and validate Topo Projects.
+
+- `topo-project-context`: provides Topo and Topo Project reference context for questions about `x-topo` metadata, schema, docs, and CLI Project behavior.
+- `topo-project-bootstrap`: converts a repository into a Topo Project by adding or improving `compose.yaml` and `x-topo` metadata.
+- `topo-project-lint`: reviews an existing Topo Project for correctness, consistency, and authoring best practices.
+- `topo-project-optimize-deployment`: optimizes `topo deploy` or Docker build performance for initial deployment and iteration workflows.
+
+### Installing Skills
+
+You can install the skills with [`npx skills`](https://github.com/vercel-labs/skills):
+
+```sh
+npx skills add arm/topo
+```
+
+Or install the skills manually by copying or symlinking the directories under `skills/` into your agent's skills directory.
+
+Restart your agent after installing or updating skills.
