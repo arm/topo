@@ -311,7 +311,9 @@ func (o printSummary) Run(w io.Writer) error {
 
 Now run:
   cd %s
-  topo deploy --target [user@]host`, o.path, o.path)
+  topo deploy
+
+A deployment target is required. Provide --target or set TOPO_TARGET.`, o.path, o.path)
 
 	_, err := fmt.Fprintln(w, toPrint)
 	return err

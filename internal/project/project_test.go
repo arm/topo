@@ -73,8 +73,11 @@ services:
 		out := output.String()
 		assert.Contains(t, out, "Project ready")
 		assert.Contains(t, out, fmt.Sprintf("Created in '%s'", destDir))
-		assert.Contains(t, out, "cd "+destDir)
-		assert.Contains(t, out, "topo deploy --target [user@]host")
+		assert.Contains(t, out, fmt.Sprintf(`Now run:
+  cd %s
+  topo deploy
+
+A deployment target is required. Provide --target or set TOPO_TARGET.`, destDir))
 	})
 
 	t.Run("clones source into destination directory", func(t *testing.T) {
