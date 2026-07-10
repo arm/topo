@@ -1,8 +1,8 @@
-# Examples
-/test-workspace
+# CLI examples
+/cli/test-workspace
 
-# Temporary test files
-/test-tmp
+# CLI temporary test files
+/cli/test-tmp
 
-# Local binary
-/topo
+# CLI local binary
+/cli/topo

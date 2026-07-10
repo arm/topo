@@ -8,6 +8,6 @@ updates:
 
   # Maintain dependencies for Go CLI
   - package-ecosystem: "gomod"
-    directory: "/"
+    directory: "/cli"
     schedule:
       interval: "monthly"

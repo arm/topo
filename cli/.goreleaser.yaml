@@ -3,10 +3,11 @@ project_name: topo
 
 before:
   hooks:
-    - go mod tidy
+    - go -C ./cli mod tidy
 
 builds:
   - id: topo
+    dir: ./cli
     main: ./cmd/topo
     binary: topo
     env:
