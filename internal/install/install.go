@@ -283,12 +283,12 @@ func install(installPath string, r runner.Runner, binaries map[string][]byte) er
 		}
 
 		installCmd := fmt.Sprintf("install -D -m %s /dev/stdin %s/%s", mode, installPath, binaryName)
-		output, _, err := r.RunWithStdin(context.TODO(), installCmd, binaryData)
+		_, stderr, err := r.RunWithStdin(context.TODO(), installCmd, binaryData)
 		if err != nil {
 			if errors.Is(err, ssh.ErrSSH) {
 				return err
 			}
-			if classified := classifyStderr(output); classified != nil {
+			if classified := classifyStderr(stderr); classified != nil {
 				return classified
 			}
 			return err
