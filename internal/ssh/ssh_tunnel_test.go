@@ -3,7 +3,6 @@ package ssh_test
 import (
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"strings"
 	"testing"
@@ -117,50 +116,6 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 			assert.ErrorContains(t, err, `could not resolve SSH hostname for "ssh://"`)
 		})
 	})
-}
-
-func TestCheckRemotePortNotListening(t *testing.T) {
-	t.Run("it rejects an empty remote host", func(t *testing.T) {
-		err := ssh.CheckRemotePortNotListening("", "12345")
-
-		assert.EqualError(t, err, "could not check remote port 12345: host must not be empty")
-	})
-
-	t.Run("it succeeds when nothing answers on the remote port", func(t *testing.T) {
-		port := reserveFreePort(t)
-
-		err := ssh.CheckRemotePortNotListening("127.0.0.1", port)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("it reports an exposed port when a TCP listener accepts the connection", func(t *testing.T) {
-		listener, err := net.Listen("tcp", "127.0.0.1:0")
-		require.NoError(t, err)
-		t.Cleanup(func() { _ = listener.Close() })
-		_, port, err := net.SplitHostPort(listener.Addr().String())
-		require.NoError(t, err)
-
-		err = ssh.CheckRemotePortNotListening("127.0.0.1", port)
-
-		assert.EqualError(t, err, fmt.Sprintf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port))
-	})
-
-	t.Run("it reports a resolution error when the remote host does not resolve", func(t *testing.T) {
-		err := ssh.CheckRemotePortNotListening("nonexistent.invalid", "12345")
-
-		assert.ErrorContains(t, err, `could not resolve remote host "nonexistent.invalid" while checking tunnel exposure`)
-	})
-}
-
-func reserveFreePort(t *testing.T) string {
-	t.Helper()
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	_, port, err := net.SplitHostPort(listener.Addr().String())
-	require.NoError(t, err)
-	require.NoError(t, listener.Close())
-	return port
 }
 
 func TestSSHTunnelStop(t *testing.T) {

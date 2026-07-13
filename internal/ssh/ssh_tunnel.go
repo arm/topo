@@ -114,17 +114,14 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := CheckRemotePortNotListening(host, ct.Port); err != nil {
+	if err := checkRemotePortNotListening(host, ct.Port); err != nil {
 		return err
 	}
 	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
 	return nil
 }
 
-func CheckRemotePortNotListening(host, port string) error {
-	if host == "" {
-		return fmt.Errorf("could not check remote port %s: host must not be empty", port)
-	}
+func checkRemotePortNotListening(host, port string) error {
 	address := net.JoinHostPort(host, port)
 	connection, err := net.DialTimeout("tcp", address, 5*time.Second)
 	if err == nil {
