@@ -10,6 +10,7 @@ import (
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/operation"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
+	"github.com/arm/topo/internal/env"
 	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
@@ -80,7 +81,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 		if deploy.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
 			deployOpts.Registry = &deploy.RegistryConfig{
 				Port:                resolvedPort,
-				SkipRemotePortCheck: skipRemotePortCheck,
+				SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
 				UseControlSockets:   deploy.SupportsSSHControlSockets(goos),
 			}
 		}
@@ -129,7 +130,10 @@ func validatePort(port string) error {
 	return nil
 }
 
-const portEnvVar = "TOPO_PORT"
+const (
+	portEnvVar                = "TOPO_PORT"
+	skipRemotePortCheckEnvVar = "TOPO_SKIP_REMOTE_PORT_CHECK"
+)
 
 func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 	if cmd.Flags().Changed("registry-port") {
@@ -141,11 +145,23 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 	return flagValue, nil
 }
 
+func resolveSkipRemotePortCheck(cmd *cobra.Command) bool {
+	if !cmd.Flags().Changed("skip-remote-port-check") {
+		return env.IsVarTruthy(skipRemotePortCheckEnvVar)
+	}
+
+	value, err := cmd.Flags().GetBool("skip-remote-port-check")
+	if err != nil {
+		panic("internal error: skip-remote-port-check flag not registered: " + err.Error())
+	}
+	return value
+}
+
 func init() {
 	addTargetFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "disable private registry flow; use direct save/load transfer")
-	deployCmd.Flags().BoolVar(&skipRemotePortCheck, "skip-remote-port-check", false, "skip checking whether the SSH tunnel port is exposed on the remote network")
+	deployCmd.Flags().BoolVar(&skipRemotePortCheck, "skip-remote-port-check", false, fmt.Sprintf("skip checking whether the SSH tunnel port is exposed on the remote network (can also be set via %s env var)", skipRemotePortCheckEnvVar))
 	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "force recreation of containers even if their configuration and image haven't changed")
 	deployCmd.Flags().BoolVar(&noRecreate, "no-recreate", false, "prevent recreation of containers even if their configuration and image have changed")
 	deployCmd.Flags().BoolVar(&skipProjectChecks, "skip-project-checks", false, "skip project compatibility checks for the target platform")
