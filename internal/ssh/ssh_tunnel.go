@@ -135,14 +135,14 @@ func CheckRemotePortNotListening(host, port string) error {
 		return nil
 	}
 
-	var dnsError *net.DNSError
-	if errors.As(err, &dnsError) {
-		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
-	}
-
 	var networkError net.Error
 	if errors.As(err, &networkError) && networkError.Timeout() {
 		return fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
+	}
+
+	var dnsError *net.DNSError
+	if errors.As(err, &dnsError) {
+		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
 	}
 
 	return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
