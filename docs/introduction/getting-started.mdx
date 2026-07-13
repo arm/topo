@@ -1,0 +1,144 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Getting Started
+
+Use this guide to deploy the [Hello World Topo Project](https://github.com/Arm-Examples/topo-welcome) to an Arm64 Linux target. The project runs a web page with a configurable greeting.
+
+## Prerequisites
+
+**Host machine** (where you run `topo`):
+
+- [Docker](https://docs.docker.com/get-docker/)
+- curl
+- OpenSSH Client
+
+**Target machine** (the remote Arm system):
+
+- Reachable with SSH
+- Linux on ARM64
+- Docker
+
+:::info
+
+The host and target can be the same system. If you're working directly on an Arm Linux system, you can specify `--target localhost` instead of a remote host.
+
+:::
+
+## Install Topo
+
+<Tabs groupId="install-method">
+  <TabItem value="linux-mac" label="Linux/macOS">
+
+```sh
+curl -fsSL
+https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
+```
+
+  </TabItem>
+  <TabItem value="brew" label="Brew">
+
+```sh
+brew install arm/topo/topo
+```
+
+  </TabItem>
+  <TabItem value="windows" label="Windows">
+
+```powershell
+irm https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.ps1 | iex
+```
+
+  </TabItem>
+</Tabs>
+
+After this has completed successfully, confirm the installation with:
+
+```sh
+topo --version
+```
+
+## Check that everything is ready
+
+:::note
+
+The commands in this guide use `pi@raspberrypi` as the target. Replace this value with an SSH alias or destination for your device. Topo accepts values such as `user@host` and `ssh://user@host:2222`.
+
+:::
+
+Run the health checks:
+
+```sh
+topo health --target pi@raspberrypi
+```
+
+Topo checks the required host tools, SSH connection, target container engine, and target hardware. Resolve each error and review any warnings. The report provides corrective commands when Topo can resolve a problem.
+
+If the target host key is unknown, confirm the target identity. Then run the suggested command to accept the key. If public-key authentication is not configured, run the following command after you accept the host key:
+
+```sh
+topo setup-keys --target pi@raspberrypi
+```
+
+This command creates a dedicated key, copies the public key to the target, and updates your SSH configuration. The target must permit password authentication for the initial key transfer. If it does not, configure a public key through your existing device-management process.
+
+Run `topo health` again and confirm that no checks report an error. The Hello World project does not require Remoteproc Runtime.
+
+## Find a compatible Topo Project
+
+List the available projects and compare their requirements with the target hardware:
+
+```sh
+topo projects --target pi@raspberrypi
+```
+
+The output includes a clone command for each project. This guide uses Hello World, which has no optional hardware requirements.
+
+## Clone and configure Hello World
+
+Clone the project:
+
+```sh
+topo clone https://github.com/Arm-Examples/topo-welcome.git
+```
+
+At the `GREETING_NAME` prompt, enter a name or press Enter to use the default value, `World`. Topo creates a configured project in the `topo-welcome` directory.
+
+## Deploy Hello World
+
+Change to the project directory and deploy it:
+
+```sh
+cd topo-welcome
+topo deploy --target pi@raspberrypi
+```
+
+Topo builds or pulls the images on the host, transfers them to the target, and starts the services. Run deployment management commands from the project directory. Topo uses its `compose.yaml` file to identify the deployment.
+
+## Verify the deployment
+
+List the running containers for the project:
+
+```sh
+topo ps --target pi@raspberrypi
+```
+
+Find the web service in the output. Copy the value from the `Address` column. Open `http://<address>` in a browser and replace `<address>` with the copied value. The page displays your configured greeting.
+
+After you change the project, run `topo deploy --target pi@raspberrypi` again. Docker and Topo reuse cached layers where possible to reduce deployment time.
+
+## Stop the deployment
+
+From the `topo-welcome` directory, stop the services:
+
+```sh
+topo stop --target pi@raspberrypi
+```
+
+This command stops the services but does not remove their containers.
+
+## Next steps
+
+- Run `topo <command> --help` for command options.
+- Review the [Topo glossary](glossary.md) for core terms.
+- Read the [Topo Project Specification](../project-specification/README.md) to create or adapt a project.
