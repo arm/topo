@@ -78,7 +78,11 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		goos := runtime.GOOS
 		if deploy.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
-			deployOpts.Registry = newRegistryConfig(resolvedPort, goos)
+			deployOpts.Registry = &deploy.RegistryConfig{
+				Port:                resolvedPort,
+				SkipRemotePortCheck: skipRemotePortCheck,
+				UseControlSockets:   deploy.SupportsSSHControlSockets(goos),
+			}
 		}
 		switch {
 		case forceRecreate:
@@ -135,14 +139,6 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 		return env, nil
 	}
 	return flagValue, nil
-}
-
-func newRegistryConfig(port, goos string) *deploy.RegistryConfig {
-	return &deploy.RegistryConfig{
-		Port:                port,
-		SkipRemotePortCheck: skipRemotePortCheck,
-		UseControlSockets:   deploy.SupportsSSHControlSockets(goos),
-	}
 }
 
 func init() {
