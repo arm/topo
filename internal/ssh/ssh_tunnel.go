@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/arm/topo/internal/command"
@@ -163,6 +164,14 @@ func classifyRemotePortError(host, address string, err error) error {
 	}
 
 	return &inconclusiveRemotePortCheckError{err: fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)}
+}
+
+func isConnectionRefused(err error) bool {
+	if runtime.GOOS == "windows" {
+		const windowsConnectionRefused syscall.Errno = 10061
+		return errors.Is(err, windowsConnectionRefused)
+	}
+	return errors.Is(err, syscall.ECONNREFUSED)
 }
 
 func remotePortCheckErrorWithSuggestion(err error, port string) error {
