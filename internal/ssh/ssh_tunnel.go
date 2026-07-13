@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/arm/topo/internal/command"
@@ -149,7 +148,7 @@ func classifyRemotePortError(host, address string, err error) error {
 	if err == nil {
 		panic("classifyRemotePortError requires a non-nil error")
 	}
-	if errors.Is(err, syscall.ECONNREFUSED) {
+	if isConnectionRefused(err) {
 		return nil
 	}
 
