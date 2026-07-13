@@ -2,12 +2,16 @@ package ssh
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"syscall"
+	"time"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
@@ -107,26 +111,38 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 	}
 
 	host := NewConfig(ct.TargetDest).HostName
-	if RemotePortRefusedConnection(host, ct.Port) {
-		_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
-		return nil
+	if err := CheckRemotePortNotListening(host, ct.Port); err != nil {
+		return err
 	}
-	return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", ct.Port)
+	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
+	return nil
 }
 
-func RemotePortRefusedConnection(host, port string) bool {
-	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", host, port), "--max-time", "5")
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	_ = cmd.Run()
-
-	// Only curl exit 7 ("Failed to connect to host") proves no TCP listener
-	// answered. Anything else — connection succeeded, DNS failure, timeout,
-	// curl missing — leaves us unable to certify the port is not not listening.
-	if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 7 {
-		return true
+func CheckRemotePortNotListening(host, port string) error {
+	address := net.JoinHostPort(host, port)
+	connection, err := net.DialTimeout("tcp", address, 5*time.Second)
+	if err == nil {
+		if closeErr := connection.Close(); closeErr != nil {
+			return fmt.Errorf("remote port %s accepted a TCP connection, but closing the connection failed: %w", address, closeErr)
+		}
+		return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port)
 	}
-	return false
+
+	if errors.Is(err, syscall.ECONNREFUSED) {
+		return nil
+	}
+
+	var dnsError *net.DNSError
+	if errors.As(err, &dnsError) {
+		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
+	}
+
+	var networkError net.Error
+	if errors.As(err, &networkError) && networkError.Timeout() {
+		return fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
+	}
+
+	return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
 }
 
 type SSHTunnelStop struct {

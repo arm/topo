@@ -108,28 +108,31 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 	})
 }
 
-func TestRemotePortRefusedConnection(t *testing.T) {
-	t.Run("it returns true when nothing answers on the remote port", func(t *testing.T) {
+func TestCheckRemotePortNotListening(t *testing.T) {
+	t.Run("it succeeds when nothing answers on the remote port", func(t *testing.T) {
 		port := reserveFreePort(t)
 
-		assert.True(t, ssh.RemotePortRefusedConnection("127.0.0.1", port))
+		err := ssh.CheckRemotePortNotListening("127.0.0.1", port)
+
+		assert.NoError(t, err)
 	})
 
-	t.Run("it returns false when a TCP listener is bound on the remote port", func(t *testing.T) {
+	t.Run("it reports an exposed port when a TCP listener accepts the connection", func(t *testing.T) {
 		listener, err := net.Listen("tcp", "127.0.0.1:0")
 		require.NoError(t, err)
 		t.Cleanup(func() { _ = listener.Close() })
 		_, port, err := net.SplitHostPort(listener.Addr().String())
 		require.NoError(t, err)
 
-		assert.False(t, ssh.RemotePortRefusedConnection("127.0.0.1", port))
+		err = ssh.CheckRemotePortNotListening("127.0.0.1", port)
+
+		assert.EqualError(t, err, fmt.Sprintf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port))
 	})
 
-	t.Run("it returns false when curl exits with any other non-7 error", func(t *testing.T) {
-		// `.invalid` is reserved by RFC 6761 to never resolve, so curl
-		// exits 6 ("Couldn't resolve host") rather than 7. We can't
-		// certify the tunnel is safe, so we must fail.
-		assert.False(t, ssh.RemotePortRefusedConnection("nonexistent.invalid", "12345"))
+	t.Run("it reports a resolution error when the remote host does not resolve", func(t *testing.T) {
+		err := ssh.CheckRemotePortNotListening("nonexistent.invalid", "12345")
+
+		assert.ErrorContains(t, err, `could not resolve remote host "nonexistent.invalid" while checking tunnel exposure`)
 	})
 }
 
