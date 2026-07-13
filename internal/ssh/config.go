@@ -22,6 +22,19 @@ func NewConfig(dest Destination) Config {
 	return NewConfigFromBytes(output)
 }
 
+func ResolveHostName(dest Destination) (string, error) {
+	output, err := readConfig(dest)
+	if err != nil {
+		return "", fmt.Errorf("could not resolve SSH hostname for %q: %w", dest.String(), err)
+	}
+
+	hostName := NewConfigFromBytes(output).HostName
+	if hostName == "" {
+		return "", fmt.Errorf("could not resolve SSH hostname for %q: SSH configuration did not provide a hostname", dest.String())
+	}
+	return hostName, nil
+}
+
 func NewConfigFromBytes(data []byte) Config {
 	var config Config
 	scanner := bufio.NewScanner(bytes.NewReader(data))

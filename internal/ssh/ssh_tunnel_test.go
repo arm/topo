@@ -2,6 +2,7 @@ package ssh_test
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -104,6 +105,16 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 			got := cs.Description()
 
 			assert.Equal(t, "Check tunnel port is not exposed on remote network", got)
+		})
+	})
+
+	t.Run("Run", func(t *testing.T) {
+		t.Run("it fails when the SSH hostname cannot be resolved", func(t *testing.T) {
+			check := ssh.NewCheckRemoteForwardNotExposed(ssh.Destination{}, "12345")
+
+			err := check.Run(io.Discard)
+
+			assert.ErrorContains(t, err, `could not resolve SSH hostname for "ssh://"`)
 		})
 	})
 }

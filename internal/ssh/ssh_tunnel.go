@@ -110,7 +110,10 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 		return nil
 	}
 
-	host := NewConfig(ct.TargetDest).HostName
+	host, err := ResolveHostName(ct.TargetDest)
+	if err != nil {
+		return err
+	}
 	if err := CheckRemotePortNotListening(host, ct.Port); err != nil {
 		return err
 	}
