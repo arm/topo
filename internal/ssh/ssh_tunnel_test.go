@@ -125,6 +125,7 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 			err := check.Run(io.Discard)
 
 			assert.ErrorContains(t, err, `could not resolve SSH hostname for "ssh://"`)
+			assert.ErrorContains(t, err, "use `--skip-remote-port-check` if you understand the security risk")
 		})
 
 		t.Run("it succeeds when the remote port refuses the connection", func(t *testing.T) {
@@ -149,6 +150,7 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 			err = check.Run(io.Discard)
 
 			assert.EqualError(t, err, fmt.Sprintf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port))
+			assert.NotContains(t, err.Error(), "--skip-remote-port-check")
 		})
 	})
 }

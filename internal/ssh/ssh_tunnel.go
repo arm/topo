@@ -94,6 +94,18 @@ type CheckRemoteForwardNotExposed struct {
 	Port       string
 }
 
+type inconclusiveRemotePortCheckError struct {
+	err error
+}
+
+func (e *inconclusiveRemotePortCheckError) Error() string {
+	return e.err.Error()
+}
+
+func (e *inconclusiveRemotePortCheckError) Unwrap() error {
+	return e.err
+}
+
 // Checks whether the RemoteForward port exposes the registry to the target's
 // network, rather than being limited to target loopback. This can happen when
 // sshd permits non-loopback remote forwards, such as GatewayPorts.
@@ -112,10 +124,10 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 
 	host, err := ResolveHostName(ct.TargetDest)
 	if err != nil {
-		return err
+		return remotePortCheckErrorWithSuggestion(&inconclusiveRemotePortCheckError{err: err})
 	}
 	if err := checkRemotePortNotListening(host, ct.Port); err != nil {
-		return err
+		return remotePortCheckErrorWithSuggestion(err)
 	}
 	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
 	return nil
@@ -143,15 +155,23 @@ func classifyRemotePortError(host, address string, err error) error {
 
 	var networkError net.Error
 	if errors.As(err, &networkError) && networkError.Timeout() {
-		return fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
+		return &inconclusiveRemotePortCheckError{err: fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)}
 	}
 
 	var dnsError *net.DNSError
 	if errors.As(err, &dnsError) {
-		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
+		return &inconclusiveRemotePortCheckError{err: fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)}
 	}
 
-	return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
+	return &inconclusiveRemotePortCheckError{err: fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)}
+}
+
+func remotePortCheckErrorWithSuggestion(err error) error {
+	var inconclusiveError *inconclusiveRemotePortCheckError
+	if !errors.As(err, &inconclusiveError) {
+		return err
+	}
+	return fmt.Errorf("%w; retry after resolving the connectivity issue, or use `--skip-remote-port-check` if you understand the security risk", err)
 }
 
 type SSHTunnelStop struct {
