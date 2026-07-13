@@ -130,7 +130,13 @@ func CheckRemotePortNotListening(host, port string) error {
 		}
 		return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port)
 	}
+	return classifyRemotePortError(host, address, err)
+}
 
+func classifyRemotePortError(host, address string, err error) error {
+	if err == nil {
+		panic("classifyRemotePortError requires a non-nil error")
+	}
 	if errors.Is(err, syscall.ECONNREFUSED) {
 		return nil
 	}
