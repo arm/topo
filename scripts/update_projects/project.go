@@ -20,7 +20,7 @@ type XTopo struct {
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
 	Features    []string             `json:"features"`
-	Parameters  map[string]Parameter `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+	Parameters  map[string]Parameter `json:"parameters,omitempty"`
 }
 
 type Parameter struct {
@@ -29,6 +29,31 @@ type Parameter struct {
 	Default     string         `json:"default,omitempty"`
 	Example     string         `json:"example,omitempty"`
 	Hints       map[string]any `json:"hints,omitempty"`
+}
+
+func (t *XTopo) UnmarshalYAML(node *yaml.Node) error {
+	type rawXTopo struct {
+		Name        string               `yaml:"name"`
+		Description string               `yaml:"description"`
+		Features    []string             `yaml:"features"`
+		Parameters  map[string]Parameter `yaml:"parameters,omitempty"`
+		Args        map[string]Parameter `yaml:"args,omitempty"`
+	}
+
+	var raw rawXTopo
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+
+	t.Name = raw.Name
+	t.Description = raw.Description
+	t.Features = raw.Features
+	t.Parameters = raw.Parameters
+	if len(t.Parameters) == 0 && len(raw.Args) > 0 {
+		t.Parameters = raw.Args
+	}
+
+	return nil
 }
 
 func NewProject(source GitHubSource, composeFile io.Reader) (Project, error) {
