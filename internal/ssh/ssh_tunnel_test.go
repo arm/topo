@@ -120,6 +120,12 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 }
 
 func TestCheckRemotePortNotListening(t *testing.T) {
+	t.Run("it rejects an empty remote host", func(t *testing.T) {
+		err := ssh.CheckRemotePortNotListening("", "12345")
+
+		assert.EqualError(t, err, "could not check remote port 12345: host must not be empty")
+	})
+
 	t.Run("it succeeds when nothing answers on the remote port", func(t *testing.T) {
 		port := reserveFreePort(t)
 

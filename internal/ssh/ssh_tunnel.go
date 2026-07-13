@@ -122,6 +122,9 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 }
 
 func CheckRemotePortNotListening(host, port string) error {
+	if host == "" {
+		return fmt.Errorf("could not check remote port %s: host must not be empty", port)
+	}
 	address := net.JoinHostPort(host, port)
 	connection, err := net.DialTimeout("tcp", address, 5*time.Second)
 	if err == nil {
