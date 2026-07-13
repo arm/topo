@@ -21,7 +21,7 @@ func TestNewRegistryConfig(t *testing.T) {
 		require.NoError(t, flag.Value.Set("true"))
 		flag.Changed = true
 
-		got := newRegistryConfig(deployCmd, "12345", "linux")
+		got := newRegistryConfig("12345", "linux")
 
 		want := &deploy.RegistryConfig{
 			Port:                "12345",

@@ -18,11 +18,12 @@ import (
 )
 
 var (
-	noRegistry        bool
-	registryPort      string
-	skipProjectChecks bool
-	forceRecreate     bool
-	noRecreate        bool
+	noRegistry          bool
+	registryPort        string
+	skipRemotePortCheck bool
+	skipProjectChecks   bool
+	forceRecreate       bool
+	noRecreate          bool
 )
 
 var deployOpts deploy.DeployOptions
@@ -77,7 +78,7 @@ The compose file (compose.yaml) must be in the current working directory, as thi
 
 		goos := runtime.GOOS
 		if deploy.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
-			deployOpts.Registry = newRegistryConfig(cmd, resolvedPort, goos)
+			deployOpts.Registry = newRegistryConfig(resolvedPort, goos)
 		}
 		switch {
 		case forceRecreate:
@@ -136,11 +137,7 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 	return flagValue, nil
 }
 
-func newRegistryConfig(cmd *cobra.Command, port, goos string) *deploy.RegistryConfig {
-	skipRemotePortCheck, err := cmd.Flags().GetBool("skip-remote-port-check")
-	if err != nil {
-		panic("internal error: skip-remote-port-check flag not registered: " + err.Error())
-	}
+func newRegistryConfig(port, goos string) *deploy.RegistryConfig {
 	return &deploy.RegistryConfig{
 		Port:                port,
 		SkipRemotePortCheck: skipRemotePortCheck,
@@ -152,7 +149,7 @@ func init() {
 	addTargetFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", operation.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "disable private registry flow; use direct save/load transfer")
-	deployCmd.Flags().Bool("skip-remote-port-check", false, "skip checking whether the SSH tunnel port is exposed on the remote network")
+	deployCmd.Flags().BoolVar(&skipRemotePortCheck, "skip-remote-port-check", false, "skip checking whether the SSH tunnel port is exposed on the remote network")
 	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "force recreation of containers even if their configuration and image haven't changed")
 	deployCmd.Flags().BoolVar(&noRecreate, "no-recreate", false, "prevent recreation of containers even if their configuration and image have changed")
 	deployCmd.Flags().BoolVar(&skipProjectChecks, "skip-project-checks", false, "skip project compatibility checks for the target platform")
