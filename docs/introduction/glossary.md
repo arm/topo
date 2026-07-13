@@ -1,4 +1,4 @@
-# Topo Glossary
+# Glossary
 
 This glossary defines the core terms used in Topo documentation and command output.
 

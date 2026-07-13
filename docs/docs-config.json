@@ -1,0 +1,14 @@
+{
+  "siteLabel": "Topo",
+  "navbarItems": [
+    {
+      "label": "Documentation",
+      "to": "introduction",
+      "position": "left"
+    }
+  ],
+  "sidebarIDs": ["documentation"],
+  "sidebarDirectoryMap": {
+    "documentation": ["introduction", "project-specification", "development"]
+  }
+}

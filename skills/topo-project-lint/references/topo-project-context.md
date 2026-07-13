@@ -16,7 +16,7 @@ Refresh spec-sensitive context at runtime before making or validating Project ch
 
 - Published Topo Project Specification schema: `https://raw.githubusercontent.com/arm/topo/refs/heads/main/docs/project-specification/schema/topo-project-specification.json`.
 - Published Topo Project Specification docs: `https://github.com/arm/topo/docs/project-specification`, especially `README.md`, `00-overview.md`, `01-authoring-projects.md`, `02-project-configuration.md`, and `03-schema.md`.
-- Published Topo glossary for domain terms: `https://github.com/arm/topo/blob/main/docs/glossary.md`.
+- Published Topo glossary for domain terms: `https://github.com/arm/topo/blob/main/docs/introduction/glossary.md`.
 - Compose Spec for standard Compose semantics. Do not invent non-standard Compose keys except the root-level `x-topo` extension.
 
 When references conflict, prefer the schema for validation behavior, then the specification docs for authoring intent, then the target repository's actual Compose behavior for the smallest safe change.
