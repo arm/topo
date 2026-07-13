@@ -3,6 +3,7 @@ package ssh_test
 import (
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
 	"testing"
@@ -108,6 +109,16 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 	})
 
 	t.Run("Run", func(t *testing.T) {
+		t.Run("it skips the check for localhost", func(t *testing.T) {
+			check := ssh.NewCheckRemoteForwardNotExposed(ssh.PlainLocalhost, "invalid")
+			var output strings.Builder
+
+			err := check.Run(&output)
+
+			assert.NoError(t, err)
+			assert.Empty(t, output.String())
+		})
+
 		t.Run("it fails when the SSH hostname cannot be resolved", func(t *testing.T) {
 			check := ssh.NewCheckRemoteForwardNotExposed(ssh.Destination{}, "12345")
 
@@ -115,7 +126,41 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 
 			assert.ErrorContains(t, err, `could not resolve SSH hostname for "ssh://"`)
 		})
+
+		t.Run("it succeeds when the remote port refuses the connection", func(t *testing.T) {
+			port := reserveFreePort(t, "0.0.0.0")
+			check := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("0.0.0.0"), port)
+			var output strings.Builder
+
+			err := check.Run(&output)
+
+			assert.NoError(t, err)
+			assert.Equal(t, fmt.Sprintf("Port %s is bound to remote loopback only\n", port), output.String())
+		})
+
+		t.Run("it fails when the remote port accepts a connection", func(t *testing.T) {
+			listener, err := net.Listen("tcp", "0.0.0.0:0")
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = listener.Close() })
+			_, port, err := net.SplitHostPort(listener.Addr().String())
+			require.NoError(t, err)
+			check := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("0.0.0.0"), port)
+
+			err = check.Run(io.Discard)
+
+			assert.EqualError(t, err, fmt.Sprintf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port))
+		})
 	})
+}
+
+func reserveFreePort(t *testing.T, host string) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
+	require.NoError(t, err)
+	_, port, err := net.SplitHostPort(listener.Addr().String())
+	require.NoError(t, err)
+	require.NoError(t, listener.Close())
+	return port
 }
 
 func TestSSHTunnelStop(t *testing.T) {
