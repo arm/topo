@@ -4,6 +4,10 @@ Topo is a command-line tool for discovering, configuring, and deploying containe
 
 You run Topo on a host and deploy to a target. The host can be a Linux, macOS, or Windows computer. The target is an Arm64 Linux device that runs the deployed services. An Arm64 Linux system can act as both the host and target.
 
+This diagram shows where Topo runs, what it deploys, and how you iterate on a project.
+
+![Topo host-to-target deployment and development loop](./img/topo-overview.svg)
+
 ## Why Topo?
 
 Use Topo to:
