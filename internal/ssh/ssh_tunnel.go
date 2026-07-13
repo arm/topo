@@ -124,10 +124,10 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 
 	host, err := ResolveHostName(ct.TargetDest)
 	if err != nil {
-		return remotePortCheckErrorWithSuggestion(&inconclusiveRemotePortCheckError{err: err})
+		return remotePortCheckErrorWithSuggestion(&inconclusiveRemotePortCheckError{err: err}, ct.Port)
 	}
 	if err := checkRemotePortNotListening(host, ct.Port); err != nil {
-		return remotePortCheckErrorWithSuggestion(err)
+		return remotePortCheckErrorWithSuggestion(err, ct.Port)
 	}
 	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
 	return nil
@@ -166,12 +166,12 @@ func classifyRemotePortError(host, address string, err error) error {
 	return &inconclusiveRemotePortCheckError{err: fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)}
 }
 
-func remotePortCheckErrorWithSuggestion(err error) error {
+func remotePortCheckErrorWithSuggestion(err error, port string) error {
 	var inconclusiveError *inconclusiveRemotePortCheckError
 	if !errors.As(err, &inconclusiveError) {
 		return err
 	}
-	return fmt.Errorf("%w; retry after resolving the connectivity issue, or use `--skip-remote-port-check` if you understand the security risk", err)
+	return fmt.Errorf("cannot conclusively rule out network access to registry port %s because the exposure check did not complete: %w; retry after resolving the connectivity issue, or use `--skip-remote-port-check` if you understand the security risk", port, err)
 }
 
 type SSHTunnelStop struct {
