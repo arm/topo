@@ -9,8 +9,9 @@ import (
 )
 
 type RegistryConfig struct {
-	Port              string
-	UseControlSockets bool
+	Port                string
+	SkipRemotePortCheck bool
+	UseControlSockets   bool
 }
 
 type DeployOptions struct {
@@ -46,7 +47,9 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 			cleanup = stop
 			ops = append(ops, operation.NewRunRegistry(opts.Registry.Port)...)
 			ops = append(ops, start)
-			ops = append(ops, securityCheck)
+			if !opts.Registry.SkipRemotePortCheck {
+				ops = append(ops, securityCheck)
+			}
 			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, targetHost, opts.Registry.Port))
 			ops = append(ops, stop)
 		} else {

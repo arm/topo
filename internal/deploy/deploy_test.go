@@ -148,6 +148,38 @@ func TestNewDeployment(t *testing.T) {
 		)
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("excludes the remote port check when skipped", func(t *testing.T) {
+		remoteDest := ssh.NewDestination("user@remote")
+		port := operation.DefaultRegistryPort
+		opts := deploy.DeployOptions{
+			TargetHost: remoteDest,
+			Registry: &deploy.RegistryConfig{
+				Port:                port,
+				SkipRemotePortCheck: true,
+				UseControlSockets:   true,
+			},
+		}
+
+		got, _ := deploy.NewDeployment(composeFile, opts)
+
+		wantTunnelStart, _, wantTunnelStop := ssh.NewSSHTunnel(remoteDest, port, opts.Registry.UseControlSockets)
+		localHost := command.LocalHost
+		remoteHost := command.NewHostFromDestination(remoteDest)
+		want := goperation.Sequence{
+			operation.NewDockerComposeBuild(composeFile, localHost),
+			operation.NewDockerComposePull(composeFile, localHost),
+		}
+		want = append(want, operation.NewRunRegistry(port)...)
+		want = append(want,
+			wantTunnelStart,
+			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
+			wantTunnelStop,
+			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
+			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
+		)
+		assert.Equal(t, want, got)
+	})
 }
 
 func TestDeployment(t *testing.T) {
