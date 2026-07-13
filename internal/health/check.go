@@ -32,7 +32,7 @@ type CommandSuccessful struct {
 }
 
 func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
-	_, err := r.Run(ctx, c.Cmd)
+	_, _, err := r.Run(ctx, c.Cmd)
 	return c.Fix, err
 }
 

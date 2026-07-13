@@ -34,7 +34,7 @@ type PathCandidate struct {
 }
 
 func getPathDirs(r runner.Runner) ([]string, error) {
-	output, err := r.Run(context.TODO(), "echo $PATH")
+	output, _, err := r.Run(context.TODO(), "echo $PATH")
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func getPathDirs(r runner.Runner) ([]string, error) {
 }
 
 func getHomeDir(r runner.Runner) (string, error) {
-	output, err := r.Run(context.TODO(), "echo $HOME")
+	output, _, err := r.Run(context.TODO(), "echo $HOME")
 	if err != nil {
 		return "", err
 	}
@@ -59,7 +59,7 @@ func getExistingBinaryDir(r runner.Runner, binaryName string) (string, error) {
 		return "", err
 	}
 
-	output, err := r.Run(context.TODO(), checkCommand)
+	output, _, err := r.Run(context.TODO(), checkCommand)
 	if err != nil {
 		return "", nil
 	}
@@ -283,7 +283,7 @@ func install(installPath string, r runner.Runner, binaries map[string][]byte) er
 		}
 
 		installCmd := fmt.Sprintf("install -D -m %s /dev/stdin %s/%s", mode, installPath, binaryName)
-		output, err := r.RunWithStdin(context.TODO(), installCmd, binaryData)
+		output, _, err := r.RunWithStdin(context.TODO(), installCmd, binaryData)
 		if err != nil {
 			if errors.Is(err, ssh.ErrSSH) {
 				return err

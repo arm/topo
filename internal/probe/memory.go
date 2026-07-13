@@ -14,7 +14,7 @@ func Memory(ctx context.Context, r runner.Runner) (int64, error) {
 	key := "MemTotal"
 	path := "/proc/meminfo"
 
-	out, err := r.Run(ctx, fmt.Sprintf("cat %s", path))
+	out, _, err := r.Run(ctx, fmt.Sprintf("cat %s", path))
 	if err != nil {
 		return 0, err
 	}

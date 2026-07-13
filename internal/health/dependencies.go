@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
@@ -41,6 +42,19 @@ type Dependency struct {
 	HardwarePrerequisite  []HardwareCapability
 }
 
+type OpenSSHAvailable struct{}
+
+func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
+	stdout, stderr, err := r.Run(ctx, "ssh -V")
+	if err != nil {
+		return nil, err
+	}
+	if !strings.Contains(stdout, "OpenSSH_") && !strings.Contains(stderr, "OpenSSH_") {
+		return nil, fmt.Errorf("%q is not OpenSSH", dep.Binary)
+	}
+	return nil, nil
+}
+
 var HostRequiredDependencies = []Dependency{
 	{
 		Binary: "topo",
@@ -77,7 +91,7 @@ var HostRequiredDependencies = []Dependency{
 	{
 		Binary: "ssh",
 		Label:  "OpenSSH",
-		Checks: []Check{BinaryExists{}},
+		Checks: []Check{BinaryExists{}, OpenSSHAvailable{}},
 	},
 	{
 		Binary: "curl",

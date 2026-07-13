@@ -17,7 +17,7 @@ func TestLocal(t *testing.T) {
 			cancel()
 			r := runner.NewLocal()
 
-			_, err := r.Run(ctx, "sleep 10")
+			_, _, err := r.Run(ctx, "sleep 10")
 
 			require.ErrorIs(t, err, runner.ErrTimeout)
 		})
@@ -28,18 +28,42 @@ func TestLocal(t *testing.T) {
 			time.Sleep(5 * time.Millisecond)
 			r := runner.NewLocal()
 
-			_, err := r.Run(ctx, "sleep 10")
+			_, _, err := r.Run(ctx, "sleep 10")
 
 			require.ErrorIs(t, err, runner.ErrTimeout)
 		})
 
 		t.Run("executes binary directly without shell interpretation", func(t *testing.T) {
 			r := runner.NewLocal()
-			got, err := r.Run(context.Background(), "echo hello && echo world")
+			got, _, err := r.Run(context.Background(), "echo hello && echo world")
 
 			assert.NoError(t, err)
 			assert.Equal(t, "hello && echo world\n", got)
 		})
+	})
+
+	t.Run("Run returns stdout and stderr separately", func(t *testing.T) {
+		r := runner.NewLocal()
+
+		stdout, stderr, err := r.Run(context.Background(), "sh -c 'echo stdout-output; echo stderr-output >&2'")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "stdout-output\n", stdout)
+		assert.Equal(t, "stderr-output\n", stderr)
+	})
+
+	t.Run("RunWithStdin", func(t *testing.T) {
+		r := runner.NewLocal()
+
+		stdout, stderr, err := r.RunWithStdin(
+			context.Background(),
+			"sh -c 'read input; echo stdout-$input; echo stderr-$input >&2'",
+			[]byte("input\n"),
+		)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "stdout-input\n", stdout)
+		assert.Equal(t, "stderr-input\n", stderr)
 	})
 
 	t.Run("BinaryExists", func(t *testing.T) {

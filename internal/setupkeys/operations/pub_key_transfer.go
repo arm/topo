@@ -14,7 +14,7 @@ var passwordAuthArgs = []string{
 }
 
 type sshRunnerWithExtraArgs interface {
-	RunWithStdinAndArgs(ctx context.Context, command string, stdin []byte, sshArgs ...string) (string, error)
+	RunWithStdinAndArgs(ctx context.Context, command string, stdin []byte, sshArgs ...string) (stdout, stderr string, err error)
 }
 
 type PubKeyTransfer struct {
@@ -39,10 +39,10 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 		return fmt.Errorf("failed to read public key %s: %w", kt.pubKeyPath, err)
 	}
 
-	cmdOutput, err := kt.r.RunWithStdinAndArgs(context.TODO(), remoteAuthorizedKeysCommand, pubKey, passwordAuthArgs...)
+	cmdStdout, _, err := kt.r.RunWithStdinAndArgs(context.TODO(), remoteAuthorizedKeysCommand, pubKey, passwordAuthArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to transfer public key to target: %w", err)
 	}
-	_, err = outputWriter.Write([]byte(cmdOutput))
+	_, err = outputWriter.Write([]byte(cmdStdout))
 	return err
 }
