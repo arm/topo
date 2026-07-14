@@ -7,7 +7,7 @@
         "value": "topo"
       },
       {
-        "name": "SSH",
+        "name": "OpenSSH",
         "status": "ok",
         "value": "ssh"
       },

@@ -68,6 +68,50 @@ func TestTargetRequiredDependencies(t *testing.T) {
 	})
 }
 
+func TestOpenSSHAvailable(t *testing.T) {
+	ctx := context.Background()
+	dependency := health.Dependency{Binary: "ssh", Label: "OpenSSH"}
+
+	t.Run("accepts OpenSSH", func(t *testing.T) {
+		check := health.OpenSSHAvailable{}
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"ssh -V": {Stderr: "OpenSSH_9.9p1, OpenSSL 3.4.0"},
+		}}
+
+		fix, err := check.Run(ctx, r, dependency)
+
+		assert.NoError(t, err)
+		assert.Nil(t, fix)
+	})
+
+	t.Run("rejects another SSH implementation", func(t *testing.T) {
+		check := health.OpenSSHAvailable{}
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"ssh -V": {Stderr: "Dropbear v2025.88"},
+		}}
+
+		fix, err := check.Run(ctx, r, dependency)
+
+		assert.EqualError(t, err, `"ssh" does not resolve to OpenSSH: Dropbear v2025.88`)
+		assert.Equal(t, &health.Fix{
+			Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
+		}, fix)
+	})
+
+	t.Run("returns an error when the version cannot be checked", func(t *testing.T) {
+		check := health.OpenSSHAvailable{}
+		versionErr := errors.New("version check failed")
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"ssh -V": {Err: versionErr},
+		}}
+
+		fix, err := check.Run(ctx, r, dependency)
+
+		assert.ErrorIs(t, err, versionErr)
+		assert.Nil(t, fix)
+	})
+}
+
 func TestPerformChecks(t *testing.T) {
 	t.Run("when no dependencies are found, statuses show not installed", func(t *testing.T) {
 		fooDependency := health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{health.BinaryExists{}}}

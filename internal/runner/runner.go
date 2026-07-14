@@ -11,8 +11,8 @@ import (
 var ErrTimeout = errors.New("timed out")
 
 type Runner interface {
-	Run(ctx context.Context, command string) (string, error)
-	RunWithStdin(ctx context.Context, command string, stdin []byte) (string, error)
+	Run(ctx context.Context, command string) (stdout, stderr string, err error)
+	RunWithStdin(ctx context.Context, command string, stdin []byte) (stdout, stderr string, err error)
 	BinaryExists(ctx context.Context, bin string) error
 }
 

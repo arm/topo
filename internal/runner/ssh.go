@@ -18,19 +18,19 @@ func NewSSH(dest ssh.Destination) *SSH {
 	return &SSH{dest: dest}
 }
 
-func (r *SSH) Run(ctx context.Context, cmdStr string) (string, error) {
+func (r *SSH) Run(ctx context.Context, cmdStr string) (string, string, error) {
 	return r.exec(ctx, cmdStr, nil, nil)
 }
 
-func (r *SSH) RunWithStdin(ctx context.Context, cmdStr string, stdin []byte) (string, error) {
+func (r *SSH) RunWithStdin(ctx context.Context, cmdStr string, stdin []byte) (string, string, error) {
 	return r.exec(ctx, cmdStr, stdin, nil)
 }
 
-func (r *SSH) RunWithArgs(ctx context.Context, cmdStr string, args ...string) (string, error) {
+func (r *SSH) RunWithArgs(ctx context.Context, cmdStr string, args ...string) (string, string, error) {
 	return r.exec(ctx, cmdStr, nil, args)
 }
 
-func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []byte, args ...string) (string, error) {
+func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []byte, args ...string) (string, string, error) {
 	return r.exec(ctx, cmdStr, stdin, args)
 }
 
@@ -39,7 +39,7 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := r.Run(ctx, cmd); err != nil {
+	if _, _, err := r.Run(ctx, cmd); err != nil {
 		if errors.Is(err, ssh.ErrSSH) || errors.Is(err, ErrTimeout) {
 			return err
 		}
@@ -48,13 +48,13 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 	return nil
 }
 
-func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArgs []string) (string, error) {
+func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArgs []string) (string, string, error) {
 	args := append(multiplexArgs(), extraSSHArgs...)
-	out, err := ssh.RunCommand(ctx, r.dest, command.WrapInLoginShell(cmdStr), stdin, args...)
+	stdout, stderr, err := ssh.RunCommand(ctx, r.dest, command.WrapInLoginShell(cmdStr), stdin, args...)
 	if err != nil && ctx.Err() != nil {
-		return "", ErrTimeout
+		return "", "", ErrTimeout
 	}
-	return out, err
+	return stdout, stderr, err
 }
 
 func multiplexArgs() []string {

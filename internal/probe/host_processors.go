@@ -43,7 +43,7 @@ func HostProcessors(ctx context.Context, r runner.Runner) ([]HostProcessor, erro
 		return nil, err
 	}
 
-	out, err := r.Run(ctx, "lscpu --json")
+	out, _, err := r.Run(ctx, "lscpu --json")
 	if err != nil {
 		return nil, err
 	}
