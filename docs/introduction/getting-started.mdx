@@ -1,42 +1,45 @@
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
-# Getting Started
+# Getting started
 
-Use this guide to deploy the [Hello World Topo Project](https://github.com/Arm-Examples/topo-welcome) to an Arm64 Linux target. The project runs a web page with a configurable greeting.
+Use this guide to deploy the [Hello World Topo Project](https://github.com/Arm-Examples/topo-welcome) to a target that runs Linux on AArch64 (`linux/arm64`). The project runs a web page with a configurable greeting.
 
 ## Prerequisites
 
-**Host machine** (where you run `topo`):
+Install the following tools on the host where you run `topo`:
 
 - [Docker](https://docs.docker.com/get-docker/)
-- curl
-- OpenSSH Client
+- [`curl`](https://curl.se/download.html)
+- [Git](https://git-scm.com/downloads)
+- OpenSSH client
 
-**Target machine** (the remote Arm system):
+The target must:
 
-- Reachable with SSH
-- Linux on ARM64
-- Docker
+- Be reachable through SSH
+- Run Linux on AArch64 (`linux/arm64`)
+- Run Docker
+- Provide the `lscpu` command
 
 :::info
 
-The host and target can be the same system. If you're working directly on an Arm Linux system, you can specify `--target localhost` instead of a remote host.
+The host and target can be the same AArch64 Linux system (`linux/arm64`). In this configuration, use `--target localhost`.
 
 :::
 
 ## Install Topo
 
+Choose an installation method:
+
 <Tabs groupId="install-method">
-  <TabItem value="linux-mac" label="Linux/macOS">
+  <TabItem value="linux-mac" label="Linux and macOS script">
 
 ```sh
-curl -fsSL
-https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
 ```
 
   </TabItem>
-  <TabItem value="brew" label="Brew">
+  <TabItem value="brew" label="Homebrew">
 
 ```sh
 brew install arm/topo/topo
@@ -52,17 +55,17 @@ irm https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.p
   </TabItem>
 </Tabs>
 
-After this has completed successfully, confirm the installation with:
+Verify the installation:
 
 ```sh
 topo --version
 ```
 
-## Check that everything is ready
+## Check the host and target
 
 :::note
 
-The commands in this guide use `pi@raspberrypi` as the target. Replace this value with an SSH alias or destination for your device. Topo accepts values such as `user@host` and `ssh://user@host:2222`.
+The commands in this guide use `pi@raspberrypi` as the target. Replace this value with the SSH destination for your target. Topo accepts an SSH alias, a value such as `user@host`, or a URL such as `ssh://user@host:2222`.
 
 :::
 
@@ -72,7 +75,7 @@ Run the health checks:
 topo health --target pi@raspberrypi
 ```
 
-Topo checks the required host tools, SSH connection, target container engine, and target hardware. Resolve each error and review any warnings. The report provides corrective commands when Topo can resolve a problem.
+Topo checks the required host tools, SSH connection, target container engine, and target hardware. Resolve all errors and review each warning. When available, the report includes commands to correct problems.
 
 If the target host key is unknown, confirm the target identity. Then run the suggested command to accept the key. If public-key authentication is not configured, run the following command after you accept the host key:
 
@@ -80,19 +83,19 @@ If the target host key is unknown, confirm the target identity. Then run the sug
 topo setup-keys --target pi@raspberrypi
 ```
 
-This command creates a dedicated key, copies the public key to the target, and updates your SSH configuration. The target must permit password authentication for the initial key transfer. If it does not, configure a public key through your existing device-management process.
+This command creates a dedicated key, copies the public key to the target, and updates your SSH configuration. The target must permit password authentication for the initial key transfer. If it does not, configure a public key through your existing device management process.
 
-Run `topo health` again and confirm that no checks report an error. The Hello World project does not require Remoteproc Runtime.
+Run `topo health` again and confirm that no checks report an error. You can ignore a Remoteproc Runtime warning because the Hello World project does not require this runtime.
 
 ## Find a compatible Topo Project
 
-List the available projects and compare their requirements with the target hardware:
+List the available projects and check their compatibility with the target hardware:
 
 ```sh
 topo projects --target pi@raspberrypi
 ```
 
-The output includes a clone command for each project. This guide uses Hello World, which has no optional hardware requirements.
+The output includes a clone command for each project. The Hello World project has no additional hardware requirements.
 
 ## Clone and configure Hello World
 
@@ -113,7 +116,7 @@ cd topo-welcome
 topo deploy --target pi@raspberrypi
 ```
 
-Topo builds or pulls the images on the host, transfers them to the target, and starts the services. Run deployment management commands from the project directory. Topo uses its `compose.yaml` file to identify the deployment.
+Topo builds or pulls the images on the host, transfers them to the target, and starts the services. Run commands that manage the deployment from the project directory. These commands use the `compose.yaml` file in the current directory.
 
 ## Verify the deployment
 
@@ -123,7 +126,7 @@ List the running containers for the project:
 topo ps --target pi@raspberrypi
 ```
 
-Find the web service in the output. Copy the value from the `Address` column. Open `http://<address>` in a browser and replace `<address>` with the copied value. The page displays your configured greeting.
+Find the web service in the output. Copy the value from the `Address` column. and open the URL in a browser. The page displays your configured greeting.
 
 After you change the project, run `topo deploy --target pi@raspberrypi` again. Docker and Topo reuse cached layers where possible to reduce deployment time.
 
