@@ -92,8 +92,10 @@ func TestOpenSSHAvailable(t *testing.T) {
 
 		fix, err := check.Run(ctx, r, dependency)
 
-		assert.EqualError(t, err, `"ssh" is not OpenSSH`)
-		assert.Nil(t, fix)
+		assert.EqualError(t, err, `"ssh" does not resolve to OpenSSH: Dropbear v2025.88`)
+		assert.Equal(t, &health.Fix{
+			Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
+		}, fix)
 	})
 
 	t.Run("returns an error when the version cannot be checked", func(t *testing.T) {
