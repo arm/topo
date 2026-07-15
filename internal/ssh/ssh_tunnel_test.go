@@ -141,7 +141,7 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 		})
 
 		t.Run("it fails when the remote port accepts a connection", func(t *testing.T) {
-			listener, err := net.Listen("tcp", "0.0.0.0:0")
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = listener.Close() })
 			connectionClosed := make(chan error, 1)
@@ -155,11 +155,13 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 			}()
 			_, port, err := net.SplitHostPort(listener.Addr().String())
 			require.NoError(t, err)
-			check := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("0.0.0.0"), port)
+			check := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("localhost."), port)
 
 			err = check.Run(io.Discard)
+			listenerCloseErr := listener.Close()
 
 			assert.EqualError(t, err, fmt.Sprintf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", port))
+			assert.NoError(t, listenerCloseErr)
 			assert.NoError(t, <-connectionClosed)
 		})
 	})
