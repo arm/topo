@@ -144,6 +144,15 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 			listener, err := net.Listen("tcp", "0.0.0.0:0")
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = listener.Close() })
+			connectionClosed := make(chan error, 1)
+			go func() {
+				connection, acceptErr := listener.Accept()
+				if acceptErr != nil {
+					connectionClosed <- acceptErr
+					return
+				}
+				connectionClosed <- connection.Close()
+			}()
 			_, port, err := net.SplitHostPort(listener.Addr().String())
 			require.NoError(t, err)
 			check := ssh.NewCheckRemoteForwardNotExposed(ssh.NewDestination("0.0.0.0"), port)
@@ -152,6 +161,7 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 
 			assert.EqualError(t, err, fmt.Sprintf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port))
 			assert.NotContains(t, err.Error(), "--skip-remote-port-check")
+			assert.NoError(t, <-connectionClosed)
 		})
 	})
 }

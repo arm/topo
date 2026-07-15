@@ -10,8 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
-	"time"
+	"strings"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
@@ -127,43 +126,27 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 
 func checkRemotePortNotListening(host, port string) (error, bool) {
 	address := net.JoinHostPort(host, port)
-	connection, err := net.DialTimeout("tcp", address, 5*time.Second)
-	if err == nil {
-		if closeErr := connection.Close(); closeErr != nil {
-			return fmt.Errorf("remote port %s accepted a TCP connection, but closing the connection failed: %w", address, closeErr), false
-		}
+	var remoteIP strings.Builder
+	cmd := exec.Command("curl", "http://"+address, "--max-time", "5", "--noproxy", "*", "--output", os.DevNull, "--silent", "--write-out", "%{remote_ip}")
+	cmd.Stdout = &remoteIP
+	cmd.Stderr = io.Discard
+	err := cmd.Run()
+	if err == nil || remoteIP.Len() > 0 {
 		return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port), false
 	}
-	return classifyRemotePortError(host, address, err)
-}
 
-func classifyRemotePortError(host, address string, err error) (error, bool) {
-	if err == nil {
-		panic("classifyRemotePortError requires a non-nil error")
-	}
-	if isConnectionRefused(err) {
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) && exitError.ExitCode() == 7 {
 		return nil, false
 	}
-
-	var networkError net.Error
-	if errors.As(err, &networkError) && networkError.Timeout() {
+	if errors.As(err, &exitError) && exitError.ExitCode() == 28 {
 		return fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err), true
 	}
-
-	var dnsError *net.DNSError
-	if errors.As(err, &dnsError) {
+	if errors.As(err, &exitError) && exitError.ExitCode() == 6 {
 		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err), true
 	}
 
 	return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err), true
-}
-
-func isConnectionRefused(err error) bool {
-	if runtime.GOOS == "windows" {
-		const windowsConnectionRefused syscall.Errno = 10061
-		return errors.Is(err, windowsConnectionRefused)
-	}
-	return errors.Is(err, syscall.ECONNREFUSED)
 }
 
 func remotePortCheckErrorWithSuggestion(err error, port string) error {
