@@ -3,8 +3,6 @@ import TabItem from "@theme/TabItem";
 
 # Getting started
 
-Use this guide to deploy the [Hello World Topo Project](https://github.com/Arm-Examples/topo-welcome) to a target that runs Linux on AArch64 (`linux/arm64`). The project runs a web page with a configurable greeting.
-
 ## Prerequisites
 
 Install the following tools on the host where you run `topo`:
@@ -83,7 +81,7 @@ topo setup-keys --target pi@raspberrypi
 
 This command creates a dedicated key, copies the public key to the target, and updates your SSH configuration. The target must permit password authentication for the initial key transfer. If it does not, configure a public key through your existing device management process.
 
-Run `topo health` again and confirm that no checks report an error. You can ignore a Remoteproc Runtime warning because the Hello World project does not require this runtime.
+Run `topo health` again and confirm that no checks report an error. You can ignore a Remoteproc Runtime warning if you do not plan to deploy firmware to a remote processor.
 
 ## Find a compatible Topo Project
 
@@ -93,9 +91,9 @@ List the available projects and check their compatibility with the target hardwa
 topo projects --target pi@raspberrypi
 ```
 
-The output includes a clone command for each project. The Hello World project has no additional hardware requirements.
+The output includes a clone command for each project.
 
-## Clone and configure Hello World
+## Clone and configure a project
 
 Clone the project:
 
@@ -103,9 +101,9 @@ Clone the project:
 topo clone https://github.com/Arm-Examples/topo-welcome.git
 ```
 
-At the `GREETING_NAME` prompt, enter a name or press Enter to use the default value, `World`. Topo creates a configured project in the `topo-welcome` directory.
+When you run the `topo clone` command, Topo prompts for values that configure the project. You can also pass values through the command line or a configuration file.
 
-## Deploy Hello World
+## Deploy the project
 
 Change to the project directory and deploy it:
 
@@ -124,13 +122,13 @@ List the running containers for the project:
 topo ps --target pi@raspberrypi
 ```
 
-Find the web service in the output. Copy the value from the `Address` column. and open the URL in a browser. The page displays your configured greeting.
+Check the `Address` column in the `topo ps` output for accessible service endpoints.
 
 After you change the project, run `topo deploy --target pi@raspberrypi` again. Docker and Topo reuse cached layers where possible to reduce deployment time.
 
 ## Stop the deployment
 
-From the `topo-welcome` directory, stop the services:
+From the project directory, stop the services:
 
 ```sh
 topo stop --target pi@raspberrypi
