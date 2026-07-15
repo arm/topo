@@ -1,0 +1,203 @@
+---
+sidebar_position: 1
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Install Topo
+
+Install Topo on a host to deploy applications to an Arm-based Linux target. The host and target can be separate systems. You can also use one AArch64 Linux system as both the host and target.
+
+## Supported systems
+
+Topo release binaries support the following host systems:
+
+| Host operating system | Host architecture       |
+| --------------------- | ----------------------- |
+| Linux                 | AMD64 and Arm64         |
+| macOS                 | Intel and Apple silicon |
+| Windows               | x64 and Arm64           |
+
+A target must run Linux on AArch64 (`linux/arm64`). Topo uses Docker to build images on the host and run containers on the target.
+
+## Prepare the host
+
+Install the following tools on the host:
+
+- [Docker](https://docs.docker.com/get-docker/)
+- `curl`
+- OpenSSH client
+- Git to clone Topo Projects from Git repositories
+
+Topo also needs network access to download releases, clone projects, and pull container images. Network requirements vary by project because project builds can download additional dependencies.
+
+## Prepare the target
+
+The target requires:
+
+- Linux on AArch64 (`linux/arm64`)
+- Docker configured so that the target user can run commands without `sudo`
+- `lscpu`, which is usually included in the `util-linux` package
+- A POSIX-compatible login shell like `sh` or `bash`
+- SSH access from the host unless you deploy to `localhost`
+
+## Choose an installation method
+
+<Tabs groupId="install-method">
+  <TabItem value="brew" label="Homebrew">
+
+Install from the Arm Homebrew tap:
+
+```sh
+brew install arm/topo/topo
+```
+
+You can use Homebrew on macOS and supported Linux distributions. See [Homebrew](https://brew.sh/) for installation instructions.
+
+  </TabItem>
+
+  <TabItem value="linux-mac" label="Linux and macOS script">
+
+The installer supports AMD64 and Arm64 hosts. It requires `tar` and the `install` utility. By default, it installs `topo` in `$HOME/.local/bin`.
+
+If your security policy requires source review, review the [current installer script in the Topo repository](https://github.com/arm/topo/blob/main/scripts/install.sh) before you run it.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
+```
+
+If `$HOME/.local/bin` is not on `PATH`, run the shell-specific command printed by the installer. Then open a new terminal.
+
+  </TabItem>
+  <TabItem value="windows" label="Windows script">
+
+The installer requires PowerShell 5.1 or later. If your security policy requires source review, review the [current installer script in the Topo repository](https://github.com/arm/topo/blob/main/scripts/install.ps1) before you run it.
+
+```powershell
+irm https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.ps1 | iex
+```
+
+The installer adds its default installation directory to your user `PATH`. Open a new terminal to make the updated `PATH` available to other applications.
+
+  </TabItem>
+</Tabs>
+
+## Verify the installation
+
+Print the installed version:
+
+```sh
+topo --version
+```
+
+Check the host dependencies:
+
+```sh
+topo health
+```
+
+Fix every host error before you continue. For some problems, the report provides a command that applies the fix.
+
+## Install a specific version or use a custom directory
+
+The Linux and macOS installer supports `--version` and `--path`. To use these options, download the script before you run it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh -o install-topo.sh
+sh install-topo.sh --version v4.0.0 --path "$HOME/bin"
+rm install-topo.sh
+```
+
+The Windows installer provides equivalent `-Version` and `-Path` parameters:
+
+```powershell
+$installer = irm https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.ps1
+& ([scriptblock]::Create($installer)) -Version v4.0.0 -Path C:\tools\topo
+```
+
+Replace `v4.0.0` with the required release version. If you use a custom directory, add it to `PATH` manually.
+
+## Upgrade Topo
+
+Use the method that matches how you installed Topo.
+
+<Tabs groupId="upgrade-method">
+  <TabItem value="managed" label="Install script or direct binary">
+
+Upgrade to the latest release:
+
+```sh
+topo upgrade
+```
+
+To install a specific version, run the installer again with its version option.
+
+  </TabItem>
+  <TabItem value="homebrew" label="Homebrew">
+
+Update Homebrew and upgrade Topo:
+
+```sh
+brew update
+brew upgrade topo
+```
+
+  </TabItem>
+</Tabs>
+
+Verify the upgrade:
+
+```sh
+topo --version
+topo health
+```
+
+## Uninstall Topo
+
+Choose the instructions that match the installation method.
+
+<Tabs groupId="uninstall-method">
+  <TabItem value="linux-mac" label="Linux and macOS script">
+
+Remove the binary from the default installation directory:
+
+```sh
+rm "$HOME/.local/bin/topo"
+```
+
+If you selected a custom directory, remove `topo` from that directory instead. Remove any `PATH` entry that you added only for Topo.
+
+  </TabItem>
+  <TabItem value="homebrew" label="Homebrew">
+
+```sh
+brew uninstall topo
+```
+
+  </TabItem>
+  <TabItem value="windows" label="Windows">
+
+Delete the default installation directory, `%LOCALAPPDATA%\Programs\topo`. If you selected a custom directory, delete `topo.exe` from that directory instead. Remove the installation directory from your user `PATH`.
+
+  </TabItem>
+</Tabs>
+
+Uninstalling Topo does not remove:
+
+- Cloned project directories
+- Containers or images on a target
+- The `topo-registry` container on the host
+- SSH keys or configuration entries created by `topo setup-keys`
+
+Remove the local registry container if you no longer need it:
+
+```sh
+docker rm -f topo-registry
+```
+
+Other Topo installations or target aliases might use entries in `~/.ssh/config` or `~/.ssh/topo_config`, or keys named `~/.ssh/id_ed25519_topo_*`. Remove only unused entries and keys.
+
+## Next steps
+
+Follow [Getting started](getting-started.md) to check a target and deploy an example project.

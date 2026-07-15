@@ -1,69 +1,14 @@
-import Tabs from "@theme/Tabs";
-import TabItem from "@theme/TabItem";
-
 # Getting started
 
-## Prerequisites
-
-Install the following tools on the host where you run `topo`:
-
-- [Docker](https://docs.docker.com/get-docker/)
-- curl
-- OpenSSH client
-
-The target must:
-
-- Be reachable through SSH
-- Run Linux on AArch64 (`linux/arm64`)
-- Docker
-
-:::info
-
-The host and target can be the same AArch64 Linux system (`linux/arm64`). In this configuration, use `--target localhost`.
-
-:::
-
-## Install Topo
-
-Choose an installation method:
-
-<Tabs groupId="install-method">
-  <TabItem value="linux-mac" label="Linux and macOS script">
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.sh | sh
-```
-
-  </TabItem>
-  <TabItem value="brew" label="Homebrew">
-
-```sh
-brew install arm/topo/topo
-```
-
-  </TabItem>
-  <TabItem value="windows" label="Windows">
-
-```powershell
-irm https://raw.githubusercontent.com/arm/topo/refs/heads/main/scripts/install.ps1 | iex
-```
-
-  </TabItem>
-</Tabs>
-
-Verify the installation:
-
-```sh
-topo --version
-```
-
-## Check the host and target
+After you [install Topo](install.mdx), use this guide to check a target, discover a compatible project, and deploy the project.
 
 :::note
 
 The commands in this guide use `pi@raspberrypi` as the target. Replace this value with the SSH destination for your target. Topo accepts an SSH alias, a value such as `user@host`, or a URL such as `ssh://user@host:2222`.
 
 :::
+
+## Check the host and target
 
 Run the health checks:
 
