@@ -9,6 +9,7 @@ import (
 // FakeResult holds the canned response for a command.
 type FakeResult struct {
 	Output string
+	Stderr string
 	Err    error
 }
 
@@ -20,15 +21,15 @@ type Fake struct {
 	Commands        map[string]FakeResult
 }
 
-func (f *Fake) Run(ctx context.Context, command string) (string, error) {
+func (f *Fake) Run(_ context.Context, command string) (string, string, error) {
 	res, ok := f.Commands[command]
 	if !ok {
-		return "", fmt.Errorf("unexpected command: %s", command)
+		return "", "", fmt.Errorf("unexpected command: %s", command)
 	}
-	return res.Output, res.Err
+	return res.Output, res.Stderr, res.Err
 }
 
-func (f *Fake) RunWithStdin(ctx context.Context, command string, stdin []byte) (string, error) {
+func (f *Fake) RunWithStdin(ctx context.Context, command string, stdin []byte) (string, string, error) {
 	return f.Run(ctx, command)
 }
 

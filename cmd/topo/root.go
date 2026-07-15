@@ -16,8 +16,24 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:           "topo",
-	Short:         "Topo CLI",
+	Use:   "topo",
+	Short: "Discover and deploy containerised software to Arm hardware over SSH",
+	Long: `Topo discovers and deploys containerised software to Arm hardware over SSH.
+
+Use Topo to find hardware-matched Topo Projects, configure them, and deploy
+them as standard Docker Compose projects. You can also deploy existing Compose
+projects with fast, incremental builds.
+
+Topo runs on a host and deploys applications to a target.
+
+The host is the system where the Topo CLI runs. The target is the Linux/Arm64
+system where deployments run, reached over SSH.
+
+Commands requiring a target accept an SSH destination (for example,
+user@example.local) with --target  or the TOPO_TARGET environment variable.
+
+The host and target may be the same system; use --target localhost in that
+case.`,
 	Version:       fmt.Sprintf("%s (commit: %s)", version.Version, version.GitCommit),
 	SilenceErrors: true,
 	SilenceUsage:  true,
@@ -94,7 +110,7 @@ func lookupTarget(cmd *cobra.Command) (string, bool) {
 func requireTarget(cmd *cobra.Command) (string, error) {
 	t, exists := lookupTarget(cmd)
 	if !exists {
-		return "", fmt.Errorf("target not specified: provide --target or set TOPO_TARGET env var")
+		return "", fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
 	}
 	return t, nil
 }

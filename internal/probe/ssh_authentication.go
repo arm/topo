@@ -17,7 +17,7 @@ var (
 
 // SSHAuthentication verifies SSH connectivity by attempting public key authentication.
 func SSHAuthentication(ctx context.Context, r *runner.SSH, acceptNewHostKeys bool) error {
-	_, err := r.RunWithArgs(ctx, "true", sshAuthArgs(acceptNewHostKeys)...)
+	_, _, err := r.RunWithArgs(ctx, "true", sshAuthArgs(acceptNewHostKeys)...)
 	if err == nil {
 		return nil
 	}
