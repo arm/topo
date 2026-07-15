@@ -94,18 +94,6 @@ type CheckRemoteForwardNotExposed struct {
 	Port       string
 }
 
-type inconclusiveRemotePortCheckError struct {
-	err error
-}
-
-func (e *inconclusiveRemotePortCheckError) Error() string {
-	return e.err.Error()
-}
-
-func (e *inconclusiveRemotePortCheckError) Unwrap() error {
-	return e.err
-}
-
 // Checks whether the RemoteForward port exposes the registry to the target's
 // network, rather than being limited to target loopback. This can happen when
 // sshd permits non-loopback remote forwards, such as GatewayPorts.
@@ -124,46 +112,50 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 
 	host, err := ResolveHostName(ct.TargetDest)
 	if err != nil {
-		return remotePortCheckErrorWithSuggestion(&inconclusiveRemotePortCheckError{err: err}, ct.Port)
-	}
-	if err := checkRemotePortNotListening(host, ct.Port); err != nil {
 		return remotePortCheckErrorWithSuggestion(err, ct.Port)
+	}
+	err, inconclusive := checkRemotePortNotListening(host, ct.Port)
+	if inconclusive {
+		return remotePortCheckErrorWithSuggestion(err, ct.Port)
+	}
+	if err != nil {
+		return err
 	}
 	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
 	return nil
 }
 
-func checkRemotePortNotListening(host, port string) error {
+func checkRemotePortNotListening(host, port string) (error, bool) {
 	address := net.JoinHostPort(host, port)
 	connection, err := net.DialTimeout("tcp", address, 5*time.Second)
 	if err == nil {
 		if closeErr := connection.Close(); closeErr != nil {
-			return fmt.Errorf("remote port %s accepted a TCP connection, but closing the connection failed: %w", address, closeErr)
+			return fmt.Errorf("remote port %s accepted a TCP connection, but closing the connection failed: %w", address, closeErr), false
 		}
-		return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port)
+		return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port), false
 	}
 	return classifyRemotePortError(host, address, err)
 }
 
-func classifyRemotePortError(host, address string, err error) error {
+func classifyRemotePortError(host, address string, err error) (error, bool) {
 	if err == nil {
 		panic("classifyRemotePortError requires a non-nil error")
 	}
 	if isConnectionRefused(err) {
-		return nil
+		return nil, false
 	}
 
 	var networkError net.Error
 	if errors.As(err, &networkError) && networkError.Timeout() {
-		return &inconclusiveRemotePortCheckError{err: fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)}
+		return fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err), true
 	}
 
 	var dnsError *net.DNSError
 	if errors.As(err, &dnsError) {
-		return &inconclusiveRemotePortCheckError{err: fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)}
+		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err), true
 	}
 
-	return &inconclusiveRemotePortCheckError{err: fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)}
+	return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err), true
 }
 
 func isConnectionRefused(err error) bool {
@@ -175,10 +167,6 @@ func isConnectionRefused(err error) bool {
 }
 
 func remotePortCheckErrorWithSuggestion(err error, port string) error {
-	var inconclusiveError *inconclusiveRemotePortCheckError
-	if !errors.As(err, &inconclusiveError) {
-		return err
-	}
 	return fmt.Errorf("cannot conclusively rule out network access to registry port %s because the exposure check did not complete: %w; retry after resolving the connectivity issue, or use `--skip-remote-port-check` if you understand the security risk", port, err)
 }
 
