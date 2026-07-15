@@ -150,11 +150,7 @@ func resolveSkipRemotePortCheck(cmd *cobra.Command) bool {
 		return env.IsVarTruthy(skipRemotePortCheckEnvVar)
 	}
 
-	value, err := cmd.Flags().GetBool("skip-remote-port-check")
-	if err != nil {
-		panic("internal error: skip-remote-port-check flag not registered: " + err.Error())
-	}
-	return value
+	return env.IsVarTruthy(skipRemotePortCheckEnvVar)
 }
 
 func init() {
