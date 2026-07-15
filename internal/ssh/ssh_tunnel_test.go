@@ -159,8 +159,7 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 
 			err = check.Run(io.Discard)
 
-			assert.EqualError(t, err, fmt.Sprintf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port))
-			assert.NotContains(t, err.Error(), "--skip-remote-port-check")
+			assert.EqualError(t, err, fmt.Sprintf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", port))
 			assert.NoError(t, <-connectionClosed)
 		})
 	})

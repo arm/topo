@@ -95,7 +95,7 @@ type CheckRemoteForwardNotExposed struct {
 
 // Checks whether the RemoteForward port exposes the registry to the target's
 // network, rather than being limited to target loopback. This can happen when
-// sshd permits non-loopback remote forwards, such as GatewayPorts.
+// the SSH server permits non-loopback remote forwards.
 func NewCheckRemoteForwardNotExposed(targetDest Destination, port string) *CheckRemoteForwardNotExposed {
 	return &CheckRemoteForwardNotExposed{TargetDest: targetDest, Port: port}
 }
@@ -132,7 +132,7 @@ func checkRemotePortNotListening(host, port string) (error, bool) {
 	cmd.Stderr = io.Discard
 	err := cmd.Run()
 	if err == nil || remoteIP.Len() > 0 {
-		return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", port), false
+		return fmt.Errorf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", port), false
 	}
 
 	var exitError *exec.ExitError
