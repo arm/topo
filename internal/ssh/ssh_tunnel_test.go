@@ -125,7 +125,7 @@ func TestCheckRemoteForwardNotExposed(t *testing.T) {
 			err := check.Run(io.Discard)
 
 			assert.ErrorContains(t, err, "cannot conclusively rule out network access to registry port 12345")
-			assert.ErrorContains(t, err, `could not resolve SSH hostname for "ssh://"`)
+			assert.ErrorContains(t, err, `could not resolve SSH configuration for "ssh://"`)
 			assert.ErrorContains(t, err, "use `--skip-remote-port-check` if you understand the security risk")
 		})
 
