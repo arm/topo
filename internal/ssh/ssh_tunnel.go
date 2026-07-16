@@ -137,13 +137,16 @@ func ensureRemotePortNotListening(host, port string) error {
 	}
 
 	var exitError *exec.ExitError
-	if errors.As(err, &exitError) && exitError.ExitCode() == 7 {
+	if !errors.As(err, &exitError) {
+		return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
+	}
+	if exitError.ExitCode() == 7 {
 		return nil
 	}
-	if errors.As(err, &exitError) && exitError.ExitCode() == 28 {
+	if exitError.ExitCode() == 28 {
 		return fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
 	}
-	if errors.As(err, &exitError) && exitError.ExitCode() == 6 {
+	if exitError.ExitCode() == 6 {
 		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
 	}
 
