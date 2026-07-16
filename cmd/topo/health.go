@@ -17,7 +17,10 @@ const (
 	skipVersionChecksFlag = "skip-version-checks"
 )
 
-const skipVersionChecksEnvVar = "TOPO_SKIP_VERSION_CHECKS"
+const (
+	skipVersionChecksEnvVar  = "TOPO_SKIP_VERSION_CHECKS"
+	disableSelfUpgradeEnvVar = "TOPO_DISABLE_SELF_UPGRADE"
+)
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
