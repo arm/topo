@@ -47,8 +47,8 @@ var upgradeCmd = &cobra.Command{
 
 func init() {
 	binPath, err := upgrade.CurrentBinaryPath()
-	if err == nil {
-		upgradeCmd.Hidden = !upgrade.IsBinaryManagedByUs(binPath)
+	if err == nil && !upgrade.IsBinaryManagedByUs(binPath) {
+		return
 	}
 	addTimeoutFlag(upgradeCmd, 0)
 	rootCmd.AddCommand(upgradeCmd)
