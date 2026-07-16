@@ -55,7 +55,6 @@ func init() {
 }
 
 func isSelfUpgradeDisabled() bool {
-	const disableSelfUpgradeEnvVar = "TOPO_DISABLE_SELF_UPGRADE"
 	if env.IsVarTruthy(disableSelfUpgradeEnvVar) {
 		return true
 	}
