@@ -148,6 +148,21 @@ func TestNewDeployment(t *testing.T) {
 		)
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("excludes the remote port check when skipped", func(t *testing.T) {
+		remoteDest := ssh.NewDestination("user@remote")
+		opts := deploy.DeployOptions{
+			TargetHost: remoteDest,
+			Registry: &deploy.RegistryConfig{
+				SkipRemotePortCheck: true,
+			},
+		}
+
+		got, _ := deploy.NewDeployment(composeFile, opts)
+
+		_, remotePortCheck, _ := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
+		assert.NotContains(t, got, remotePortCheck)
+	})
 }
 
 func TestDeployment(t *testing.T) {

@@ -2,12 +2,15 @@ package ssh
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
@@ -92,7 +95,7 @@ type CheckRemoteForwardNotExposed struct {
 
 // Checks whether the RemoteForward port exposes the registry to the target's
 // network, rather than being limited to target loopback. This can happen when
-// sshd permits non-loopback remote forwards, such as GatewayPorts.
+// the SSH server permits non-loopback remote forwards.
 func NewCheckRemoteForwardNotExposed(targetDest Destination, port string) *CheckRemoteForwardNotExposed {
 	return &CheckRemoteForwardNotExposed{TargetDest: targetDest, Port: port}
 }
@@ -106,27 +109,53 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 		return nil
 	}
 
-	host := NewConfig(ct.TargetDest).HostName
-	if RemotePortRefusedConnection(host, ct.Port) {
-		_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
-		return nil
+	host, err := resolveHostName(ct.TargetDest)
+	if err != nil {
+		return remotePortCheckErrorWithSuggestion(err, ct.Port)
 	}
-	return fmt.Errorf("remote sshd might be exposing the forwarded port %s on its network (likely GatewayPorts=yes); the local registry may be reachable without SSH auth", ct.Port)
+	listening, err := isRemotePortListening(host, ct.Port)
+	if err != nil {
+		return remotePortCheckErrorWithSuggestion(err, ct.Port)
+	}
+	if listening {
+		return fmt.Errorf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", ct.Port)
+	}
+	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
+	return nil
 }
 
-func RemotePortRefusedConnection(host, port string) bool {
-	cmd := exec.Command("curl", fmt.Sprintf("%s:%s", host, port), "--max-time", "5")
-	cmd.Stdout = io.Discard
+func isRemotePortListening(host, port string) (bool, error) {
+	address := net.JoinHostPort(host, port)
+	var remoteIP strings.Builder
+	// Release binaries use Go's resolver because CGO is disabled. Use curl so
+	// host resolution matches OpenSSH for mDNS, NSS, and split-DNS configurations.
+	// remote_ip detects a connection even when HTTP fails, noproxy ensures the
+	// connection is direct, and silent suppresses curl's progress and errors.
+	cmd := exec.Command("curl", "http://"+address, "--max-time", "5", "--noproxy", "*", "--output", os.DevNull, "--silent", "--write-out", "%{remote_ip}")
+	cmd.Stdout = &remoteIP
 	cmd.Stderr = io.Discard
-	_ = cmd.Run()
-
-	// Only curl exit 7 ("Failed to connect to host") proves no TCP listener
-	// answered. Anything else — connection succeeded, DNS failure, timeout,
-	// curl missing — leaves us unable to certify the port is not not listening.
-	if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 7 {
-		return true
+	err := cmd.Run()
+	if err == nil || remoteIP.Len() > 0 {
+		return true, nil
 	}
-	return false
+
+	exitError, ok := errors.AsType[*exec.ExitError](err)
+	if ok {
+		switch exitError.ExitCode() {
+		case 7:
+			return false, nil
+		case 28:
+			return false, fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
+		case 6:
+			return false, fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
+		}
+	}
+
+	return false, fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
+}
+
+func remotePortCheckErrorWithSuggestion(err error, port string) error {
+	return fmt.Errorf("cannot conclusively rule out network access to registry port %s because the exposure check did not complete: %w; retry after resolving the connectivity issue, or use `--skip-remote-port-check` if you understand the security risk", port, err)
 }
 
 type SSHTunnelStop struct {
