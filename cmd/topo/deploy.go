@@ -146,8 +146,9 @@ func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
 }
 
 func resolveSkipRemotePortCheck(cmd *cobra.Command) bool {
-	if !cmd.Flags().Changed("skip-remote-port-check") {
-		return env.IsVarTruthy(skipRemotePortCheckEnvVar)
+	flagValue, _ := cmd.Flags().GetBool("skip-remote-port-check")
+	if cmd.Flags().Changed("skip-remote-port-check") {
+		return flagValue
 	}
 
 	return env.IsVarTruthy(skipRemotePortCheckEnvVar)
