@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/upgrade"
 	"github.com/arm/topo/internal/version"
@@ -46,10 +47,19 @@ var upgradeCmd = &cobra.Command{
 }
 
 func init() {
-	binPath, err := upgrade.CurrentBinaryPath()
-	if err == nil && !upgrade.IsBinaryManagedByUs(binPath) {
+	if isSelfUpgradeDisabled() {
 		return
 	}
 	addTimeoutFlag(upgradeCmd, 0)
 	rootCmd.AddCommand(upgradeCmd)
+}
+
+func isSelfUpgradeDisabled() bool {
+	const disableSelfUpgradeEnvVar = "TOPO_DISABLE_SELF_UPGRADE"
+	if env.IsVarTruthy(disableSelfUpgradeEnvVar) {
+		return true
+	}
+
+	binPath, err := upgrade.CurrentBinaryPath()
+	return err == nil && !upgrade.IsBinaryManagedByUs(binPath)
 }
