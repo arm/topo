@@ -128,6 +128,10 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 func ensureRemotePortNotListening(host, port string) error {
 	address := net.JoinHostPort(host, port)
 	var remoteIP strings.Builder
+	// Release binaries use Go's resolver because CGO is disabled. Use curl so
+	// host resolution matches OpenSSH for mDNS, NSS, and split-DNS configurations.
+	// remote_ip detects a connection even when HTTP fails, noproxy ensures the
+	// connection is direct, and silent suppresses curl's progress and errors.
 	cmd := exec.Command("curl", "http://"+address, "--max-time", "5", "--noproxy", "*", "--output", os.DevNull, "--silent", "--write-out", "%{remote_ip}")
 	cmd.Stdout = &remoteIP
 	cmd.Stderr = io.Discard
