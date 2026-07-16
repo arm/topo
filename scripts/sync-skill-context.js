@@ -22,7 +22,12 @@ const shared_context_syncs = {
 
 const specific_syncs = [
   {
-    source: path.join(root, "docs", "04-build-optimization.md"),
+    source: path.join(
+      root,
+      "docs",
+      "project-specification",
+      "04-build-optimization.md",
+    ),
     destinations: [
       path.join(
         skills_dir,

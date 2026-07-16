@@ -14,7 +14,7 @@ Already have a Compose project? Topo gives you a fast, incremental build-deploy 
 
 **You have a heterogeneous device and want to use all of it.** Your board has remote processors like a Cortex-M that normally need separate toolchains and manual firmware loading. Topo and [Remoteproc Runtime](https://github.com/arm/remoteproc-runtime) let you orchestrate the whole device as one Docker Compose project.
 
-Not sure what these terms mean? The [glossary](docs/glossary.md) defines Topo's core concepts.
+Not sure what these terms mean? The [glossary](docs/introduction/glossary.md) defines Topo's core concepts.
 
 ## What does it look like?
 
