@@ -1,6 +1,4 @@
-# Overview
-
-A Topo Project is a repository that defines one or more container services using the [Compose Spec](https://compose-spec.io) with Topo-specific metadata.
+# Project Overview
 
 ## Requirements
 
