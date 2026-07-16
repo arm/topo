@@ -1,0 +1,31 @@
+name: Deploy to staging
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: AWS GitHub OIDC Login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::529607359382:role/Proj-GHA-topo-docs-s3-upload
+          aws-region: eu-west-1
+
+      - name: Publish docs site
+        uses: ARM-software/docs-action/publish@v0.1.3
+        with:
+          docs-root: docs
+          site-id: topo
+          environment: staging
