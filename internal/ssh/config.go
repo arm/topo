@@ -22,7 +22,8 @@ func NewConfig(dest Destination) Config {
 	return NewConfigFromBytes(output)
 }
 
-func resolveHostName(dest Destination) (string, error) {
+// ResolveHostName resolves the SSH hostname for dest.
+func ResolveHostName(dest Destination) (string, error) {
 	output, err := readConfig(dest)
 	if err != nil {
 		return "", fmt.Errorf("could not resolve SSH configuration for %q: %w", dest.String(), err)

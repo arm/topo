@@ -2,15 +2,12 @@ package ssh
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/operation"
@@ -24,19 +21,17 @@ func ControlSocketPath(targetHost string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
 }
 
-func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation, operation.Operation) {
-	start := NewSSHTunnelStart(targetDest, port, useControlSockets)
+func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation) {
+	startTunnel := NewSSHTunnelStart(targetDest, port, useControlSockets)
 
-	securityCheck := NewCheckRemoteForwardNotExposed(targetDest, port)
-
-	var stop operation.Operation
+	var stopTunnel operation.Operation
 	if useControlSockets {
-		stop = NewSSHTunnelStop(targetDest)
+		stopTunnel = NewSSHTunnelStop(targetDest)
 	} else {
-		stop = NewSSHTunnelProcessStop(start)
+		stopTunnel = NewSSHTunnelProcessStop(startTunnel)
 	}
 
-	return start, securityCheck, stop
+	return startTunnel, stopTunnel
 }
 
 type SSHTunnelStart struct {
@@ -86,76 +81,6 @@ func (s *SSHTunnelStart) Run(w io.Writer) error {
 	}
 	_, _ = fmt.Fprintln(w, "Tunnel created")
 	return nil
-}
-
-type CheckRemoteForwardNotExposed struct {
-	TargetDest Destination
-	Port       string
-}
-
-// Checks whether the RemoteForward port exposes the registry to the target's
-// network, rather than being limited to target loopback. This can happen when
-// the SSH server permits non-loopback remote forwards.
-func NewCheckRemoteForwardNotExposed(targetDest Destination, port string) *CheckRemoteForwardNotExposed {
-	return &CheckRemoteForwardNotExposed{TargetDest: targetDest, Port: port}
-}
-
-func (ct *CheckRemoteForwardNotExposed) Description() string {
-	return "Check tunnel port is not exposed on remote network"
-}
-
-func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
-	if ct.TargetDest.IsLocalhost() {
-		return nil
-	}
-
-	host, err := resolveHostName(ct.TargetDest)
-	if err != nil {
-		return remotePortCheckErrorWithSuggestion(err, ct.Port)
-	}
-	listening, err := isRemotePortListening(host, ct.Port)
-	if err != nil {
-		return remotePortCheckErrorWithSuggestion(err, ct.Port)
-	}
-	if listening {
-		return fmt.Errorf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", ct.Port)
-	}
-	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
-	return nil
-}
-
-func isRemotePortListening(host, port string) (bool, error) {
-	address := net.JoinHostPort(host, port)
-	var remoteIP strings.Builder
-	// Release binaries use Go's resolver because CGO is disabled. Use curl so
-	// host resolution matches OpenSSH for mDNS, NSS, and split-DNS configurations.
-	// remote_ip detects a connection even when HTTP fails, noproxy ensures the
-	// connection is direct, and silent suppresses curl's progress and errors.
-	cmd := exec.Command("curl", "http://"+address, "--max-time", "5", "--noproxy", "*", "--output", os.DevNull, "--silent", "--write-out", "%{remote_ip}")
-	cmd.Stdout = &remoteIP
-	cmd.Stderr = io.Discard
-	err := cmd.Run()
-	if err == nil || remoteIP.Len() > 0 {
-		return true, nil
-	}
-
-	exitError, ok := errors.AsType[*exec.ExitError](err)
-	if ok {
-		switch exitError.ExitCode() {
-		case 7:
-			return false, nil
-		case 28:
-			return false, fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
-		case 6:
-			return false, fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
-		}
-	}
-
-	return false, fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
-}
-
-func remotePortCheckErrorWithSuggestion(err error, port string) error {
-	return fmt.Errorf("cannot conclusively rule out network access to registry port %s because the exposure check did not complete: %w; retry after resolving the connectivity issue, or use `--skip-remote-port-check` if you understand the security risk", port, err)
 }
 
 type SSHTunnelStop struct {

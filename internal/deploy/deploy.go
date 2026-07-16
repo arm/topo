@@ -43,15 +43,15 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 	var cleanup goperation.Operation
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry != nil {
-			start, securityCheck, stop := ssh.NewSSHTunnel(opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
-			cleanup = stop
+			startTunnel, stopTunnel := ssh.NewSSHTunnel(opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
+			cleanup = stopTunnel
 			ops = append(ops, operation.NewRunRegistry(opts.Registry.Port)...)
-			ops = append(ops, start)
+			ops = append(ops, startTunnel)
 			if !opts.Registry.SkipRemotePortCheck {
-				ops = append(ops, securityCheck)
+				ops = append(ops, operation.NewRegistryTunnelExposureCheck(opts.TargetHost, opts.Registry.Port))
 			}
 			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, targetHost, opts.Registry.Port))
-			ops = append(ops, stop)
+			ops = append(ops, stopTunnel)
 		} else {
 			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, targetHost))
 		}
