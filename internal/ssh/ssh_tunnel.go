@@ -113,19 +113,18 @@ func (ct *CheckRemoteForwardNotExposed) Run(w io.Writer) error {
 	if err != nil {
 		return remotePortCheckErrorWithSuggestion(err, ct.Port)
 	}
-	err = ensureRemotePortNotListening(host, ct.Port)
+	listening, err := isRemotePortListening(host, ct.Port)
 	if err != nil {
-		var exposedError *remotePortExposedError
-		if errors.As(err, &exposedError) {
-			return err
-		}
 		return remotePortCheckErrorWithSuggestion(err, ct.Port)
+	}
+	if listening {
+		return fmt.Errorf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", ct.Port)
 	}
 	_, _ = fmt.Fprintf(w, "Port %s is bound to remote loopback only\n", ct.Port)
 	return nil
 }
 
-func ensureRemotePortNotListening(host, port string) error {
+func isRemotePortListening(host, port string) (bool, error) {
 	address := net.JoinHostPort(host, port)
 	var remoteIP strings.Builder
 	// Release binaries use Go's resolver because CGO is disabled. Use curl so
@@ -137,32 +136,22 @@ func ensureRemotePortNotListening(host, port string) error {
 	cmd.Stderr = io.Discard
 	err := cmd.Run()
 	if err == nil || remoteIP.Len() > 0 {
-		return &remotePortExposedError{port: port}
+		return true, nil
 	}
 
-	var exitError *exec.ExitError
-	if !errors.As(err, &exitError) {
-		return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
-	}
-	if exitError.ExitCode() == 7 {
-		return nil
-	}
-	if exitError.ExitCode() == 28 {
-		return fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
-	}
-	if exitError.ExitCode() == 6 {
-		return fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
+	exitError, ok := errors.AsType[*exec.ExitError](err)
+	if ok {
+		switch exitError.ExitCode() {
+		case 7:
+			return false, nil
+		case 28:
+			return false, fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
+		case 6:
+			return false, fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
+		}
 	}
 
-	return fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
-}
-
-type remotePortExposedError struct {
-	port string
-}
-
-func (err *remotePortExposedError) Error() string {
-	return fmt.Sprintf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", err.port)
+	return false, fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
 }
 
 func remotePortCheckErrorWithSuggestion(err error, port string) error {
