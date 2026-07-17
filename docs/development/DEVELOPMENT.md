@@ -44,13 +44,13 @@ Some tests have a dependency on docker. Test container images are built automati
 
 #### Golden Files
 
-A subset of the end-to-end tests use golden files to compare CLI output with known output. These tests fail whenever the output changes. An output change is not necessarily breaking. Review the [breaking change policy](breaking-changes.md) before accepting the change.
-
-Update the golden files after confirming that the new output is compatible or that the change is set as breaking:
+A subset of our e2e tests rely on "golden files" to assert CLI output against a known good state. These tests will fail when the CLI output has changed and can be updated in place with the `UPDATE_GOLDEN` environment variable when running the tests.
 
 ```
 UPDATE_GOLDEN=1 go test ./e2e/...
 ```
+
+While an output change is not necessarily breaking, it's worth reviewing the [breaking change policy](breaking-changes.md) and ensuring the change is marked as breaking/non-breaking appropriately before approving.
 
 ## Skills
 
