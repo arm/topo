@@ -22,7 +22,6 @@ func NewConfig(dest Destination) Config {
 	return NewConfigFromBytes(output)
 }
 
-// ResolveHostName resolves the SSH hostname for dest.
 func ResolveHostName(dest Destination) (string, error) {
 	output, err := readConfig(dest)
 	if err != nil {
