@@ -15,7 +15,7 @@ Use Topo vocabulary precisely:
 Refresh spec-sensitive context at runtime before making or validating Project changes. Authoritative references, in order:
 
 - Published Topo Project Specification schema: `https://raw.githubusercontent.com/arm/topo/refs/heads/main/docs/project-specification/schema/topo-project-specification.json`.
-- Published Topo Project Specification docs: `https://github.com/arm/topo/docs/project-specification`, especially `README.md`, `00-overview.md`, `01-authoring-projects.md`, `02-project-configuration.md`, and `03-schema.md`.
+- Published Topo Project Specification docs: `https://github.com/arm/topo/docs/project-specification`, especially `README.md`, `01-authoring-projects.md`, `02-project-configuration.md`, and `03-schema.md`.
 - Published Topo glossary for domain terms: `https://github.com/arm/topo/blob/main/docs/introduction/glossary.md`.
 - Compose Spec for standard Compose semantics. Do not invent non-standard Compose keys except the root-level `x-topo` extension.
 

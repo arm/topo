@@ -1,4 +1,8 @@
-# Project Specification
+---
+sidebar_position: 0
+---
+
+# Overview
 
 A Topo Project is a containerized sample project for Arm-based Linux systems. At minimum, it is a directory containing a `compose.yaml`, Dockerfiles, and source code, with an `x-topo` metadata block that describes what the Project does, what hardware features it requires, and what parameters a user can configure.
 
@@ -35,12 +39,11 @@ Because this is valid Compose, any Project can be run with plain `docker compose
 ## Specification
 
 - Human-readable spec:
-  - [Overview](00-overview.md)
   - [Authoring Topo Projects](01-authoring-projects.md)
   - [Project Configuration](02-project-configuration.md)
   - [Schema Compliance](03-schema.md)
 - Machine-readable schema:
-  - [`schema/topo-project-specification.json`](schema/topo-project-specification.json)
+  - [`schema/topo-project-specification.json`](https://github.com/arm/topo/blob/main/docs/project-specification/schema/topo-project-specification.json)
 
 ## Discover Topo Projects
 
