@@ -9,13 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/operation"
 )
-
-const TunnelPIDPlaceholder = "<ssh tunnel pid>"
 
 func ControlSocketPath(targetHost string) string {
 	hash := sha256.Sum256([]byte(targetHost))
@@ -114,145 +110,5 @@ func killCommand(cmd *exec.Cmd) error {
 			return fmt.Errorf("wait for process %d: %w", pid, err)
 		}
 	}
-	return nil
-}
-
-func NewSSHTunnel(targetDest Destination, port string, useControlSockets bool) (operation.Operation, operation.Operation) {
-	startTunnel := NewSSHTunnelStart(targetDest, port, useControlSockets)
-
-	var stopTunnel operation.Operation
-	if useControlSockets {
-		stopTunnel = NewSSHTunnelStop(targetDest)
-	} else {
-		stopTunnel = NewSSHTunnelProcessStop(startTunnel)
-	}
-
-	return startTunnel, stopTunnel
-}
-
-type SSHTunnelStart struct {
-	TargetDest        Destination
-	UseControlSockets bool
-	Port              string
-	Process           *os.Process
-}
-
-func NewSSHTunnelStart(targetDest Destination, port string, useControlSockets bool) *SSHTunnelStart {
-	return &SSHTunnelStart{TargetDest: targetDest, Port: port, UseControlSockets: useControlSockets}
-}
-
-func (s *SSHTunnelStart) Description() string {
-	return "Open registry SSH tunnel"
-}
-
-func (s *SSHTunnelStart) Command() *exec.Cmd {
-	args := []string{"ssh", "-N", "-o", "ExitOnForwardFailure=yes"}
-	if s.UseControlSockets {
-		args = append(args,
-			"-fMS", ControlSocketPath(s.TargetDest.String()),
-		)
-	}
-	args = append(args,
-		"-R", fmt.Sprintf("127.0.0.1:%s:127.0.0.1:%s", s.Port, s.Port),
-		s.TargetDest.String(),
-	)
-	// #nosec -- arguments are validated
-	return exec.Command(args[0], args[1:]...)
-}
-
-func (s *SSHTunnelStart) Run(w io.Writer) error {
-	cmd := s.Command()
-	cmd.Stdout = w
-	cmd.Stderr = w
-	run := cmd.Start
-	if s.UseControlSockets {
-		run = cmd.Run
-	}
-	if err := run(); err != nil {
-		formattedError := command.FormatError(cmd.Args, err)
-		return fmt.Errorf("failed to open ssh tunnel: %w - ensure port %s is free or specify a different one with `--registry-port`", formattedError, s.Port)
-	}
-	if cmd.Process != nil {
-		s.Process = cmd.Process
-	}
-	_, _ = fmt.Fprintln(w, "Tunnel created")
-	return nil
-}
-
-type SSHTunnelStop struct {
-	TargetDest Destination
-}
-
-func NewSSHTunnelStop(targetDest Destination) *SSHTunnelStop {
-	return &SSHTunnelStop{TargetDest: targetDest}
-}
-
-func (s *SSHTunnelStop) Description() string {
-	return "Close registry SSH tunnel"
-}
-
-func (s *SSHTunnelStop) Command() *exec.Cmd {
-	args := []string{"ssh"}
-	args = append(args,
-		"-S", ControlSocketPath(s.TargetDest.String()),
-		"-O", "exit",
-		s.TargetDest.String(),
-	)
-	// #nosec -- arguments are validated
-	return exec.Command(args[0], args[1:]...)
-}
-
-func (s *SSHTunnelStop) Run(w io.Writer) error {
-	if _, err := os.Stat(ControlSocketPath(s.TargetDest.String())); os.IsNotExist(err) {
-		return nil
-	}
-	cmd := s.Command()
-	cmd.Stdout = w
-	cmd.Stderr = w
-	if err := cmd.Run(); err != nil {
-		formattedError := command.FormatError(cmd.Args, err)
-		return fmt.Errorf("failed to close SSH tunnel: %w", formattedError)
-	}
-	return nil
-}
-
-type SSHTunnelProcessStop struct {
-	Start *SSHTunnelStart
-}
-
-func NewSSHTunnelProcessStop(start *SSHTunnelStart) *SSHTunnelProcessStop {
-	return &SSHTunnelProcessStop{Start: start}
-}
-
-func (s *SSHTunnelProcessStop) Description() string {
-	return "Close registry SSH tunnel"
-}
-
-func (s *SSHTunnelProcessStop) Command() *exec.Cmd {
-	pid := TunnelPIDPlaceholder
-	if s.Start != nil && s.Start.Process != nil {
-		pid = fmt.Sprintf("%d", s.Start.Process.Pid)
-	}
-
-	if runtime.GOOS == "windows" {
-		return exec.Command("taskkill", "/PID", pid, "/F")
-	}
-	return exec.Command("kill", "-9", pid)
-}
-
-func (s *SSHTunnelProcessStop) Run(w io.Writer) error {
-	if s.Start == nil || s.Start.Process == nil {
-		return nil
-	}
-
-	cmd := s.Command()
-	cmd.Stdout = w
-	cmd.Stderr = w
-	if err := cmd.Run(); err != nil {
-		pid := s.Start.Process.Pid
-		formattedError := command.FormatError(cmd.Args, err)
-		return fmt.Errorf("failed to stop ssh tunnel process (pid: %d): %w", pid, formattedError)
-	}
-	s.Start.Process = nil
 	return nil
 }
