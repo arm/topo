@@ -285,25 +285,13 @@ If the target SSH server prohibits reverse forwarding, use direct transfer:
 topo deploy --target <user@host> --no-registry
 ```
 
-### `remote sshd might be exposing the forwarded port`
+### `the remote SSH server is exposing forwarded registry port`
 
 Topo cannot verify that the registry port is bound to the loopback interface on the target. `GatewayPorts=yes` can expose the port to the target network. A Domain Name System (DNS) failure or network timeout during the safety probe can also produce an inconclusive result.
 
 1. Ask the target administrator to verify the SSH server forwarding policy.
 2. Do not expose the unauthenticated local registry to the target network.
 3. Use direct transfer while the policy or probe remains uncertain:
-
-   ```sh
-   topo deploy --target <user@host> --no-registry
-   ```
-
-### Transfer fails with `connection reset by peer`
-
-A busy host Docker daemon can drop registry push or pull connections.
-
-1. Stop or reduce other Docker workloads on the host.
-2. Retry the deployment.
-3. If it continues to fail, bypass the registry:
 
    ```sh
    topo deploy --target <user@host> --no-registry
