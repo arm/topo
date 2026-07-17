@@ -123,6 +123,10 @@ When you're done, stop the running services:
 topo stop --target [user@]host
 ```
 
+## Troubleshooting
+
+If installation, health checks, SSH, Docker, or deployments fail, see the [troubleshooting guide](docs/introduction/troubleshooting.mdx).
+
 ## Other Commands
 
 Run `topo <command> --help` for full usage details.

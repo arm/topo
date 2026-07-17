@@ -44,5 +44,6 @@ Later deployments reuse cached image layers where possible. This reduces the wor
 ## Next steps
 
 - [Install Topo](install.mdx) and follow [Getting started](getting-started.md) to deploy a web application to a target.
+- Use [Troubleshooting](troubleshooting.mdx) to resolve installation, health check, SSH, deployment, and runtime problems.
 - Use the [Topo extension for Visual Studio Code](https://github.com/arm/vscode-topo) for editor integration.
 - Review the [Topo Project Specification](../project-specification) to learn how Topo Projects are defined.

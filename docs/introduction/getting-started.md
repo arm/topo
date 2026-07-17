@@ -16,7 +16,7 @@ Run the health checks:
 topo health --target pi@raspberrypi
 ```
 
-Topo checks the required host tools, SSH connection, target container engine, and target hardware. Resolve all errors and review each warning. When available, the report includes commands to correct problems.
+Topo checks the required host tools, SSH connection, target container engine, and target hardware. Resolve all errors and review each warning. When available, the report includes commands to correct problems. If a check still reports an error, see [Troubleshooting](troubleshooting.mdx).
 
 If the target host key is unknown, confirm the target identity. Then run the suggested command to accept the key. If public-key authentication is not configured, run the following command after you accept the host key:
 
@@ -58,6 +58,8 @@ topo deploy --target pi@raspberrypi
 ```
 
 Topo builds or pulls the images on the host, transfers them to the target, and starts the services. Run commands that manage the deployment from the project directory. These commands use the `compose.yaml` file in the current directory.
+
+If the build, image transfer, or deployment fails, see [Troubleshooting](troubleshooting.mdx).
 
 ## Verify the deployment
 

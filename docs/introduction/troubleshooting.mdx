@@ -1,0 +1,330 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Troubleshooting
+
+:::note
+
+The commands on this page use `<user@host>` as the target. Replace this value with the SSH destination for your target.
+
+:::
+
+## Start with a health report
+
+Run the health check before you deploy:
+
+```sh
+topo health --target <user@host>
+```
+
+Use `localhost` only when the host is also the deployment target:
+
+```sh
+topo health --target localhost
+```
+
+For logs or automation, capture the JSON report:
+
+```sh
+topo health --target <user@host> --output json
+```
+
+Check every reported `status`. `topo health` can return exit status `0` when a health check reports an error. Do not rely only on the process exit status.
+
+## Fix installation problems
+
+### `topo: command not found`
+
+Choose the method that you used to install Topo.
+
+<Tabs groupId="install-method">
+  <TabItem value="brew" label="Homebrew">
+
+Confirm that Homebrew installed the Topo formula:
+
+```sh
+brew list --versions topo
+```
+
+If the command does not print a version, install the formula:
+
+```sh
+brew install arm/topo/topo
+```
+
+Link the binary and load the Homebrew environment into the current shell:
+
+```sh
+brew link topo
+eval "$(brew shellenv)"
+```
+
+Confirm that the shell can find Topo:
+
+```sh
+command -v topo
+topo --version
+```
+
+If `brew shellenv` fixes the problem, add `eval "$(brew shellenv)"` to the startup file for your shell. See the [Homebrew installation instructions](https://docs.brew.sh/Installation).
+
+  </TabItem>
+
+  <TabItem value="linux-mac" label="Linux and macOS script">
+
+The installer uses `$HOME/.local/bin` by default. If you selected a custom directory, use that directory in these steps.
+
+Confirm that the binary exists:
+
+```sh
+ls -l "$HOME/.local/bin/topo"
+```
+
+If the binary is missing, run the installer again. If the binary exists, add its directory to `PATH` by using the shell-specific command printed by the installer. Open a new terminal, then confirm the result:
+
+```sh
+command -v topo
+topo --version
+```
+
+  </TabItem>
+
+  <TabItem value="windows" label="Windows script">
+
+The installer uses `%LOCALAPPDATA%\Programs\topo` by default. In PowerShell, confirm that the binary exists and runs directly:
+
+```powershell
+$TopoPath = Join-Path $env:LOCALAPPDATA 'Programs\topo\topo.exe'
+Test-Path $TopoPath
+& $TopoPath --version
+```
+
+If you selected a custom directory with `-Path`, change `$TopoPath` to the location of `topo.exe`. If `Test-Path` returns `False`, run the installer again.
+
+If the binary runs directly, refresh `PATH` in the current PowerShell session:
+
+```powershell
+$env:Path = @(
+    [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    [Environment]::GetEnvironmentVariable('Path', 'User')
+) -join ';'
+Get-Command topo
+topo --version
+```
+
+If PowerShell still cannot find Topo, open **Edit environment variables for your account**. Select **Path** > **Edit** and add the directory that contains `topo.exe`. Restart the terminal and any parent application, such as Visual Studio Code.
+
+  </TabItem>
+</Tabs>
+
+## Fix Docker problems
+
+### Container Engine reports `docker not found in $PATH`
+
+Confirm Docker is available on both the host and target:
+
+```sh
+docker info
+ssh <user@host> 'command -v docker && docker info'
+```
+
+If either command fails:
+
+1. Install Docker on that system.
+2. Start the Docker daemon.
+3. Ensure the current host or target user can run Docker commands without `sudo`.
+4. Rerun `topo health`.
+
+## Fix target and SSH problems
+
+### `target not specified`
+
+A Topo target is an SSH destination, not a hardware model or architecture name.
+
+Pass the target for each command:
+
+```sh
+topo health --target <user@host>
+topo deploy --target <user@host>
+```
+
+Alternatively, set it for the current shell:
+
+```sh
+export TOPO_TARGET=<user@host>
+```
+
+Use an SSH alias when you need a custom user, port, key, proxy, or other SSH option.
+
+### `ssh host key is unknown`
+
+Verify the target fingerprint through a trusted channel. Then run the fix command from the health report:
+
+```sh
+topo health --target <user@host> --accept-new-host-keys
+```
+
+This option accepts new keys. It does not silently replace changed keys.
+
+### `ssh host key has changed`
+
+Do not remove the old key until you have confirmed why it changed. A changed key can indicate a reinstalled target, a reused address, or an attack.
+
+After you verify the new fingerprint, run the `ssh-keygen -R` command printed by `topo health`, then retry.
+
+### `ssh authentication failed` or `too many authentication failures`
+
+Set up a dedicated key for the target:
+
+```sh
+topo setup-keys --target <user@host>
+```
+
+The command creates a key, transfers the public key, and writes a Topo-managed SSH configuration with `IdentitiesOnly yes`.
+
+If Topo reports legacy SSH configuration entries, migrate them first:
+
+```sh
+topo migrate-ssh
+```
+
+If an SSH alias is already associated with another user, create a separate alias for each user in `~/.ssh/config`.
+
+### SSH times out, refuses the connection, or cannot resolve the host
+
+Test the same destination outside Topo:
+
+```sh
+ssh -vvv <user@host> true
+```
+
+Check the following configuration:
+
+- Host name
+- Network route
+- SSH service
+- Firewall
+- Configured SSH port
+
+For a slow target, increase the health timeout:
+
+```sh
+topo health --target <user@host> --timeout 30s
+```
+
+The `--timeout` option applies to health checks. `topo deploy` does not currently provide a timeout option.
+
+## Fix project and parameter problems
+
+### `compose file not found in current working directory`
+
+Run Topo from the project directory that contains `compose.yaml` or `compose.yml`. Alternatively, select the file explicitly:
+
+```sh
+topo deploy --file path/to/compose.yaml --target <user@host>
+```
+
+If both default files exist, Topo warns and selects `compose.yaml`.
+
+### `project is not ready for linux/arm64 deployments`
+
+For each standard Linux service, set:
+
+```yaml
+platform: linux/arm64
+```
+
+A service that sets `runtime: remoteproc` does not need that platform declaration. Topo rejects missing or incompatible platform values before deployment.
+
+Use `--skip-project-checks` only when you have independently verified that every affected image can run on the target.
+
+### `missing required parameters`
+
+Configure the project and supply the named values:
+
+```sh
+topo configure PARAMETER=VALUE
+```
+
+Run `topo configure` without arguments to answer interactive prompts. Use the parameter names printed in the error.
+
+## Fix registry and transfer problems
+
+Topo normally starts a local registry on port `12737`, opens an SSH reverse tunnel, and transfers images through that registry. `--no-registry` selects a slower direct save and load transfer.
+
+### The registry port is already in use
+
+Select a free port:
+
+```sh
+topo deploy --target <user@host> --registry-port 12738
+```
+
+Alternatively, set the `TOPO_PORT` environment variable to a free port.
+
+If Topo reports a registry port mismatch, a previous `topo-registry` container might still use another port. Inspect the container before you remove it:
+
+```sh
+docker ps -a --filter name=topo-registry
+docker port topo-registry
+```
+
+If it is a stale Topo registry, remove it and retry:
+
+```sh
+docker rm -f topo-registry
+```
+
+### `failed to open ssh tunnel`
+
+The selected port must be free on both ends of the reverse tunnel. Try another `--registry-port` value.
+
+If the target SSH server prohibits reverse forwarding, use direct transfer:
+
+```sh
+topo deploy --target <user@host> --no-registry
+```
+
+### `remote sshd might be exposing the forwarded port`
+
+Topo cannot verify that the registry port is bound to the loopback interface on the target. `GatewayPorts=yes` can expose the port to the target network. A Domain Name System (DNS) failure or network timeout during the safety probe can also produce an inconclusive result.
+
+1. Ask the target administrator to verify the SSH server forwarding policy.
+2. Do not expose the unauthenticated local registry to the target network.
+3. Use direct transfer while the policy or probe remains uncertain:
+
+   ```sh
+   topo deploy --target <user@host> --no-registry
+   ```
+
+### Transfer fails with `connection reset by peer`
+
+A busy host Docker daemon can drop registry push or pull connections.
+
+1. Stop or reduce other Docker workloads on the host.
+2. Retry the deployment.
+3. If it continues to fail, bypass the registry:
+
+   ```sh
+   topo deploy --target <user@host> --no-registry
+   ```
+
+### Image builds are slower on an x86 host
+
+Topo builds standard target images for `linux/arm64`. Docker can therefore run Arm64 build steps under emulation on an x86 host. Processor-intensive builds can be substantially slower.
+
+Use a native Arm64 builder when one is available. Project authors can also move architecture-independent work into host-native build stages and improve BuildKit caching. See [Speeding up image builds](../project-specification/04-build-optimization.md).
+
+## Fix Remoteproc Runtime problems
+
+### Remoteproc Runtime installation fails because of the login shell
+
+Topo runs remote commands in the login shell configured for the target user. Installation can fail when that shell does not accept Portable Operating System Interface (POSIX) shell syntax.
+
+Use a target account with a POSIX-compatible login shell, such as `sh` or `bash`, to install the runtime. Confirm the shell change with the target administrator before modifying an existing account.
+
+### A Remoteproc Runtime container reports an incompatible image
+
+An image for Remoteproc Runtime must contain a binary for the selected remote processor. Standard Linux application images are not interchangeable with remote processor firmware images.
+
+Check the project documentation, the service `runtime` value, and the image contents. Replace the image with one built for the target processing domain.
