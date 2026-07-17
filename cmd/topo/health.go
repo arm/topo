@@ -76,6 +76,10 @@ func init() {
 }
 
 func resolveSkipVersionChecks(cmd *cobra.Command) bool {
+	if env.IsVarTruthy(disableSelfUpgradeEnvVar) {
+		return true
+	}
+
 	if !cmd.Flags().Changed(skipVersionChecksFlag) {
 		return env.IsVarTruthy(skipVersionChecksEnvVar)
 	}

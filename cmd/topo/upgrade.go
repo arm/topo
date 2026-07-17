@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const disableSelfUpgradeEnvVar = "TOPO_DISABLE_SELF_UPGRADE"
+
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrade topo to the latest version",
@@ -55,7 +57,6 @@ func init() {
 }
 
 func isSelfUpgradeDisabled() bool {
-	const disableSelfUpgradeEnvVar = "TOPO_DISABLE_SELF_UPGRADE"
 	if env.IsVarTruthy(disableSelfUpgradeEnvVar) {
 		return true
 	}
