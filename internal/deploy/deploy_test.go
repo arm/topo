@@ -52,10 +52,10 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposePull(composeFile, localHost),
 		}
 		want = append(want, operation.NewRunRegistry(port)...)
-		wantTunnelStart, wantSecurityCheck, wantTunnelStop := ssh.NewSSHTunnel(remoteDest, port, opts.Registry.UseControlSockets)
+		wantTunnelStart, wantTunnelStop := ssh.NewSSHTunnel(remoteDest, port, opts.Registry.UseControlSockets)
 		want = append(want,
 			wantTunnelStart,
-			wantSecurityCheck,
+			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
 			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
 			wantTunnelStop,
 			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
@@ -130,7 +130,7 @@ func TestNewDeployment(t *testing.T) {
 
 		got, _ := deploy.NewDeployment(composeFile, opts)
 
-		wantTunnelStart, wantSecurityCheck, wantTunnelEnd := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
+		wantTunnelStart, wantTunnelStop := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
 		localHost := command.LocalHost
 		remoteHost := command.NewHostFromDestination(remoteDest)
 		want := goperation.Sequence{
@@ -140,9 +140,9 @@ func TestNewDeployment(t *testing.T) {
 		want = append(want, operation.NewRunRegistry(port)...)
 		want = append(want,
 			wantTunnelStart,
-			wantSecurityCheck,
+			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
 			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
-			wantTunnelEnd,
+			wantTunnelStop,
 			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
 			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
 		)
@@ -160,7 +160,7 @@ func TestNewDeployment(t *testing.T) {
 
 		got, _ := deploy.NewDeployment(composeFile, opts)
 
-		_, remotePortCheck, _ := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
+		remotePortCheck := operation.NewRegistryTunnelExposureCheck(remoteDest, opts.Registry.Port)
 		assert.NotContains(t, got, remotePortCheck)
 	})
 }
