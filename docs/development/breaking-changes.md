@@ -1,6 +1,6 @@
 # Breaking change policy
 
-This policy defines which changes to the Topo are breaking changes for end users. It helps reviewers classify changes consistently before a release.
+This policy defines which changes to the Topo are breaking changes. It helps reviewers classify changes consistently before a release.
 
 This policy explicitly does not extend to:
 
