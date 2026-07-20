@@ -1,31 +1,26 @@
 package operation
 
 import (
+	"context"
 	"io"
-	"os/exec"
 
-	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 )
 
-type DockerCompose struct {
-	description string
+type DockerComposeBuild struct {
 	composeFile string
 	host        command.Host
-	args        []string
 }
 
-func NewDockerCompose(description string, composeFile string, h command.Host, args []string) *DockerCompose {
-	return &DockerCompose{
-		description: description,
-		composeFile: composeFile,
-		host:        h,
-		args:        args,
-	}
+func NewDockerComposeBuild(composeFile string, host command.Host) *DockerComposeBuild {
+	return &DockerComposeBuild{composeFile: composeFile, host: host}
 }
 
-func NewDockerComposeBuild(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("Build images", composeFile, h, []string{"build"})
+func (b *DockerComposeBuild) Description() string { return "Build images" }
+
+func (b *DockerComposeBuild) Run(output io.Writer) error {
+	return docker.BuildImages(context.Background(), output, b.composeFile, b.host)
 }
 
 type DockerComposePull struct {
@@ -33,61 +28,51 @@ type DockerComposePull struct {
 	host        command.Host
 }
 
-func NewDockerComposePull(composeFile string, h command.Host) *DockerComposePull {
-	return &DockerComposePull{composeFile: composeFile, host: h}
+func NewDockerComposePull(composeFile string, host command.Host) *DockerComposePull {
+	return &DockerComposePull{composeFile: composeFile, host: host}
 }
 
 func (p *DockerComposePull) Description() string { return "Pull images" }
 
-func (p *DockerComposePull) Run(w io.Writer) error {
-	services, err := compose.PullableServices(p.composeFile)
-	if err != nil {
-		return err
-	}
-	if len(services) == 0 {
-		return nil
-	}
-	args := append([]string{"pull"}, services...)
-	cmd := command.DockerCompose(p.host, p.composeFile, args...)
-	cmd.Stdout = w
-	cmd.Stderr = w
-	return cmd.Run()
+func (p *DockerComposePull) Run(output io.Writer) error {
+	return docker.PullImages(context.Background(), output, p.composeFile, p.host)
 }
 
-func NewDockerComposeStop(composeFile string, h command.Host) *DockerCompose {
-	return NewDockerCompose("Stop services", composeFile, h, []string{"stop"})
+type DockerComposeStop struct {
+	composeFile string
+	host        command.Host
 }
 
-func NewDockerComposeUp(composeFile string, h command.Host, mode RecreateMode) *DockerCompose {
-	args := []string{"up", "-d", "--no-build", "--pull", "never"}
-	switch mode {
-	case RecreateModeForce:
-		args = append(args, "--force-recreate")
-	case RecreateModeNone:
-		args = append(args, "--no-recreate")
-	}
-	return NewDockerCompose("Start services", composeFile, h, args)
+func NewDockerComposeStop(composeFile string, host command.Host) *DockerComposeStop {
+	return &DockerComposeStop{composeFile: composeFile, host: host}
 }
 
-func (dc *DockerCompose) Description() string {
-	return dc.description
+func (s *DockerComposeStop) Description() string { return "Stop services" }
+
+func (s *DockerComposeStop) Run(output io.Writer) error {
+	return docker.StopServices(context.Background(), output, s.composeFile, s.host)
 }
 
-func (dc *DockerCompose) Run(cmdOutput io.Writer) error {
-	cmd := dc.buildCommand()
-	cmd.Stdout = cmdOutput
-	cmd.Stderr = cmdOutput
-	return cmd.Run()
+type DockerComposeUp struct {
+	composeFile  string
+	host         command.Host
+	recreateMode RecreateMode
 }
 
-func (dc *DockerCompose) buildCommand() *exec.Cmd {
-	return command.DockerCompose(dc.host, dc.composeFile, dc.args...)
+func NewDockerComposeUp(composeFile string, host command.Host, mode RecreateMode) *DockerComposeUp {
+	return &DockerComposeUp{composeFile: composeFile, host: host, recreateMode: mode}
 }
 
-type RecreateMode int
+func (u *DockerComposeUp) Description() string { return "Start services" }
+
+func (u *DockerComposeUp) Run(output io.Writer) error {
+	return docker.StartServices(context.Background(), output, u.composeFile, u.host, u.recreateMode)
+}
+
+type RecreateMode = docker.RecreateMode
 
 const (
-	RecreateModeDefault RecreateMode = iota
-	RecreateModeForce
-	RecreateModeNone
+	RecreateModeDefault = docker.RecreateModeDefault
+	RecreateModeForce   = docker.RecreateModeForce
+	RecreateModeNone    = docker.RecreateModeNone
 )
