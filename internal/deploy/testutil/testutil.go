@@ -41,6 +41,13 @@ func RequireImageExists(t *testing.T, h command.Host, imageName string) {
 	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, command.String(inspectCmd), string(output))
 }
 
+func RequireImageDoesNotExist(t *testing.T, h command.Host, imageName string) {
+	t.Helper()
+	inspectCmd := command.Docker(h, "image", "inspect", imageName)
+	output, err := inspectCmd.CombinedOutput()
+	require.Error(t, err, "image %s unexpectedly exists: %s output: %s", imageName, command.String(inspectCmd), string(output))
+}
+
 func BuildMinimalImage(t *testing.T, h command.Host, imageName string) {
 	t.Helper()
 	dockerfileContent := `

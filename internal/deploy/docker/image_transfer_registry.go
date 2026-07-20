@@ -1,0 +1,117 @@
+package docker
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"regexp"
+	"strings"
+
+	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/deploy/command"
+)
+
+const registryContainerName = "topo-registry"
+
+var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
+
+func TransferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, source, destination command.Host, port string) error {
+	images, err := compose.ImageNames(composeFile)
+	if err != nil {
+		return err
+	}
+
+	for _, image := range images {
+		if err := transferImageViaRegistry(ctx, source, destination, port, output, image); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func transferImageViaRegistry(ctx context.Context, source, destination command.Host, port string, output io.Writer, image string) error {
+	registryTag := fmt.Sprintf("localhost:%s/%s", port, image)
+	if err := tagImageForRegistry(ctx, source, image, registryTag, output); err != nil {
+		return err
+	}
+
+	digestReference, err := pushImageToRegistry(ctx, source, registryTag, port, output)
+	if err != nil {
+		return err
+	}
+
+	if err := pullImageByDigest(ctx, destination, digestReference, output); err != nil {
+		return err
+	}
+
+	return restoreOriginalImageTag(ctx, destination, digestReference, image, output)
+}
+
+func tagImageForRegistry(ctx context.Context, source command.Host, image, registryTag string, output io.Writer) error {
+	return runDockerCommand(ctx, source, output, "tag", image, registryTag)
+}
+
+func pushImageToRegistry(ctx context.Context, source command.Host, registryTag, port string, output io.Writer) (string, error) {
+	pushCommand := command.DockerContext(ctx, source, "push", registryTag)
+	var pushOutput bytes.Buffer
+	pushCommand.Stdout = io.MultiWriter(output, &pushOutput)
+	pushCommand.Stderr = output
+	if err := pushCommand.Run(); err != nil {
+		pushErr := fmt.Errorf("failed to execute %s: %w", strings.Join(pushCommand.Args, " "), err)
+		if mismatchErr := checkRegistryPortMismatch(ctx, port); mismatchErr != nil {
+			return "", errors.Join(pushErr, mismatchErr)
+		}
+		return "", pushErr
+	}
+
+	digest, err := ParseDigestFromPushOutput(pushOutput.String())
+	if err != nil {
+		return "", fmt.Errorf("failed to parse digest after pushing %s: %w", registryTag, err)
+	}
+	return fmt.Sprintf("%s@%s", registryTag, digest), nil
+}
+
+func pullImageByDigest(ctx context.Context, destination command.Host, digestReference string, output io.Writer) error {
+	return runDockerCommand(ctx, destination, output, "pull", digestReference)
+}
+
+func restoreOriginalImageTag(ctx context.Context, destination command.Host, digestReference, image string, output io.Writer) error {
+	return runDockerCommand(ctx, destination, output, "tag", digestReference, image)
+}
+
+func runDockerCommand(ctx context.Context, host command.Host, output io.Writer, args ...string) error {
+	cmd := command.DockerContext(ctx, host, args...)
+	cmd.Stdout = output
+	cmd.Stderr = output
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to execute %s: %w", strings.Join(cmd.Args, " "), err)
+	}
+	return nil
+}
+
+func ParseDigestFromPushOutput(output string) (string, error) {
+	match := digestRegexp.FindStringSubmatch(output)
+	if match == nil {
+		return "", fmt.Errorf("no digest found in push output")
+	}
+	return match[1], nil
+}
+
+func checkRegistryPortMismatch(ctx context.Context, requestedPort string) error {
+	cmd := command.DockerContext(ctx, command.LocalHost, "port", registryContainerName, "5000")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+
+	actual := strings.TrimSpace(string(out))
+	if index := strings.LastIndex(actual, ":"); index != -1 {
+		actualPort := actual[index+1:]
+		if actualPort != requestedPort {
+			return fmt.Errorf("registry port mismatch (running: %s, requested: %s)\nyou may need to stop the existing topo-registry: docker rm -f %s", actualPort, requestedPort, registryContainerName)
+		}
+	}
+	return nil
+}
