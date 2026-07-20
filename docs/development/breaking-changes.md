@@ -33,13 +33,15 @@ JSON structure is contractual. JSON values are not contractual unless their allo
 The following JSON changes are breaking:
 
 - Removing or renaming a field
-- Changing a field type, nullability/optionality or nesting
+- Making a previously required/non-nullable field optional/nullable
+- Changing a field type or nesting
 - Changing documented array ordering semantics
 - Adding a value to an explicitly documented closed set of allowed values
 
 The following JSON changes are not breaking:
 
 - Adding an optional field
+- Making a previously optional/nullable field required/non-nullable
 - Reordering object fields
 - Changing field values, descriptive labels, or messages
 - Changing array contents
