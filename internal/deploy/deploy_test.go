@@ -52,7 +52,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposePull(composeFile, localHost),
 		}
 		want = append(want, operation.NewRunRegistry(port)...)
-		wantTunnelStart, wantTunnelStop := ssh.NewSSHTunnel(remoteDest, port, opts.Registry.UseControlSockets)
+		wantTunnelStart, wantTunnelStop := operation.NewRegistrySSHTunnel(remoteDest, port, opts.Registry.UseControlSockets)
 		want = append(want,
 			wantTunnelStart,
 			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
@@ -103,26 +103,6 @@ func TestNewDeployment(t *testing.T) {
 		}
 	})
 
-	t.Run("returns an SSH tunnel cleanup operation for remote host", func(t *testing.T) {
-		remoteHost := ssh.NewDestination("user@remote")
-		deployOpts := deploy.DeployOptions{TargetHost: remoteHost, Registry: &deploy.RegistryConfig{UseControlSockets: true}}
-
-		_, cleanup := deploy.NewDeployment(composeFile, deployOpts)
-
-		want := ssh.NewSSHTunnelStop(remoteHost)
-		assert.Equal(t, want, cleanup)
-	})
-
-	t.Run("does not return an SSH tunnel cleanup operation for local host", func(t *testing.T) {
-		localHost := ssh.PlainLocalhost
-		deployOpts := deploy.DeployOptions{TargetHost: localHost, Registry: &deploy.RegistryConfig{}}
-
-		_, cleanup := deploy.NewDeployment(composeFile, deployOpts)
-
-		var want goperation.Operation = nil
-		assert.Equal(t, want, cleanup)
-	})
-
 	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
 		port := operation.DefaultRegistryPort
@@ -130,7 +110,7 @@ func TestNewDeployment(t *testing.T) {
 
 		got, _ := deploy.NewDeployment(composeFile, opts)
 
-		wantTunnelStart, wantTunnelStop := ssh.NewSSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
+		wantTunnelStart, wantTunnelStop := operation.NewRegistrySSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
 		localHost := command.LocalHost
 		remoteHost := command.NewHostFromDestination(remoteDest)
 		want := goperation.Sequence{
