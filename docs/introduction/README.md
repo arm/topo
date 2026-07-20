@@ -8,7 +8,7 @@ Topo helps you discover, configure, and deploy containerized software to Arm-bas
 
 Topo provides a command-line interface (CLI). You can also use the [Topo extension for Visual Studio Code](https://github.com/arm/vscode-topo).
 
-You run Topo on a host and deploy to a target. The host can run Linux, macOS, or Windows. The target must run Linux on AArch64 (`linux/arm64`). The same system can act as both the host and target.
+You run Topo on a [host](glossary.md#host) and deploy to a [target](glossary.md#target). The host can run Linux, macOS, or Windows. The target must run Linux on AArch64 (`linux/arm64`). The same system can act as both the host and target.
 
 This diagram shows where Topo runs, what it deploys, and how you iterate on a project.
 
@@ -20,13 +20,13 @@ Use Topo to:
 
 - Evaluate an Arm device by finding projects that match its hardware capabilities
 - Use an incremental build and deployment loop between your host and a remote device
-- Orchestrate Linux services and remote processor firmware in one project on supported heterogeneous devices
+- Orchestrate Linux services and [remote processor](glossary.md#remote-processor) firmware in one project on supported [heterogeneous devices](glossary.md#heterogeneous-device)
 
-Topo works with [Remoteproc Runtime](https://github.com/arm/remoteproc-runtime) to package and run firmware through container workflows.
+Topo works with [Remoteproc Runtime](glossary.md#remoteproc-runtime) to package and run firmware through container workflows.
 
 ## Projects
 
-A Topo Project is a Compose project that includes `x-topo` metadata. The metadata describes the purpose, hardware requirements, and configurable parameters of the project. Topo uses this information to check target compatibility and configure the project for your use case.
+A [Topo Project](glossary.md#topo-project) is a Compose project that includes [`x-topo`](glossary.md#x-topo) metadata. The metadata describes the purpose, hardware requirements, and configurable parameters of the project. Topo uses this information to check target compatibility and configure the project for your use case.
 
 The configured project remains a standard Compose project that you can inspect, modify, and use with existing container tools. You can also use Topo to deploy an existing Compose project whose Linux services target `linux/arm64`.
 
