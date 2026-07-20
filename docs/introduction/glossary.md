@@ -64,7 +64,7 @@ A **build** approach where only changed layers are rebuilt, and a **deploy** app
 
 ## Remoteproc Runtime
 
-An Open Container Initiative (OCI) compliant container runtime that deploys firmware to **remote processors** via the Linux remoteproc framework. Allows firmware to be packaged, distributed, and executed using standard container tools (e.g., Docker, containerd, Podman).
+An Open Container Initiative (OCI) compliant [container runtime that deploys firmware to **remote processors** via the Linux remoteproc framework](https://github.com/arm/remoteproc-runtime). Allows firmware to be packaged, distributed, and executed using standard container tools (e.g., Docker, containerd, Podman).
 
 ## Firmware Container
 
