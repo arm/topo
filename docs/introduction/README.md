@@ -14,7 +14,7 @@ This diagram shows where Topo runs, what it deploys, and how you iterate on a pr
 
 ![Topo host-to-target deployment and development loop](./img/topo-overview.svg)
 
-## Benefits of Topo
+## Use cases
 
 Use Topo to:
 
