@@ -1,4 +1,4 @@
-# Development Guide
+# Development guide
 
 This guide covers the development workflow, tools, and conventions for contributing to `topo`.
 
@@ -44,11 +44,13 @@ Some tests have a dependency on docker. Test container images are built automati
 
 #### Golden Files
 
-A subset of our e2e tests rely on "golden files" to assert CLI output against a known good state. These tests will fail when breaking changes are made and can be updated in place with the `UPDATE_GOLDEN` environment variable when running the tests.
+A subset of our e2e tests rely on "golden files" to assert CLI output against a known good state. These tests will fail when the CLI output has changed and can be updated in place with the `UPDATE_GOLDEN` environment variable when running the tests.
 
 ```
 UPDATE_GOLDEN=1 go test ./e2e/...
 ```
+
+While an output change is not necessarily breaking, it's worth reviewing the [breaking change policy](breaking-changes.md) and ensuring the change is marked as breaking/non-breaking appropriately before approving.
 
 ## Skills
 
