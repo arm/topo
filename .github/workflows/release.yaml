@@ -164,45 +164,16 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
           PUBLISHER_RUN_ID: ${{ steps.trigger_sign_and_release.outputs.publisher_run_id }}
-          ARTIFACT_NAME: release-links
         run: |
-          echo "Waiting for $ARTIFACT_NAME artifact from topo-publisher run $PUBLISHER_RUN_ID"
+          gh run watch "$PUBLISHER_RUN_ID" \
+            --repo Arm-Debug/topo-publisher \
+            --compact \
+            --exit-status
 
-          for attempt in {1..30}; do
-            artifact_id="$(gh api \
-              "repos/Arm-Debug/topo-publisher/actions/runs/$PUBLISHER_RUN_ID/artifacts" \
-              --jq ".artifacts | map(select(.name == \"$ARTIFACT_NAME\")) | .[0].id // empty")"
-
-            if [ -n "$artifact_id" ]; then
-              echo "Found $ARTIFACT_NAME artifact: $artifact_id"
-              gh run download "$PUBLISHER_RUN_ID" \
-                --repo Arm-Debug/topo-publisher \
-                --name "$ARTIFACT_NAME" \
-                --dir publisher-artifacts
-              exit $?
-            fi
-
-            status="$(gh run view "$PUBLISHER_RUN_ID" \
-              --repo Arm-Debug/topo-publisher \
-              --json status \
-              --jq .status)"
-
-            conclusion="$(gh run view "$PUBLISHER_RUN_ID" \
-              --repo Arm-Debug/topo-publisher \
-              --json conclusion \
-              --jq '.conclusion // ""')"
-
-            if [ "$status" = "completed" ]; then
-              echo "::error::topo-publisher run completed with conclusion '$conclusion' before producing $ARTIFACT_NAME"
-              exit 1
-            fi
-
-            echo "$ARTIFACT_NAME is not available yet; publisher run status is $status; retrying in 60 seconds ($attempt/30)"
-            sleep 60
-          done
-
-          echo "::error::Timed out waiting for $ARTIFACT_NAME artifact from topo-publisher run $PUBLISHER_RUN_ID"
-          exit 1
+          gh run download "$PUBLISHER_RUN_ID" \
+            --repo Arm-Debug/topo-publisher \
+            --name release-links \
+            --dir publisher-artifacts
 
       - name: Update and publish release
         env:
