@@ -3,6 +3,7 @@ package ssh
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -22,8 +23,8 @@ func NewConfig(dest Destination) Config {
 	return NewConfigFromBytes(output)
 }
 
-func ResolveHostName(dest Destination) (string, error) {
-	output, err := readConfig(dest)
+func ResolveHostName(ctx context.Context, dest Destination) (string, error) {
+	output, err := readConfigContext(ctx, dest)
 	if err != nil {
 		return "", fmt.Errorf("could not resolve SSH configuration for %q: %w", dest.String(), err)
 	}
@@ -125,5 +126,9 @@ func IsExplicitHostConfig(host string, config []byte) bool {
 }
 
 func readConfig(dest Destination) ([]byte, error) {
-	return exec.Command("ssh", "-v", "-G", dest.String()).CombinedOutput()
+	return readConfigContext(context.Background(), dest)
+}
+
+func readConfigContext(ctx context.Context, dest Destination) ([]byte, error) {
+	return exec.CommandContext(ctx, "ssh", "-v", "-G", dest.String()).CombinedOutput()
 }

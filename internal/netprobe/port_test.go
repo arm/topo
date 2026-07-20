@@ -1,6 +1,7 @@
 package netprobe_test
 
 import (
+	"context"
 	"net"
 	"testing"
 
@@ -13,7 +14,7 @@ func TestIsRemotePortListening(t *testing.T) {
 	t.Run("returns false when the remote port refuses the connection", func(t *testing.T) {
 		port := reserveFreePort(t, "0.0.0.0")
 
-		got, err := netprobe.IsRemotePortListening("0.0.0.0", port)
+		got, err := netprobe.IsRemotePortListening(context.Background(), "0.0.0.0", port)
 
 		assert.NoError(t, err)
 		assert.False(t, got)
@@ -35,7 +36,7 @@ func TestIsRemotePortListening(t *testing.T) {
 		_, port, err := net.SplitHostPort(listener.Addr().String())
 		require.NoError(t, err)
 
-		got, err := netprobe.IsRemotePortListening("localhost.", port)
+		got, err := netprobe.IsRemotePortListening(context.Background(), "localhost.", port)
 		listenerCloseErr := listener.Close()
 
 		assert.NoError(t, err)
@@ -45,7 +46,7 @@ func TestIsRemotePortListening(t *testing.T) {
 	})
 
 	t.Run("returns an error when the remote host cannot be resolved", func(t *testing.T) {
-		got, err := netprobe.IsRemotePortListening("nonexistent.invalid", "12345")
+		got, err := netprobe.IsRemotePortListening(context.Background(), "nonexistent.invalid", "12345")
 
 		assert.ErrorContains(t, err, `could not resolve remote host "nonexistent.invalid"`)
 		assert.False(t, got)

@@ -1,6 +1,7 @@
 package netprobe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,14 +12,14 @@ import (
 )
 
 // IsRemotePortListening reports whether host:port accepts TCP connections.
-func IsRemotePortListening(host, port string) (bool, error) {
+func IsRemotePortListening(ctx context.Context, host, port string) (bool, error) {
 	address := net.JoinHostPort(host, port)
 	var remoteIP strings.Builder
 	// Use curl so host resolution matches OpenSSH for mDNS, NSS, and split-DNS configurations.
 	// - remote_ip detects a connection even when HTTP fails
 	// - noproxy ensures the connection is direct
 	// - silent suppresses curl's progress and errors.
-	cmd := exec.Command("curl", "http://"+address, "--max-time", "5", "--noproxy", "*", "--output", os.DevNull, "--silent", "--write-out", "%{remote_ip}")
+	cmd := exec.CommandContext(ctx, "curl", "http://"+address, "--max-time", "5", "--noproxy", "*", "--output", os.DevNull, "--silent", "--write-out", "%{remote_ip}")
 	cmd.Stdout = &remoteIP
 	cmd.Stderr = io.Discard
 	err := cmd.Run()
