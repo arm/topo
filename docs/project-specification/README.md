@@ -4,7 +4,7 @@ sidebar_position: 0
 
 # Overview
 
-A Topo Project is a containerized sample project for Arm-based Linux systems. At minimum, it is a directory containing a `compose.yaml`, Dockerfiles, and source code, with an `x-topo` metadata block that describes what the Project does, what hardware features it requires, and what parameters a user can configure.
+A [Topo Project](../introduction/glossary.md#topo-project) is a containerized sample project for Arm-based Linux systems. At minimum, it is a directory containing a `compose.yaml`, Dockerfiles, and source code, with an [`x-topo`](../introduction/glossary.md#x-topo) metadata block that describes what the Project does, what hardware [features](../introduction/glossary.md#feature) it requires, and what parameters a user can configure.
 
 This specification defines the `x-topo` extension. It was developed for use with [Topo CLI](https://github.com/arm/topo/), but this is an open spec and any tool can read and act on `x-topo` metadata to discover, validate, and deploy Projects.
 

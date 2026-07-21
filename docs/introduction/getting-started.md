@@ -1,6 +1,6 @@
 # Getting started
 
-After you [install Topo](install.mdx), use this guide to check a target, discover a compatible project, and deploy the project.
+After you [install Topo](install.mdx), use this guide to check a [target](glossary.md#target), discover a compatible [Topo Project](glossary.md#topo-project), and deploy the project.
 
 :::note
 
@@ -16,7 +16,7 @@ Run the health checks:
 topo health --target pi@raspberrypi
 ```
 
-Topo checks the required host tools, SSH connection, target container engine, and target hardware. Resolve all errors and review each warning. When available, the report includes commands to correct problems.
+Topo checks the required [host](glossary.md#host) tools, SSH connection, target container engine, and target hardware. Resolve all errors and review each warning. When available, the report includes commands to correct problems.
 
 If the target host key is unknown, confirm the target identity. Then run the suggested command to accept the key. If public-key authentication is not configured, run the following command after you accept the host key:
 
@@ -26,7 +26,7 @@ topo setup-keys --target pi@raspberrypi
 
 This command creates a dedicated key, copies the public key to the target, and updates your SSH configuration. The target must permit password authentication for the initial key transfer. If it does not, configure a public key through your existing device management process.
 
-Run `topo health` again and confirm that no checks report an error. You can ignore a Remoteproc Runtime warning if you do not plan to deploy firmware to a remote processor.
+Run `topo health` again and confirm that no checks report an error. You can ignore a [Remoteproc Runtime](glossary.md#remoteproc-runtime) warning if you do not plan to deploy firmware to a [remote processor](glossary.md#remote-processor).
 
 ## Find a compatible Topo Project
 

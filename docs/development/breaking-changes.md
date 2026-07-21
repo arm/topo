@@ -53,10 +53,10 @@ A JSON value change can still accompany a breaking behavior change. Evaluate the
 
 ## Host and target requirements
 
-A new or stricter requirement is breaking when a previously supported host or target no longer works.
+A new or stricter requirement is breaking when a previously supported [host](../introduction/glossary.md#host) or [target](../introduction/glossary.md#target) no longer works.
 This rule includes:
 
-- Requiring a new executable, daemon, runtime, kernel capability, hardware feature, or network service
+- Requiring a new executable, daemon, runtime, kernel capability, hardware [feature](../introduction/glossary.md#feature), or network service
 - Increasing a minimum dependency version
 - Supporting fewer implementations, operating systems, or architectures
 - Requiring new permissions, configuration, credentials, or network access
@@ -86,7 +86,7 @@ A newer binary must continue to read and operate on files created or modified by
 
 Automatic, lossless migration is not breaking. Topo does not guarantee that an older binary can read files after a newer binary migrates them unless rollback support is explicitly documented.
 
-A newer binary must also continue to manage existing deployments. A change is breaking if users can no longer inspect, update, redeploy, or stop a deployment without recreating or manually repairing it.
+A newer binary must also continue to manage existing [deployments](../introduction/glossary.md#deployment). A change is breaking if users can no longer inspect, update, redeploy, or stop a deployment without recreating or manually repairing it.
 
 ## Exit status compatibility
 

@@ -2,15 +2,15 @@
 
 ## Overview
 
-Topo Projects support configuration through project parameters:
+[Topo Projects](../introduction/glossary.md#topo-project) support configuration through project parameters:
 
-- `x-topo.parameters` defines parameter metadata (description, whether required, examples, and advisory hints)
+- [`x-topo.parameters`](../introduction/glossary.md#x-topo) defines parameter metadata (description, whether required, examples, and advisory hints)
 - When a project parameter is used during an image build, its value is passed through standard Compose `build.args` and consumed by the Dockerfile as an `ARG`
 
 ## How Project Parameters Work
 
 Projects extend [compose-spec](https://compose-spec.io/) with `x-topo.parameters` to define and document user-configurable project parameters.
-Unless a service is intended for a remote processor, every service definition in these examples (and in compliant Projects) must include `platform: linux/arm64`. Remote processor services omit `platform` but must set `remoteproc` as their `runtime` so Implementations can recognize the exception.
+Unless a service is intended for a [remote processor](../introduction/glossary.md#remote-processor), every service definition in these examples (and in compliant Projects) must include `platform: linux/arm64`. Remote processor services omit `platform` but must set [`remoteproc`](../introduction/glossary.md#remoteproc-runtime) as their `runtime` so Implementations can recognize the exception.
 
 **compose.yaml**
 

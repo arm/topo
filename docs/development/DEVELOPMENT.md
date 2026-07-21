@@ -62,7 +62,7 @@ To test skills from this checkout while developing them, install the local repos
 npx skills add . --global
 ```
 
-Each installable skill folder should be self-contained, but shared Topo Project context is maintained in `skills/_shared/topo-project-context.md` to avoid hand-edited drift across skills. After editing that shared context, update each skill's `references/topo-project-context.md` copy:
+Each installable skill folder should be self-contained, but shared [Topo Project](../introduction/glossary.md#topo-project) context is maintained in `skills/_shared/topo-project-context.md` to avoid hand-edited drift across skills. After editing that shared context, update each skill's `references/topo-project-context.md` copy:
 
 ```bash
 node scripts/sync-skill-context.js

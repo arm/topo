@@ -1,6 +1,6 @@
 # Topo Project Authoring Guide
 
-This guide details how to create Topo Projects for the Topo ecosystem.
+This guide details how to create [Topo Projects](../introduction/glossary.md#topo-project) for the Topo ecosystem.
 
 ## File Structure
 
@@ -13,7 +13,7 @@ my-project/
 
 ## The compose.yaml
 
-You must extend the standard [Compose Spec](https://compose-spec.io) with `x-topo` metadata. In addition, all Project services must explicitly set `platform: linux/arm64` so Implementations target Arm64. The only exception is for services deployed via remoteproc.
+You must extend the standard [Compose Spec](https://compose-spec.io) with [`x-topo`](../introduction/glossary.md#x-topo) metadata. In addition, all Project services must explicitly set `platform: linux/arm64` so Implementations target Arm64. The only exception is for services deployed via [remoteproc](../introduction/glossary.md#remoteproc-runtime).
 
 ```yaml
 services:
