@@ -49,6 +49,7 @@ jobs:
           git config --global user.name "topo-release"
 
       - name: Create tag
+        id: create_tag
         run: |
           git tag -a "${{ steps.calculate_next_version.outputs.next_version }}" -m "Release ${{ steps.calculate_next_version.outputs.next_version }}"
           git push origin "${{ steps.calculate_next_version.outputs.next_version }}"
@@ -197,3 +198,9 @@ jobs:
           else
             gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file combined_notes.md
           fi
+
+      - name: Delete tag after failure
+        if: ${{ (failure() || cancelled()) && steps.create_tag.outcome == 'success' }}
+        env:
+          RELEASE_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
+        run: git push origin --delete "$RELEASE_TAG"
