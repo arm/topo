@@ -212,7 +212,7 @@ Run 'docker --help' for more information`
 		fix, err := check.Run(ctx, runner, dep)
 
 		assert.Contains(t, err.Error(), "1.9.0")
-		assert.Contains(t, err.Error(), "less than required version")
+		assert.Contains(t, err.Error(), "older than required version")
 		assert.Contains(t, fix.Description, "Upgrade Docker Compose")
 	})
 }

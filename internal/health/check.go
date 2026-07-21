@@ -109,8 +109,8 @@ func (c DockerComposeCompatible) Run(ctx context.Context, r runner.Runner, _ Dep
 
 	if !version.IsAtLeastVersion(stdout, c.MinVersion) {
 		return &Fix{
-			Description: fmt.Sprintf("Upgrade Docker Compose to at least version %s", c.MinVersion),
-		}, fmt.Errorf("installed docker compose version %q is less than required version %q", stdout, c.MinVersion)
+			Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later", c.MinVersion),
+		}, fmt.Errorf("installed docker compose version %q is older than required version %q", stdout, c.MinVersion)
 	}
 
 	return nil, nil
