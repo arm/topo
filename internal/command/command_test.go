@@ -1,6 +1,11 @@
 package command_test
 
 import (
+	"bytes"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/arm/topo/internal/command"
@@ -12,8 +17,41 @@ func TestWrapInLoginShell(t *testing.T) {
 	t.Run("wraps command in login shell", func(t *testing.T) {
 		got := command.WrapInLoginShell("echo $PATH")
 
-		want := `/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"echo \\\$PATH\""`
+		want := `/bin/sh -c "exec 3>&1 4>&2; exec ${SHELL:-/bin/sh} -l -c \"exec 1>&3 2>&4 3>&- 4>&-; echo \\\$PATH\" >/dev/null 2>&1"`
 		assert.Equal(t, want, got)
+	})
+
+	t.Run("keeps login shell output separate from command output", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("test uses a POSIX shell script")
+		}
+
+		fakeShell := filepath.Join(t.TempDir(), "fake-shell")
+		err := os.WriteFile(fakeShell, []byte(`#!/bin/sh
+printf 'login shell stdout\n'
+printf 'login shell stderr\n' >&2
+while [ "$#" -gt 0 ]; do
+	if [ "$1" = "-c" ]; then
+		exec /bin/sh -c "$2"
+	fi
+	shift
+done
+exit 1
+`), 0o700)
+		require.NoError(t, err)
+
+		wrapped := command.WrapInLoginShell("printf 'command output\\n'; printf 'command error\\n' >&2")
+		cmd := exec.Command("/bin/sh", "-c", wrapped)
+		cmd.Env = append(os.Environ(), "SHELL="+fakeShell)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err = cmd.Run()
+
+		require.NoError(t, err)
+		assert.Equal(t, "command output\n", stdout.String())
+		assert.Equal(t, "command error\n", stderr.String())
 	})
 }
 

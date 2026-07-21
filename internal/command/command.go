@@ -13,7 +13,8 @@ func SSHKeyGen(keyType string, keyPath string, targetHost string) *exec.Cmd {
 
 func WrapInLoginShell(cmd string) string {
 	escaped := shellEscapeForDoubleQuotes(cmd)
-	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
+	// Suppress startup-file output, then restore both output streams before running cmd.
+	return fmt.Sprintf(`/bin/sh -c "exec 3>&1 4>&2; exec ${SHELL:-/bin/sh} -l -c \"exec 1>&3 2>&4 3>&- 4>&-; %s\" >/dev/null 2>&1"`, escaped)
 }
 
 func BinaryLookupCommand(bin string) (string, error) {
