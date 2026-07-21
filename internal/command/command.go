@@ -11,11 +11,6 @@ func SSHKeyGen(keyType string, keyPath string, targetHost string) *exec.Cmd {
 	return exec.Command("ssh-keygen", sshKeyGenArgs...)
 }
 
-func WrapInLoginShell(cmd string) string {
-	escaped := shellEscapeForDoubleQuotes(cmd)
-	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
-}
-
 func BinaryLookupCommand(bin string) (string, error) {
 	if err := ValidateBinaryName(bin); err != nil {
 		return "", err
@@ -34,14 +29,4 @@ func QuoteArg(s string) string {
 	}
 
 	return s
-}
-
-func shellEscapeForDoubleQuotes(s string) string {
-	repl := strings.NewReplacer(
-		`\`, `\\`,
-		`"`, `\\\"`,
-		`$`, `\\\$`,
-		"`", `\\\`+"`",
-	)
-	return repl.Replace(s)
 }
