@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 )
@@ -15,9 +16,13 @@ func String(cmd *exec.Cmd) string {
 }
 
 func DockerCompose(host Host, composeFile string, args ...string) *exec.Cmd {
+	return DockerComposeContext(context.Background(), host, composeFile, args...)
+}
+
+func DockerComposeContext(ctx context.Context, host Host, composeFile string, args ...string) *exec.Cmd {
 	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
 	cmdArgs := append(hostToArgs(host), composeArgs...)
-	return exec.Command("docker", cmdArgs...)
+	return exec.CommandContext(ctx, "docker", cmdArgs...)
 }
 
 func hostToArgs(h Host) []string {
