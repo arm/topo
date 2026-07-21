@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -171,10 +172,7 @@ func TestDockerComposeCompatible(t *testing.T) {
 		runner := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
 				"docker compose version": {
-					Stderr: `docker: unknown command: docker compose
-
-Run 'docker --help' for more information`,
-					Err: errors.New("it blew up"),
+					Err: fmt.Errorf("it blew up"),
 				},
 			},
 		}
@@ -183,6 +181,24 @@ Run 'docker --help' for more information`,
 
 		assert.Contains(t, err.Error(), "it blew up")
 		assert.Contains(t, fix.Description, "as a plugin")
+	})
+
+	t.Run("joins multi-line executions error into a one line", func(t *testing.T) {
+		stderr := `docker: unknown command: docker compose
+
+Run 'docker --help' for more information`
+		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version": {
+					Err: errors.New(stderr),
+				},
+			},
+		}
+
+		_, err := check.Run(ctx, runner, dep)
+
+		assert.Contains(t, err.Error(), strings.ReplaceAll(stderr, "\n", " "))
 	})
 
 	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {
