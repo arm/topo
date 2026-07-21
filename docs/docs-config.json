@@ -1,9 +1,20 @@
 {
   "siteLabel": "Topo",
+  "indexPageDirectory": "index-page",
   "navbarItems": [
     {
-      "label": "Documentation",
-      "to": "introduction",
+      "label": "Getting Started",
+      "to": "/introduction",
+      "position": "left"
+    },
+    {
+      "label": "Project Specification",
+      "to": "/project-specification",
+      "position": "left"
+    },
+    {
+      "label": "Development",
+      "to": "/development",
       "position": "left"
     }
   ],
