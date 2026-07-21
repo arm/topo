@@ -1,6 +1,6 @@
 {
   "siteLabel": "Topo",
-  "indexPageDirectory": "index-page",
+  "indexPageDirectory": "landing-page",
   "navbarItems": [
     {
       "label": "Documentation",
