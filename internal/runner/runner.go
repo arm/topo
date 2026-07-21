@@ -22,3 +22,10 @@ func For(dest ssh.Destination) Runner {
 	}
 	return NewSSH(dest)
 }
+
+func ForDirect(dest ssh.Destination) Runner {
+	if dest.IsPlainLocalhost() {
+		return NewLocal()
+	}
+	return NewDirectSSH(dest)
+}

@@ -11,10 +11,15 @@ import (
 )
 
 type SSH struct {
-	dest ssh.Destination
+	dest          ssh.Destination
+	useLoginShell bool
 }
 
 func NewSSH(dest ssh.Destination) *SSH {
+	return &SSH{dest: dest, useLoginShell: true}
+}
+
+func NewDirectSSH(dest ssh.Destination) *SSH {
 	return &SSH{dest: dest}
 }
 
@@ -50,7 +55,10 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 
 func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArgs []string) (string, string, error) {
 	args := append(multiplexArgs(), extraSSHArgs...)
-	stdout, stderr, err := ssh.RunCommand(ctx, r.dest, command.WrapInLoginShell(cmdStr), stdin, args...)
+	if r.useLoginShell {
+		cmdStr = command.WrapInLoginShell(cmdStr)
+	}
+	stdout, stderr, err := ssh.RunCommand(ctx, r.dest, cmdStr, stdin, args...)
 	if err != nil && ctx.Err() != nil {
 		return "", "", ErrTimeout
 	}

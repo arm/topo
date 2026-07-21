@@ -37,7 +37,7 @@ var describeCmd = &cobra.Command{
 			return err
 		}
 
-		r := runner.For(ssh.NewDestination(targetArg))
+		r := runner.ForDirect(ssh.NewDestination(targetArg))
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 		hwProfile, err := probe.Hardware(ctx, r)
