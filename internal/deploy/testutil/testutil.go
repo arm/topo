@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/command"
@@ -43,9 +44,10 @@ func RequireImageExists(t *testing.T, h command.Host, imageName string) {
 
 func RequireImageDoesNotExist(t *testing.T, h command.Host, imageName string) {
 	t.Helper()
-	inspectCmd := command.Docker(h, "image", "inspect", imageName)
-	output, err := inspectCmd.CombinedOutput()
-	require.Error(t, err, "image %s unexpectedly exists: %s output: %s", imageName, command.String(inspectCmd), string(output))
+	listCmd := command.Docker(h, "image", "ls", "--quiet", "--filter", "reference="+imageName)
+	output, err := listCmd.CombinedOutput()
+	require.NoError(t, err, "failed to list image %s: %s output: %s", imageName, command.String(listCmd), string(output))
+	require.Empty(t, strings.TrimSpace(string(output)), "image %s unexpectedly exists", imageName)
 }
 
 func BuildMinimalImage(t *testing.T, h command.Host, imageName string) {
