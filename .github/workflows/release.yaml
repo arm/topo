@@ -169,6 +169,7 @@ jobs:
           gh run watch "$PUBLISHER_RUN_ID" \
             --repo Arm-Debug/topo-publisher \
             --compact \
+            --interval 60 \
             --exit-status
 
           gh run download "$PUBLISHER_RUN_ID" \
