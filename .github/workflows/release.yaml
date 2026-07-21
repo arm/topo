@@ -16,6 +16,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-24.04-arm
+    outputs:
+      release_tag: ${{ steps.calculate_next_version.outputs.next_version }}
+      tag_created: ${{ steps.create_tag.outcome == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -200,8 +203,13 @@ jobs:
             gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file combined_notes.md
           fi
 
-      - name: Delete tag after failure
-        if: ${{ (failure() || cancelled()) && steps.create_tag.outcome == 'success' }}
+  cleanup:
+    needs: release
+    if: ${{ always() && needs.release.result != 'success' && needs.release.outputs.tag_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete tag after release failure
         env:
-          RELEASE_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
-        run: git push origin --delete "$RELEASE_TAG"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release.outputs.release_tag }}
+        run: gh api --method DELETE "repos/${{ github.repository }}/git/refs/tags/$RELEASE_TAG"
