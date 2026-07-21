@@ -98,6 +98,16 @@ var HostRequiredDependencies = []Dependency{
 			},
 		},
 	},
+	{
+		Binary:                "docker-compose",
+		Label:                 "Docker Compose",
+		SoftwarePrerequisites: []SoftwareDependency{Docker},
+		Checks: []Check{
+			DockerComposeCompatible{
+				MinVersion: "2.21.0",
+			},
+		},
+	},
 }
 
 func TargetRequiredDependencies(target ssh.Destination) []Dependency {

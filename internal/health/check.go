@@ -9,6 +9,7 @@ import (
 
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/version"
 )
 
 type Check interface {
@@ -91,6 +92,27 @@ func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependen
 			Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
 		}, fmt.Errorf("%q does not resolve to OpenSSH: %s", dep.Binary, stderr)
 	}
+	return nil, nil
+}
+
+type DockerComposeCompatible struct {
+	MinVersion string
+}
+
+func (c DockerComposeCompatible) Run(ctx context.Context, r runner.Runner, _ Dependency) (*Fix, error) {
+	stdout, _, err := r.Run(ctx, "docker compose version")
+	if err != nil {
+		return &Fix{
+			Description: "Ensure Docker Compose is installed as a plugin for Docker",
+		}, errors.New(strings.ReplaceAll(err.Error(), "\n", " "))
+	}
+
+	if !version.IsAtLeastVersion(stdout, c.MinVersion) {
+		return &Fix{
+			Description: fmt.Sprintf("Upgrade Docker Compose to at least version %s", c.MinVersion),
+		}, fmt.Errorf("installed docker compose version %q is less than required version %q", stdout, c.MinVersion)
+	}
+
 	return nil, nil
 }
 

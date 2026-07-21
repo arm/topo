@@ -134,3 +134,69 @@ func TestOpenSSHAvailable(t *testing.T) {
 		assert.Nil(t, fix)
 	})
 }
+func TestDockerComposeCompatible(t *testing.T) {
+	ctx := context.Background()
+	dep := health.Dependency{}
+
+	t.Run("accepts Docker Compose at the minimum version", func(t *testing.T) {
+		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version": {Output: "Docker Compose version 2.0.0"},
+			},
+		}
+
+		fix, err := check.Run(ctx, runner, dep)
+
+		assert.NoError(t, err)
+		assert.Nil(t, fix)
+	})
+
+	t.Run("accepts Docker Compose newer than the minimum version", func(t *testing.T) {
+		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version": {Output: "Docker Compose version 5.2.0"},
+			},
+		}
+
+		fix, err := check.Run(ctx, runner, dep)
+
+		assert.NoError(t, err)
+		assert.Nil(t, fix)
+	})
+
+	t.Run("returns a plugin installation fix when the version command fails", func(t *testing.T) {
+		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version": {
+					Stderr: `docker: unknown command: docker compose
+
+Run 'docker --help' for more information`,
+					Err: errors.New("it blew up"),
+				},
+			},
+		}
+
+		fix, err := check.Run(ctx, runner, dep)
+
+		assert.Contains(t, err.Error(), "it blew up")
+		assert.Contains(t, fix.Description, "as a plugin")
+	})
+
+	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {
+		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version": {Output: "Docker Compose version 1.9.0"},
+			},
+		}
+
+		fix, err := check.Run(ctx, runner, dep)
+
+		assert.Contains(t, err.Error(), "1.9.0")
+		assert.Contains(t, err.Error(), "less than required version")
+		assert.Contains(t, fix.Description, "Upgrade Docker Compose")
+	})
+}

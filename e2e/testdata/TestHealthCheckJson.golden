@@ -20,6 +20,11 @@
         "name": "Container Engine",
         "status": "ok",
         "value": "docker"
+      },
+      {
+        "name": "Docker Compose",
+        "status": "ok",
+        "value": "docker-compose"
       }
     ]
   },

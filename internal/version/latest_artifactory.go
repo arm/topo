@@ -6,18 +6,13 @@ import (
 	"io"
 	"maps"
 	"net/http"
-	"regexp"
 	"slices"
 	"sort"
-	"strconv"
-	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
 )
 
 const ArtifactoryBaseURL = "https://artifacts.tools.arm.com/topo"
-
-var semverRe = regexp.MustCompile(`v(\d+)\.(\d+)\.(\d+)`)
 
 func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -65,17 +60,4 @@ func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
 	latest := versionsList[len(versionsList)-1]
 
 	return latest[1:], nil
-}
-
-func compareSemver(a, b string) int {
-	pa := semverRe.FindStringSubmatch(a)
-	pb := semverRe.FindStringSubmatch(b)
-	for i := 1; i <= 3; i++ {
-		na, _ := strconv.Atoi(pa[i])
-		nb, _ := strconv.Atoi(pb[i])
-		if na != nb {
-			return na - nb
-		}
-	}
-	return strings.Compare(a, b)
 }
