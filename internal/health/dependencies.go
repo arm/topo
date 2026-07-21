@@ -3,7 +3,6 @@ package health
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
@@ -40,21 +39,6 @@ type Dependency struct {
 	SoftwareEnumID        SoftwareDependency
 	SoftwarePrerequisites []SoftwareDependency
 	HardwarePrerequisite  []HardwareCapability
-}
-
-type OpenSSHAvailable struct{}
-
-func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
-	_, stderr, err := r.Run(ctx, "ssh -V")
-	if err != nil {
-		return nil, err
-	}
-	if !strings.Contains(stderr, "OpenSSH_") {
-		return &Fix{
-			Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
-		}, fmt.Errorf("%q does not resolve to OpenSSH: %s", dep.Binary, stderr)
-	}
-	return nil, nil
 }
 
 var HostRequiredDependencies = []Dependency{
