@@ -7,27 +7,8 @@ import (
 
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/project"
 )
-
-type DeploySuccess struct {
-	composeFile    string
-	host           command.Host
-	defaultMessage string
-}
-
-func NewDeploySuccess(composeFile string, h command.Host, defaultMessage string) *DeploySuccess {
-	return &DeploySuccess{
-		composeFile:    composeFile,
-		host:           h,
-		defaultMessage: defaultMessage,
-	}
-}
-
-func (p *DeploySuccess) Run(output io.Writer) error {
-	return PrintDeploySuccess(output, p.composeFile, p.defaultMessage)
-}
 
 func DefaultMessage(composeFile string) string {
 	if composeFile == compose.DefaultFileName() {
@@ -35,10 +16,6 @@ func DefaultMessage(composeFile string) string {
 	}
 
 	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", cmdtext.QuoteArg(composeFile))
-}
-
-func (t *DeploySuccess) Description() string {
-	return "Deployment Success"
 }
 
 func getSuccessMessage(composeFile string) (string, error) {

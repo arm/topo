@@ -135,32 +135,3 @@ func closeTunnel(output io.Writer, tunnel *ssh.SSHTunnel) error {
 	}
 	return errors.Join(headerError, closeError)
 }
-
-func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence, goperation.Operation) {
-	sourceHost := command.LocalHost
-	ops := []goperation.Operation{
-		operation.NewDockerComposeBuild(composeFile, sourceHost),
-		operation.NewDockerComposePull(composeFile, sourceHost),
-	}
-
-	targetHost := command.NewHostFromDestination(opts.TargetHost)
-	var cleanup goperation.Operation
-	if !opts.TargetHost.IsPlainLocalhost() {
-		if opts.Registry != nil {
-			startTunnel, stopTunnel := operation.NewRegistrySSHTunnel(opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
-			cleanup = stopTunnel
-			ops = append(ops, operation.NewRunRegistry(DefaultRegistryContainerName, opts.Registry.Port)...)
-			ops = append(ops, startTunnel)
-			if !opts.TargetHost.IsLocalhost() && !opts.Registry.SkipRemotePortCheck {
-				ops = append(ops, operation.NewRegistryTunnelExposureCheck(opts.TargetHost, opts.Registry.Port))
-			}
-			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, targetHost, opts.Registry.Port))
-			ops = append(ops, stopTunnel)
-		} else {
-			ops = append(ops, operation.NewDockerComposePipeTransfer(composeFile, sourceHost, targetHost))
-		}
-	}
-	ops = append(ops, operation.NewDockerComposeUp(composeFile, targetHost, opts.RecreateMode))
-	ops = append(ops, post_deploy.NewDeploySuccess(composeFile, targetHost, post_deploy.DefaultMessage(composeFile)))
-	return goperation.NewSequence(ops...), cleanup
-}

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -54,23 +53,6 @@ services:
 
 		require.Error(t, err)
 	})
-}
-
-func TestDeploySuccess(t *testing.T) {
-	dir := t.TempDir()
-	composeFile := filepath.Join(dir, "compose.yaml")
-	testutil.RequireWriteFile(t, composeFile, `
-services:
-  app:
-    image: nginx
-`)
-	op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "default message")
-	var output bytes.Buffer
-
-	err := op.Run(&output)
-
-	require.NoError(t, err)
-	assert.Equal(t, "default message\n", output.String())
 }
 
 func TestDefaultMessage(t *testing.T) {
