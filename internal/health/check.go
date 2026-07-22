@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -95,22 +96,28 @@ func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependen
 	return nil, nil
 }
 
-type DockerComposeCompatible struct {
+type DockerComposeMinVersion struct {
 	MinVersion string
 }
 
-func (c DockerComposeCompatible) Run(ctx context.Context, r runner.Runner, _ Dependency) (*Fix, error) {
-	stdout, _, err := r.Run(ctx, "docker compose version")
+func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner, _ Dependency) (*Fix, error) {
+	stdout, _, err := r.Run(ctx, "docker compose version --format json")
 	if err != nil {
-		return &Fix{
-			Description: "Ensure Docker Compose is installed as a plugin for Docker",
-		}, errors.New(strings.ReplaceAll(err.Error(), "\n", " "))
+		return nil, err
 	}
 
-	if !version.IsAtLeastVersion(stdout, c.MinVersion) {
+	var output struct {
+		Version string `json:"version"`
+	}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return nil, err
+	}
+
+	if !version.IsAtLeastVersion(output.Version, c.MinVersion) {
 		return &Fix{
 			Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later", c.MinVersion),
-		}, fmt.Errorf("installed docker compose version %q is older than required version %q", stdout, c.MinVersion)
+		}, fmt.Errorf("installed docker compose version %s is older than required version %s", output.Version, c.MinVersion)
 	}
 
 	return nil, nil

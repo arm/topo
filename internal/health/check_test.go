@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -141,10 +140,10 @@ func TestDockerComposeCompatible(t *testing.T) {
 	dep := health.Dependency{}
 
 	t.Run("accepts Docker Compose at the minimum version", func(t *testing.T) {
-		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
 		runner := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"docker compose version": {Output: "Docker Compose version 2.0.0"},
+				"docker compose version --format json": {Output: `{"version": "2.0.0"}`},
 			},
 		}
 
@@ -155,10 +154,10 @@ func TestDockerComposeCompatible(t *testing.T) {
 	})
 
 	t.Run("accepts Docker Compose newer than the minimum version", func(t *testing.T) {
-		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
 		runner := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"docker compose version": {Output: "Docker Compose version 5.2.0"},
+				"docker compose version --format json": {Output: `{"version": "5.2.0"}`},
 			},
 		}
 
@@ -168,51 +167,17 @@ func TestDockerComposeCompatible(t *testing.T) {
 		assert.Nil(t, fix)
 	})
 
-	t.Run("returns a plugin installation fix when the version command fails", func(t *testing.T) {
-		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
-		runner := &runner.Fake{
-			Commands: map[string]runner.FakeResult{
-				"docker compose version": {
-					Err: fmt.Errorf("it blew up"),
-				},
-			},
-		}
-
-		fix, err := check.Run(ctx, runner, dep)
-
-		assert.EqualError(t, err, "it blew up")
-		assert.Equal(t, fix.Description, "Ensure Docker Compose is installed as a plugin for Docker")
-	})
-
-	t.Run("joins multi-line executions error into a one line", func(t *testing.T) {
-		stderr := `docker: unknown command: docker compose
-
-Run 'docker --help' for more information`
-		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
-		runner := &runner.Fake{
-			Commands: map[string]runner.FakeResult{
-				"docker compose version": {
-					Err: errors.New(stderr),
-				},
-			},
-		}
-
-		_, err := check.Run(ctx, runner, dep)
-
-		assert.EqualError(t, err, strings.ReplaceAll(stderr, "\n", " "))
-	})
-
 	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {
-		check := health.DockerComposeCompatible{MinVersion: "2.0.0"}
+		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
 		runner := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"docker compose version": {Output: "Docker Compose version 1.9.0"},
+				"docker compose version --format json": {Output: `{"version": "v1.9.0"}`},
 			},
 		}
 
 		fix, err := check.Run(ctx, runner, dep)
 
-		assert.EqualError(t, err, "installed docker compose version \"Docker Compose version 1.9.0\" is older than required version \"2.0.0\"")
+		assert.EqualError(t, err, "installed docker compose version v1.9.0 is older than required version 2.0.0")
 		assert.Contains(t, fix.Description, "Upgrade Docker Compose")
 	})
 }

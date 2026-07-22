@@ -103,7 +103,13 @@ var HostRequiredDependencies = []Dependency{
 		Label:                 "Docker Compose",
 		SoftwarePrerequisites: []SoftwareDependency{Docker},
 		Checks: []Check{
-			DockerComposeCompatible{
+			CommandSuccessful{
+				Cmd: "docker compose",
+				Fix: &Fix{
+					Description: "Ensure Docker Compose is installed as a plugin for Docker",
+				},
+			},
+			DockerComposeMinVersion{
 				MinVersion: "2.21.0",
 			},
 		},
