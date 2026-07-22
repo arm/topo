@@ -41,7 +41,7 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	destinationHost := command.NewHostFromDestination(destination)
 	testutil.RequireImageDoesNotExist(t, destinationHost, imageName)
 
-	tunnel, err := ssh.OpenSSHTunnel(t.Context(), os.Stdout, destination, registryPort, false)
+	tunnel, err := ssh.OpenSSHTunnel(context.Background(), os.Stdout, destination, registryPort, false)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, tunnel.Close(context.Background(), os.Stdout))
