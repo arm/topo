@@ -1,6 +1,7 @@
 package deploy_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -188,8 +189,8 @@ services:
 			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
 
 			deployOpts := deploy.DeployOptions{TargetHost: remoteDockerHost}
-			d, _ := deploy.NewDeployment(composeFilePath, deployOpts)
-			err := d.Run(os.Stdout)
+
+			err := deploy.Deploy(context.Background(), os.Stdout, composeFilePath, deployOpts)
 
 			require.NoError(t, err)
 			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
