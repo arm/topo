@@ -1,4 +1,4 @@
-packageetestutil
+package testutil
 
 import (
 	"net"
