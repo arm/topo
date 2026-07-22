@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDeploySuccess(t *testing.T) {
-	t.Run("Run writes deployment_success_message from compose file", func(t *testing.T) {
+func TestPrintDeploySuccess(t *testing.T) {
+	t.Run("writes deployment_success_message from compose file", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFile := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, composeFile, `
@@ -23,16 +23,15 @@ services:
   app:
     image: nginx
 `)
-		op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "Run `topo ps` to see deployed containers")
 		var buf bytes.Buffer
 
-		err := op.Run(&buf)
+		err := post_deploy.PrintDeploySuccess(&buf, composeFile, "Run `topo ps` to see deployed containers")
 
 		require.NoError(t, err)
 		assert.Equal(t, "Deployment complete!\n", buf.String())
 	})
 
-	t.Run("Run writes default message when deployment_success_message is absent", func(t *testing.T) {
+	t.Run("writes default message when deployment_success_message is absent", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFile := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, composeFile, `
@@ -40,23 +39,38 @@ services:
   app:
     image: nginx
 `)
-		op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "default message")
 		var buf bytes.Buffer
 
-		err := op.Run(&buf)
+		err := post_deploy.PrintDeploySuccess(&buf, composeFile, "default message")
 
 		require.NoError(t, err)
 		assert.Equal(t, "default message\n", buf.String())
 	})
 
-	t.Run("Run returns error when compose file does not exist", func(t *testing.T) {
-		op := post_deploy.NewDeploySuccess("nonexistent.yaml", command.LocalHost, "Run `topo ps` to see deployed containers")
+	t.Run("returns error when compose file does not exist", func(t *testing.T) {
 		var buf bytes.Buffer
 
-		err := op.Run(&buf)
+		err := post_deploy.PrintDeploySuccess(&buf, "nonexistent.yaml", "Run `topo ps` to see deployed containers")
 
 		require.Error(t, err)
 	})
+}
+
+func TestDeploySuccess(t *testing.T) {
+	dir := t.TempDir()
+	composeFile := filepath.Join(dir, "compose.yaml")
+	testutil.RequireWriteFile(t, composeFile, `
+services:
+  app:
+    image: nginx
+`)
+	op := post_deploy.NewDeploySuccess(composeFile, command.LocalHost, "default message")
+	var output bytes.Buffer
+
+	err := op.Run(&output)
+
+	require.NoError(t, err)
+	assert.Equal(t, "default message\n", output.String())
 }
 
 func TestDefaultMessage(t *testing.T) {

@@ -25,6 +25,10 @@ func NewDeploySuccess(composeFile string, h command.Host, defaultMessage string)
 	}
 }
 
+func (p *DeploySuccess) Run(output io.Writer) error {
+	return PrintDeploySuccess(output, p.composeFile, p.defaultMessage)
+}
+
 func DefaultMessage(composeFile string) string {
 	if composeFile == compose.DefaultFileName() {
 		return "Run `topo ps` to see deployed containers"
@@ -51,19 +55,15 @@ func getSuccessMessage(composeFile string) (string, error) {
 	return p.Metadata.DeploymentSuccessMessage, nil
 }
 
-func (p *DeploySuccess) Run(w io.Writer) error {
-	successMessage, err := getSuccessMessage(p.composeFile)
+func PrintDeploySuccess(output io.Writer, composeFile, defaultMessage string) error {
+	successMessage, err := getSuccessMessage(composeFile)
 	if err != nil {
 		return err
 	}
 	if successMessage == "" {
-		successMessage = p.defaultMessage
+		successMessage = defaultMessage
 	}
 
-	_, err = fmt.Fprintln(w, successMessage)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err = fmt.Fprintln(output, successMessage)
+	return err
 }
