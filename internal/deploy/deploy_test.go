@@ -8,6 +8,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/deploy/testutil"
@@ -32,7 +33,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposeBuild(composeFile, localHost),
 			operation.NewDockerComposePull(composeFile, localHost),
 			operation.NewDockerComposePipeTransfer(composeFile, localHost, remoteHost),
-			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
+			operation.NewDockerComposeUp(composeFile, remoteHost, docker.RecreateModeDefault),
 			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
 		}
 		assert.Equal(t, want, got)
@@ -58,7 +59,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
 			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
 			wantTunnelStop,
-			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
+			operation.NewDockerComposeUp(composeFile, remoteHost, docker.RecreateModeDefault),
 			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
 		)
 		assert.Equal(t, want, got)
@@ -67,19 +68,19 @@ func TestNewDeployment(t *testing.T) {
 	t.Run("excludes transfer operation for local host", func(t *testing.T) {
 		tests := []struct {
 			name         string
-			recreateMode operation.RecreateMode
+			recreateMode docker.RecreateMode
 		}{
 			{
 				name:         "default",
-				recreateMode: operation.RecreateModeDefault,
+				recreateMode: docker.RecreateModeDefault,
 			},
 			{
 				name:         "force recreate",
-				recreateMode: operation.RecreateModeForce,
+				recreateMode: docker.RecreateModeForce,
 			},
 			{
 				name:         "no recreate",
-				recreateMode: operation.RecreateModeNone,
+				recreateMode: docker.RecreateModeNone,
 			},
 		}
 		for _, tt := range tests {
@@ -123,7 +124,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
 			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
 			wantTunnelStop,
-			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
+			operation.NewDockerComposeUp(composeFile, remoteHost, docker.RecreateModeDefault),
 			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
 		)
 		assert.Equal(t, want, got)

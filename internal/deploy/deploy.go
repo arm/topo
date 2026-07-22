@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	goperation "github.com/arm/topo/internal/operation"
@@ -20,7 +21,7 @@ type RegistryConfig struct {
 }
 
 type DeployOptions struct {
-	RecreateMode operation.RecreateMode
+	RecreateMode docker.RecreateMode
 	TargetHost   ssh.Destination
 	Registry     *RegistryConfig
 }

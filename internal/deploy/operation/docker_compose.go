@@ -56,10 +56,10 @@ func (s *DockerComposeStop) Run(output io.Writer) error {
 type DockerComposeUp struct {
 	composeFile  string
 	host         command.Host
-	recreateMode RecreateMode
+	recreateMode docker.RecreateMode
 }
 
-func NewDockerComposeUp(composeFile string, host command.Host, mode RecreateMode) *DockerComposeUp {
+func NewDockerComposeUp(composeFile string, host command.Host, mode docker.RecreateMode) *DockerComposeUp {
 	return &DockerComposeUp{composeFile: composeFile, host: host, recreateMode: mode}
 }
 
@@ -68,11 +68,3 @@ func (u *DockerComposeUp) Description() string { return "Start services" }
 func (u *DockerComposeUp) Run(output io.Writer) error {
 	return docker.StartServices(context.Background(), output, u.composeFile, u.host, u.recreateMode)
 }
-
-type RecreateMode = docker.RecreateMode
-
-const (
-	RecreateModeDefault = docker.RecreateModeDefault
-	RecreateModeForce   = docker.RecreateModeForce
-	RecreateModeNone    = docker.RecreateModeNone
-)

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/deploy/docker"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/arm/topo/internal/env"
 	goperation "github.com/arm/topo/internal/operation"
@@ -87,9 +87,9 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 		switch {
 		case forceRecreate:
-			deployOpts.RecreateMode = operation.RecreateModeForce
+			deployOpts.RecreateMode = docker.RecreateModeForce
 		case noRecreate:
-			deployOpts.RecreateMode = operation.RecreateModeNone
+			deployOpts.RecreateMode = docker.RecreateModeNone
 		}
 
 		if deployOpts.Registry == nil {
