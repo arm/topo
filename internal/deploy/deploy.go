@@ -48,12 +48,12 @@ func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequ
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) (deploymentError error) {
 	sourceHost := command.LocalHost
-	if err := runDeployStep(output, "Build images", func() error {
+	if err := runStep(output, "Build images", func() error {
 		return docker.BuildImages(ctx, output, composeFile, sourceHost)
 	}); err != nil {
 		return err
 	}
-	if err := runDeployStep(output, "Pull images", func() error {
+	if err := runStep(output, "Pull images", func() error {
 		return docker.PullImages(ctx, output, composeFile, sourceHost)
 	}); err != nil {
 		return err
@@ -61,20 +61,20 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 
 	targetHost := command.NewHostFromDestination(opts.TargetHost)
 	if !opts.TargetHost.IsPlainLocalhost() && opts.Registry == nil {
-		if err := runDeployStep(output, "Transfer images", func() error {
+		if err := runStep(output, "Transfer images", func() error {
 			return docker.TransferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost)
 		}); err != nil {
 			return err
 		}
 	}
 	if !opts.TargetHost.IsPlainLocalhost() && opts.Registry != nil {
-		if err := runDeployStep(output, "Run registry", func() error {
+		if err := runStep(output, "Run registry", func() error {
 			return docker.EnsureRegistryRunning(ctx, output, DefaultRegistryContainerName, opts.Registry.Port)
 		}); err != nil {
 			return err
 		}
 		var tunnel *ssh.SSHTunnel
-		if err := runDeployStep(output, "Open registry SSH tunnel", func() error {
+		if err := runStep(output, "Open registry SSH tunnel", func() error {
 			var err error
 			tunnel, err = ssh.OpenSSHTunnel(ctx, output, opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
 			if err != nil {
@@ -89,30 +89,30 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 		}()
 
 		if !opts.TargetHost.IsLocalhost() && !opts.Registry.SkipRemotePortCheck {
-			if err := runDeployStep(output, "Check registry tunnel is not exposed on remote network", func() error {
+			if err := runStep(output, "Check registry tunnel is not exposed on remote network", func() error {
 				return docker.CheckTunnelExposure(ctx, output, opts.TargetHost, opts.Registry.Port)
 			}); err != nil {
 				return err
 			}
 		}
-		if err := runDeployStep(output, "Transfer via registry", func() error {
+		if err := runStep(output, "Transfer via registry", func() error {
 			return docker.TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, targetHost, opts.Registry.Port)
 		}); err != nil {
 			return err
 		}
 	}
 
-	if err := runDeployStep(output, "Start services", func() error {
+	if err := runStep(output, "Start services", func() error {
 		return docker.StartServices(ctx, output, composeFile, targetHost, opts.RecreateMode)
 	}); err != nil {
 		return err
 	}
-	return runDeployStep(output, "Deployment Success", func() error {
+	return runStep(output, "Deployment Success", func() error {
 		return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
 	})
 }
 
-func runDeployStep(output io.Writer, description string, run func() error) error {
+func runStep(output io.Writer, description string, run func() error) error {
 	if output != nil {
 		if err := term.PrintHeader(output, description); err != nil {
 			return err
