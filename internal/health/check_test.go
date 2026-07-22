@@ -198,7 +198,7 @@ Run 'docker --help' for more information`
 
 		_, err := check.Run(ctx, runner, dep)
 
-		assert.Contains(t, err.Error(), strings.ReplaceAll(stderr, "\n", " "))
+		assert.EqualError(t, err, strings.ReplaceAll(stderr, "\n", " "))
 	})
 
 	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {

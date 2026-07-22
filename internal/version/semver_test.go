@@ -1,9 +1,10 @@
-package version
+package version_test
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/arm/topo/internal/version"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,7 +24,7 @@ func TestIsAtLeastVersion(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("current = %s, minimum = %s", test.current, test.minimum), func(t *testing.T) {
-			result := IsAtLeastVersion(test.current, test.minimum)
+			result := version.IsAtLeastVersion(test.current, test.minimum)
 
 			require.Equal(t, test.expected, result)
 		})
