@@ -6,6 +6,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"regexp"
 	"slices"
 	"sort"
 
@@ -13,6 +14,8 @@ import (
 )
 
 const ArtifactoryBaseURL = "https://artifacts.tools.arm.com/topo"
+
+var artifactoryVersionRe = regexp.MustCompile(`href="v?(\d+)\.(\d+)\.(\d+)/"`)
 
 func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -40,14 +43,14 @@ func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
 		return "", fmt.Errorf("reading version index: %w", err)
 	}
 
-	matches := semverRe.FindAllStringSubmatch(string(body), -1)
+	matches := artifactoryVersionRe.FindAllStringSubmatch(string(body), -1)
 	if len(matches) == 0 {
 		return "", fmt.Errorf("no versions found in %q", url)
 	}
 
 	versions := make(map[string]struct{})
 	for _, m := range matches {
-		v := m[0]
+		v := fmt.Sprintf("%s.%s.%s", m[1], m[2], m[3])
 		if _, ok := versions[v]; !ok {
 			versions[v] = struct{}{}
 		}
@@ -59,5 +62,5 @@ func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
 	})
 	latest := versionsList[len(versionsList)-1]
 
-	return latest[1:], nil
+	return latest, nil
 }

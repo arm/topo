@@ -171,7 +171,7 @@ func TestArtifactoryDownloadURL(t *testing.T) {
 	for _, tt := range tests {
 		name := tt.os + "/" + tt.arch
 		t.Run(name, func(t *testing.T) {
-			url := upgrade.ArtifactoryDownloadURL(tt.os, tt.arch, version)
+			url := upgrade.TopoDownloadURL(tt.os, tt.arch, version)
 
 			assert.Equal(t, url, tt.expected)
 		})

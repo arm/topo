@@ -53,6 +53,28 @@ func TestFetchLatestArtifactory(t *testing.T) {
 		assert.Equal(t, "4.1.0", got)
 	})
 
+	t.Run("returns highest version without a v prefix", func(t *testing.T) {
+		body := `<a href="1.1.0/">1.1.0/</a>
+<a href="1.1.1/">1.1.1/</a>`
+		srv := createTestServerWithBody(t, body)
+
+		got, err := version.FetchLatestArtifactory(context.Background(), srv.URL)
+
+		require.NoError(t, err)
+		assert.Equal(t, "1.1.1", got)
+	})
+
+	t.Run("ignores versions outside Artifactory directory links", func(t *testing.T) {
+		body := `Latest version: 99.0.0
+<a href="v1.2.3/">v1.2.3/</a>`
+		srv := createTestServerWithBody(t, body)
+
+		got, err := version.FetchLatestArtifactory(context.Background(), srv.URL)
+
+		require.NoError(t, err)
+		assert.Equal(t, "1.2.3", got)
+	})
+
 	t.Run("picks correct version when order is scrambled", func(t *testing.T) {
 		body := `<a href="v2.0.0/">v2.0.0/</a>
 <a href="v10.0.0/">v10.0.0/</a>

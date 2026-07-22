@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/arm/topo/internal/install"
@@ -10,15 +11,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const remoteprocRuntimeRepoURL = "arm/remoteproc-runtime"
+const (
+	remoteprocRuntimeURL         = "https://artifacts.tools.arm.com/remoteproc-runtime/"
+	remoteprocRuntimeArchiveName = "remoteproc-runtime_%s_linux_arm64.tar.gz"
+)
 
 var installRemoteprocRuntimeCmd = &cobra.Command{
 	Use:   "remoteproc-runtime",
 	Short: "Install remoteproc-runtime and shim to a location on the target's PATH",
 	Long: `Install remoteproc-runtime and shim to a location on the target's PATH.
 
-Fetches binaries from https://github.com/` + remoteprocRuntimeRepoURL + `
-Set GITHUB_TOKEN to authenticate with the GitHub API and avoid rate limits.
+Fetches binaries from https://artifacts.tools.arm.com/remoteproc-runtime/
 
 Attempts to replace existing installations if found.
 Falls back to ~/bin if no suitable locations are automatically found.`,
@@ -31,7 +34,7 @@ Falls back to ~/bin if no suitable locations are automatically found.`,
 		}
 
 		outputFormat := resolveOutput(cmd)
-		p, err := installRemoteprocRuntime(ssh.NewDestination(targetArg))
+		p, err := installRemoteprocRuntime(cmd.Context(), ssh.NewDestination(targetArg))
 		if err != nil {
 			return err
 		}
@@ -39,9 +42,9 @@ Falls back to ~/bin if no suitable locations are automatically found.`,
 	},
 }
 
-func installRemoteprocRuntime(targetDest ssh.Destination) (views.View, error) {
+func installRemoteprocRuntime(ctx context.Context, targetDest ssh.Destination) (views.View, error) {
 	r := runner.For(targetDest)
-	results, err := install.InstallBinariesFromGithubRelease(r, remoteprocRuntimeRepoURL, []string{"remoteproc-runtime", "containerd-shim-remoteproc-v1"})
+	results, err := install.InstallBinariesFromArtifactory(ctx, r, remoteprocRuntimeURL, remoteprocRuntimeArchiveName, []string{"remoteproc-runtime", "containerd-shim-remoteproc-v1"})
 	if err != nil {
 		return nil, err
 	}
