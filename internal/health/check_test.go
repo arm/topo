@@ -134,3 +134,50 @@ func TestOpenSSHAvailable(t *testing.T) {
 		assert.Nil(t, fix)
 	})
 }
+
+func TestDockerComposeCompatible(t *testing.T) {
+	ctx := context.Background()
+	dep := health.Dependency{}
+
+	t.Run("accepts Docker Compose at the minimum version", func(t *testing.T) {
+		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version --format json": {Output: `{"version": "2.0.0"}`},
+			},
+		}
+
+		fix, err := check.Run(ctx, runner, dep)
+
+		assert.NoError(t, err)
+		assert.Nil(t, fix)
+	})
+
+	t.Run("accepts Docker Compose newer than the minimum version", func(t *testing.T) {
+		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version --format json": {Output: `{"version": "5.2.0"}`},
+			},
+		}
+
+		fix, err := check.Run(ctx, runner, dep)
+
+		assert.NoError(t, err)
+		assert.Nil(t, fix)
+	})
+
+	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {
+		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
+		runner := &runner.Fake{
+			Commands: map[string]runner.FakeResult{
+				"docker compose version --format json": {Output: `{"version": "v1.9.0"}`},
+			},
+		}
+
+		fix, err := check.Run(ctx, runner, dep)
+
+		assert.EqualError(t, err, "installed docker compose version v1.9.0 is older than required version 2.0.0")
+		assert.Contains(t, fix.Description, "Upgrade Docker Compose")
+	})
+}

@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/version"
 )
 
 type Check interface {
@@ -91,6 +93,33 @@ func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependen
 			Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
 		}, fmt.Errorf("%q does not resolve to OpenSSH: %s", dep.Binary, stderr)
 	}
+	return nil, nil
+}
+
+type DockerComposeMinVersion struct {
+	MinVersion string
+}
+
+func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner, _ Dependency) (*Fix, error) {
+	stdout, _, err := r.Run(ctx, "docker compose version --format json")
+	if err != nil {
+		return nil, err
+	}
+
+	var output struct {
+		Version string `json:"version"`
+	}
+	err = json.Unmarshal([]byte(stdout), &output)
+	if err != nil {
+		return nil, err
+	}
+
+	if !version.IsAtLeastVersion(output.Version, c.MinVersion) {
+		return &Fix{
+			Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later", c.MinVersion),
+		}, fmt.Errorf("installed docker compose version %s is older than required version %s", output.Version, c.MinVersion)
+	}
+
 	return nil, nil
 }
 
