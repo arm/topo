@@ -3,8 +3,6 @@ package docker_test
 import (
 	"bytes"
 	"fmt"
-	"net"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -21,7 +19,7 @@ func TestEnsureRegistryRunning(t *testing.T) {
 	t.Run("creates a registry when its container does not exist", func(t *testing.T) {
 		const containerName = "topo-test-registry-create"
 		requireContainerAbsent(t, containerName)
-		port := availablePort(t)
+		port := testutil.RequireAvailableTCPPort(t, "127.0.0.1")
 		var output bytes.Buffer
 
 		err := docker.EnsureRegistryRunning(t.Context(), &output, containerName, port)
@@ -34,7 +32,7 @@ func TestEnsureRegistryRunning(t *testing.T) {
 	t.Run("starts an existing stopped registry", func(t *testing.T) {
 		const containerName = "topo-test-registry-start"
 		requireContainerAbsent(t, containerName)
-		port := availablePort(t)
+		port := testutil.RequireAvailableTCPPort(t, "127.0.0.1")
 		var output bytes.Buffer
 		require.NoError(t, docker.EnsureRegistryRunning(t.Context(), &output, containerName, port), output.String())
 		stopOutput, err := command.Docker(command.LocalHost, "stop", containerName).CombinedOutput()
@@ -51,10 +49,10 @@ func TestEnsureRegistryRunning(t *testing.T) {
 	t.Run("returns an error when an existing registry uses a different port", func(t *testing.T) {
 		const containerName = "topo-test-registry-port-mismatch"
 		requireContainerAbsent(t, containerName)
-		alreadyRunningOnPort := availablePort(t)
-		newlyRequestedPort := availablePort(t)
+		alreadyRunningOnPort := testutil.RequireAvailableTCPPort(t, "127.0.0.1")
+		newlyRequestedPort := testutil.RequireAvailableTCPPort(t, "127.0.0.1")
 		for newlyRequestedPort == alreadyRunningOnPort {
-			newlyRequestedPort = availablePort(t)
+			newlyRequestedPort = testutil.RequireAvailableTCPPort(t, "127.0.0.1")
 		}
 		var output bytes.Buffer
 		require.NoError(t, docker.EnsureRegistryRunning(t.Context(), &output, containerName, alreadyRunningOnPort), output.String())
@@ -72,7 +70,7 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		requireContainerAbsent(t, containerName)
 		const portOwnerContainerName = "topo-test-registry-port-owner"
 		requireContainerAbsent(t, portOwnerContainerName)
-		port := availablePort(t)
+		port := testutil.RequireAvailableTCPPort(t, "127.0.0.1")
 		portOwnerOutput, err := command.Docker(
 			command.LocalHost,
 			"run",
@@ -101,15 +99,6 @@ func requireContainerAbsent(t *testing.T, containerName string) {
 			t.Logf("failed to remove registry container: %v: %s", err, string(removeOutput))
 		}
 	})
-}
-
-func availablePort(t *testing.T) string {
-	t.Helper()
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	port := strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
-	require.NoError(t, listener.Close())
-	return port
 }
 
 func assertRegistryRunning(t *testing.T, containerName string) {
