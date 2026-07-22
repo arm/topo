@@ -113,14 +113,14 @@ func downloadFile(ctx context.Context, url *url.URL) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected fetch status code: %d", resp.StatusCode)
+		statusErr := fmt.Errorf("unexpected fetch status code: %d", resp.StatusCode)
+		return nil, errors.Join(statusErr, resp.Body.Close())
 	}
 
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
+	b, readErr := io.ReadAll(resp.Body)
+	if err := errors.Join(readErr, resp.Body.Close()); err != nil {
 		return nil, err
 	}
 	return b, nil

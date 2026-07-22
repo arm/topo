@@ -153,7 +153,7 @@ func TestInstall(t *testing.T) {
 	})
 }
 
-func TestArtifactoryDownloadURL(t *testing.T) {
+func TestTopoDownloadURL(t *testing.T) {
 	version := "3.13.37"
 	tests := []struct {
 		os       string

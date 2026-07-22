@@ -2,6 +2,7 @@ package upgrade
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -135,7 +136,7 @@ func extractBinary(ctx context.Context, archiveData []byte, destDir string) (str
 	}
 	tmpPath := tmp.Name()
 	if _, err := tmp.Write(files[binaryName]); err != nil {
-		_ = tmp.Close()
+		err = errors.Join(err, tmp.Close())
 		ensureFileRemoved(tmpPath)
 		return "", fmt.Errorf("failed to extract binary: %w", err)
 	}

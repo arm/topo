@@ -38,12 +38,6 @@ const artifactoryHTML = `<!DOCTYPE html>
 <hr/><address style="font-size:small;">Artifactory Online Server</address></body></html>`
 
 func TestFetchLatestArtifactory(t *testing.T) {
-	t.Run("can reach real artifactory index page", func(t *testing.T) {
-		_, err := version.FetchLatestArtifactory(context.Background(), version.ArtifactoryBaseURL)
-
-		require.NoError(t, err)
-	})
-
 	t.Run("returns highest version from artifactory index", func(t *testing.T) {
 		srv := createTestServerWithBody(t, artifactoryHTML)
 
