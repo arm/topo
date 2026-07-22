@@ -179,8 +179,8 @@ func TestDockerComposeCompatible(t *testing.T) {
 
 		fix, err := check.Run(ctx, runner, dep)
 
-		assert.Contains(t, err.Error(), "it blew up")
-		assert.Contains(t, fix.Description, "as a plugin")
+		assert.EqualError(t, err, "it blew up")
+		assert.Equal(t, fix.Description, "Ensure Docker Compose is installed as a plugin for Docker")
 	})
 
 	t.Run("joins multi-line executions error into a one line", func(t *testing.T) {
@@ -211,8 +211,7 @@ Run 'docker --help' for more information`
 
 		fix, err := check.Run(ctx, runner, dep)
 
-		assert.Contains(t, err.Error(), "1.9.0")
-		assert.Contains(t, err.Error(), "older than required version")
+		assert.EqualError(t, err, "installed docker compose version \"Docker Compose version 1.9.0\" is older than required version \"2.0.0\"")
 		assert.Contains(t, fix.Description, "Upgrade Docker Compose")
 	})
 }
