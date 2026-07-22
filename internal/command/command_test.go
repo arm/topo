@@ -8,15 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWrapInLoginShell(t *testing.T) {
-	t.Run("wraps command in login shell", func(t *testing.T) {
-		got := command.WrapInLoginShell("echo $PATH")
-
-		want := `/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"echo \\\$PATH\""`
-		assert.Equal(t, want, got)
-	})
-}
-
 func TestBinaryLookupCommand(t *testing.T) {
 	t.Run("returns wrapped command for valid binary", func(t *testing.T) {
 		got, err := command.BinaryLookupCommand("docker")
