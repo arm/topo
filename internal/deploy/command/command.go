@@ -7,8 +7,12 @@ import (
 )
 
 func Docker(host Host, args ...string) *exec.Cmd {
+	return DockerContext(context.Background(), host, args...)
+}
+
+func DockerContext(ctx context.Context, host Host, args ...string) *exec.Cmd {
 	cmdArgs := append(hostToArgs(host), args...)
-	return exec.Command("docker", cmdArgs...)
+	return exec.CommandContext(ctx, "docker", cmdArgs...)
 }
 
 func String(cmd *exec.Cmd) string {
