@@ -176,6 +176,7 @@ func moveBinary(src, dst string) error {
 }
 
 func ensureFileRemoved(path string) {
+	// #nosec G703 -- path is returned by os.CreateTemp and only used for temporary-file cleanup
 	err := os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {
