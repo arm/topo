@@ -133,7 +133,7 @@ func TestNewDeployment(t *testing.T) {
 		localhostSSHDest := ssh.NewDestination("ssh://root@localhost:2222")
 		opts := deploy.DeployOptions{
 			TargetHost: localhostSSHDest,
-			Registry:   &deploy.RegistryConfig{Port: operation.DefaultRegistryPort},
+			Registry:   &deploy.RegistryConfig{Port: deploy.DefaultRegistryPort},
 		}
 
 		got, _ := deploy.NewDeployment(composeFile, opts)
