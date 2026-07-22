@@ -25,8 +25,8 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		err := docker.EnsureRegistryRunning(t.Context(), &output, containerName, port)
 
 		require.NoError(t, err, output.String())
-		assertRegistryRunning(t, containerName)
-		assertRegistryPort(t, containerName, port)
+		assertContainerRunning(t, containerName)
+		assertContainerPort(t, containerName, port)
 	})
 
 	t.Run("starts an existing stopped registry", func(t *testing.T) {
@@ -42,8 +42,8 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		err = docker.EnsureRegistryRunning(t.Context(), &output, containerName, port)
 
 		require.NoError(t, err, output.String())
-		assertRegistryRunning(t, containerName)
-		assertRegistryPort(t, containerName, port)
+		assertContainerRunning(t, containerName)
+		assertContainerPort(t, containerName, port)
 	})
 
 	t.Run("returns an error when an existing registry uses a different port", func(t *testing.T) {
@@ -101,7 +101,7 @@ func requireContainerAbsent(t *testing.T, containerName string) {
 	})
 }
 
-func assertRegistryRunning(t *testing.T, containerName string) {
+func assertContainerRunning(t *testing.T, containerName string) {
 	t.Helper()
 	inspectCommand := command.Docker(command.LocalHost, "inspect", "--format", "{{.State.Running}}", containerName)
 	output, err := inspectCommand.CombinedOutput()
@@ -109,7 +109,7 @@ func assertRegistryRunning(t *testing.T, containerName string) {
 	assert.Equal(t, "true", strings.TrimSpace(string(output)))
 }
 
-func assertRegistryPort(t *testing.T, containerName, port string) {
+func assertContainerPort(t *testing.T, containerName, port string) {
 	t.Helper()
 	portCommand := command.Docker(command.LocalHost, "port", containerName, "5000")
 	output, err := portCommand.CombinedOutput()
