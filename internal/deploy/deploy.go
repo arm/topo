@@ -47,7 +47,7 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 			cleanup = stopTunnel
 			ops = append(ops, operation.NewRunRegistry(opts.Registry.Port)...)
 			ops = append(ops, startTunnel)
-			if !opts.Registry.SkipRemotePortCheck {
+			if !opts.TargetHost.IsLocalhost() && !opts.Registry.SkipRemotePortCheck {
 				ops = append(ops, operation.NewRegistryTunnelExposureCheck(opts.TargetHost, opts.Registry.Port))
 			}
 			ops = append(ops, operation.NewRegistryTransfer(composeFile, sourceHost, targetHost, opts.Registry.Port))
