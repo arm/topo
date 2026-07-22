@@ -75,3 +75,15 @@ node scripts/sync-skill-context.js --check
 ```
 
 Skill-specific instructions should stay workflow-focused. Put stable common vocabulary in the shared context, reference the current schema/docs for evolving spec details, and avoid copying the full specification into individual skills.
+
+## Docs
+
+### Previewing the docs locally
+
+Use the provided compose project to preview docs changes locally:
+
+```sh
+docker compose up
+```
+
+The documentation preview is available at `http://localhost:3000` and automatically reloads when files change.
