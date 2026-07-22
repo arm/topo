@@ -8,6 +8,11 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
+const (
+	DefaultRegistryContainerName = "topo-registry"
+	DefaultRegistryPort          = "12737"
+)
+
 type RegistryConfig struct {
 	Port                string
 	SkipRemotePortCheck bool
@@ -45,7 +50,7 @@ func NewDeployment(composeFile string, opts DeployOptions) (goperation.Sequence,
 		if opts.Registry != nil {
 			startTunnel, stopTunnel := operation.NewRegistrySSHTunnel(opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
 			cleanup = stopTunnel
-			ops = append(ops, operation.NewRunRegistry(opts.Registry.Port)...)
+			ops = append(ops, operation.NewRunRegistry(DefaultRegistryContainerName, opts.Registry.Port)...)
 			ops = append(ops, startTunnel)
 			if !opts.TargetHost.IsLocalhost() && !opts.Registry.SkipRemotePortCheck {
 				ops = append(ops, operation.NewRegistryTunnelExposureCheck(opts.TargetHost, opts.Registry.Port))

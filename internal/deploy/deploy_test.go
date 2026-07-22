@@ -40,7 +40,7 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		port := operation.DefaultRegistryPort
+		port := deploy.DefaultRegistryPort
 		opts := deploy.DeployOptions{TargetHost: remoteDest, Registry: &deploy.RegistryConfig{Port: port, UseControlSockets: true}}
 
 		got, _ := deploy.NewDeployment(composeFile, opts)
@@ -51,7 +51,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposeBuild(composeFile, localHost),
 			operation.NewDockerComposePull(composeFile, localHost),
 		}
-		want = append(want, operation.NewRunRegistry(port)...)
+		want = append(want, operation.NewRunRegistry(deploy.DefaultRegistryContainerName, port)...)
 		wantTunnelStart, wantTunnelStop := operation.NewRegistrySSHTunnel(remoteDest, port, opts.Registry.UseControlSockets)
 		want = append(want,
 			wantTunnelStart,
@@ -105,7 +105,7 @@ func TestNewDeployment(t *testing.T) {
 
 	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
 		remoteDest := ssh.NewDestination("user@remote")
-		port := operation.DefaultRegistryPort
+		port := deploy.DefaultRegistryPort
 		opts := deploy.DeployOptions{TargetHost: remoteDest, Registry: &deploy.RegistryConfig{Port: port, UseControlSockets: false}}
 
 		got, _ := deploy.NewDeployment(composeFile, opts)
@@ -117,7 +117,7 @@ func TestNewDeployment(t *testing.T) {
 			operation.NewDockerComposeBuild(composeFile, localHost),
 			operation.NewDockerComposePull(composeFile, localHost),
 		}
-		want = append(want, operation.NewRunRegistry(port)...)
+		want = append(want, operation.NewRunRegistry(deploy.DefaultRegistryContainerName, port)...)
 		want = append(want,
 			wantTunnelStart,
 			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
@@ -133,7 +133,7 @@ func TestNewDeployment(t *testing.T) {
 		localhostSSHDest := ssh.NewDestination("ssh://root@localhost:2222")
 		opts := deploy.DeployOptions{
 			TargetHost: localhostSSHDest,
-			Registry:   &deploy.RegistryConfig{Port: operation.DefaultRegistryPort},
+			Registry:   &deploy.RegistryConfig{Port: deploy.DefaultRegistryPort},
 		}
 
 		got, _ := deploy.NewDeployment(composeFile, opts)

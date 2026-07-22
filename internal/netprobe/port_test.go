@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/netprobe"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestIsRemotePortListening(t *testing.T) {
 	t.Run("returns false when the remote port refuses the connection", func(t *testing.T) {
-		port := reserveFreePort(t, "0.0.0.0")
+		port := testutil.RequireAvailableTCPPort(t, "0.0.0.0")
 
 		got, err := netprobe.IsRemotePortListening(context.Background(), "0.0.0.0", port)
 
@@ -51,14 +52,4 @@ func TestIsRemotePortListening(t *testing.T) {
 		assert.ErrorContains(t, err, `could not resolve remote host "nonexistent.invalid"`)
 		assert.False(t, got)
 	})
-}
-
-func reserveFreePort(t *testing.T, host string) string {
-	t.Helper()
-	listener, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
-	require.NoError(t, err)
-	_, port, err := net.SplitHostPort(listener.Addr().String())
-	require.NoError(t, err)
-	require.NoError(t, listener.Close())
-	return port
 }

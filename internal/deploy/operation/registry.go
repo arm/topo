@@ -1,71 +1,26 @@
 package operation
 
 import (
-	"bytes"
-	"fmt"
+	"context"
 	"io"
-	"strings"
 
-	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/operation"
 )
 
-const (
-	RegistryContainerName = "topo-registry"
-	DefaultRegistryPort   = "12737"
-	registryImage         = "registry:2"
-)
-
-func NewRunRegistry(port string) operation.Sequence {
-	localHost := command.LocalHost
-	return operation.NewSequence(
-		NewDockerPull(localHost, registryImage),
-		operation.NewConditional(
-			NewContainerExistsPredicate(localHost, RegistryContainerName),
-			NewDockerStart(localHost, RegistryContainerName),
-			NewRegistryRunWrapper(NewDockerRun(localHost, registryImage, RegistryContainerName,
-				[]string{
-					"-d",
-					"--restart", "always",
-					"-p", fmt.Sprintf("127.0.0.1:%s:5000", port),
-				},
-			)),
-		),
-	)
+func NewRunRegistry(containerName, port string) operation.Sequence {
+	return operation.NewSequence(&runRegistry{containerName: containerName, port: port})
 }
 
-type RegistryRunWrapper struct {
-	*Docker
-}
-
-func NewRegistryRunWrapper(d *Docker) *RegistryRunWrapper {
-	return &RegistryRunWrapper{Docker: d}
-}
-
-func (r *RegistryRunWrapper) Run(w io.Writer) error {
-	var buf bytes.Buffer
-	combined := io.MultiWriter(w, &buf)
-	if err := r.Docker.Run(combined); err != nil {
-		if strings.Contains(buf.String(), "already in use") || strings.Contains(buf.String(), "already allocated") {
-			return fmt.Errorf("%w\nport is already in use, this could be an existing %s or another process", err, RegistryContainerName)
-		}
-		return err
-	}
-	return nil
-}
-
-type ContainerExistsPredicate struct {
-	host          command.Host
+type runRegistry struct {
 	containerName string
+	port          string
 }
 
-func NewContainerExistsPredicate(host command.Host, containerName string) *ContainerExistsPredicate {
-	return &ContainerExistsPredicate{host: host, containerName: containerName}
+func (r *runRegistry) Description() string {
+	return "Run registry"
 }
 
-func (p *ContainerExistsPredicate) Eval() bool {
-	cmd := command.Docker(p.host, "inspect", p.containerName)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	return cmd.Run() == nil
+func (r *runRegistry) Run(output io.Writer) error {
+	return docker.EnsureRegistryRunning(context.Background(), output, r.containerName, r.port)
 }

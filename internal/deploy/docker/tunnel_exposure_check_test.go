@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,7 @@ func TestCheckTunnelExposure(t *testing.T) {
 	})
 
 	t.Run("succeeds when the remote port refuses the connection", func(t *testing.T) {
-		port := reserveFreePort(t, "0.0.0.0")
+		port := testutil.RequireAvailableTCPPort(t, "0.0.0.0")
 		var output strings.Builder
 
 		err := docker.CheckTunnelExposure(context.Background(), &output, ssh.NewDestination("0.0.0.0"), port)
@@ -56,14 +57,4 @@ func TestCheckTunnelExposure(t *testing.T) {
 		assert.NoError(t, listenerCloseErr)
 		assert.NoError(t, <-connectionClosed)
 	})
-}
-
-func reserveFreePort(t *testing.T, host string) string {
-	t.Helper()
-	listener, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
-	require.NoError(t, err)
-	_, port, err := net.SplitHostPort(listener.Addr().String())
-	require.NoError(t, err)
-	require.NoError(t, listener.Close())
-	return port
 }
