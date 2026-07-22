@@ -47,7 +47,7 @@ func transferImageViaRegistry(ctx context.Context, source, destination command.H
 }
 
 func tagImageForRegistry(ctx context.Context, source command.Host, image, registryTag string, output io.Writer) error {
-	return runDockerCommand(ctx, source, output, "tag", image, registryTag)
+	return command.RunDocker(ctx, source, output, "tag", image, registryTag)
 }
 
 func pushImageToRegistry(ctx context.Context, source command.Host, registryTag string, output io.Writer) (string, error) {
@@ -67,21 +67,11 @@ func pushImageToRegistry(ctx context.Context, source command.Host, registryTag s
 }
 
 func pullImageByDigest(ctx context.Context, destination command.Host, digestReference string, output io.Writer) error {
-	return runDockerCommand(ctx, destination, output, "pull", digestReference)
+	return command.RunDocker(ctx, destination, output, "pull", digestReference)
 }
 
 func restoreOriginalImageTag(ctx context.Context, destination command.Host, digestReference, image string, output io.Writer) error {
-	return runDockerCommand(ctx, destination, output, "tag", digestReference, image)
-}
-
-func runDockerCommand(ctx context.Context, host command.Host, output io.Writer, args ...string) error {
-	cmd := command.DockerContext(ctx, host, args...)
-	cmd.Stdout = output
-	cmd.Stderr = output
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to execute %s: %w", strings.Join(cmd.Args, " "), err)
-	}
-	return nil
+	return command.RunDocker(ctx, destination, output, "tag", digestReference, image)
 }
 
 func ParseDigestFromPushOutput(output string) (string, error) {
