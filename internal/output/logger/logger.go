@@ -70,7 +70,7 @@ func New(opts Options) *Logger {
 	}
 }
 
-func (l *Logger) log(level Level, msg string) {
+func (l *Logger) Log(level Level, msg string) {
 	formattedMsg := formatMessage(l.format, l.palette, level, msg)
 	_, _ = fmt.Fprintln(l.output, formattedMsg)
 }

@@ -7,13 +7,13 @@ func SetOptions(opts Options) {
 }
 
 func Info(msg string) {
-	logger.log(LevelInfo, msg)
+	logger.Log(LevelInfo, msg)
 }
 
 func Warn(msg string) {
-	logger.log(LevelWarn, msg)
+	logger.Log(LevelWarn, msg)
 }
 
 func Error(msg string) {
-	logger.log(LevelError, msg)
+	logger.Log(LevelError, msg)
 }
