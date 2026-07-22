@@ -15,10 +15,12 @@ type LoginShellWrapper struct {
 
 // NewLoginShellWrapper returns a wrapper that marks the start of command output.
 func NewLoginShellWrapper() *LoginShellWrapper {
-	return newLoginShellWrapperWithMarker(loginShellMarker)
+	return NewLoginShellWrapperWithMarker(loginShellMarker)
 }
 
-func newLoginShellWrapperWithMarker(marker string) *LoginShellWrapper {
+// NewLoginShellWrapperWithMarker returns a wrapper that uses marker to identify
+// the start of command output.
+func NewLoginShellWrapperWithMarker(marker string) *LoginShellWrapper {
 	return &LoginShellWrapper{marker: marker}
 }
 

@@ -1,15 +1,16 @@
-package command
+package command_test
 
 import (
 	"testing"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoginShellWrapper(t *testing.T) {
 	t.Run("Wrap", func(t *testing.T) {
 		t.Run("wraps the command in a login shell with markers", func(t *testing.T) {
-			wrapper := newLoginShellWrapperWithMarker("*FOO*")
+			wrapper := command.NewLoginShellWrapperWithMarker("*FOO*")
 
 			got := wrapper.Wrap("echo $PATH")
 
@@ -19,7 +20,7 @@ func TestLoginShellWrapper(t *testing.T) {
 	})
 
 	t.Run("Unwrap", func(t *testing.T) {
-		wrapper := newLoginShellWrapperWithMarker("*FOO*")
+		wrapper := command.NewLoginShellWrapperWithMarker("*FOO*")
 
 		t.Run("strips output emitted before the marker", func(t *testing.T) {
 			got := wrapper.Unwrap("login shell output\n*FOO*\nhello, some output")
