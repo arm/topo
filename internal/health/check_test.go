@@ -135,6 +135,7 @@ func TestOpenSSHAvailable(t *testing.T) {
 		assert.Nil(t, fix)
 	})
 }
+
 func TestDockerComposeCompatible(t *testing.T) {
 	ctx := context.Background()
 	dep := health.Dependency{}
