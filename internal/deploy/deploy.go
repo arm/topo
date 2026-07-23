@@ -47,7 +47,17 @@ func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequ
 	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, command.NewHostFromDestination(dest))}
 }
 
-func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) (deploymentError error) {
+func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) error {
+	if err := runDeployment(ctx, output, composeFile, opts); err != nil {
+		return err
+	}
+	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
+		return err
+	}
+	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
+}
+
+func runDeployment(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) (deploymentError error) {
 	sourceHost := command.LocalHost
 
 	if err := term.PrintHeader(output, "Build images"); err != nil {
@@ -121,10 +131,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 		return err
 	}
 
-	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
-		return err
-	}
-	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
+	return nil
 }
 
 func closeTunnel(output io.Writer, tunnel *ssh.SSHTunnel) error {
