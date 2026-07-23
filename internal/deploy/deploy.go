@@ -48,78 +48,78 @@ func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequ
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) (deploymentError error) {
 	sourceHost := command.LocalHost
-	if err := runStep(output, "Build images", func() error {
-		return docker.BuildImages(ctx, output, composeFile, sourceHost)
-	}); err != nil {
+
+	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
 	}
-	if err := runStep(output, "Pull images", func() error {
-		return docker.PullImages(ctx, output, composeFile, sourceHost)
-	}); err != nil {
+	if err := docker.BuildImages(ctx, output, composeFile, sourceHost); err != nil {
+		return err
+	}
+
+	if err := term.PrintHeader(output, "Pull images"); err != nil {
+		return err
+	}
+	if err := docker.PullImages(ctx, output, composeFile, sourceHost); err != nil {
 		return err
 	}
 
 	targetHost := command.NewHostFromDestination(opts.TargetHost)
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry == nil {
-			if err := runStep(output, "Transfer images", func() error {
-				return docker.TransferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost)
-			}); err != nil {
+			if err := term.PrintHeader(output, "Transfer images"); err != nil {
+				return err
+			}
+			if err := docker.TransferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost); err != nil {
 				return err
 			}
 		} else {
-			if err := runStep(output, "Run registry", func() error {
-				return docker.EnsureRegistryRunning(ctx, output, DefaultRegistryContainerName, opts.Registry.Port)
-			}); err != nil {
+			if err := term.PrintHeader(output, "Run registry"); err != nil {
 				return err
 			}
-			var tunnel *ssh.SSHTunnel
-			if err := runStep(output, "Open registry SSH tunnel", func() error {
-				var err error
-				tunnel, err = ssh.OpenSSHTunnel(ctx, output, opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
-				if err != nil {
-					return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Registry.Port)
-				}
-				return nil
-			}); err != nil {
+			if err := docker.EnsureRegistryRunning(ctx, output, DefaultRegistryContainerName, opts.Registry.Port); err != nil {
 				return err
+			}
+
+			if err := term.PrintHeader(output, "Open registry SSH tunnel"); err != nil {
+				return err
+			}
+			tunnel, err := ssh.OpenSSHTunnel(ctx, output, opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
+			if err != nil {
+				return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Registry.Port)
 			}
 			defer func() {
 				deploymentError = errors.Join(deploymentError, closeTunnel(output, tunnel))
 			}()
 
 			if !opts.TargetHost.IsLocalhost() && !opts.Registry.SkipRemotePortCheck {
-				if err := runStep(output, "Check registry tunnel is not exposed on remote network", func() error {
-					return docker.CheckTunnelExposure(ctx, output, opts.TargetHost, opts.Registry.Port)
-				}); err != nil {
+				if err := term.PrintHeader(output, "Check registry tunnel is not exposed on remote network"); err != nil {
+					return err
+				}
+				if err := docker.CheckTunnelExposure(ctx, output, opts.TargetHost, opts.Registry.Port); err != nil {
 					return err
 				}
 			}
-			if err := runStep(output, "Transfer via registry", func() error {
-				return docker.TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, targetHost, opts.Registry.Port)
-			}); err != nil {
+
+			if err := term.PrintHeader(output, "Transfer via registry"); err != nil {
+				return err
+			}
+			if err := docker.TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, targetHost, opts.Registry.Port); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err := runStep(output, "Start services", func() error {
-		return docker.StartServices(ctx, output, composeFile, targetHost, opts.RecreateMode)
-	}); err != nil {
+	if err := term.PrintHeader(output, "Start services"); err != nil {
 		return err
 	}
-	return runStep(output, "Deployment Success", func() error {
-		return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
-	})
-}
-
-func runStep(output io.Writer, description string, run func() error) error {
-	if output != nil {
-		if err := term.PrintHeader(output, description); err != nil {
-			return err
-		}
+	if err := docker.StartServices(ctx, output, composeFile, targetHost, opts.RecreateMode); err != nil {
+		return err
 	}
-	return run()
+
+	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
+		return err
+	}
+	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
 }
 
 func closeTunnel(output io.Writer, tunnel *ssh.SSHTunnel) error {
