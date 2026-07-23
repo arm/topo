@@ -2,196 +2,106 @@ package deploy_test
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"path/filepath"
 	"testing"
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/command"
-	"github.com/arm/topo/internal/deploy/operation"
-	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/deploy/testutil"
-	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestNewDeployment(t *testing.T) {
-	composeFile := "compose.yaml"
-
-	t.Run("includes transfer operation for remote host", func(t *testing.T) {
-		remoteDest := ssh.NewDestination("user@remote")
-		deployOpts := deploy.DeployOptions{TargetHost: remoteDest}
-
-		got, _ := deploy.NewDeployment(composeFile, deployOpts)
-
-		remoteHost := command.NewHostFromDestination(remoteDest)
-		localHost := command.LocalHost
-		want := goperation.Sequence{
-			operation.NewDockerComposeBuild(composeFile, localHost),
-			operation.NewDockerComposePull(composeFile, localHost),
-			operation.NewDockerComposePipeTransfer(composeFile, localHost, remoteHost),
-			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
-			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
-		}
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("includes registry operations for remote host when enabled", func(t *testing.T) {
-		remoteDest := ssh.NewDestination("user@remote")
-		port := deploy.DefaultRegistryPort
-		opts := deploy.DeployOptions{TargetHost: remoteDest, Registry: &deploy.RegistryConfig{Port: port, UseControlSockets: true}}
-
-		got, _ := deploy.NewDeployment(composeFile, opts)
-
-		remoteHost := command.NewHostFromDestination(remoteDest)
-		localHost := command.LocalHost
-		want := goperation.Sequence{
-			operation.NewDockerComposeBuild(composeFile, localHost),
-			operation.NewDockerComposePull(composeFile, localHost),
-		}
-		want = append(want, operation.NewRunRegistry(deploy.DefaultRegistryContainerName, port)...)
-		wantTunnelStart, wantTunnelStop := operation.NewRegistrySSHTunnel(remoteDest, port, opts.Registry.UseControlSockets)
-		want = append(want,
-			wantTunnelStart,
-			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
-			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
-			wantTunnelStop,
-			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
-			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
-		)
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("excludes transfer operation for local host", func(t *testing.T) {
-		tests := []struct {
-			name         string
-			recreateMode operation.RecreateMode
-		}{
-			{
-				name:         "default",
-				recreateMode: operation.RecreateModeDefault,
-			},
-			{
-				name:         "force recreate",
-				recreateMode: operation.RecreateModeForce,
-			},
-			{
-				name:         "no recreate",
-				recreateMode: operation.RecreateModeNone,
-			},
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				deployOpts := deploy.DeployOptions{
-					TargetHost:   ssh.PlainLocalhost,
-					RecreateMode: tt.recreateMode,
-				}
-
-				got, _ := deploy.NewDeployment(composeFile, deployOpts)
-
-				localHost := command.LocalHost
-				want := goperation.Sequence{
-					operation.NewDockerComposeBuild(composeFile, localHost),
-					operation.NewDockerComposePull(composeFile, localHost),
-					operation.NewDockerComposeUp(composeFile, localHost, tt.recreateMode),
-					post_deploy.NewDeploySuccess(composeFile, localHost, "Run `topo ps` to see deployed containers"),
-				}
-				assert.Equal(t, want, got)
-			})
-		}
-	})
-
-	t.Run("does not use SSH control sockets when disabled", func(t *testing.T) {
-		remoteDest := ssh.NewDestination("user@remote")
-		port := deploy.DefaultRegistryPort
-		opts := deploy.DeployOptions{TargetHost: remoteDest, Registry: &deploy.RegistryConfig{Port: port, UseControlSockets: false}}
-
-		got, _ := deploy.NewDeployment(composeFile, opts)
-
-		wantTunnelStart, wantTunnelStop := operation.NewRegistrySSHTunnel(remoteDest, opts.Registry.Port, opts.Registry.UseControlSockets)
-		localHost := command.LocalHost
-		remoteHost := command.NewHostFromDestination(remoteDest)
-		want := goperation.Sequence{
-			operation.NewDockerComposeBuild(composeFile, localHost),
-			operation.NewDockerComposePull(composeFile, localHost),
-		}
-		want = append(want, operation.NewRunRegistry(deploy.DefaultRegistryContainerName, port)...)
-		want = append(want,
-			wantTunnelStart,
-			operation.NewRegistryTunnelExposureCheck(remoteDest, port),
-			operation.NewRegistryTransfer(composeFile, localHost, remoteHost, port),
-			wantTunnelStop,
-			operation.NewDockerComposeUp(composeFile, remoteHost, operation.RecreateModeDefault),
-			post_deploy.NewDeploySuccess(composeFile, remoteHost, "Run `topo ps` to see deployed containers"),
-		)
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("excludes the remote port check for a localhost SSH target", func(t *testing.T) {
-		localhostSSHDest := ssh.NewDestination("ssh://root@localhost:2222")
-		opts := deploy.DeployOptions{
-			TargetHost: localhostSSHDest,
-			Registry:   &deploy.RegistryConfig{Port: deploy.DefaultRegistryPort},
-		}
-
-		got, _ := deploy.NewDeployment(composeFile, opts)
-
-		remotePortCheck := operation.NewRegistryTunnelExposureCheck(localhostSSHDest, opts.Registry.Port)
-		assert.NotContains(t, got, remotePortCheck)
-	})
-
-	t.Run("excludes the remote port check when skipped", func(t *testing.T) {
-		remoteDest := ssh.NewDestination("user@remote")
-		opts := deploy.DeployOptions{
-			TargetHost: remoteDest,
-			Registry: &deploy.RegistryConfig{
-				SkipRemotePortCheck: true,
-			},
-		}
-
-		got, _ := deploy.NewDeployment(composeFile, opts)
-
-		remotePortCheck := operation.NewRegistryTunnelExposureCheck(remoteDest, opts.Registry.Port)
-		assert.NotContains(t, got, remotePortCheck)
-	})
-}
 
 func TestDeployment(t *testing.T) {
 	testutil.RequireDocker(t)
 
-	t.Run("Run", func(t *testing.T) {
-		container := testutil.StartContainer(t, testutil.DinDContainer)
+	t.Run("deploys to localhost", func(t *testing.T) {
+		composeFilePath, imageName := deploymentFixture(t)
+		t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
+		testutil.RequireImageDoesNotExist(t, command.LocalHost, imageName)
+		deployOptions := deploy.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-		t.Run("builds images, transfers them, and starts services", func(t *testing.T) {
-			remoteDockerHost := ssh.NewDestination(container.SSHDestination)
-			tmpDir := t.TempDir()
-			dockerFilePath := filepath.Join(tmpDir, "Dockerfile")
-			dockerFileContent := `
-FROM alpine:latest
-CMD ["tail", "-f", "/dev/null"]
-`
-			testutil.RequireWriteFile(t, dockerFilePath, dockerFileContent)
-			composeFilePath := filepath.Join(tmpDir, "compose.yaml")
-			composeFileContent := fmt.Sprintf(`
+		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+
+		require.NoError(t, err)
+		testutil.RequireImageExists(t, command.LocalHost, imageName)
+		testutil.AssertContainersRunning(t, ssh.PlainLocalhost, composeFilePath)
+	})
+
+	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
+		container := testutil.StartContainer(t, testutil.DinDContainer)
+		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
+		composeFilePath, imageName := deploymentFixture(t)
+		testutil.RequireImageDoesNotExist(t, command.NewHostFromDestination(remoteDockerHost), imageName)
+		deployOptions := deploy.DeployOptions{TargetHost: remoteDockerHost}
+
+		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+
+		require.NoError(t, err)
+		testutil.RequireImageExists(t, command.NewHostFromDestination(remoteDockerHost), imageName)
+		testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
+	})
+
+	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
+		registryPort := testutil.RequireAvailableTCPPort(t, "127.0.0.1")
+		registryContainerName := testutil.TestContainerName(t) + "-registry"
+		cleanupRegistryContainer(t, registryContainerName)
+		container := testutil.StartContainer(t, testutil.DinDContainer)
+		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
+		remoteCommandHost := command.NewHostFromDestination(remoteDockerHost)
+		composeFilePath, imageName := deploymentFixture(t)
+		testutil.RequireImageDoesNotExist(t, remoteCommandHost, imageName)
+		deployOptions := deploy.DeployOptions{
+			TargetHost: remoteDockerHost,
+			Registry: &deploy.RegistryConfig{
+				ContainerName:       registryContainerName,
+				Port:                registryPort,
+				SkipRemotePortCheck: true,
+			},
+		}
+
+		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+
+		require.NoError(t, err)
+		testutil.RequireImageExists(t, remoteCommandHost, imageName)
+		testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
+	})
+}
+
+func deploymentFixture(t *testing.T) (composeFilePath, imageName string) {
+	t.Helper()
+	temporaryDirectory := t.TempDir()
+	imageName = testutil.TestImageName(t)
+	composeFilePath = filepath.Join(temporaryDirectory, "compose.yaml")
+	composeFileContent := fmt.Sprintf(`
 name: %s
 services:
-  busybox:
-    image: busybox
-    command: ["tail", "-f", "/dev/null"]
   a-service:
     build: .
-`, testutil.TestProjectName(t))
-			testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-			t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
+    image: %s
+`, testutil.TestProjectName(t), imageName)
+	testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
+	testutil.RequireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), `
+FROM alpine:latest
+CMD ["tail", "-f", "/dev/null"]
+`)
+	t.Cleanup(func() {
+		removeOutput, err := command.Docker(command.LocalHost, "image", "rm", "-f", imageName).CombinedOutput()
+		if err != nil {
+			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
+		}
+	})
+	return composeFilePath, imageName
+}
 
-			deployOpts := deploy.DeployOptions{TargetHost: remoteDockerHost}
-			d, _ := deploy.NewDeployment(composeFilePath, deployOpts)
-			err := d.Run(os.Stdout)
-
-			require.NoError(t, err)
-			testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
-		})
+func cleanupRegistryContainer(t *testing.T, containerName string) {
+	t.Helper()
+	_ = command.Docker(command.LocalHost, "rm", "-f", containerName).Run()
+	t.Cleanup(func() {
+		removeOutput, err := command.Docker(command.LocalHost, "rm", "-f", containerName).CombinedOutput()
+		if err != nil {
+			t.Logf("failed to remove registry container: %v: %s", err, string(removeOutput))
+		}
 	})
 }

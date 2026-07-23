@@ -7,23 +7,8 @@ import (
 
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/project"
 )
-
-type DeploySuccess struct {
-	composeFile    string
-	host           command.Host
-	defaultMessage string
-}
-
-func NewDeploySuccess(composeFile string, h command.Host, defaultMessage string) *DeploySuccess {
-	return &DeploySuccess{
-		composeFile:    composeFile,
-		host:           h,
-		defaultMessage: defaultMessage,
-	}
-}
 
 func DefaultMessage(composeFile string) string {
 	if composeFile == compose.DefaultFileName() {
@@ -31,10 +16,6 @@ func DefaultMessage(composeFile string) string {
 	}
 
 	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", cmdtext.QuoteArg(composeFile))
-}
-
-func (t *DeploySuccess) Description() string {
-	return "Deployment Success"
 }
 
 func getSuccessMessage(composeFile string) (string, error) {
@@ -51,19 +32,15 @@ func getSuccessMessage(composeFile string) (string, error) {
 	return p.Metadata.DeploymentSuccessMessage, nil
 }
 
-func (p *DeploySuccess) Run(w io.Writer) error {
-	successMessage, err := getSuccessMessage(p.composeFile)
+func PrintDeploySuccess(output io.Writer, composeFile, defaultMessage string) error {
+	successMessage, err := getSuccessMessage(composeFile)
 	if err != nil {
 		return err
 	}
 	if successMessage == "" {
-		successMessage = p.defaultMessage
+		successMessage = defaultMessage
 	}
 
-	_, err = fmt.Fprintln(w, successMessage)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err = fmt.Fprintln(output, successMessage)
+	return err
 }

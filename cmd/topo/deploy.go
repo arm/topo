@@ -3,15 +3,16 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/operation"
+	"github.com/arm/topo/internal/deploy/docker"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/arm/topo/internal/env"
-	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
 
@@ -87,22 +88,22 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 		switch {
 		case forceRecreate:
-			deployOpts.RecreateMode = operation.RecreateModeForce
+			deployOpts.RecreateMode = docker.RecreateModeForce
 		case noRecreate:
-			deployOpts.RecreateMode = operation.RecreateModeNone
+			deployOpts.RecreateMode = docker.RecreateModeNone
 		}
 
 		if deployOpts.Registry == nil {
 			logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
 		}
 
-		deployment, cleanup := deploy.NewDeployment(composeFile, deployOpts)
-		stop := goperation.SetupExitCleanup(os.Stdout, cleanup, os.Exit)
-
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		err = deployment.Run(os.Stdout)
-		if err != nil {
+		if err := deploy.Deploy(ctx, os.Stdout, composeFile, deployOpts); err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
 		}
 		return nil

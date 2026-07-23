@@ -8,36 +8,6 @@ import (
 	"github.com/arm/topo/internal/deploy/docker"
 )
 
-type DockerComposeBuild struct {
-	composeFile string
-	host        command.Host
-}
-
-func NewDockerComposeBuild(composeFile string, host command.Host) *DockerComposeBuild {
-	return &DockerComposeBuild{composeFile: composeFile, host: host}
-}
-
-func (b *DockerComposeBuild) Description() string { return "Build images" }
-
-func (b *DockerComposeBuild) Run(output io.Writer) error {
-	return docker.BuildImages(context.Background(), output, b.composeFile, b.host)
-}
-
-type DockerComposePull struct {
-	composeFile string
-	host        command.Host
-}
-
-func NewDockerComposePull(composeFile string, host command.Host) *DockerComposePull {
-	return &DockerComposePull{composeFile: composeFile, host: host}
-}
-
-func (p *DockerComposePull) Description() string { return "Pull images" }
-
-func (p *DockerComposePull) Run(output io.Writer) error {
-	return docker.PullImages(context.Background(), output, p.composeFile, p.host)
-}
-
 type DockerComposeStop struct {
 	composeFile string
 	host        command.Host
@@ -52,27 +22,3 @@ func (s *DockerComposeStop) Description() string { return "Stop services" }
 func (s *DockerComposeStop) Run(output io.Writer) error {
 	return docker.StopServices(context.Background(), output, s.composeFile, s.host)
 }
-
-type DockerComposeUp struct {
-	composeFile  string
-	host         command.Host
-	recreateMode RecreateMode
-}
-
-func NewDockerComposeUp(composeFile string, host command.Host, mode RecreateMode) *DockerComposeUp {
-	return &DockerComposeUp{composeFile: composeFile, host: host, recreateMode: mode}
-}
-
-func (u *DockerComposeUp) Description() string { return "Start services" }
-
-func (u *DockerComposeUp) Run(output io.Writer) error {
-	return docker.StartServices(context.Background(), output, u.composeFile, u.host, u.recreateMode)
-}
-
-type RecreateMode = docker.RecreateMode
-
-const (
-	RecreateModeDefault = docker.RecreateModeDefault
-	RecreateModeForce   = docker.RecreateModeForce
-	RecreateModeNone    = docker.RecreateModeNone
-)
