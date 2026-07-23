@@ -12,11 +12,6 @@
         "value": "ssh"
       },
       {
-        "name": "Curl",
-        "status": "ok",
-        "value": "curl"
-      },
-      {
         "name": "Container Engine",
         "status": "ok",
         "value": "docker"
