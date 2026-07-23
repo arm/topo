@@ -23,6 +23,7 @@ const (
 )
 
 type RegistryConfig struct {
+	ContainerName       string
 	Port                string
 	SkipRemotePortCheck bool
 	UseControlSockets   bool
@@ -76,7 +77,11 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 			if err := term.PrintHeader(output, "Run registry"); err != nil {
 				return err
 			}
-			if err := docker.EnsureRegistryRunning(ctx, output, DefaultRegistryContainerName, opts.Registry.Port); err != nil {
+			registryContainerName := opts.Registry.ContainerName
+			if registryContainerName == "" {
+				registryContainerName = DefaultRegistryContainerName
+			}
+			if err := docker.EnsureRegistryRunning(ctx, output, registryContainerName, opts.Registry.Port); err != nil {
 				return err
 			}
 
