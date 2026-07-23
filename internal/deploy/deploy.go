@@ -48,16 +48,6 @@ func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequ
 }
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) error {
-	if err := runDeployment(ctx, output, composeFile, opts); err != nil {
-		return err
-	}
-	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
-		return err
-	}
-	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
-}
-
-func runDeployment(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) (deploymentError error) {
 	sourceHost := command.LocalHost
 
 	if err := term.PrintHeader(output, "Build images"); err != nil {
@@ -74,51 +64,14 @@ func runDeployment(ctx context.Context, output io.Writer, composeFile string, op
 		return err
 	}
 
-	targetHost := command.NewHostFromDestination(opts.TargetHost)
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry == nil {
-			if err := term.PrintHeader(output, "Transfer images"); err != nil {
-				return err
-			}
-			if err := docker.TransferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost); err != nil {
+			targetHost := command.NewHostFromDestination(opts.TargetHost)
+			if err := transferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost); err != nil {
 				return err
 			}
 		} else {
-			if err := term.PrintHeader(output, "Run registry"); err != nil {
-				return err
-			}
-			registryContainerName := opts.Registry.ContainerName
-			if registryContainerName == "" {
-				registryContainerName = DefaultRegistryContainerName
-			}
-			if err := docker.EnsureRegistryRunning(ctx, output, registryContainerName, opts.Registry.Port); err != nil {
-				return err
-			}
-
-			if err := term.PrintHeader(output, "Open registry SSH tunnel"); err != nil {
-				return err
-			}
-			tunnel, err := ssh.OpenSSHTunnel(ctx, output, opts.TargetHost, opts.Registry.Port, opts.Registry.UseControlSockets)
-			if err != nil {
-				return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Registry.Port)
-			}
-			defer func() {
-				deploymentError = errors.Join(deploymentError, closeTunnel(output, tunnel))
-			}()
-
-			if !opts.TargetHost.IsLocalhost() && !opts.Registry.SkipRemotePortCheck {
-				if err := term.PrintHeader(output, "Check registry tunnel is not exposed on remote network"); err != nil {
-					return err
-				}
-				if err := docker.CheckTunnelExposure(ctx, output, opts.TargetHost, opts.Registry.Port); err != nil {
-					return err
-				}
-			}
-
-			if err := term.PrintHeader(output, "Transfer via registry"); err != nil {
-				return err
-			}
-			if err := docker.TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, targetHost, opts.Registry.Port); err != nil {
+			if err := transferImagesViaRegistry(ctx, output, composeFile, sourceHost, opts.TargetHost, *opts.Registry); err != nil {
 				return err
 			}
 		}
@@ -127,7 +80,59 @@ func runDeployment(ctx context.Context, output io.Writer, composeFile string, op
 	if err := term.PrintHeader(output, "Start services"); err != nil {
 		return err
 	}
-	if err := docker.StartServices(ctx, output, composeFile, targetHost, opts.RecreateMode); err != nil {
+	if err := docker.StartServices(ctx, output, composeFile, command.NewHostFromDestination(opts.TargetHost), opts.RecreateMode); err != nil {
+		return err
+	}
+
+	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
+		return err
+	}
+	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
+}
+
+func transferImagesViaPipe(ctx context.Context, output io.Writer, composeFile string, sourceHost, targetHost command.Host) error {
+	if err := term.PrintHeader(output, "Transfer images"); err != nil {
+		return err
+	}
+	return docker.TransferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost)
+}
+
+func transferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, sourceHost command.Host, targetHost ssh.Destination, opts RegistryConfig) (transferErr error) {
+	if err := term.PrintHeader(output, "Run registry"); err != nil {
+		return err
+	}
+	registryContainerName := opts.ContainerName
+	if registryContainerName == "" {
+		registryContainerName = DefaultRegistryContainerName
+	}
+	if err := docker.EnsureRegistryRunning(ctx, output, registryContainerName, opts.Port); err != nil {
+		return err
+	}
+
+	if err := term.PrintHeader(output, "Open registry SSH tunnel"); err != nil {
+		return err
+	}
+	tunnel, err := ssh.OpenSSHTunnel(ctx, output, targetHost, opts.Port, opts.UseControlSockets)
+	if err != nil {
+		return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Port)
+	}
+	defer func() {
+		transferErr = errors.Join(transferErr, closeTunnel(output, tunnel))
+	}()
+
+	if !targetHost.IsLocalhost() && !opts.SkipRemotePortCheck {
+		if err := term.PrintHeader(output, "Check registry tunnel is not exposed on remote network"); err != nil {
+			return err
+		}
+		if err := docker.CheckTunnelExposure(ctx, output, targetHost, opts.Port); err != nil {
+			return err
+		}
+	}
+
+	if err := term.PrintHeader(output, "Transfer via registry"); err != nil {
+		return err
+	}
+	if err := docker.TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, command.NewHostFromDestination(targetHost), opts.Port); err != nil {
 		return err
 	}
 
