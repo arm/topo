@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -103,8 +101,8 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		defer stop()
 
 		if err := deploy.Deploy(ctx, os.Stdout, composeFile, deployOpts); err != nil {
-			if errors.Is(err, context.Canceled) {
-				return err
+			if ctx.Err() != nil {
+				return ctx.Err()
 			}
 			return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
 		}
