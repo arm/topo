@@ -27,7 +27,7 @@ func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
 	defer func() {
 		err = resp.Body.Close()
 		if err != nil {
-			logger.Error("failed to close version check response body: %v", err)
+			logger.Error(fmt.Sprintf("failed to close version check response body: %v", err))
 		}
 	}()
 

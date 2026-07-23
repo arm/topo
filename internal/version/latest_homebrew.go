@@ -28,7 +28,7 @@ func FetchLatestHomebrew(ctx context.Context, formulaURL string) (string, error)
 	defer func() {
 		err = resp.Body.Close()
 		if err != nil {
-			logger.Error("failed to close Homebrew formula response body: %v", err)
+			logger.Error(fmt.Sprintf("failed to close Homebrew formula response body: %v", err))
 		}
 	}()
 

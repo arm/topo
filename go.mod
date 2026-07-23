@@ -6,7 +6,6 @@ require (
 	github.com/compose-spec/compose-go/v2 v2.13.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/kevinburke/ssh_config v1.6.0
-	github.com/lmittmann/tint v1.1.3
 	github.com/mholt/archives v0.1.5
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/spf13/cobra v1.10.2

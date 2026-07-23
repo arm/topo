@@ -2,71 +2,46 @@ package logger_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"testing"
+	"testing/synctest"
 
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTestLogOutputBuffer(t *testing.T, format term.Format) *bytes.Buffer {
-	t.Helper()
-	var buf bytes.Buffer
-	logger.SetOptions(logger.Options{Output: &buf, Format: format})
-	t.Cleanup(func() {
-		logger.SetOptions(logger.Options{})
-	})
-	return &buf
-}
+func TestLogger(t *testing.T) {
+	t.Run("logs plain output", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			var buf bytes.Buffer
+			l := logger.New(logger.Options{Output: &buf})
+			want := `00:00:00 INFO Hello World
+00:00:00 WARN This is a warning
+00:00:00 ERROR This is an error
+`
 
-func TestLogFunctions(t *testing.T) {
-	buf := setupTestLogOutputBuffer(t, term.JSON)
+			l.Log(logger.LevelInfo, "Hello World")
+			l.Log(logger.LevelWarn, "This is a warning")
+			l.Log(logger.LevelError, "This is an error")
 
-	tests := []struct {
-		name  string
-		fn    func(string, ...any)
-		level string
-	}{
-		{"Info", logger.Info, "INFO"},
-		{"Warn", logger.Warn, "WARN"},
-		{"Error", logger.Error, "ERROR"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf.Reset()
-
-			tt.fn("hello", "key", "val")
-
-			var entry map[string]any
-			err := json.Unmarshal(buf.Bytes(), &entry)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.level, entry["level"])
-			assert.Equal(t, "hello", entry["msg"])
-			assert.Equal(t, "val", entry["key"])
+			assert.Equal(t, want, buf.String())
 		})
-	}
-}
-
-func TestSetOutputFormat(t *testing.T) {
-	t.Run("JSON", func(t *testing.T) {
-		buf := setupTestLogOutputBuffer(t, term.JSON)
-
-		logger.Info("json test")
-
-		var entry map[string]any
-		err := json.Unmarshal(buf.Bytes(), &entry)
-		assert.NoError(t, err)
-		assert.Equal(t, "INFO", entry["level"])
-		assert.Equal(t, "json test", entry["msg"])
 	})
 
-	t.Run("Plain", func(t *testing.T) {
-		buf := setupTestLogOutputBuffer(t, term.Plain)
+	t.Run("logs JSON output", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			var buf bytes.Buffer
+			l := logger.New(logger.Options{Output: &buf, Format: term.JSON})
+			want := `{"time":"00:00:00","level":"INFO","msg":"Hello World"}
+{"time":"00:00:00","level":"WARN","msg":"This is a warning"}
+{"time":"00:00:00","level":"ERROR","msg":"This is an error"}
+`
 
-		logger.Info("plain test")
+			l.Log(logger.LevelInfo, "Hello World")
+			l.Log(logger.LevelWarn, "This is a warning")
+			l.Log(logger.LevelError, "This is an error")
 
-		assert.Contains(t, buf.String(), "INF plain test\n")
+			assert.Equal(t, want, buf.String())
+		})
 	})
 }
