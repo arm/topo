@@ -13,6 +13,10 @@ permissions:
   contents: write
   packages: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-24.04-arm
