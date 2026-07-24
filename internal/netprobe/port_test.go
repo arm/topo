@@ -1,6 +1,7 @@
 package netprobe_test
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/arm/topo/internal/netprobe"
@@ -27,25 +28,25 @@ func TestIsPortListeningInProcNetTCP(t *testing.T) {
 		{
 			name:       "returns false for an IPv4 loopback listener",
 			procNetTCP: procNetTCPV4,
-			port:       "11000",
+			port:       strconv.Itoa(0x2AF8),
 			expected:   false,
 		},
 		{
 			name:       "returns true for an IPv4 all-interfaces listener",
 			procNetTCP: procNetTCPV4,
-			port:       "11434",
+			port:       strconv.Itoa(0x2CAA),
 			expected:   true,
 		},
 		{
 			name:       "returns false for an IPv6 loopback listener",
 			procNetTCP: procNetTCPV6,
-			port:       "631",
+			port:       strconv.Itoa(0x0277),
 			expected:   false,
 		},
 		{
 			name:       "returns true for an IPv6 all-interfaces listener",
 			procNetTCP: procNetTCPV6,
-			port:       "11434",
+			port:       strconv.Itoa(0x2CAA),
 			expected:   true,
 		},
 	}
@@ -59,7 +60,7 @@ func TestIsPortListeningInProcNetTCP(t *testing.T) {
 	}
 
 	t.Run("returns false when the port is not present", func(t *testing.T) {
-		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCPV4, "631")
+		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCPV4, "9999")
 
 		assert.NoError(t, err)
 		assert.False(t, got)
@@ -68,8 +69,9 @@ func TestIsPortListeningInProcNetTCP(t *testing.T) {
 	t.Run("returns false when the matching socket is not listening", func(t *testing.T) {
 		procNetTCP := `sl local_address rem_address st
 0: 0100007F:2AF8 00000000:0000 01`
+		port := strconv.Itoa(0x2AF8)
 
-		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, "11000")
+		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, port)
 
 		assert.NoError(t, err)
 		assert.False(t, got)
@@ -77,16 +79,18 @@ func TestIsPortListeningInProcNetTCP(t *testing.T) {
 
 	t.Run("returns true when a non-loopback interface is listening", func(t *testing.T) {
 		procNetTCP := `sl local_address rem_address st
-0: 0100000A:2AF8 00000000:0000 0A`
+0: 0100000A:2B28 00000000:0000 0A`
+		port := strconv.Itoa(0x2B28)
 
-		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, "11000")
+		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, port)
 
 		assert.NoError(t, err)
 		assert.True(t, got)
 	})
 
 	t.Run("returns an error for an invalid port", func(t *testing.T) {
-		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCPV4, "not-a-port")
+		procNetTCP := `sl local_address rem_address st`
+		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, "not-a-port")
 
 		assert.ErrorContains(t, err, `invalid TCP port "not-a-port"`)
 		assert.False(t, got)
@@ -96,7 +100,7 @@ func TestIsPortListeningInProcNetTCP(t *testing.T) {
 		procNetTCP := `sl rem_address
 0: 00000000:0000`
 
-		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, "11000")
+		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, "12345")
 
 		assert.ErrorContains(t, err, `missing "local_address" column`)
 		assert.False(t, got)
@@ -104,9 +108,10 @@ func TestIsPortListeningInProcNetTCP(t *testing.T) {
 
 	t.Run("returns an error when a table row is incomplete", func(t *testing.T) {
 		procNetTCP := `sl local_address rem_address st
-0: 0100007F:2AF8`
+0: 0100007F:1A18`
+		port := strconv.Itoa(0x1A18)
 
-		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, "11000")
+		got, err := netprobe.IsRemotePortListeningInProcNetTCP(procNetTCP, port)
 
 		assert.ErrorContains(t, err, "row 2 has 2 fields, expected at least 4")
 		assert.False(t, got)
