@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/ssh"
 
 	"github.com/spf13/cobra"
@@ -33,9 +33,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 
 		dest := ssh.NewDestination(targetArg)
 
-		stop := deploy.NewDeploymentStop(composeFile, dest)
-
-		return stop.Run(os.Stdout)
+		return docker.Stop(cmd.Context(), os.Stdout, composeFile, dest)
 	},
 }
 

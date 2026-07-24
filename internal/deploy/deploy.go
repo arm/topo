@@ -9,9 +9,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/operation"
 	"github.com/arm/topo/internal/deploy/post_deploy"
-	goperation "github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/ssh"
 )
@@ -41,10 +39,6 @@ func SupportsRegistry(noRegistry bool, dest ssh.Destination) bool {
 
 func SupportsSSHControlSockets(goos string) bool {
 	return goos != "windows"
-}
-
-func NewDeploymentStop(composeFile string, dest ssh.Destination) goperation.Sequence {
-	return goperation.Sequence{operation.NewDockerComposeStop(composeFile, command.NewHostFromDestination(dest))}
 }
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) error {
