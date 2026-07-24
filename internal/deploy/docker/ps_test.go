@@ -3,7 +3,7 @@ package docker_test
 import (
 	"testing"
 
-	docker "github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
