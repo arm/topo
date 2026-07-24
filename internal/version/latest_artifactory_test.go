@@ -58,7 +58,7 @@ func TestFetchLatestArtifactory(t *testing.T) {
 		assert.Equal(t, "1.1.1", got)
 	})
 
-	t.Run("ignores versions outside Artifactory directory links", func(t *testing.T) {
+	t.Run("ignores entries that are not Artifactory directory links", func(t *testing.T) {
 		body := `Latest version: 99.0.0
 <a href="v1.2.3/">v1.2.3/</a>`
 		srv := createTestServerWithBody(t, body)
