@@ -1,28 +1,24 @@
 package install
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
 	"slices"
 	"strings"
 	"time"
 
+	archiveutil "github.com/arm/topo/internal/archive"
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/mholt/archives"
+	"github.com/arm/topo/internal/version"
 )
 
 const (
-	apiTimeout      = 15 * time.Second
 	downloadTimeout = 2 * time.Minute
 )
 
@@ -103,132 +99,8 @@ func FindPathDirs(r runner.Runner) ([]PathCandidate, error) {
 	return validPaths, nil
 }
 
-type githubAsset struct {
-	Name               string `json:"name"`
-	BrowserDownloadURL string `json:"browser_download_url"`
-}
-
-type githubRelease struct {
-	Assets []githubAsset `json:"assets"`
-}
-
-func addGitHubAuthHeader(req *http.Request) {
-	token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN"))
-	if token == "" {
-		return
-	}
-
-	host := req.URL.Hostname()
-	if host == "github.com" || host == "api.github.com" || strings.HasSuffix(host, ".github.com") {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-}
-
-func getLatestReleaseTarAddress(repoURL string) (*url.URL, error) {
-	base, err := url.Parse("https://api.github.com")
-	if err != nil {
-		return nil, err
-	}
-
-	base.Path = path.Join(
-		"repos",
-		repoURL,
-		"releases",
-		"latest",
-	)
-
-	ctx, cancel := context.WithTimeout(context.Background(), apiTimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	addGitHubAuthHeader(req)
-
-	// #nosec G704 -- request is validated, false positive warning
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		msg := strings.TrimSpace(string(body))
-		if msg != "" {
-			return nil, fmt.Errorf("GitHub API rejected request (status %d): %s", resp.StatusCode, msg)
-		}
-		return nil, fmt.Errorf("GitHub API rejected request (status %d)", resp.StatusCode)
-	}
-
-	var release githubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, err
-	}
-
-	for _, asset := range release.Assets {
-		if strings.HasSuffix(asset.Name, "_linux_arm64.tar.gz") {
-			u, err := url.Parse(asset.BrowserDownloadURL)
-			if err != nil {
-				return nil, err
-			}
-			return u, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no _linux_arm64.tar.gz release asset found")
-}
-
-func extractFilesFromTarGz(tarGzData []byte, targetFiles []string) (map[string][]byte, error) {
-	reader := bytes.NewReader(tarGzData)
-
-	format, stream, err := archives.Identify(context.Background(), "", reader)
-	if err != nil {
-		return nil, err
-	}
-
-	extractor, ok := format.(archives.Extractor)
-	if !ok {
-		return nil, fmt.Errorf("format does not support extraction")
-	}
-
-	extractedFiles := make(map[string][]byte)
-
-	err = extractor.Extract(context.Background(), stream, func(ctx context.Context, fileInfo archives.FileInfo) error {
-		baseName := path.Base(fileInfo.Name())
-		for _, target := range targetFiles {
-			if baseName == target {
-				file, err := fileInfo.Open()
-				if err != nil {
-					return fmt.Errorf("failed to open %s: %w", fileInfo.Name(), err)
-				}
-				defer func() { _ = file.Close() }()
-
-				content, err := io.ReadAll(file)
-				if err != nil {
-					return fmt.Errorf("failed to read %s: %w", fileInfo.Name(), err)
-				}
-
-				extractedFiles[baseName] = content
-				break
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(extractedFiles) == 0 {
-		return nil, fmt.Errorf("files not found in archive")
-	}
-
-	return extractedFiles, nil
-}
-
-func fetchFile(url *url.URL) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+func downloadFile(ctx context.Context, url *url.URL) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
@@ -236,42 +108,22 @@ func fetchFile(url *url.URL) ([]byte, error) {
 		return nil, err
 	}
 
-	addGitHubAuthHeader(req)
-
 	// #nosec G704 -- Request is previously validated
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected fetch status code: %d", resp.StatusCode)
+		statusErr := fmt.Errorf("unexpected fetch status code: %d", resp.StatusCode)
+		return nil, errors.Join(statusErr, resp.Body.Close())
 	}
 
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
+	b, readErr := io.ReadAll(resp.Body)
+	if err := errors.Join(readErr, resp.Body.Close()); err != nil {
 		return nil, err
 	}
 	return b, nil
-}
-
-func FetchLatestReleaseBinaries(githubRepoSlug string, binaries []string) (map[string][]byte, error) {
-	url, err := getLatestReleaseTarAddress(githubRepoSlug)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve latest release download URL: %w", err)
-	}
-
-	tarball, err := fetchFile(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to download latest release: %w", err)
-	}
-
-	files, err := extractFilesFromTarGz(tarball, binaries)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract files from tar.gz: %w", err)
-	}
-	return files, err
 }
 
 func install(installPath string, r runner.Runner, binaries map[string][]byte) error {
@@ -327,14 +179,43 @@ type InstallResult struct {
 	Binary   string
 }
 
-func InstallBinariesFromGithubRelease(r runner.Runner, repoURL string, binaryNames []string) ([]InstallResult, error) {
+func downloadLatestArtifactoryBinaries(ctx context.Context, artifactoryURL string, archiveNameFormat string, binaryNames []string) (map[string][]byte, error) {
+	latest, err := version.FetchLatestArtifactory(ctx, artifactoryURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve latest Artifactory version: %w", err)
+	}
+
+	archiveName := fmt.Sprintf(archiveNameFormat, latest)
+	archiveURL, err := url.JoinPath(artifactoryURL, latest, archiveName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct Artifactory download URL: %w", err)
+	}
+
+	parsedArchiveURL, err := url.Parse(archiveURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Artifactory download URL: %w", err)
+	}
+
+	tarball, err := downloadFile(ctx, parsedArchiveURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download latest release: %w", err)
+	}
+
+	binaries, err := archiveutil.ExtractFiles(ctx, tarball, binaryNames)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract files from tar.gz: %w", err)
+	}
+	return binaries, nil
+}
+
+func InstallBinariesFromArtifactory(ctx context.Context, r runner.Runner, artifactoryURL string, archiveNameFormat string, binaryNames []string) ([]InstallResult, error) {
 	for _, binaryName := range binaryNames {
 		if err := command.ValidateBinaryName(binaryName); err != nil {
 			return nil, err
 		}
 	}
 
-	binaries, err := FetchLatestReleaseBinaries(repoURL, binaryNames)
+	binaries, err := downloadLatestArtifactoryBinaries(ctx, artifactoryURL, archiveNameFormat, binaryNames)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest release binaries: %w", err)
 	}

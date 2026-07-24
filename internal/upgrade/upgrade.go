@@ -1,8 +1,8 @@
 package upgrade
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"runtime"
 
+	archiveutil "github.com/arm/topo/internal/archive"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/version"
-	"github.com/mholt/archives"
 )
 
 func Upgrade(ctx context.Context, reporter term.ProgressReporter) (string, error) {
@@ -37,7 +37,7 @@ func Upgrade(ctx context.Context, reporter term.ProgressReporter) (string, error
 		return version.Version, nil
 	}
 
-	downloadURL := ArtifactoryDownloadURL(runtime.GOOS, runtime.GOARCH, latest)
+	downloadURL := TopoDownloadURL(runtime.GOOS, runtime.GOARCH, latest)
 
 	if reporter != nil {
 		reporter.Step(fmt.Sprintf("Installing topo version %s...", latest))
@@ -77,7 +77,7 @@ func CurrentBinaryPath() (string, error) {
 	return binPath, nil
 }
 
-func ArtifactoryDownloadURL(os string, arch string, targetVersion string) string {
+func TopoDownloadURL(os string, arch string, targetVersion string) string {
 	ext := "tar.gz"
 	if os == "windows" {
 		ext = "zip"
@@ -124,48 +124,26 @@ func downloadArchive(ctx context.Context, url string) ([]byte, error) {
 }
 
 func extractBinary(ctx context.Context, archiveData []byte, destDir string) (string, error) {
-	format, stream, err := archives.Identify(ctx, "", bytes.NewReader(archiveData))
+	binaryName := BinaryName("topo")
+	files, err := archiveutil.ExtractFiles(ctx, archiveData, []string{binaryName})
 	if err != nil {
-		return "", fmt.Errorf("failed to identify archive format: %w", err)
+		return "", err
 	}
 
-	extractor, ok := format.(archives.Extractor)
-	if !ok {
-		return "", fmt.Errorf("archive format does not support extraction")
-	}
-
-	var tmpPath string
-
-	err = extractor.Extract(ctx, stream, func(ctx context.Context, fileInfo archives.FileInfo) error {
-		if filepath.Base(fileInfo.Name()) != BinaryName("topo") {
-			return nil
-		}
-
-		rc, err := fileInfo.Open()
-		if err != nil {
-			return fmt.Errorf("failed to open %s in archive: %w", fileInfo.Name(), err)
-		}
-		defer rc.Close() //nolint:errcheck
-
-		// important to create the temp file in the same directory to ensure atomic rename works across filesystems
-		tmp, err := os.CreateTemp(destDir, BinaryName(".topo-new-*"))
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-		tmpPath = tmp.Name()
-
-		// #nosec G110 -- archive from a hardcoded, trusted Artifactory URL
-		if _, err := io.Copy(tmp, rc); err != nil {
-			tmp.Close() //nolint:errcheck
-			return fmt.Errorf("failed to extract binary: %w", err)
-		}
-		return tmp.Close()
-	})
+	tmp, err := os.CreateTemp(destDir, BinaryName(".topo-new-*"))
 	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	if _, err := tmp.Write(files[binaryName]); err != nil {
+		err = errors.Join(err, tmp.Close())
 		ensureFileRemoved(tmpPath)
-		return "", fmt.Errorf("failed to read archive: %w", err)
+		return "", fmt.Errorf("failed to extract binary: %w", err)
 	}
-
+	if err := tmp.Close(); err != nil {
+		ensureFileRemoved(tmpPath)
+		return "", fmt.Errorf("failed to close extracted binary: %w", err)
+	}
 	return tmpPath, nil
 }
 
@@ -198,6 +176,7 @@ func moveBinary(src, dst string) error {
 }
 
 func ensureFileRemoved(path string) {
+	// #nosec G703 -- path is returned by os.CreateTemp and only used for temporary-file cleanup
 	err := os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {
