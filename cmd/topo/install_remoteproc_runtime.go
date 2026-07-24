@@ -21,8 +21,6 @@ var installRemoteprocRuntimeCmd = &cobra.Command{
 	Short: "Install remoteproc-runtime and shim to a location on the target's PATH",
 	Long: `Install remoteproc-runtime and shim to a location on the target's PATH.
 
-Fetches binaries from https://artifacts.tools.arm.com/remoteproc-runtime/
-
 Attempts to replace existing installations if found.
 Falls back to ~/bin if no suitable locations are automatically found.`,
 	Args: cobra.ExactArgs(0),
