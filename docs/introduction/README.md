@@ -12,7 +12,7 @@ You run Topo on a [host](glossary.md#host) and deploy to a [target](glossary.md#
 
 This diagram shows where Topo runs, what it deploys, and how you iterate on a project.
 
-![Topo host-to-target deployment and development loop](./img/topo-overview.svg)
+![Topo host-to-target deployment and development loop](pathname:///img/topo-overview.svg)
 
 ## Use cases
 
