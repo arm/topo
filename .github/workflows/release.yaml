@@ -136,37 +136,20 @@ jobs:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
           VERSION: ${{ steps.calculate_next_version.outputs.next_version }}
         run: |
-          gh workflow run sign-and-release.yml \
+          publisher_run_url="$(gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
-            --ref v8 \
-            --field source-run-id=${{ github.run_id }} \
-            --field release-version=${VERSION} \
-            --field pre-release=${{ inputs.pre-release }}
+            --ref v10 \
+            --field source-run-id="${{ github.run_id }}" \
+            --field release-version="$VERSION" \
+            --field pre-release="${{ inputs.pre-release }}")"
 
-          echo "Waiting for topo-publisher sign-and-release run to be created"
-          publisher_run_title="${{ github.run_id }}"
-          publisher_run_id=""
-          for attempt in {1..30}; do
-            publisher_run_id="$(gh run list \
-              --repo Arm-Debug/topo-publisher \
-              --workflow sign-and-release.yml \
-              --branch v8 \
-              --event workflow_dispatch \
-              --limit 5 \
-              --json createdAt,databaseId,displayTitle \
-              --jq "map(select(.displayTitle == \"$publisher_run_title\")) | .[0].databaseId // empty")"
+          publisher_run_id="${publisher_run_url##*/}"
+          if [[ ! "$publisher_run_id" =~ ^[0-9]+$ ]]; then
+            echo "::error::Could not extract a run ID from: $publisher_run_url"
+            exit 1
+          fi
 
-            if [ -n "$publisher_run_id" ]; then
-              echo "publisher_run_id=$publisher_run_id" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-
-            echo "Publisher workflow run is not visible yet; retrying in 10 seconds ($attempt/30)"
-            sleep 10
-          done
-
-          echo "::error::Timed out waiting for topo-publisher sign-and-release run to be created"
-          exit 1
+          echo "publisher_run_id=$publisher_run_id" >> "$GITHUB_OUTPUT"
 
       - name: Wait for publisher release links artifact
         env:
