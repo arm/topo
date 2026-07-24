@@ -61,24 +61,11 @@ func openSocket(t *testing.T, dest ssh.Destination, address string, port string)
 		_ = cmd.Process.Kill()
 	})
 
-	err = waitForOpenSocket(dest, address, port)
-	require.NoError(t, err)
-}
-
-func waitForOpenSocket(dest ssh.Destination, address string, port string) error {
-	deadline := time.Now().Add(5 * time.Second)
-	var lastErr error
-
-	for time.Now().Before(deadline) {
-		// #nosec G204 -- ignore as its a test helper
+	var output []byte
+	assert.Eventually(t, func() bool {
 		cmd := exec.Command("ssh", dest.String(), fmt.Sprintf("nc -z -w 1 %s %s", address, port))
-		output, err := cmd.CombinedOutput()
-		if err == nil {
-			return nil
-		}
-		lastErr = fmt.Errorf("%w output: %s", err, strings.TrimSpace(string(output)))
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	return fmt.Errorf("port %s not ready: %w", port, lastErr)
+		var err error
+		output, err = cmd.CombinedOutput()
+		return err == nil
+	}, 5*time.Second, 200*time.Millisecond, "port %s not ready on %s: %v output: %s", port, address, err, string(output))
 }
