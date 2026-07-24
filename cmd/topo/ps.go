@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/output/views"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
@@ -40,13 +40,29 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		host := command.NewHostFromDestination(dest)
-		containers, err := deploy.ListContainers(composeFile, host, hostName, allContainers)
+		containers, err := docker.ListContainers(composeFile, host, hostName, allContainers)
 		if err != nil {
 			return err
 		}
 
-		return views.Print(views.ContainerList{Containers: containers}, os.Stdout, outputFormat)
+		return views.Print(newContainerList(containers), os.Stdout, outputFormat)
 	},
+}
+
+func newContainerList(containers []docker.Container) views.ContainerList {
+	items := make([]views.Container, len(containers))
+	for i, container := range containers {
+		items[i] = views.Container{
+			ID:               container.Id,
+			Names:            container.Names,
+			Image:            container.Image,
+			State:            container.State,
+			Status:           container.Status,
+			ProcessingDomain: container.ProcessingDomain,
+			Address:          container.Address,
+		}
+	}
+	return views.ContainerList{Containers: items}
 }
 
 func init() {

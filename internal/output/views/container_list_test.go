@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/output/views"
 	"github.com/stretchr/testify/assert"
@@ -16,9 +15,9 @@ func TestContainerList(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
 		t.Run("renders container id, names, image, status, processing domain, and address", func(t *testing.T) {
 			toPrint := views.ContainerList{
-				Containers: []deploy.Container{
+				Containers: []views.Container{
 					{
-						Id:               "abcdef123456",
+						ID:               "abcdef123456",
 						Names:            "project-web-1",
 						Image:            "my-app",
 						State:            "running",
@@ -48,7 +47,7 @@ func TestContainerList(t *testing.T) {
 
 		t.Run("renders multiple containers", func(t *testing.T) {
 			toPrint := views.ContainerList{
-				Containers: []deploy.Container{
+				Containers: []views.Container{
 					{Image: "web", ProcessingDomain: "Linux Host"},
 					{Image: "db", ProcessingDomain: "Linux Host"},
 				},
@@ -77,9 +76,9 @@ func TestContainerList(t *testing.T) {
 	t.Run("JSONFormat", func(t *testing.T) {
 		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
 			toPrint := views.ContainerList{
-				Containers: []deploy.Container{
+				Containers: []views.Container{
 					{
-						Id:               "abcdef123456",
+						ID:               "abcdef123456",
 						Names:            "project-web-1",
 						Image:            "my-app",
 						State:            "running",
@@ -102,7 +101,7 @@ func TestContainerList(t *testing.T) {
 
 		t.Run("renders empty containers as empty array", func(t *testing.T) {
 			toPrint := views.ContainerList{
-				Containers: []deploy.Container{},
+				Containers: []views.Container{},
 			}
 			var out bytes.Buffer
 
