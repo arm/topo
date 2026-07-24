@@ -28,7 +28,7 @@ func TestCheckTunnelExposure(t *testing.T) {
 	})
 
 	t.Run("succeeds when the remote port refuses the connection", func(t *testing.T) {
-		target := testutil.StartContainer(t, testutil.SshServerContainer)
+		target := testutil.StartContainer(t, testutil.PasswordlessSSHContainer)
 		dest := ssh.NewDestination(target.SSHDestination)
 		port := "12345"
 		openSocket(t, dest, "127.0.0.1", port)
@@ -41,7 +41,7 @@ func TestCheckTunnelExposure(t *testing.T) {
 	})
 
 	t.Run("fails when the remote port accepts a connection", func(t *testing.T) {
-		target := testutil.StartContainer(t, testutil.SshServerContainer)
+		target := testutil.StartContainer(t, testutil.PasswordlessSSHContainer)
 		dest := ssh.NewDestination(target.SSHDestination)
 		port := "12345"
 		openSocket(t, dest, "0.0.0.0", port)

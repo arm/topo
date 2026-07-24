@@ -46,7 +46,7 @@ var DinDContainer = ContainerSpec{
 	},
 }
 
-var SshServerContainer = ContainerSpec{
+var PasswordlessSSHContainer = ContainerSpec{
 	context: relPath("passwordless-ssh"),
 	image:   "topo-e2e-passwordless-ssh:latest",
 	setup: func(c *Container) error {
