@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	deploymentEngine    string
+	engine              string
 	noRegistry          bool
 	registryPort        string
 	skipRemotePortCheck bool
@@ -34,8 +34,8 @@ var (
 type containerEngine string
 
 const (
-	deploymentEngineDocker containerEngine = "docker"
-	deploymentEnginePodman containerEngine = "podman"
+	containerEngineDocker containerEngine = "docker"
+	containerEnginePodman containerEngine = "podman"
 )
 
 var deployOpts deploy.DeployOptions
@@ -56,11 +56,11 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		engine, err := parseDeploymentEngine(deploymentEngine)
+		parsedEngine, err := parseContainerEngine(engine)
 		if err != nil {
 			return err
 		}
-		if engine == deploymentEnginePodman {
+		if parsedEngine == containerEnginePodman {
 			return deployWithPodman(cmd)
 		}
 		return deployWithDocker(cmd)
@@ -158,15 +158,15 @@ func executeDeployment(cmd *cobra.Command, deployment func(context.Context) erro
 	return nil
 }
 
-func parseDeploymentEngine(value string) (containerEngine, error) {
-	engine := containerEngine(value)
-	if engine == "" {
-		return deploymentEngineDocker, nil
+func parseContainerEngine(value string) (containerEngine, error) {
+	parsedEngine := containerEngine(value)
+	if parsedEngine == "" {
+		return containerEngineDocker, nil
 	}
-	if engine != deploymentEngineDocker && engine != deploymentEnginePodman {
+	if parsedEngine != containerEngineDocker && parsedEngine != containerEnginePodman {
 		return "", fmt.Errorf("invalid engine %q: must be docker or podman", value)
 	}
-	return engine, nil
+	return parsedEngine, nil
 }
 
 func validatePort(port string) error {
@@ -208,7 +208,7 @@ func init() {
 	addTargetFlag(deployCmd)
 	addComposeFileFlag(deployCmd)
 	if experimentalFeaturesEnabled() {
-		deployCmd.Flags().StringVar(&deploymentEngine, "engine", string(deploymentEngineDocker), "container engine to use (docker or podman)")
+		deployCmd.Flags().StringVar(&engine, "engine", string(containerEngineDocker), "container engine to use (docker or podman)")
 	}
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", deploy.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "disable private registry flow; use direct save/load transfer")
