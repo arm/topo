@@ -46,6 +46,20 @@ var DinDContainer = ContainerSpec{
 	},
 }
 
+var PasswordlessSSHContainer = ContainerSpec{
+	context: relPath("passwordless-ssh"),
+	image:   "topo-e2e-passwordless-ssh:latest",
+	setup: func(c *Container) error {
+		if err := acceptHostKey(c); err != nil {
+			return err
+		}
+		return nil
+	},
+	cleanup: func(c *Container) {
+		removeHostKey(c)
+	},
+}
+
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	t.Helper()
 	if testing.Short() {
