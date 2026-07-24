@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/testutil"
@@ -30,7 +31,7 @@ func TestCheckTunnelExposure(t *testing.T) {
 		target := testutil.StartContainer(t, testutil.SshServerContainer)
 		dest := ssh.NewDestination(target.SSHDestination)
 		port := "12345"
-		listenOnPort(t, dest, "127.0.0.1", port)
+		openSocket(t, dest, "127.0.0.1", port)
 		var output strings.Builder
 
 		err := docker.CheckTunnelExposure(context.Background(), &output, dest, port)
@@ -43,7 +44,7 @@ func TestCheckTunnelExposure(t *testing.T) {
 		target := testutil.StartContainer(t, testutil.SshServerContainer)
 		dest := ssh.NewDestination(target.SSHDestination)
 		port := "12345"
-		listenOnPort(t, dest, "0.0.0.0", port)
+		openSocket(t, dest, "0.0.0.0", port)
 
 		err := docker.CheckTunnelExposure(context.Background(), io.Discard, dest, port)
 
@@ -51,12 +52,33 @@ func TestCheckTunnelExposure(t *testing.T) {
 	})
 }
 
-func listenOnPort(t *testing.T, dest ssh.Destination, address string, port string) {
+func openSocket(t *testing.T, dest ssh.Destination, address string, port string) {
 	t.Helper()
-	cmd := exec.Command("ssh", dest.String(), fmt.Sprintf("nc -l -p %s -s %s", port, address))
+	cmd := exec.Command("ssh", dest.String(), fmt.Sprintf("nc -lk -p %s -s %s -e cat", port, address))
 	err := cmd.Start()
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		_ = cmd.Process.Kill()
 	})
+
+	err = waitForOpenSocket(dest, address, port)
+	require.NoError(t, err)
+}
+
+func waitForOpenSocket(dest ssh.Destination, address string, port string) error {
+	deadline := time.Now().Add(5 * time.Second)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		// #nosec G204 -- ignore as its a test helper
+		cmd := exec.Command("ssh", dest.String(), fmt.Sprintf("nc -z -w 1 %s %s", address, port))
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		lastErr = fmt.Errorf("%w output: %s", err, strings.TrimSpace(string(output)))
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return fmt.Errorf("port %s not ready: %w", port, lastErr)
 }

@@ -55,6 +55,9 @@ var SshServerContainer = ContainerSpec{
 		}
 		return nil
 	},
+	cleanup: func(c *Container) {
+		removeHostKey(c)
+	},
 }
 
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
