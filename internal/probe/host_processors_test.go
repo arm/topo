@@ -97,6 +97,32 @@ func TestHostProcessors(t *testing.T) {
 		assert.Equal(t, 2, got[1].Cores)
 	})
 
+	t.Run("handles out-of-order results for a single processor", func(t *testing.T) {
+		r := &runner.Fake{
+			Binaries: []string{"lscpu"},
+			Commands: map[string]runner.FakeResult{
+				"lscpu --json": {Output: lscpuJSON(`
+					{"field": "Core(s) per socket:", "data": "4"},
+					{"field": "Socket(s):", "data": "1"},
+					{"field": "Flags:", "data": "fp asimd"},
+					{"field": "Model name:", "data": "Cortex-A55"}
+				`)},
+			},
+		}
+
+		got, err := probe.HostProcessors(context.Background(), r)
+
+		require.NoError(t, err)
+		want := []probe.HostProcessor{
+			{
+				Model:    "Cortex-A55",
+				Cores:    4,
+				Features: []string{"fp", "asimd"},
+			},
+		}
+		assert.Equal(t, want, got)
+	})
+
 	t.Run("returns empty when no model name field", func(t *testing.T) {
 		r := &runner.Fake{
 			Binaries: []string{"lscpu"},
