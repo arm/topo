@@ -136,7 +136,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          podman machine init --provider wsl --cpus 2 --memory 2048 --now
+          podman machine init --cpus 2 --memory 2048 --now
 
       - name: Verify Podman test prerequisites (Linux)
         if: runner.os == 'Linux'
