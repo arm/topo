@@ -1,0 +1,17 @@
+services:
+  docs-preview:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: docs-preview
+      args:
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org/}
+        PREVIEW_BRANCH: ${PREVIEW_BRANCH:-main}
+      secrets:
+        - gh_token
+    ports:
+      - "3001:8080"
+
+secrets:
+  gh_token:
+    environment: GH_TOKEN
