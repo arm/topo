@@ -89,6 +89,12 @@ func groupByModelName(fields []lscpuOutputField) []modelFields {
 			groups[len(groups)-1].fields = append(groups[len(groups)-1].fields, f)
 		}
 	}
+
+	// lscpu <v2.37 reported a single processor which doesn't appear before its corresponding fields
+	// so we need to assign all the fields to the single processor if there is only one
+	if len(groups) == 1 {
+		groups[0].fields = fields
+	}
 	return groups
 }
 
