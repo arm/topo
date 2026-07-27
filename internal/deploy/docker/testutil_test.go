@@ -60,14 +60,14 @@ func requireImageExists(t *testing.T, host docker.Host, imageName string) {
 	t.Helper()
 	inspectCommand := docker.Command(t.Context(), host, "image", "inspect", imageName)
 	output, err := inspectCommand.CombinedOutput()
-	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, docker.String(inspectCommand), string(output))
+	require.NoError(t, err, "image %s doesn't exist: %s", imageName, string(output))
 }
 
 func requireImageDoesNotExist(t *testing.T, host docker.Host, imageName string) {
 	t.Helper()
 	listCommand := docker.Command(t.Context(), host, "image", "ls", "--quiet", "--filter", "reference="+imageName)
 	output, err := listCommand.CombinedOutput()
-	require.NoError(t, err, "failed to list image %s: %s output: %s", imageName, docker.String(listCommand), string(output))
+	require.NoError(t, err, "failed to list image %s: %s", imageName, string(output))
 	require.Empty(t, strings.TrimSpace(string(output)), "image %s unexpectedly exists", imageName)
 }
 

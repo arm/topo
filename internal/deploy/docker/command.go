@@ -2,10 +2,10 @@ package docker
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os/exec"
-	"strings"
+
+	"github.com/arm/topo/internal/command"
 )
 
 func Command(ctx context.Context, host Host, args ...string) *exec.Cmd {
@@ -15,10 +15,6 @@ func Command(ctx context.Context, host Host, args ...string) *exec.Cmd {
 
 func RunCommand(ctx context.Context, host Host, output io.Writer, args ...string) error {
 	return run(Command(ctx, host, args...), output)
-}
-
-func String(cmd *exec.Cmd) string {
-	return strings.Join(cmd.Args, " ")
 }
 
 func ComposeCommand(ctx context.Context, host Host, composeFile string, args ...string) *exec.Cmd {
@@ -35,7 +31,7 @@ func run(cmd *exec.Cmd, output io.Writer) error {
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to execute %s: %w", String(cmd), err)
+		return command.FormatError(cmd.Args, err)
 	}
 	return nil
 }
