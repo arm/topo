@@ -88,7 +88,7 @@ func AssertContainersRunning(t *testing.T, dest ssh.Destination, composeFilePath
 
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers running")
 
-	containers, err := unmarshalNDJSON(output)
+	containers, err := UnmarshalNDJSON(output)
 	require.NoError(t, err)
 
 	for _, container := range containers {
@@ -104,7 +104,7 @@ func AssertContainersStopped(t *testing.T, dest ssh.Destination, composeFilePath
 
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported")
 
-	containers, err := unmarshalNDJSON(output)
+	containers, err := UnmarshalNDJSON(output)
 	require.NoError(t, err)
 
 	for _, container := range containers {
@@ -112,10 +112,10 @@ func AssertContainersStopped(t *testing.T, dest ssh.Destination, composeFilePath
 	}
 }
 
-type jsonObject map[string]any
+type JsonObject map[string]any
 
-func unmarshalNDJSON(ndJSON []byte) ([]jsonObject, error) {
-	objects := []jsonObject{}
+func UnmarshalNDJSON(ndJSON []byte) ([]JsonObject, error) {
+	objects := []JsonObject{}
 	lines := bytes.SplitSeq(bytes.TrimSpace(ndJSON), []byte("\n"))
 
 	for line := range lines {
@@ -124,7 +124,7 @@ func unmarshalNDJSON(ndJSON []byte) ([]jsonObject, error) {
 			continue
 		}
 
-		var obj jsonObject
+		var obj JsonObject
 		err := json.Unmarshal(line, &obj)
 		if err != nil {
 			return objects, err

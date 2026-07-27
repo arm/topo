@@ -3,7 +3,6 @@ package podman_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/deploy/testutil"
 	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,33 +48,12 @@ func assertContainersRunning(t *testing.T, composeFile string) {
 	require.NoError(t, err, string(output))
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported")
 
-	containers, err := unmarshalNDJSON(output)
+	containers, err := testutil.UnmarshalNDJSON(output)
 	require.NoError(t, err)
 
 	for _, container := range containers {
 		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Name"], container["State"])
 	}
-}
-
-type jsonObject map[string]any
-
-func unmarshalNDJSON(ndJSON []byte) ([]jsonObject, error) {
-	objects := []jsonObject{}
-	lines := bytes.SplitSeq(bytes.TrimSpace(ndJSON), []byte("\n"))
-
-	for line := range lines {
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
-			continue
-		}
-
-		var object jsonObject
-		if err := json.Unmarshal(line, &object); err != nil {
-			return objects, err
-		}
-		objects = append(objects, object)
-	}
-	return objects, nil
 }
 
 func deploymentFixture(t *testing.T) string {
