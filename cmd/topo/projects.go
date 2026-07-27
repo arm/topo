@@ -51,9 +51,7 @@ var projectsCmd = &cobra.Command{
 func init() {
 	addTargetFlag(projectsCmd)
 	addTimeoutFlag(projectsCmd, defaultTimeout)
-	if experimentalFeaturesEnabled() {
-		projectsCmd.Flags().StringP(sourceFlag, "s", "", "where to source projects' data from")
-	}
+	projectsCmd.Flags().StringP(sourceFlag, "s", "", "where to source projects' data from")
 	rootCmd.AddCommand(projectsCmd)
 }
 
