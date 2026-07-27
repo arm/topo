@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/ssh"
 	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -37,35 +37,35 @@ func TestProjectName(t *testing.T) string {
 	return "test-project-" + gtestutil.SanitiseTestName(t)
 }
 
-func RequireImageExists(t *testing.T, h command.Host, imageName string) {
+func RequireImageExists(t *testing.T, h docker.Host, imageName string) {
 	t.Helper()
-	inspectCmd := command.Docker(h, "image", "inspect", imageName)
+	inspectCmd := docker.Docker(h, "image", "inspect", imageName)
 	output, err := inspectCmd.CombinedOutput()
-	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, command.String(inspectCmd), string(output))
+	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, docker.String(inspectCmd), string(output))
 }
 
-func RequireImageDoesNotExist(t *testing.T, h command.Host, imageName string) {
+func RequireImageDoesNotExist(t *testing.T, h docker.Host, imageName string) {
 	t.Helper()
-	listCmd := command.Docker(h, "image", "ls", "--quiet", "--filter", "reference="+imageName)
+	listCmd := docker.Docker(h, "image", "ls", "--quiet", "--filter", "reference="+imageName)
 	output, err := listCmd.CombinedOutput()
-	require.NoError(t, err, "failed to list image %s: %s output: %s", imageName, command.String(listCmd), string(output))
+	require.NoError(t, err, "failed to list image %s: %s output: %s", imageName, docker.String(listCmd), string(output))
 	require.Empty(t, strings.TrimSpace(string(output)), "image %s unexpectedly exists", imageName)
 }
 
-func BuildMinimalImage(t *testing.T, h command.Host, imageName string) {
+func BuildMinimalImage(t *testing.T, h docker.Host, imageName string) {
 	t.Helper()
 	dockerfileContent := `
 FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `
-	buildCmd := command.Docker(h, "build", "-t", imageName, "-")
+	buildCmd := docker.Docker(h, "build", "-t", imageName, "-")
 	buildCmd.Stdin = bytes.NewBufferString(dockerfileContent)
 	output, err := buildCmd.CombinedOutput()
-	require.NoError(t, err, "failed to build image %s: %s output: %s", imageName, command.String(buildCmd), string(output))
+	require.NoError(t, err, "failed to build image %s: %s output: %s", imageName, docker.String(buildCmd), string(output))
 
 	RequireImageExists(t, h, imageName)
 	t.Cleanup(func() {
-		removeCmd := command.Docker(h, "image", "rm", "-f", imageName)
+		removeCmd := docker.Docker(h, "image", "rm", "-f", imageName)
 		if err := removeCmd.Run(); err != nil {
 			t.Logf("failed to remove image %s: %v", imageName, err)
 		}
@@ -83,7 +83,7 @@ func ForceComposeDown(t *testing.T, composeFilePath string) {
 
 func AssertContainersRunning(t *testing.T, dest ssh.Destination, composeFilePath string) {
 	t.Helper()
-	dockerCmd := command.DockerCompose(command.NewHostFromDestination(dest), composeFilePath, "ps", "--format", "json")
+	dockerCmd := docker.DockerCompose(docker.NewHostFromDestination(dest), composeFilePath, "ps", "--format", "json")
 	output, err := dockerCmd.CombinedOutput()
 	require.NoError(t, err, string(output))
 
@@ -99,7 +99,7 @@ func AssertContainersRunning(t *testing.T, dest ssh.Destination, composeFilePath
 
 func AssertContainersStopped(t *testing.T, dest ssh.Destination, composeFilePath string) {
 	t.Helper()
-	dockerCmd := command.DockerCompose(command.NewHostFromDestination(dest), composeFilePath, "ps", "--format", "json", "--all")
+	dockerCmd := docker.DockerCompose(docker.NewHostFromDestination(dest), composeFilePath, "ps", "--format", "json", "--all")
 	output, err := dockerCmd.CombinedOutput()
 	require.NoError(t, err, string(output))
 

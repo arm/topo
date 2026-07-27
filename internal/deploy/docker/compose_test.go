@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/stretchr/testify/require"
@@ -28,7 +27,7 @@ services:
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 		var output bytes.Buffer
 
-		err := docker.PullImages(context.Background(), &output, composeFilePath, command.LocalHost)
+		err := docker.PullImages(context.Background(), &output, composeFilePath, docker.LocalHost)
 
 		require.NoError(t, err)
 	})

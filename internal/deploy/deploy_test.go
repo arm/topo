@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/require"
@@ -19,13 +19,13 @@ func TestDeployment(t *testing.T) {
 	t.Run("deploys to localhost", func(t *testing.T) {
 		composeFilePath, imageName := deploymentFixture(t)
 		t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
-		testutil.RequireImageDoesNotExist(t, command.LocalHost, imageName)
+		testutil.RequireImageDoesNotExist(t, docker.LocalHost, imageName)
 		deployOptions := deploy.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
 		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
-		testutil.RequireImageExists(t, command.LocalHost, imageName)
+		testutil.RequireImageExists(t, docker.LocalHost, imageName)
 		testutil.AssertContainersRunning(t, ssh.PlainLocalhost, composeFilePath)
 	})
 
@@ -33,13 +33,13 @@ func TestDeployment(t *testing.T) {
 		container := testutil.StartContainer(t, testutil.DinDContainer)
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 		composeFilePath, imageName := deploymentFixture(t)
-		testutil.RequireImageDoesNotExist(t, command.NewHostFromDestination(remoteDockerHost), imageName)
+		testutil.RequireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
 		deployOptions := deploy.DeployOptions{TargetHost: remoteDockerHost}
 
 		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
-		testutil.RequireImageExists(t, command.NewHostFromDestination(remoteDockerHost), imageName)
+		testutil.RequireImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
 		testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
 	})
 
@@ -49,7 +49,7 @@ func TestDeployment(t *testing.T) {
 		cleanupRegistryContainer(t, registryContainerName)
 		container := testutil.StartContainer(t, testutil.DinDContainer)
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
-		remoteCommandHost := command.NewHostFromDestination(remoteDockerHost)
+		remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
 		composeFilePath, imageName := deploymentFixture(t)
 		testutil.RequireImageDoesNotExist(t, remoteCommandHost, imageName)
 		deployOptions := deploy.DeployOptions{
@@ -87,7 +87,7 @@ FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)
 	t.Cleanup(func() {
-		removeOutput, err := command.Docker(command.LocalHost, "image", "rm", "-f", imageName).CombinedOutput()
+		removeOutput, err := docker.Docker(docker.LocalHost, "image", "rm", "-f", imageName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
@@ -97,9 +97,9 @@ CMD ["tail", "-f", "/dev/null"]
 
 func cleanupRegistryContainer(t *testing.T, containerName string) {
 	t.Helper()
-	_ = command.Docker(command.LocalHost, "rm", "-f", containerName).Run()
+	_ = docker.Docker(docker.LocalHost, "rm", "-f", containerName).Run()
 	t.Cleanup(func() {
-		removeOutput, err := command.Docker(command.LocalHost, "rm", "-f", containerName).CombinedOutput()
+		removeOutput, err := docker.Docker(docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove registry container: %v: %s", err, string(removeOutput))
 		}

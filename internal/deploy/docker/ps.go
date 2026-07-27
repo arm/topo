@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	"github.com/arm/topo/internal/deploy/command"
 )
 
 const (
@@ -46,7 +44,7 @@ type InspectedHostConfig struct {
 	Annotations map[string]string `json:"Annotations"`
 }
 
-func ListContainers(composeFile string, h command.Host, hostName string, all bool) ([]Container, error) {
+func ListContainers(composeFile string, h Host, hostName string, all bool) ([]Container, error) {
 	rawJSON, err := getContainers(composeFile, h, all)
 	if err != nil {
 		return nil, err
@@ -68,9 +66,9 @@ func ListContainers(composeFile string, h command.Host, hostName string, all boo
 	return containers, nil
 }
 
-func getContainers(composeFile string, h command.Host, all bool) (string, error) {
+func getContainers(composeFile string, h Host, all bool) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := command.DockerCompose(h, composeFile, composePSArgs(all)...)
+	cmd := DockerCompose(h, composeFile, composePSArgs(all)...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -100,7 +98,7 @@ func ParseContainers(rawJSON string) ([]PSContainer, error) {
 	return raws, nil
 }
 
-func getProcessingDomains(raws []PSContainer, h command.Host) (map[string]string, error) {
+func getProcessingDomains(raws []PSContainer, h Host) (map[string]string, error) {
 	targets := make([]string, 0, len(raws))
 	for _, raw := range raws {
 		if raw.ID != "" {
@@ -124,9 +122,9 @@ func getProcessingDomains(raws []PSContainer, h command.Host) (map[string]string
 	return BuildProcessingDomainLookup(inspected), nil
 }
 
-func inspectContainers(targets []string, h command.Host) (string, error) {
+func inspectContainers(targets []string, h Host) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := command.Docker(h, append([]string{"inspect"}, targets...)...)
+	cmd := Docker(h, append([]string{"inspect"}, targets...)...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

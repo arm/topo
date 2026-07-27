@@ -6,11 +6,10 @@ import (
 	"io"
 
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
 	"golang.org/x/sync/errgroup"
 )
 
-func TransferImagesViaPipe(ctx context.Context, output io.Writer, composeFile string, source, destination command.Host) error {
+func TransferImagesViaPipe(ctx context.Context, output io.Writer, composeFile string, source, destination Host) error {
 	images, err := compose.ImageNames(composeFile)
 	if err != nil {
 		return err
@@ -25,11 +24,11 @@ func TransferImagesViaPipe(ctx context.Context, output io.Writer, composeFile st
 	return group.Wait()
 }
 
-func transferImageViaPipe(ctx context.Context, source, destination command.Host, output io.Writer, image string) error {
+func transferImageViaPipe(ctx context.Context, source, destination Host, output io.Writer, image string) error {
 	pipeReader, pipeWriter := io.Pipe()
 
-	saveCommand := command.DockerContext(ctx, source, "save", image)
-	loadCommand := command.DockerContext(ctx, destination, "load")
+	saveCommand := DockerContext(ctx, source, "save", image)
+	loadCommand := DockerContext(ctx, destination, "load")
 	saveCommand.Stdout = pipeWriter
 	saveCommand.Stderr = output
 	loadCommand.Stdin = pipeReader

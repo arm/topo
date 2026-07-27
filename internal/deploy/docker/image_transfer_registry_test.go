@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
@@ -16,29 +15,29 @@ import (
 
 func TestTransferImagesViaRegistry(t *testing.T) {
 	testutil.RequireLinuxDockerEngine(t)
-	host := command.LocalHost
+	host := docker.LocalHost
 	const (
 		registryContainerName = "topo-test-registry"
 		registryPort          = "12738"
 	)
 	composeFilePath, imageName := buildTransferTestImage(t, host)
 
-	removeRegistry := command.Docker(host, "rm", "-f", registryContainerName)
+	removeRegistry := docker.Docker(host, "rm", "-f", registryContainerName)
 	removeOutput, removeErr := removeRegistry.CombinedOutput()
 	if removeErr != nil {
 		t.Logf("registry container cleanup (expected if not running): %s", string(removeOutput))
 	}
 
-	startRegistry := command.Docker(host, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", registryPort), "--name", registryContainerName, "registry:2")
+	startRegistry := docker.Docker(host, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", registryPort), "--name", registryContainerName, "registry:2")
 	startOutput, err := startRegistry.CombinedOutput()
 	require.NoError(t, err, "could not start registry for test: %s", string(startOutput))
 	t.Cleanup(func() {
-		_ = command.Docker(host, "rm", "-f", registryContainerName).Run()
+		_ = docker.Docker(host, "rm", "-f", registryContainerName).Run()
 	})
 
 	destinationContainer := testutil.StartContainer(t, testutil.DinDContainer)
 	destination := ssh.NewDestination(destinationContainer.SSHDestination)
-	destinationHost := command.NewHostFromDestination(destination)
+	destinationHost := docker.NewHostFromDestination(destination)
 	testutil.RequireImageDoesNotExist(t, destinationHost, imageName)
 
 	tunnel, err := ssh.OpenSSHTunnel(context.Background(), os.Stdout, destination, registryPort, false)

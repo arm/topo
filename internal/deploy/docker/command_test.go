@@ -1,9 +1,9 @@
-package command_test
+package docker_test
 
 import (
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
@@ -11,10 +11,10 @@ import (
 func TestString(t *testing.T) {
 	t.Run("converts docker command to string", func(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
-		remoteHost := command.NewHostFromDestination(dest)
-		cmd := command.Docker(remoteHost, "save", "alpine:latest")
+		remoteHost := docker.NewHostFromDestination(dest)
+		cmd := docker.Docker(remoteHost, "save", "alpine:latest")
 
-		got := command.String(cmd)
+		got := docker.String(cmd)
 
 		want := "docker -H ssh://user@remote save alpine:latest"
 		assert.Equal(t, want, got)
@@ -22,10 +22,10 @@ func TestString(t *testing.T) {
 
 	t.Run("converts docker compose command to string", func(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
-		remoteHost := command.NewHostFromDestination(dest)
-		cmd := command.DockerCompose(remoteHost, "/path/to/compose.yaml", "up", "-d")
+		remoteHost := docker.NewHostFromDestination(dest)
+		cmd := docker.DockerCompose(remoteHost, "/path/to/compose.yaml", "up", "-d")
 
-		got := command.String(cmd)
+		got := docker.String(cmd)
 
 		want := "docker -H ssh://user@remote compose -f /path/to/compose.yaml up -d"
 		assert.Equal(t, want, got)

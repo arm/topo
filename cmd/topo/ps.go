@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/output/views"
 	"github.com/arm/topo/internal/ssh"
@@ -39,7 +38,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			panic("internal error: all flag not registered: " + err.Error())
 		}
 
-		host := command.NewHostFromDestination(dest)
+		host := docker.NewHostFromDestination(dest)
 		containers, err := docker.ListContainers(composeFile, host, hostName, allContainers)
 		if err != nil {
 			return err

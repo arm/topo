@@ -7,7 +7,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
@@ -42,7 +41,7 @@ func SupportsSSHControlSockets(goos string) bool {
 }
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) error {
-	sourceHost := command.LocalHost
+	sourceHost := docker.LocalHost
 
 	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
@@ -60,7 +59,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry == nil {
-			targetHost := command.NewHostFromDestination(opts.TargetHost)
+			targetHost := docker.NewHostFromDestination(opts.TargetHost)
 			if err := transferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost); err != nil {
 				return err
 			}
@@ -74,7 +73,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 	if err := term.PrintHeader(output, "Start services"); err != nil {
 		return err
 	}
-	if err := docker.StartServices(ctx, output, composeFile, command.NewHostFromDestination(opts.TargetHost), opts.RecreateMode); err != nil {
+	if err := docker.StartServices(ctx, output, composeFile, docker.NewHostFromDestination(opts.TargetHost), opts.RecreateMode); err != nil {
 		return err
 	}
 
@@ -84,14 +83,14 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
 }
 
-func transferImagesViaPipe(ctx context.Context, output io.Writer, composeFile string, sourceHost, targetHost command.Host) error {
+func transferImagesViaPipe(ctx context.Context, output io.Writer, composeFile string, sourceHost, targetHost docker.Host) error {
 	if err := term.PrintHeader(output, "Transfer images"); err != nil {
 		return err
 	}
 	return docker.TransferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost)
 }
 
-func transferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, sourceHost command.Host, targetHost ssh.Destination, opts RegistryConfig) (transferErr error) {
+func transferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, sourceHost docker.Host, targetHost ssh.Destination, opts RegistryConfig) (transferErr error) {
 	if err := term.PrintHeader(output, "Run registry"); err != nil {
 		return err
 	}
@@ -126,7 +125,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, composeFil
 	if err := term.PrintHeader(output, "Transfer via registry"); err != nil {
 		return err
 	}
-	if err := docker.TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, command.NewHostFromDestination(targetHost), opts.Port); err != nil {
+	if err := docker.TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, docker.NewHostFromDestination(targetHost), opts.Port); err != nil {
 		return err
 	}
 
