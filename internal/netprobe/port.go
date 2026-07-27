@@ -2,42 +2,114 @@ package netprobe
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
-	"net"
-	"os"
-	"os/exec"
+	"strconv"
 	"strings"
+
+	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/ssh"
 )
 
-// IsRemotePortListening reports whether host:port accepts TCP connections.
-func IsRemotePortListening(ctx context.Context, host, port string) (bool, error) {
-	address := net.JoinHostPort(host, port)
-	var remoteIP strings.Builder
-	// Use curl so host resolution matches OpenSSH for mDNS, NSS, and split-DNS configurations.
-	// - remote_ip detects a connection even when HTTP fails
-	// - noproxy ensures the connection is direct
-	// - silent suppresses curl's progress and errors.
-	cmd := exec.CommandContext(ctx, "curl", "http://"+address, "--max-time", "5", "--noproxy", "*", "--output", os.DevNull, "--silent", "--write-out", "%{remote_ip}")
-	cmd.Stdout = &remoteIP
-	cmd.Stderr = io.Discard
-	err := cmd.Run()
-	if err == nil || remoteIP.Len() > 0 {
-		return true, nil
-	}
+var procNetTcpFiles = []string{"/proc/net/tcp", "/proc/net/tcp6"}
 
-	exitError, ok := errors.AsType[*exec.ExitError](err)
-	if ok {
-		switch exitError.ExitCode() {
-		case 7:
-			return false, nil
-		case 28:
-			return false, fmt.Errorf("timed out while checking whether remote port %s is exposed: %w", address, err)
-		case 6:
-			return false, fmt.Errorf("could not resolve remote host %q while checking tunnel exposure: %w", host, err)
+const (
+	loopbackV4Hex     = "0100007F"
+	loopbackV6Hex     = "00000000000000000000000001000000"
+	tcpListeningState = "0A"
+)
+
+type parsedTable struct {
+	columnIndexes map[string]int
+	rows          [][]string
+}
+
+// IsRemotePortListening reports whether the target is listening beyond the local loopback on the given TCP port
+func IsRemotePortListening(ctx context.Context, targetDest ssh.Destination, port string) (bool, error) {
+	sshRunner := runner.NewSSH(targetDest)
+	for _, path := range procNetTcpFiles {
+		stdout, _, err := sshRunner.Run(ctx, fmt.Sprintf("cat %s", path))
+		if err != nil {
+			return false, err
+		}
+
+		listening, err := IsRemotePortListeningInProcNetTCP(stdout, port)
+		if err != nil {
+			return false, err
+		}
+		if listening {
+			return true, nil
 		}
 	}
+	return false, nil
+}
 
-	return false, fmt.Errorf("could not verify whether remote port %s is exposed: %w", address, err)
+func IsRemotePortListeningInProcNetTCP(procNetTCP, port string) (bool, error) {
+	portNumber, err := strconv.ParseUint(port, 10, 16)
+	if err != nil {
+		return false, fmt.Errorf("invalid TCP port %q: %w", port, err)
+	}
+	portHex := fmt.Sprintf("%04X", portNumber)
+
+	table, err := parseTable(procNetTCP)
+	if err != nil {
+		return false, fmt.Errorf("parse proc net TCP table: %w", err)
+	}
+	localAddressColumn, ok := table.columnIndexes["local_address"]
+	if !ok {
+		return false, fmt.Errorf(`parse proc net TCP table: missing "local_address" column`)
+	}
+	stateColumn, ok := table.columnIndexes["st"]
+	if !ok {
+		return false, fmt.Errorf(`parse proc net TCP table: missing "st" column`)
+	}
+
+	for _, row := range table.rows {
+		localAddress := row[localAddressColumn]
+		state := row[stateColumn]
+		if hasPort(localAddress, portHex) && state == tcpListeningState && !isLoopback(localAddress) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func parseTable(rawTable string) (parsedTable, error) {
+	lines := strings.Split(rawTable, "\n")
+	headers := strings.Fields(lines[0])
+	if len(headers) == 0 {
+		return parsedTable{}, fmt.Errorf("table header is empty")
+	}
+
+	table := parsedTable{
+		columnIndexes: make(map[string]int, len(headers)),
+		rows:          make([][]string, 0, len(lines)-1),
+	}
+	for index, header := range headers {
+		table.columnIndexes[header] = index
+	}
+
+	for index, line := range lines[1:] {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		if len(fields) < len(headers) {
+			return parsedTable{}, fmt.Errorf(
+				"row %d has %d fields, expected at least %d",
+				index+2,
+				len(fields),
+				len(headers),
+			)
+		}
+		table.rows = append(table.rows, fields)
+	}
+	return table, nil
+}
+
+func hasPort(localAddress, portHex string) bool {
+	return strings.HasSuffix(localAddress, ":"+portHex)
+}
+
+func isLoopback(localAddress string) bool {
+	return strings.HasPrefix(localAddress, loopbackV4Hex+":") || strings.HasPrefix(localAddress, loopbackV6Hex+":")
 }

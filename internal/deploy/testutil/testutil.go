@@ -22,6 +22,7 @@ var (
 	SanitiseTestName         = gtestutil.SanitiseTestName
 	StartContainer           = gtestutil.StartContainer
 	DinDContainer            = gtestutil.DinDContainer
+	PasswordlessSSHContainer = gtestutil.PasswordlessSSHContainer
 )
 
 func TestImageName(t *testing.T) string {
