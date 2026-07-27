@@ -51,26 +51,6 @@ func RequireImageDoesNotExist(t *testing.T, h docker.Host, imageName string) {
 	require.Empty(t, strings.TrimSpace(string(output)), "image %s unexpectedly exists", imageName)
 }
 
-func BuildMinimalImage(t *testing.T, h docker.Host, imageName string) {
-	t.Helper()
-	dockerfileContent := `
-FROM alpine:latest
-CMD ["tail", "-f", "/dev/null"]
-`
-	buildCmd := docker.Docker(h, "build", "-t", imageName, "-")
-	buildCmd.Stdin = bytes.NewBufferString(dockerfileContent)
-	output, err := buildCmd.CombinedOutput()
-	require.NoError(t, err, "failed to build image %s: %s output: %s", imageName, docker.String(buildCmd), string(output))
-
-	RequireImageExists(t, h, imageName)
-	t.Cleanup(func() {
-		removeCmd := docker.Docker(h, "image", "rm", "-f", imageName)
-		if err := removeCmd.Run(); err != nil {
-			t.Logf("failed to remove image %s: %v", imageName, err)
-		}
-	})
-}
-
 func ForceComposeDown(t *testing.T, composeFilePath string) {
 	t.Helper()
 	// #nosec G204 -- ignore as its a test helper
