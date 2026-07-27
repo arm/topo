@@ -28,12 +28,7 @@ var projectsCmd = &cobra.Command{
 		var projects []catalog.Project
 		var err error
 		source := getSource(cmd)
-		switch source {
-		case builtinProjects:
-			projects, err = catalog.ListBuiltinProjects()
-		default:
-			projects, err = catalog.ListProjectsFromURL(ctx, source)
-		}
+		projects, err = catalog.ListProjectsFromURL(ctx, source)
 		if err != nil {
 			return err
 		}
@@ -62,17 +57,14 @@ func init() {
 	rootCmd.AddCommand(projectsCmd)
 }
 
-const builtinProjects = "builtin"
-
 func getSource(cmd *cobra.Command) string {
-	if experimentalFeaturesEnabled() {
-		flagValue, err := cmd.Flags().GetString(sourceFlag)
-		if err != nil {
-			panic(fmt.Sprintf("internal error: %s flag not registered: %v", sourceFlag, err))
-		}
-		if flagValue != "" {
-			return flagValue
-		}
+	flagValue, err := cmd.Flags().GetString(sourceFlag)
+	if err != nil {
+		panic(fmt.Sprintf("internal error: %s flag not registered: %v", sourceFlag, err))
 	}
-	return builtinProjects
+	if flagValue != "" {
+		return flagValue
+	}
+
+	return catalog.DefaultCatalogURL
 }

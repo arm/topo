@@ -3,7 +3,6 @@ package catalog
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,12 +11,6 @@ import (
 	"github.com/arm/topo/internal/fetch"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
-
-//go:embed data/catalog.json
-var catalogJSON []byte
-
-//go:embed data/catalog.schema.json
-var catalogSchemaJSON []byte
 
 type catalogDocument struct {
 	Schema   string    `json:"$schema,omitempty"`
@@ -32,20 +25,21 @@ type Project struct {
 	Ref         string   `json:"ref"`
 }
 
-func ListBuiltinProjects() ([]Project, error) {
-	return parseProjects(catalogJSON)
-}
+const DefaultURL = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + version + "/catalog/"
+const DefaultCatalogURL = DefaultURL + "catalog.json"
+const DefaultSchemaURL = DefaultURL + "catalog.schema.json"
+const version = "v1"
 
 func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 	data, err := fetchProjectsJSON(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch projects: %w", err)
 	}
-	return parseProjects(data)
+	return parseProjects(ctx, data)
 }
 
-func parseProjects(b []byte) ([]Project, error) {
-	if err := validateAgainstSchema(b); err != nil {
+func parseProjects(ctx context.Context, b []byte) ([]Project, error) {
+	if err := validateAgainstSchema(ctx, b); err != nil {
 		return nil, fmt.Errorf("failed schema validation: %w", err)
 	}
 
@@ -57,18 +51,14 @@ func parseProjects(b []byte) ([]Project, error) {
 	return catalog.Projects, nil
 }
 
-func validateAgainstSchema(b []byte) error {
-	const projectsSchemaURL = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
-
+func validateAgainstSchema(ctx context.Context, b []byte) error {
 	compiler := jsonschema.NewCompiler()
-	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(catalogSchemaJSON))
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal schema: %w", err)
-	}
-	if err := compiler.AddResource(projectsSchemaURL, schemaDoc); err != nil {
-		return fmt.Errorf("failed to add schema resource: %w", err)
-	}
-	schema, err := compiler.Compile(projectsSchemaURL)
+	loader := schemaLoader{ctx: ctx}
+	compiler.UseLoader(jsonschema.SchemeURLLoader{
+		"http":  loader,
+		"https": loader,
+	})
+	schema, err := compiler.Compile(DefaultSchemaURL)
 	if err != nil {
 		return fmt.Errorf("failed to compile schema: %w", err)
 	}
@@ -78,6 +68,18 @@ func validateAgainstSchema(b []byte) error {
 		return fmt.Errorf("failed to unmarshal projects: %w", err)
 	}
 	return schema.Validate(jsonDoc)
+}
+
+type schemaLoader struct {
+	ctx context.Context
+}
+
+func (l schemaLoader) Load(url string) (any, error) {
+	data, err := fetch.Get(l.ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	return jsonschema.UnmarshalJSON(bytes.NewReader(data))
 }
 
 func fetchProjectsJSON(ctx context.Context, url string) ([]byte, error) {
