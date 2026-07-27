@@ -12,7 +12,6 @@ import (
 
 const timeout = 2 * time.Minute
 
-// Get retrieves the contents of an HTTP or HTTPS URL.
 func Get(ctx context.Context, rawURL string) ([]byte, error) {
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
