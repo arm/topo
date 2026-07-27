@@ -6,17 +6,25 @@ import (
 	"fmt"
 	"text/tabwriter"
 	"text/template"
-
-	"github.com/arm/topo/internal/deploy"
 )
 
+type Container struct {
+	ID               string `json:"id"`
+	Names            string `json:"names"`
+	Image            string `json:"image"`
+	State            string `json:"state"`
+	Status           string `json:"status"`
+	ProcessingDomain string `json:"processingDomain"`
+	Address          string `json:"address"`
+}
+
 type ContainerList struct {
-	Containers []deploy.Container `json:"containers"`
+	Containers []Container `json:"containers"`
 }
 
 const containerListTemplate = `Container ID	Names	Image	Status	Processing Domain	Address
 {{- range .}}
-{{.Id}}	{{.Names}}	{{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
+{{.ID}}	{{.Names}}	{{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
 {{- end }}`
 
 func (r ContainerList) AsPlain(isTTY bool) (string, error) {
