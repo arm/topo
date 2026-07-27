@@ -24,18 +24,6 @@ var (
 	PasswordlessSSHContainer = gtestutil.PasswordlessSSHContainer
 )
 
-func TestImageName(t *testing.T) string {
-	return "test-image-" + gtestutil.SanitiseTestName(t)
-}
-
-func TestContainerName(t *testing.T) string {
-	return "test-container-" + gtestutil.SanitiseTestName(t)
-}
-
-func TestProjectName(t *testing.T) string {
-	return "test-project-" + gtestutil.SanitiseTestName(t)
-}
-
 func RequireImageExists(t *testing.T, h docker.Host, imageName string) {
 	t.Helper()
 	inspectCmd := docker.Docker(h, "image", "inspect", imageName)
