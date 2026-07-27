@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"bytes"
-	"encoding/json"
 	"os/exec"
 	"strings"
 	"testing"
@@ -111,27 +110,4 @@ func AssertContainersStopped(t *testing.T, dest ssh.Destination, composeFilePath
 	for _, container := range containers {
 		assert.Equal(t, "exited", container["State"], "expected container %s to be exited (state=%s)", container["Name"], container["State"])
 	}
-}
-
-type JsonObject map[string]any
-
-func UnmarshalNDJSON(ndJSON []byte) ([]JsonObject, error) {
-	objects := []JsonObject{}
-	lines := bytes.SplitSeq(bytes.TrimSpace(ndJSON), []byte("\n"))
-
-	for line := range lines {
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
-			continue
-		}
-
-		var obj JsonObject
-		err := json.Unmarshal(line, &obj)
-		if err != nil {
-			return objects, err
-		}
-		objects = append(objects, obj)
-	}
-
-	return objects, nil
 }
