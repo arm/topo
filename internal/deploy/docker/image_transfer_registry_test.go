@@ -21,17 +21,17 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	)
 	composeFilePath, imageName := buildTransferTestImage(t, host)
 
-	removeRegistry := docker.Docker(host, "rm", "-f", registryContainerName)
+	removeRegistry := docker.Command(t.Context(), host, "rm", "-f", registryContainerName)
 	removeOutput, removeErr := removeRegistry.CombinedOutput()
 	if removeErr != nil {
 		t.Logf("registry container cleanup (expected if not running): %s", string(removeOutput))
 	}
 
-	startRegistry := docker.Docker(host, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", registryPort), "--name", registryContainerName, "registry:2")
+	startRegistry := docker.Command(t.Context(), host, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", registryPort), "--name", registryContainerName, "registry:2")
 	startOutput, err := startRegistry.CombinedOutput()
 	require.NoError(t, err, "could not start registry for test: %s", string(startOutput))
 	t.Cleanup(func() {
-		_ = docker.Docker(host, "rm", "-f", registryContainerName).Run()
+		_ = docker.Command(context.Background(), host, "rm", "-f", registryContainerName).Run()
 	})
 
 	destinationContainer := startContainer(t, dinDContainer)

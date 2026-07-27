@@ -58,14 +58,14 @@ func testProjectName(t *testing.T) string {
 
 func requireImageExists(t *testing.T, host docker.Host, imageName string) {
 	t.Helper()
-	inspectCommand := docker.Docker(host, "image", "inspect", imageName)
+	inspectCommand := docker.Command(t.Context(), host, "image", "inspect", imageName)
 	output, err := inspectCommand.CombinedOutput()
 	require.NoError(t, err, "image %s doesn't exist: %s output: %s", imageName, docker.String(inspectCommand), string(output))
 }
 
 func requireImageDoesNotExist(t *testing.T, host docker.Host, imageName string) {
 	t.Helper()
-	listCommand := docker.Docker(host, "image", "ls", "--quiet", "--filter", "reference="+imageName)
+	listCommand := docker.Command(t.Context(), host, "image", "ls", "--quiet", "--filter", "reference="+imageName)
 	output, err := listCommand.CombinedOutput()
 	require.NoError(t, err, "failed to list image %s: %s output: %s", imageName, docker.String(listCommand), string(output))
 	require.Empty(t, strings.TrimSpace(string(output)), "image %s unexpectedly exists", imageName)
@@ -82,7 +82,7 @@ func forceComposeDown(t *testing.T, composeFilePath string) {
 
 func assertContainersRunning(t *testing.T, destination ssh.Destination, composeFilePath string) {
 	t.Helper()
-	dockerCommand := docker.DockerCompose(docker.NewHostFromDestination(destination), composeFilePath, "ps", "--format", "json")
+	dockerCommand := docker.ComposeCommand(t.Context(), docker.NewHostFromDestination(destination), composeFilePath, "ps", "--format", "json")
 	output, err := dockerCommand.CombinedOutput()
 	require.NoError(t, err, string(output))
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers running")
@@ -97,7 +97,7 @@ func assertContainersRunning(t *testing.T, destination ssh.Destination, composeF
 
 func assertContainersStopped(t *testing.T, destination ssh.Destination, composeFilePath string) {
 	t.Helper()
-	dockerCommand := docker.DockerCompose(docker.NewHostFromDestination(destination), composeFilePath, "ps", "--format", "json", "--all")
+	dockerCommand := docker.ComposeCommand(t.Context(), docker.NewHostFromDestination(destination), composeFilePath, "ps", "--format", "json", "--all")
 	output, err := dockerCommand.CombinedOutput()
 	require.NoError(t, err, string(output))
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported")

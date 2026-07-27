@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -68,7 +69,7 @@ func ListContainers(composeFile string, h Host, hostName string, all bool) ([]Co
 
 func getContainers(composeFile string, h Host, all bool) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := DockerCompose(h, composeFile, composePSArgs(all)...)
+	cmd := ComposeCommand(context.Background(), h, composeFile, composePSArgs(all)...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -124,7 +125,7 @@ func getProcessingDomains(raws []PSContainer, h Host) (map[string]string, error)
 
 func inspectContainers(targets []string, h Host) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := Docker(h, append([]string{"inspect"}, targets...)...)
+	cmd := Command(context.Background(), h, append([]string{"inspect"}, targets...)...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

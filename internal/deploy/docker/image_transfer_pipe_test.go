@@ -42,7 +42,7 @@ services:
 	requireWriteFile(t, composeFilePath, composeFileContent)
 	requireWriteFile(t, dockerFilePath, "FROM alpine:latest")
 
-	buildCommand := docker.DockerCompose(host, composeFilePath, "build")
+	buildCommand := docker.ComposeCommand(t.Context(), host, composeFilePath, "build")
 	buildOutput, err := buildCommand.CombinedOutput()
 	require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 	return composeFilePath, imageName

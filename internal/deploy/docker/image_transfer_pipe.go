@@ -27,8 +27,8 @@ func TransferImagesViaPipe(ctx context.Context, output io.Writer, composeFile st
 func transferImageViaPipe(ctx context.Context, source, destination Host, output io.Writer, image string) error {
 	pipeReader, pipeWriter := io.Pipe()
 
-	saveCommand := DockerContext(ctx, source, "save", image)
-	loadCommand := DockerContext(ctx, destination, "load")
+	saveCommand := Command(ctx, source, "save", image)
+	loadCommand := Command(ctx, destination, "load")
 	saveCommand.Stdout = pipeWriter
 	saveCommand.Stderr = output
 	loadCommand.Stdin = pipeReader

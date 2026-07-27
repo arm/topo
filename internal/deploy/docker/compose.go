@@ -16,7 +16,7 @@ const (
 )
 
 func BuildImages(ctx context.Context, output io.Writer, composeFile string, host Host) error {
-	return RunDockerCompose(ctx, host, composeFile, output, "build")
+	return RunComposeCommand(ctx, host, composeFile, output, "build")
 }
 
 func PullImages(ctx context.Context, output io.Writer, composeFile string, host Host) error {
@@ -29,7 +29,7 @@ func PullImages(ctx context.Context, output io.Writer, composeFile string, host 
 	}
 
 	args := append([]string{"pull"}, services...)
-	return RunDockerCompose(ctx, host, composeFile, output, args...)
+	return RunComposeCommand(ctx, host, composeFile, output, args...)
 }
 
 func StartServices(ctx context.Context, output io.Writer, composeFile string, host Host, mode RecreateMode) error {
@@ -40,9 +40,9 @@ func StartServices(ctx context.Context, output io.Writer, composeFile string, ho
 	case RecreateModeNone:
 		args = append(args, "--no-recreate")
 	}
-	return RunDockerCompose(ctx, host, composeFile, output, args...)
+	return RunComposeCommand(ctx, host, composeFile, output, args...)
 }
 
 func StopServices(ctx context.Context, output io.Writer, composeFile string, host Host) error {
-	return RunDockerCompose(ctx, host, composeFile, output, "stop")
+	return RunComposeCommand(ctx, host, composeFile, output, "stop")
 }

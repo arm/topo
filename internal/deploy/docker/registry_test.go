@@ -2,6 +2,7 @@ package docker_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -33,7 +34,7 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		port := requireAvailableTCPPort(t, "127.0.0.1")
 		var output bytes.Buffer
 		require.NoError(t, docker.EnsureRegistryRunning(t.Context(), &output, containerName, port), output.String())
-		stopOutput, err := docker.Docker(docker.LocalHost, "stop", containerName).CombinedOutput()
+		stopOutput, err := docker.Command(t.Context(), docker.LocalHost, "stop", containerName).CombinedOutput()
 		require.NoError(t, err, string(stopOutput))
 		output.Reset()
 
@@ -69,7 +70,8 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		const portOwnerContainerName = "topo-test-registry-port-owner"
 		requireContainerAbsent(t, portOwnerContainerName)
 		port := requireAvailableTCPPort(t, "127.0.0.1")
-		portOwnerOutput, err := docker.Docker(
+		portOwnerOutput, err := docker.Command(
+			t.Context(),
 			docker.LocalHost,
 			"run",
 			"-d",
@@ -89,10 +91,10 @@ func TestEnsureRegistryRunning(t *testing.T) {
 
 func requireContainerAbsent(t *testing.T, containerName string) {
 	t.Helper()
-	inspectCommand := docker.Docker(docker.LocalHost, "inspect", containerName)
+	inspectCommand := docker.Command(t.Context(), docker.LocalHost, "inspect", containerName)
 	require.Error(t, inspectCommand.Run(), "container %s already exists", containerName)
 	t.Cleanup(func() {
-		removeOutput, err := docker.Docker(docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
+		removeOutput, err := docker.Command(context.Background(), docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
 		if err != nil && !strings.Contains(string(removeOutput), "No such container") {
 			t.Logf("failed to remove registry container: %v: %s", err, string(removeOutput))
 		}
@@ -101,7 +103,7 @@ func requireContainerAbsent(t *testing.T, containerName string) {
 
 func assertContainerRunning(t *testing.T, containerName string) {
 	t.Helper()
-	inspectCommand := docker.Docker(docker.LocalHost, "inspect", "--format", "{{.State.Running}}", containerName)
+	inspectCommand := docker.Command(t.Context(), docker.LocalHost, "inspect", "--format", "{{.State.Running}}", containerName)
 	output, err := inspectCommand.CombinedOutput()
 	require.NoError(t, err, string(output))
 	assert.Equal(t, "true", strings.TrimSpace(string(output)))
@@ -109,7 +111,7 @@ func assertContainerRunning(t *testing.T, containerName string) {
 
 func assertContainerPort(t *testing.T, containerName, port string) {
 	t.Helper()
-	portCommand := docker.Docker(docker.LocalHost, "port", containerName, "5000")
+	portCommand := docker.Command(t.Context(), docker.LocalHost, "port", containerName, "5000")
 	output, err := portCommand.CombinedOutput()
 	require.NoError(t, err, string(output))
 	assert.Equal(t, "127.0.0.1:"+port, strings.TrimSpace(string(output)))

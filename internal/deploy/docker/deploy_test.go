@@ -1,6 +1,7 @@
 package docker_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -85,7 +86,7 @@ FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)
 	t.Cleanup(func() {
-		removeOutput, err := docker.Docker(docker.LocalHost, "image", "rm", "-f", imageName).CombinedOutput()
+		removeOutput, err := docker.Command(context.Background(), docker.LocalHost, "image", "rm", "-f", imageName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
@@ -95,9 +96,9 @@ CMD ["tail", "-f", "/dev/null"]
 
 func cleanupRegistryContainer(t *testing.T, containerName string) {
 	t.Helper()
-	_ = docker.Docker(docker.LocalHost, "rm", "-f", containerName).Run()
+	_ = docker.Command(t.Context(), docker.LocalHost, "rm", "-f", containerName).Run()
 	t.Cleanup(func() {
-		removeOutput, err := docker.Docker(docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
+		removeOutput, err := docker.Command(context.Background(), docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove registry container: %v: %s", err, string(removeOutput))
 		}

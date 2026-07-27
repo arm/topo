@@ -14,7 +14,7 @@ const registryImage = "registry:2"
 // EnsureRegistryRunning pulls the registry image and starts the existing local
 // registry container, or creates it when it does not yet exist.
 func EnsureRegistryRunning(ctx context.Context, output io.Writer, containerName, port string) error {
-	if err := RunDocker(ctx, LocalHost, output, "pull", registryImage); err != nil {
+	if err := RunCommand(ctx, LocalHost, output, "pull", registryImage); err != nil {
 		return err
 	}
 
@@ -22,18 +22,18 @@ func EnsureRegistryRunning(ctx context.Context, output io.Writer, containerName,
 		if err := validateRegistryPort(ctx, containerName, port); err != nil {
 			return err
 		}
-		return RunDocker(ctx, LocalHost, output, "start", containerName)
+		return RunCommand(ctx, LocalHost, output, "start", containerName)
 	}
 
 	return runRegistryContainer(ctx, containerName, port, output)
 }
 
 func registryContainerExists(ctx context.Context, containerName string) bool {
-	return RunDocker(ctx, LocalHost, io.Discard, "inspect", containerName) == nil
+	return RunCommand(ctx, LocalHost, io.Discard, "inspect", containerName) == nil
 }
 
 func validateRegistryPort(ctx context.Context, containerName, requestedPort string) error {
-	cmd := DockerContext(ctx, LocalHost, "inspect", containerName)
+	cmd := Command(ctx, LocalHost, "inspect", containerName)
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to execute %s: %w", strings.Join(cmd.Args, " "), err)
@@ -77,7 +77,7 @@ func registryHostPort(inspectOutput []byte) (string, error) {
 func runRegistryContainer(ctx context.Context, containerName, port string, output io.Writer) error {
 	var commandOutput bytes.Buffer
 	combinedOutput := io.MultiWriter(output, &commandOutput)
-	err := RunDocker(
+	err := RunCommand(
 		ctx,
 		LocalHost,
 		combinedOutput,

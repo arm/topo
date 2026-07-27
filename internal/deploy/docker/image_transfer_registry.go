@@ -46,11 +46,11 @@ func transferImageViaRegistry(ctx context.Context, source, destination Host, por
 }
 
 func tagImageForRegistry(ctx context.Context, source Host, image, registryTag string, output io.Writer) error {
-	return RunDocker(ctx, source, output, "tag", image, registryTag)
+	return RunCommand(ctx, source, output, "tag", image, registryTag)
 }
 
 func pushImageToRegistry(ctx context.Context, source Host, registryTag string, output io.Writer) (string, error) {
-	pushCommand := DockerContext(ctx, source, "push", registryTag)
+	pushCommand := Command(ctx, source, "push", registryTag)
 	var pushOutput bytes.Buffer
 	pushCommand.Stdout = io.MultiWriter(output, &pushOutput)
 	pushCommand.Stderr = output
@@ -66,11 +66,11 @@ func pushImageToRegistry(ctx context.Context, source Host, registryTag string, o
 }
 
 func pullImageByDigest(ctx context.Context, destination Host, digestReference string, output io.Writer) error {
-	return RunDocker(ctx, destination, output, "pull", digestReference)
+	return RunCommand(ctx, destination, output, "pull", digestReference)
 }
 
 func restoreOriginalImageTag(ctx context.Context, destination Host, digestReference, image string, output io.Writer) error {
-	return RunDocker(ctx, destination, output, "tag", digestReference, image)
+	return RunCommand(ctx, destination, output, "tag", digestReference, image)
 }
 
 func ParseDigestFromPushOutput(output string) (string, error) {
