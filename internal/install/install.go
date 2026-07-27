@@ -4,22 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"slices"
 	"strings"
-	"time"
 
 	archiveutil "github.com/arm/topo/internal/archive"
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/fetch"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/version"
-)
-
-const (
-	downloadTimeout = 2 * time.Minute
 )
 
 var defaultCandidatePaths = []string{"/usr/local/bin", "/usr/bin", "~/bin"}
@@ -99,33 +93,6 @@ func FindPathDirs(r runner.Runner) ([]PathCandidate, error) {
 	return validPaths, nil
 }
 
-func downloadFile(ctx context.Context, url *url.URL) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// #nosec G704 -- Request is previously validated
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		statusErr := fmt.Errorf("unexpected fetch status code: %d", resp.StatusCode)
-		return nil, errors.Join(statusErr, resp.Body.Close())
-	}
-
-	b, readErr := io.ReadAll(resp.Body)
-	if err := errors.Join(readErr, resp.Body.Close()); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
 func install(installPath string, r runner.Runner, binaries map[string][]byte) error {
 	mode := "0755"
 
@@ -191,12 +158,7 @@ func downloadLatestArtifactoryBinaries(ctx context.Context, artifactoryURL strin
 		return nil, fmt.Errorf("failed to construct Artifactory download URL: %w", err)
 	}
 
-	parsedArchiveURL, err := url.Parse(archiveURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse Artifactory download URL: %w", err)
-	}
-
-	tarball, err := downloadFile(ctx, parsedArchiveURL)
+	tarball, err := fetch.Get(ctx, archiveURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download latest release: %w", err)
 	}

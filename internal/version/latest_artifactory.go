@@ -3,14 +3,12 @@ package version
 import (
 	"context"
 	"fmt"
-	"io"
 	"maps"
-	"net/http"
 	"regexp"
 	"slices"
 	"sort"
 
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/fetch"
 )
 
 const ArtifactoryBaseURL = "https://artifacts.tools.arm.com/topo"
@@ -18,29 +16,9 @@ const ArtifactoryBaseURL = "https://artifacts.tools.arm.com/topo"
 var artifactoryVersionRe = regexp.MustCompile(`href="v?(\d+)\.(\d+)\.(\d+)/"`)
 
 func FetchLatestArtifactory(ctx context.Context, url string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", fmt.Errorf("creating request: %w", err)
-	}
-	// #nosec G704 -- request to a hardcoded, trusted URL
-	resp, err := http.DefaultClient.Do(req)
+	body, err := fetch.Get(ctx, url)
 	if err != nil {
 		return "", fmt.Errorf("fetching version index: %w", err)
-	}
-	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
-			logger.Error(fmt.Sprintf("failed to close version check response body: %v", err))
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("fetching version index: HTTP %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("reading version index: %w", err)
 	}
 
 	matches := artifactoryVersionRe.FindAllStringSubmatch(string(body), -1)

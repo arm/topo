@@ -6,12 +6,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"strings"
 
+	"github.com/arm/topo/internal/fetch"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
@@ -92,42 +90,9 @@ func fetchProjectsJSON(ctx context.Context, url string) ([]byte, error) {
 		return data, nil
 	}
 
-	data, err := httpGet(ctx, url)
+	data, err := fetch.Get(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch project: %w", err)
 	}
 	return data, nil
-}
-
-func httpGet(ctx context.Context, rawURL string) ([]byte, error) {
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return nil, err
-	}
-
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported URL scheme: %s", parsedURL.Scheme)
-	}
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		parsedURL.String(),
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.DefaultClient.Do(req) // #nosec G704 -- URL is explicitly provided by the CLI user and scheme-validated above.
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close() // nolint:errcheck
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("request failed: %s", resp.Status)
-	}
-
-	return io.ReadAll(resp.Body)
 }
