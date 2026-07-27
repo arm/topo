@@ -25,10 +25,12 @@ type Project struct {
 	Ref         string   `json:"ref"`
 }
 
-const DefaultURL = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + version + "/catalog/"
-const DefaultCatalogURL = DefaultURL + "catalog.json"
-const DefaultSchemaURL = DefaultURL + "catalog.schema.json"
-const version = "v1"
+const (
+	DefaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + version + "/catalog/"
+	DefaultCatalogURL = DefaultURL + "catalog.json"
+	DefaultSchemaURL  = DefaultURL + "catalog.schema.json"
+	version           = "v1"
+)
 
 func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 	data, err := fetchProjectsJSON(ctx, url)
