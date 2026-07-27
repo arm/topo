@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy/podman"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
@@ -20,12 +22,20 @@ import (
 )
 
 var (
+	engine              string
 	noRegistry          bool
 	registryPort        string
 	skipRemotePortCheck bool
 	skipProjectChecks   bool
 	forceRecreate       bool
 	noRecreate          bool
+)
+
+type containerEngine string
+
+const (
+	containerEngineDocker containerEngine = "docker"
+	containerEnginePodman containerEngine = "podman"
 )
 
 var deployOpts deploy.DeployOptions
@@ -46,68 +56,117 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		portChanged := cmd.Flags().Changed("registry-port")
-		if portChanged && noRegistry {
-			logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
-		}
-
-		targetArg, err := requireTarget(cmd)
+		parsedEngine, err := parseContainerEngine(engine)
 		if err != nil {
 			return err
 		}
-
-		composeFile, err := getComposeFileName(cmd)
-		if err != nil {
-			return err
+		if parsedEngine == containerEnginePodman {
+			return deployWithPodman(cmd)
 		}
-
-		resolvedPort, err := resolvePort(cmd, registryPort)
-		if err != nil {
-			return err
-		}
-
-		if err := validatePort(resolvedPort); err != nil {
-			return err
-		}
-
-		deployOpts.TargetHost = ssh.NewDestination(targetArg)
-
-		if !skipProjectChecks {
-			if err := checks.EnsureProjectIsLinuxArm64Ready(composeFile); err != nil {
-				return err
-			}
-		}
-
-		goos := runtime.GOOS
-		if deploy.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
-			deployOpts.Registry = &deploy.RegistryConfig{
-				Port:                resolvedPort,
-				SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-				UseControlSockets:   deploy.SupportsSSHControlSockets(goos),
-			}
-		}
-		switch {
-		case forceRecreate:
-			deployOpts.RecreateMode = docker.RecreateModeForce
-		case noRecreate:
-			deployOpts.RecreateMode = docker.RecreateModeNone
-		}
-
-		if deployOpts.Registry == nil {
-			logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
-		}
-
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-
-		if err := deploy.Deploy(ctx, os.Stdout, composeFile, deployOpts); err != nil {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
-		}
-		return nil
+		return deployWithDocker(cmd)
 	},
+}
+
+func deployWithPodman(cmd *cobra.Command) error {
+	targetArg, err := requireTarget(cmd)
+	if err != nil {
+		return err
+	}
+	if !ssh.NewDestination(targetArg).IsPlainLocalhost() {
+		return fmt.Errorf("podman deployments only support the localhost target")
+	}
+
+	composeFile, err := getComposeFileName(cmd)
+	if err != nil {
+		return err
+	}
+	if err := ensureProjectIsReady(composeFile); err != nil {
+		return err
+	}
+
+	return executeDeployment(cmd, func(ctx context.Context) error {
+		return podman.Deploy(ctx, os.Stdout, composeFile)
+	})
+}
+
+func deployWithDocker(cmd *cobra.Command) error {
+	if cmd.Flags().Changed("registry-port") && noRegistry {
+		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
+	}
+
+	targetArg, err := requireTarget(cmd)
+	if err != nil {
+		return err
+	}
+	composeFile, err := getComposeFileName(cmd)
+	if err != nil {
+		return err
+	}
+	if err := ensureProjectIsReady(composeFile); err != nil {
+		return err
+	}
+
+	resolvedPort, err := resolvePort(cmd, registryPort)
+	if err != nil {
+		return err
+	}
+	if err := validatePort(resolvedPort); err != nil {
+		return err
+	}
+
+	deployOpts.TargetHost = ssh.NewDestination(targetArg)
+	if deploy.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
+		deployOpts.Registry = &deploy.RegistryConfig{
+			Port:                resolvedPort,
+			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+			UseControlSockets:   deploy.SupportsSSHControlSockets(runtime.GOOS),
+		}
+	}
+	switch {
+	case forceRecreate:
+		deployOpts.RecreateMode = docker.RecreateModeForce
+	case noRecreate:
+		deployOpts.RecreateMode = docker.RecreateModeNone
+	}
+
+	if deployOpts.Registry == nil {
+		logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
+	}
+
+	return executeDeployment(cmd, func(ctx context.Context) error {
+		return deploy.Deploy(ctx, os.Stdout, composeFile, deployOpts)
+	})
+}
+
+func ensureProjectIsReady(composeFile string) error {
+	if skipProjectChecks {
+		return nil
+	}
+	return checks.EnsureProjectIsLinuxArm64Ready(composeFile)
+}
+
+func executeDeployment(cmd *cobra.Command, deployment func(context.Context) error) error {
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := deployment(ctx); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
+	}
+	return nil
+}
+
+func parseContainerEngine(value string) (containerEngine, error) {
+	parsedEngine := containerEngine(value)
+	if parsedEngine == "" {
+		return containerEngineDocker, nil
+	}
+	if parsedEngine != containerEngineDocker && parsedEngine != containerEnginePodman {
+		return "", fmt.Errorf("invalid engine %q: must be docker or podman", value)
+	}
+	return parsedEngine, nil
 }
 
 func validatePort(port string) error {
@@ -148,6 +207,9 @@ func resolveSkipRemotePortCheck(cmd *cobra.Command) bool {
 func init() {
 	addTargetFlag(deployCmd)
 	addComposeFileFlag(deployCmd)
+	if experimentalFeaturesEnabled() {
+		deployCmd.Flags().StringVar(&engine, "engine", string(containerEngineDocker), "container engine to use (docker or podman)")
+	}
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", deploy.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().BoolVar(&skipRemotePortCheck, "skip-remote-port-check", false, fmt.Sprintf("skip checking whether the SSH tunnel port is exposed on the remote network (can also be set via %s env var)", skipRemotePortCheckEnvVar))
