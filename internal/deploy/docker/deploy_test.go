@@ -7,50 +7,49 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDeployment(t *testing.T) {
-	testutil.RequireDocker(t)
+	requireDocker(t)
 
 	t.Run("deploys to localhost", func(t *testing.T) {
 		composeFilePath, imageName := deploymentFixture(t)
-		t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
-		testutil.RequireImageDoesNotExist(t, docker.LocalHost, imageName)
+		t.Cleanup(func() { forceComposeDown(t, composeFilePath) })
+		requireImageDoesNotExist(t, docker.LocalHost, imageName)
 		deployOptions := docker.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
 		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
-		testutil.RequireImageExists(t, docker.LocalHost, imageName)
-		testutil.AssertContainersRunning(t, ssh.PlainLocalhost, composeFilePath)
+		requireImageExists(t, docker.LocalHost, imageName)
+		assertContainersRunning(t, ssh.PlainLocalhost, composeFilePath)
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
-		container := testutil.StartContainer(t, testutil.DinDContainer)
+		container := startContainer(t, dinDContainer)
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 		composeFilePath, imageName := deploymentFixture(t)
-		testutil.RequireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
+		requireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
 		deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
 
 		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
-		testutil.RequireImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
-		testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
+		requireImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
+		assertContainersRunning(t, remoteDockerHost, composeFilePath)
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
-		registryPort := testutil.RequireAvailableTCPPort(t, "127.0.0.1")
-		registryContainerName := testutil.TestContainerName(t) + "-registry"
+		registryPort := requireAvailableTCPPort(t, "127.0.0.1")
+		registryContainerName := testContainerName(t) + "-registry"
 		cleanupRegistryContainer(t, registryContainerName)
-		container := testutil.StartContainer(t, testutil.DinDContainer)
+		container := startContainer(t, dinDContainer)
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 		remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
 		composeFilePath, imageName := deploymentFixture(t)
-		testutil.RequireImageDoesNotExist(t, remoteCommandHost, imageName)
+		requireImageDoesNotExist(t, remoteCommandHost, imageName)
 		deployOptions := docker.DeployOptions{
 			TargetHost: remoteDockerHost,
 			Registry: &docker.RegistryConfig{
@@ -63,15 +62,15 @@ func TestDeployment(t *testing.T) {
 		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
-		testutil.RequireImageExists(t, remoteCommandHost, imageName)
-		testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
+		requireImageExists(t, remoteCommandHost, imageName)
+		assertContainersRunning(t, remoteDockerHost, composeFilePath)
 	})
 }
 
 func deploymentFixture(t *testing.T) (composeFilePath, imageName string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
-	imageName = testutil.TestImageName(t)
+	imageName = testImageName(t)
 	composeFilePath = filepath.Join(temporaryDirectory, "compose.yaml")
 	composeFileContent := fmt.Sprintf(`
 name: %s
@@ -79,9 +78,9 @@ services:
   a-service:
     build: .
     image: %s
-`, testutil.TestProjectName(t), imageName)
-	testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-	testutil.RequireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), `
+`, testProjectName(t), imageName)
+	requireWriteFile(t, composeFilePath, composeFileContent)
+	requireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), `
 FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)

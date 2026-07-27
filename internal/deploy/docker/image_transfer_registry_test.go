@@ -7,14 +7,13 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransferImagesViaRegistry(t *testing.T) {
-	testutil.RequireLinuxDockerEngine(t)
+	requireLinuxDockerEngine(t)
 	host := docker.LocalHost
 	const (
 		registryContainerName = "topo-test-registry"
@@ -35,10 +34,10 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 		_ = docker.Docker(host, "rm", "-f", registryContainerName).Run()
 	})
 
-	destinationContainer := testutil.StartContainer(t, testutil.DinDContainer)
+	destinationContainer := startContainer(t, dinDContainer)
 	destination := ssh.NewDestination(destinationContainer.SSHDestination)
 	destinationHost := docker.NewHostFromDestination(destination)
-	testutil.RequireImageDoesNotExist(t, destinationHost, imageName)
+	requireImageDoesNotExist(t, destinationHost, imageName)
 
 	tunnel, err := ssh.OpenSSHTunnel(context.Background(), os.Stdout, destination, registryPort, false)
 	require.NoError(t, err)
@@ -49,7 +48,7 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	err = docker.TransferImagesViaRegistry(t.Context(), os.Stdout, composeFilePath, host, destinationHost, registryPort)
 
 	require.NoError(t, err)
-	testutil.RequireImageExists(t, destinationHost, imageName)
+	requireImageExists(t, destinationHost, imageName)
 }
 
 func TestParseDigestFromPushOutput(t *testing.T) {
