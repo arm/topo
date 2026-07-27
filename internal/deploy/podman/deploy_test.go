@@ -44,12 +44,14 @@ func requireLocalPodman(t *testing.T) {
 func assertContainersRunning(t *testing.T, composeFile string) {
 	t.Helper()
 	cmd := podman.ComposeCommand(t.Context(), composeFile, "ps", "--format", "json", "--all")
-	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, string(output))
-	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported")
+	var diagnostics bytes.Buffer
+	cmd.Stderr = &diagnostics
+	output, err := cmd.Output()
+	require.NoError(t, err, "stdout: %s\nstderr: %s", output, diagnostics.String())
+	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported; stderr: %s", diagnostics.String())
 
 	containers, err := testutil.UnmarshalNDJSON(output)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to parse stdout; stderr: %s", diagnostics.String())
 
 	for _, container := range containers {
 		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Name"], container["State"])

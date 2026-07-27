@@ -48,6 +48,8 @@ jobs:
         uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7
         with:
           distribution: Ubuntu-24.04
+          # Docker and Podman require the Linux kernel and container primitives provided by WSL2.
+          wsl-version: 2
           additional-packages: |
             openssh-server
             docker.io
@@ -77,6 +79,82 @@ jobs:
           wsl --exec dbus-launch true
           #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
           ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
+
+      - name: Install Podman and Docker Compose provider (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          COMPOSE_VERSION: v2.32.4
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes podman
+
+          case "$(uname -m)" in
+            x86_64) compose_arch=x86_64 ;;
+            aarch64|arm64) compose_arch=aarch64 ;;
+            *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+
+          curl --fail --location --show-error \
+            "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${compose_arch}" \
+            --output /tmp/docker-compose
+          sudo install --mode 0755 /tmp/docker-compose /usr/local/bin/docker-compose
+
+      - name: Install Podman and Docker Compose provider (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          COMPOSE_VERSION: v2.32.4
+        run: |
+          winget install --exact --id RedHat.Podman `
+            --silent `
+            --accept-package-agreements `
+            --accept-source-agreements
+
+          $podmanDirectories = @(
+            "$env:LOCALAPPDATA\Programs\Podman",
+            "$env:ProgramFiles\Podman",
+            "$env:ProgramFiles\RedHat\Podman"
+          )
+          $podmanDirectory = $podmanDirectories |
+            Where-Object { Test-Path (Join-Path $_ "podman.exe") } |
+            Select-Object -First 1
+          if (-not $podmanDirectory) {
+            throw "Unable to locate podman.exe after installation"
+          }
+
+          $toolsDirectory = Join-Path $env:RUNNER_TEMP "container-tools"
+          New-Item -ItemType Directory -Force $toolsDirectory | Out-Null
+          Invoke-WebRequest `
+            -Uri "https://github.com/docker/compose/releases/download/$env:COMPOSE_VERSION/docker-compose-windows-x86_64.exe" `
+            -OutFile (Join-Path $toolsDirectory "docker-compose.exe")
+
+          $podmanDirectory | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
+          $toolsDirectory | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Start Podman machine (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          podman machine init --cpus 2 --memory 2048 --now
+
+      - name: Verify Podman test prerequisites (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          podman version
+          podman info
+          docker-compose version
+          podman compose version
+
+      - name: Verify Podman test prerequisites (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          podman version
+          podman info
+          docker-compose version
+          podman compose version
 
       - name: Checkout repository
         uses: actions/checkout@v7
