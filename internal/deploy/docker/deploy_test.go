@@ -1,4 +1,4 @@
-package deploy_test
+package docker_test
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
@@ -20,9 +19,9 @@ func TestDeployment(t *testing.T) {
 		composeFilePath, imageName := deploymentFixture(t)
 		t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
 		testutil.RequireImageDoesNotExist(t, docker.LocalHost, imageName)
-		deployOptions := deploy.DeployOptions{TargetHost: ssh.PlainLocalhost}
+		deployOptions := docker.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
 		testutil.RequireImageExists(t, docker.LocalHost, imageName)
@@ -34,9 +33,9 @@ func TestDeployment(t *testing.T) {
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 		composeFilePath, imageName := deploymentFixture(t)
 		testutil.RequireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
-		deployOptions := deploy.DeployOptions{TargetHost: remoteDockerHost}
+		deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
 
-		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
 		testutil.RequireImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
@@ -52,16 +51,16 @@ func TestDeployment(t *testing.T) {
 		remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
 		composeFilePath, imageName := deploymentFixture(t)
 		testutil.RequireImageDoesNotExist(t, remoteCommandHost, imageName)
-		deployOptions := deploy.DeployOptions{
+		deployOptions := docker.DeployOptions{
 			TargetHost: remoteDockerHost,
-			Registry: &deploy.RegistryConfig{
+			Registry: &docker.RegistryConfig{
 				ContainerName:       registryContainerName,
 				Port:                registryPort,
 				SkipRemotePortCheck: true,
 			},
 		}
 
-		err := deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
 
 		require.NoError(t, err)
 		testutil.RequireImageExists(t, remoteCommandHost, imageName)

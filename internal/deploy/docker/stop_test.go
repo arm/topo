@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
@@ -36,8 +35,8 @@ services:
 `, testutil.TestProjectName(t))
 	testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
 	t.Cleanup(func() { testutil.ForceComposeDown(t, composeFilePath) })
-	deployOptions := deploy.DeployOptions{TargetHost: remoteDockerHost}
-	require.NoError(t, deploy.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions))
+	deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
+	require.NoError(t, docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions))
 	testutil.AssertContainersRunning(t, remoteDockerHost, composeFilePath)
 
 	err := docker.Stop(t.Context(), io.Discard, composeFilePath, remoteDockerHost)

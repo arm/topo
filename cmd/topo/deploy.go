@@ -10,7 +10,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/podman"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
@@ -38,7 +37,7 @@ const (
 	containerEnginePodman containerEngine = "podman"
 )
 
-var deployOpts deploy.DeployOptions
+var deployOpts docker.DeployOptions
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
@@ -115,11 +114,11 @@ func deployWithDocker(cmd *cobra.Command) error {
 	}
 
 	deployOpts.TargetHost = ssh.NewDestination(targetArg)
-	if deploy.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
-		deployOpts.Registry = &deploy.RegistryConfig{
+	if docker.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
+		deployOpts.Registry = &docker.RegistryConfig{
 			Port:                resolvedPort,
 			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-			UseControlSockets:   deploy.SupportsSSHControlSockets(runtime.GOOS),
+			UseControlSockets:   docker.SupportsSSHControlSockets(runtime.GOOS),
 		}
 	}
 	switch {
@@ -134,7 +133,7 @@ func deployWithDocker(cmd *cobra.Command) error {
 	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
-		return deploy.Deploy(ctx, os.Stdout, composeFile, deployOpts)
+		return docker.Deploy(ctx, os.Stdout, composeFile, deployOpts)
 	})
 }
 
@@ -210,7 +209,7 @@ func init() {
 	if experimentalFeaturesEnabled() {
 		deployCmd.Flags().StringVar(&engine, "engine", string(containerEngineDocker), "container engine to use (docker or podman)")
 	}
-	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", deploy.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
+	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", docker.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "disable private registry flow; use direct save/load transfer")
 	deployCmd.Flags().BoolVar(&skipRemotePortCheck, "skip-remote-port-check", false, fmt.Sprintf("skip checking whether the SSH tunnel port is exposed on the remote network (can also be set via %s env var)", skipRemotePortCheckEnvVar))
 	deployCmd.Flags().BoolVar(&forceRecreate, "force-recreate", false, "force recreation of containers even if their configuration and image haven't changed")
