@@ -13,43 +13,43 @@ import (
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 
-func TransferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, source, destination Host, port string) error {
+func TransferImagesViaRegistry(ctx context.Context, output io.Writer, source, destination Host, composeFile, port string) error {
 	images, err := compose.ImageNames(composeFile)
 	if err != nil {
 		return err
 	}
 
 	for _, image := range images {
-		if err := transferImageViaRegistry(ctx, source, destination, port, output, image); err != nil {
+		if err := transferImageViaRegistry(ctx, output, source, destination, port, image); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func transferImageViaRegistry(ctx context.Context, source, destination Host, port string, output io.Writer, image string) error {
+func transferImageViaRegistry(ctx context.Context, output io.Writer, source, destination Host, port, image string) error {
 	registryTag := fmt.Sprintf("localhost:%s/%s", port, image)
-	if err := tagImageForRegistry(ctx, source, image, registryTag, output); err != nil {
+	if err := tagImageForRegistry(ctx, output, source, image, registryTag); err != nil {
 		return err
 	}
 
-	digestReference, err := pushImageToRegistry(ctx, source, registryTag, output)
+	digestReference, err := pushImageToRegistry(ctx, output, source, registryTag)
 	if err != nil {
 		return err
 	}
 
-	if err := pullImageByDigest(ctx, destination, digestReference, output); err != nil {
+	if err := pullImageByDigest(ctx, output, destination, digestReference); err != nil {
 		return err
 	}
 
-	return restoreOriginalImageTag(ctx, destination, digestReference, image, output)
+	return restoreOriginalImageTag(ctx, output, destination, digestReference, image)
 }
 
-func tagImageForRegistry(ctx context.Context, source Host, image, registryTag string, output io.Writer) error {
-	return RunCommand(ctx, source, output, "tag", image, registryTag)
+func tagImageForRegistry(ctx context.Context, output io.Writer, source Host, image, registryTag string) error {
+	return RunCommand(ctx, output, source, "tag", image, registryTag)
 }
 
-func pushImageToRegistry(ctx context.Context, source Host, registryTag string, output io.Writer) (string, error) {
+func pushImageToRegistry(ctx context.Context, output io.Writer, source Host, registryTag string) (string, error) {
 	pushCommand := Command(ctx, source, "push", registryTag)
 	var pushOutput bytes.Buffer
 	pushCommand.Stdout = io.MultiWriter(output, &pushOutput)
@@ -65,12 +65,12 @@ func pushImageToRegistry(ctx context.Context, source Host, registryTag string, o
 	return fmt.Sprintf("%s@%s", registryTag, digest), nil
 }
 
-func pullImageByDigest(ctx context.Context, destination Host, digestReference string, output io.Writer) error {
-	return RunCommand(ctx, destination, output, "pull", digestReference)
+func pullImageByDigest(ctx context.Context, output io.Writer, destination Host, digestReference string) error {
+	return RunCommand(ctx, output, destination, "pull", digestReference)
 }
 
-func restoreOriginalImageTag(ctx context.Context, destination Host, digestReference, image string, output io.Writer) error {
-	return RunCommand(ctx, destination, output, "tag", digestReference, image)
+func restoreOriginalImageTag(ctx context.Context, output io.Writer, destination Host, digestReference, image string) error {
+	return RunCommand(ctx, output, destination, "tag", digestReference, image)
 }
 
 func ParseDigestFromPushOutput(output string) (string, error) {

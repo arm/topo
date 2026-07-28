@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func TransferImagesViaPipe(ctx context.Context, output io.Writer, composeFile string, source, destination Host) error {
+func TransferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Host, composeFile string) error {
 	images, err := compose.ImageNames(composeFile)
 	if err != nil {
 		return err
@@ -18,13 +18,13 @@ func TransferImagesViaPipe(ctx context.Context, output io.Writer, composeFile st
 	var group errgroup.Group
 	for _, image := range images {
 		group.Go(func() error {
-			return transferImageViaPipe(ctx, source, destination, output, image)
+			return transferImageViaPipe(ctx, output, source, destination, image)
 		})
 	}
 	return group.Wait()
 }
 
-func transferImageViaPipe(ctx context.Context, source, destination Host, output io.Writer, image string) error {
+func transferImageViaPipe(ctx context.Context, output io.Writer, source, destination Host, image string) error {
 	pipeReader, pipeWriter := io.Pipe()
 
 	saveCommand := Command(ctx, source, "save", image)

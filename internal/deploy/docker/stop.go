@@ -12,5 +12,5 @@ func Stop(ctx context.Context, output io.Writer, composeFile string, destination
 	if err := term.PrintHeader(output, "Stop services"); err != nil {
 		return err
 	}
-	return StopServices(ctx, output, composeFile, NewHostFromDestination(destination))
+	return StopServices(ctx, output, NewHostFromDestination(destination), composeFile)
 }

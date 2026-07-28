@@ -45,25 +45,25 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
 	}
-	if err := BuildImages(ctx, output, composeFile, sourceHost); err != nil {
+	if err := BuildImages(ctx, output, sourceHost, composeFile); err != nil {
 		return err
 	}
 
 	if err := term.PrintHeader(output, "Pull images"); err != nil {
 		return err
 	}
-	if err := PullImages(ctx, output, composeFile, sourceHost); err != nil {
+	if err := PullImages(ctx, output, sourceHost, composeFile); err != nil {
 		return err
 	}
 
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry == nil {
 			targetHost := NewHostFromDestination(opts.TargetHost)
-			if err := transferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost); err != nil {
+			if err := transferImagesViaPipe(ctx, output, sourceHost, targetHost, composeFile); err != nil {
 				return err
 			}
 		} else {
-			if err := transferImagesViaRegistry(ctx, output, composeFile, sourceHost, opts.TargetHost, *opts.Registry); err != nil {
+			if err := transferImagesViaRegistry(ctx, output, sourceHost, opts.TargetHost, composeFile, *opts.Registry); err != nil {
 				return err
 			}
 		}
@@ -72,7 +72,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 	if err := term.PrintHeader(output, "Start services"); err != nil {
 		return err
 	}
-	if err := StartServices(ctx, output, composeFile, NewHostFromDestination(opts.TargetHost), opts.RecreateMode); err != nil {
+	if err := StartServices(ctx, output, NewHostFromDestination(opts.TargetHost), composeFile, opts.RecreateMode); err != nil {
 		return err
 	}
 
@@ -82,14 +82,14 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
 }
 
-func transferImagesViaPipe(ctx context.Context, output io.Writer, composeFile string, sourceHost, targetHost Host) error {
+func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceHost, targetHost Host, composeFile string) error {
 	if err := term.PrintHeader(output, "Transfer images"); err != nil {
 		return err
 	}
-	return TransferImagesViaPipe(ctx, output, composeFile, sourceHost, targetHost)
+	return TransferImagesViaPipe(ctx, output, sourceHost, targetHost, composeFile)
 }
 
-func transferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, sourceHost Host, targetHost ssh.Destination, opts RegistryConfig) (transferErr error) {
+func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost Host, targetHost ssh.Destination, composeFile string, opts RegistryConfig) (transferErr error) {
 	if err := term.PrintHeader(output, "Run registry"); err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, composeFil
 	if err := term.PrintHeader(output, "Transfer via registry"); err != nil {
 		return err
 	}
-	if err := TransferImagesViaRegistry(ctx, output, composeFile, sourceHost, NewHostFromDestination(targetHost), opts.Port); err != nil {
+	if err := TransferImagesViaRegistry(ctx, output, sourceHost, NewHostFromDestination(targetHost), composeFile, opts.Port); err != nil {
 		return err
 	}
 

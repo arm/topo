@@ -21,7 +21,7 @@ func TestTransferImagesViaPipe(t *testing.T) {
 	destinationHost := docker.NewHostFromDestination(destination)
 	requireImageDoesNotExist(t, destinationHost, imageName)
 
-	err := docker.TransferImagesViaPipe(t.Context(), os.Stdout, composeFilePath, sourceHost, destinationHost)
+	err := docker.TransferImagesViaPipe(t.Context(), os.Stdout, sourceHost, destinationHost, composeFilePath)
 
 	require.NoError(t, err)
 	requireImageExists(t, destinationHost, imageName)
