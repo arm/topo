@@ -87,15 +87,3 @@ docker compose up
 ```
 
 The documentation preview is available at `http://localhost:3000` and automatically reloads when files change.
-
-### Previewing production docs
-
-Our production docs support browsing older versions of the docs. We generate the list of versions to host this historical docs for at publish time to keep releases automated.
-
-Use the provided compose project to build and preview a production build of the docs, including these older docs revisions:
-
-```sh
-export GH_TOKEN=... # required
-export PREVIEW_BRANCH=... # optional, can be used to preview a given branch as 'Latest'
-docker compose -f compose.preview.yaml up
-```

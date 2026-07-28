@@ -1,4 +1,4 @@
-FROM node:26-slim AS docs-base
+FROM node:26-slim
 
 ARG NPM_CONFIG_REGISTRY
 ENV NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY}
@@ -15,18 +15,3 @@ RUN apt-get update && \
 
 RUN npm install -g pnpm@${PNPM_VERSION}
 
-FROM docs-base AS docs-preview
-
-ARG PREVIEW_BRANCH
-
-RUN apt-get update && apt-get install -y --no-install-recommends jq gh git
-
-RUN --mount=type=secret,id=gh_token,env=GH_TOKEN gh repo clone arm/topo work -- --branch ${PREVIEW_BRANCH}
-
-WORKDIR /work
-RUN --mount=type=secret,id=gh_token,env=GH_TOKEN docs/scripts/generate-docs-config.sh --include-head
-RUN arm-docs validate --docs-root docs
-RUN mkdir /app && mv /tmp/arm-docs-build-topo-* /app/topo
-
-WORKDIR /app
-ENTRYPOINT [ "npx", "-y", "http-server" ]
