@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy/podman"
-	"github.com/arm/topo/internal/deploy/testutil"
-	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,8 +48,8 @@ func assertContainersRunning(t *testing.T, composeFile string) {
 	require.NoError(t, err, "stdout: %s\nstderr: %s", output, diagnostics.String())
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported; stderr: %s", diagnostics.String())
 
-	containers, err := testutil.UnmarshalNDJSON(output)
-	require.NoError(t, err, "failed to parse stdout; stderr: %s", diagnostics.String())
+	containers, err := unmarshalNDJSON(output)
+	require.NoError(t, err)
 
 	for _, container := range containers {
 		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Name"], container["State"])
@@ -61,7 +59,7 @@ func assertContainersRunning(t *testing.T, composeFile string) {
 func deploymentFixture(t *testing.T) string {
 	t.Helper()
 	tempDir := t.TempDir()
-	testName := gtestutil.SanitiseTestName(t)
+	testName := sanitiseTestName(t)
 	imageName := "test-image-" + testName
 	composeFile := filepath.Join(tempDir, "compose.yaml")
 	composeFileContent := fmt.Sprintf(`
@@ -74,8 +72,8 @@ services:
     image: docker.io/library/alpine:latest
     command: ["tail", "-f", "/dev/null"]
 `, "test-project-"+testName, imageName)
-	gtestutil.RequireWriteFile(t, composeFile, composeFileContent)
-	gtestutil.RequireWriteFile(t, filepath.Join(tempDir, "Dockerfile"), `
+	requireWriteFile(t, composeFile, composeFileContent)
+	requireWriteFile(t, filepath.Join(tempDir, "Dockerfile"), `
 FROM docker.io/library/alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)

@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
 )
 
 type RecreateMode int
@@ -16,11 +15,11 @@ const (
 	RecreateModeNone
 )
 
-func BuildImages(ctx context.Context, output io.Writer, composeFile string, host command.Host) error {
-	return command.RunDockerCompose(ctx, host, composeFile, output, "build")
+func BuildImages(ctx context.Context, output io.Writer, composeFile string, host Host) error {
+	return RunComposeCommand(ctx, host, composeFile, output, "build")
 }
 
-func PullImages(ctx context.Context, output io.Writer, composeFile string, host command.Host) error {
+func PullImages(ctx context.Context, output io.Writer, composeFile string, host Host) error {
 	services, err := compose.PullableServices(composeFile)
 	if err != nil {
 		return err
@@ -30,10 +29,10 @@ func PullImages(ctx context.Context, output io.Writer, composeFile string, host 
 	}
 
 	args := append([]string{"pull"}, services...)
-	return command.RunDockerCompose(ctx, host, composeFile, output, args...)
+	return RunComposeCommand(ctx, host, composeFile, output, args...)
 }
 
-func StartServices(ctx context.Context, output io.Writer, composeFile string, host command.Host, mode RecreateMode) error {
+func StartServices(ctx context.Context, output io.Writer, composeFile string, host Host, mode RecreateMode) error {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
 	switch mode {
 	case RecreateModeForce:
@@ -41,9 +40,9 @@ func StartServices(ctx context.Context, output io.Writer, composeFile string, ho
 	case RecreateModeNone:
 		args = append(args, "--no-recreate")
 	}
-	return command.RunDockerCompose(ctx, host, composeFile, output, args...)
+	return RunComposeCommand(ctx, host, composeFile, output, args...)
 }
 
-func StopServices(ctx context.Context, output io.Writer, composeFile string, host command.Host) error {
-	return command.RunDockerCompose(ctx, host, composeFile, output, "stop")
+func StopServices(ctx context.Context, output io.Writer, composeFile string, host Host) error {
+	return RunComposeCommand(ctx, host, composeFile, output, "stop")
 }

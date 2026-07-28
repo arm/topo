@@ -9,12 +9,11 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/deploy/command"
 )
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 
-func TransferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, source, destination command.Host, port string) error {
+func TransferImagesViaRegistry(ctx context.Context, output io.Writer, composeFile string, source, destination Host, port string) error {
 	images, err := compose.ImageNames(composeFile)
 	if err != nil {
 		return err
@@ -28,7 +27,7 @@ func TransferImagesViaRegistry(ctx context.Context, output io.Writer, composeFil
 	return nil
 }
 
-func transferImageViaRegistry(ctx context.Context, source, destination command.Host, port string, output io.Writer, image string) error {
+func transferImageViaRegistry(ctx context.Context, source, destination Host, port string, output io.Writer, image string) error {
 	registryTag := fmt.Sprintf("localhost:%s/%s", port, image)
 	if err := tagImageForRegistry(ctx, source, image, registryTag, output); err != nil {
 		return err
@@ -46,12 +45,12 @@ func transferImageViaRegistry(ctx context.Context, source, destination command.H
 	return restoreOriginalImageTag(ctx, destination, digestReference, image, output)
 }
 
-func tagImageForRegistry(ctx context.Context, source command.Host, image, registryTag string, output io.Writer) error {
-	return command.RunDocker(ctx, source, output, "tag", image, registryTag)
+func tagImageForRegistry(ctx context.Context, source Host, image, registryTag string, output io.Writer) error {
+	return RunCommand(ctx, source, output, "tag", image, registryTag)
 }
 
-func pushImageToRegistry(ctx context.Context, source command.Host, registryTag string, output io.Writer) (string, error) {
-	pushCommand := command.DockerContext(ctx, source, "push", registryTag)
+func pushImageToRegistry(ctx context.Context, source Host, registryTag string, output io.Writer) (string, error) {
+	pushCommand := Command(ctx, source, "push", registryTag)
 	var pushOutput bytes.Buffer
 	pushCommand.Stdout = io.MultiWriter(output, &pushOutput)
 	pushCommand.Stderr = output
@@ -66,12 +65,12 @@ func pushImageToRegistry(ctx context.Context, source command.Host, registryTag s
 	return fmt.Sprintf("%s@%s", registryTag, digest), nil
 }
 
-func pullImageByDigest(ctx context.Context, destination command.Host, digestReference string, output io.Writer) error {
-	return command.RunDocker(ctx, destination, output, "pull", digestReference)
+func pullImageByDigest(ctx context.Context, destination Host, digestReference string, output io.Writer) error {
+	return RunCommand(ctx, destination, output, "pull", digestReference)
 }
 
-func restoreOriginalImageTag(ctx context.Context, destination command.Host, digestReference, image string, output io.Writer) error {
-	return command.RunDocker(ctx, destination, output, "tag", digestReference, image)
+func restoreOriginalImageTag(ctx context.Context, destination Host, digestReference, image string, output io.Writer) error {
+	return RunCommand(ctx, destination, output, "tag", digestReference, image)
 }
 
 func ParseDigestFromPushOutput(output string) (string, error) {

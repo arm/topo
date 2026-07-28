@@ -6,45 +6,43 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransferImagesViaPipe(t *testing.T) {
-	testutil.RequireLinuxDockerEngine(t)
-	sourceHost := command.LocalHost
+	requireLinuxDockerEngine(t)
+	sourceHost := docker.LocalHost
 	composeFilePath, imageName := buildTransferTestImage(t, sourceHost)
 
-	destinationContainer := testutil.StartContainer(t, testutil.DinDContainer)
+	destinationContainer := startContainer(t, dinDContainer)
 	destination := ssh.NewDestination(destinationContainer.SSHDestination)
-	destinationHost := command.NewHostFromDestination(destination)
-	testutil.RequireImageDoesNotExist(t, destinationHost, imageName)
+	destinationHost := docker.NewHostFromDestination(destination)
+	requireImageDoesNotExist(t, destinationHost, imageName)
 
 	err := docker.TransferImagesViaPipe(t.Context(), os.Stdout, composeFilePath, sourceHost, destinationHost)
 
 	require.NoError(t, err)
-	testutil.RequireImageExists(t, destinationHost, imageName)
+	requireImageExists(t, destinationHost, imageName)
 }
 
-func buildTransferTestImage(t *testing.T, host command.Host) (string, string) {
+func buildTransferTestImage(t *testing.T, host docker.Host) (string, string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
 	composeFilePath := filepath.Join(temporaryDirectory, "compose.yaml")
 	dockerFilePath := filepath.Join(temporaryDirectory, "Dockerfile")
-	imageName := testutil.TestImageName(t)
+	imageName := testImageName(t)
 	composeFileContent := fmt.Sprintf(`
 services:
   test:
     build: .
     image: %s
 `, imageName)
-	testutil.RequireWriteFile(t, composeFilePath, composeFileContent)
-	testutil.RequireWriteFile(t, dockerFilePath, "FROM alpine:latest")
+	requireWriteFile(t, composeFilePath, composeFileContent)
+	requireWriteFile(t, dockerFilePath, "FROM alpine:latest")
 
-	buildCommand := command.DockerCompose(host, composeFilePath, "build")
+	buildCommand := docker.ComposeCommand(t.Context(), host, composeFilePath, "build")
 	buildOutput, err := buildCommand.CombinedOutput()
 	require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 	return composeFilePath, imageName

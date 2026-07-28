@@ -6,40 +6,38 @@ import (
 	"os"
 	"testing"
 
-	"github.com/arm/topo/internal/deploy/command"
 	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransferImagesViaRegistry(t *testing.T) {
-	testutil.RequireLinuxDockerEngine(t)
-	host := command.LocalHost
+	requireLinuxDockerEngine(t)
+	host := docker.LocalHost
 	const (
 		registryContainerName = "topo-test-registry"
 		registryPort          = "12738"
 	)
 	composeFilePath, imageName := buildTransferTestImage(t, host)
 
-	removeRegistry := command.Docker(host, "rm", "-f", registryContainerName)
+	removeRegistry := docker.Command(t.Context(), host, "rm", "-f", registryContainerName)
 	removeOutput, removeErr := removeRegistry.CombinedOutput()
 	if removeErr != nil {
 		t.Logf("registry container cleanup (expected if not running): %s", string(removeOutput))
 	}
 
-	startRegistry := command.Docker(host, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", registryPort), "--name", registryContainerName, "registry:2")
+	startRegistry := docker.Command(t.Context(), host, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", registryPort), "--name", registryContainerName, "registry:2")
 	startOutput, err := startRegistry.CombinedOutput()
 	require.NoError(t, err, "could not start registry for test: %s", string(startOutput))
 	t.Cleanup(func() {
-		_ = command.Docker(host, "rm", "-f", registryContainerName).Run()
+		_ = docker.Command(context.Background(), host, "rm", "-f", registryContainerName).Run()
 	})
 
-	destinationContainer := testutil.StartContainer(t, testutil.DinDContainer)
+	destinationContainer := startContainer(t, dinDContainer)
 	destination := ssh.NewDestination(destinationContainer.SSHDestination)
-	destinationHost := command.NewHostFromDestination(destination)
-	testutil.RequireImageDoesNotExist(t, destinationHost, imageName)
+	destinationHost := docker.NewHostFromDestination(destination)
+	requireImageDoesNotExist(t, destinationHost, imageName)
 
 	tunnel, err := ssh.OpenSSHTunnel(context.Background(), os.Stdout, destination, registryPort, false)
 	require.NoError(t, err)
@@ -50,7 +48,7 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	err = docker.TransferImagesViaRegistry(t.Context(), os.Stdout, composeFilePath, host, destinationHost, registryPort)
 
 	require.NoError(t, err)
-	testutil.RequireImageExists(t, destinationHost, imageName)
+	requireImageExists(t, destinationHost, imageName)
 }
 
 func TestParseDigestFromPushOutput(t *testing.T) {
