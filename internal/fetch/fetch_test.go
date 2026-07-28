@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/arm/topo/internal/fetch"
 	"github.com/stretchr/testify/assert"
@@ -49,5 +50,18 @@ func TestGet(t *testing.T) {
 		_, err := fetch.Get(ctx, "https://example.com")
 
 		assert.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("respects caller timeout", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
+			<-request.Context().Done()
+		}))
+		defer server.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		defer cancel()
+
+		_, err := fetch.Get(ctx, server.URL)
+
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
 	})
 }
