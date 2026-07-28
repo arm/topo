@@ -26,9 +26,9 @@ type Project struct {
 }
 
 const (
-	DefaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + version + "/catalog/"
-	DefaultCatalogURL = DefaultURL + "catalog.json"
-	DefaultSchemaURL  = DefaultURL + "catalog.schema.json"
+	defaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + version + "/catalog/"
+	DefaultCatalogURL = defaultURL + "catalog.json"
+	defaultSchemaURL  = defaultURL + "catalog.schema.json"
 	version           = "v1"
 )
 
@@ -60,7 +60,7 @@ func validateAgainstSchema(ctx context.Context, b []byte) error {
 		"http":  loader,
 		"https": loader,
 	})
-	schema, err := compiler.Compile(DefaultSchemaURL)
+	schema, err := compiler.Compile(defaultSchemaURL)
 	if err != nil {
 		return fmt.Errorf("failed to compile schema: %w", err)
 	}

@@ -27,7 +27,10 @@ var projectsCmd = &cobra.Command{
 
 		var projects []catalog.Project
 		var err error
-		source := getSource(cmd)
+		source, err := cmd.Flags().GetString(sourceFlag)
+		if err != nil {
+			panic(fmt.Sprintf("internal error: %s flag not registered: %v", sourceFlag, err))
+		}
 		projects, err = catalog.ListProjectsFromURL(ctx, source)
 		if err != nil {
 			return err
@@ -51,18 +54,6 @@ var projectsCmd = &cobra.Command{
 func init() {
 	addTargetFlag(projectsCmd)
 	addTimeoutFlag(projectsCmd, defaultTimeout)
-	projectsCmd.Flags().StringP(sourceFlag, "s", "", "where to source projects' data from")
+	projectsCmd.Flags().StringP(sourceFlag, "s", catalog.DefaultCatalogURL, "where to source projects' data from")
 	rootCmd.AddCommand(projectsCmd)
-}
-
-func getSource(cmd *cobra.Command) string {
-	flagValue, err := cmd.Flags().GetString(sourceFlag)
-	if err != nil {
-		panic(fmt.Sprintf("internal error: %s flag not registered: %v", sourceFlag, err))
-	}
-	if flagValue != "" {
-		return flagValue
-	}
-
-	return catalog.DefaultCatalogURL
 }
