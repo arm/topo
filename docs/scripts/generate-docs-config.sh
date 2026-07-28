@@ -8,13 +8,9 @@ if [[ ${1:-} == --include-head ]]; then
   include_head=true
 fi
 
-release_refs=$(
-  for ref in $(gh release list --exclude-drafts --exclude-pre-releases --limit 1000 --json tagName --jq '[.[] | select(.tagName | test("^v?[0-9]+\\.0\\.0$"))][:5][].tagName'); do
-    if git cat-file -e "$ref:docs/docs-config.json" 2>/dev/null; then
-      echo "$ref"
-    fi
-  done
-)
+first_docs_major=8
+release_refs=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1000 --json tagName \
+  --jq "[.[].tagName | select((capture(\"^v?(?<major>[0-9]+)[.]0[.]0$\")?.major | tonumber) >= $first_docs_major)][:5][]")
 
 jq --arg release_refs "$release_refs" --argjson include_head "$include_head" '
   .versions = [
