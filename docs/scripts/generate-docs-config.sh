@@ -9,7 +9,7 @@ if [[ ${1:-} == --include-head ]]; then
 fi
 
 release_refs=$(
-  for ref in $(gh release list --exclude-drafts --exclude-pre-releases --limit 5 --json tagName --jq '.[].tagName'); do
+  for ref in $(gh release list --exclude-drafts --exclude-pre-releases --limit 1000 --json tagName --jq '[.[] | select(.tagName | test("^v?[0-9]+\\.0\\.0$"))][:5][].tagName'); do
     if git cat-file -e "$ref:docs/docs-config.json" 2>/dev/null; then
       echo "$ref"
     fi
