@@ -135,12 +135,12 @@ func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]argu
 	if err != nil {
 		return nil, err
 	}
-	resolvedProject, err := Resolve(p, argProvider)
+	resolvedParameters, err := Resolve(p, argProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	return resolvedProject.Parameters, nil
+	return resolvedParameters, nil
 }
 
 func argsToMap(args []arguments.ResolvedArg) map[string]string {
