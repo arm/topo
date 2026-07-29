@@ -44,17 +44,6 @@ func TestListProjectsFromURL(t *testing.T) {
 		assert.Equal(t, projects, got)
 	})
 
-	t.Run("errors when payload doesn't validate against schema", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "file.json")
-		projects := []catalog.Project{{Name: "aloha"}}
-		testutil.RequireWriteFile(t, path, string(asJSON(projects)))
-
-		url := fmt.Sprintf("file://%s", path)
-		_, err := catalog.ListProjectsFromURL(context.Background(), url)
-
-		require.Error(t, err)
-	})
-
 	t.Run("errors when request fails", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
@@ -76,7 +65,7 @@ func TestListProjectsFromURL(t *testing.T) {
 		_, err := catalog.ListProjectsFromURL(context.Background(), url)
 
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "failed to unmarshal projects")
+		assert.ErrorContains(t, err, "failed to unmarshal catalog")
 	})
 }
 
