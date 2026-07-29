@@ -10,8 +10,6 @@ import (
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/operation"
-	"github.com/compose-spec/compose-go/v2/types"
-	"gopkg.in/yaml.v3"
 )
 
 func Clone(path string, src Source, argProvider arguments.Provider) error {
@@ -72,26 +70,6 @@ func RemoveService(composeFilePath, serviceName string) error {
 		return fmt.Errorf("failed to write compose file after removing service: %w", err)
 	}
 
-	return nil
-}
-
-func Init(projectDir string) error {
-	composePath := filepath.Join(projectDir, ComposeFilename)
-	if _, err := os.Stat(composePath); err == nil {
-		return fmt.Errorf("compose file already exists at %s", composePath)
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	compose := types.Project{
-		Services: types.Services{},
-	}
-	data, err := yaml.Marshal(compose)
-	if err != nil {
-		return fmt.Errorf("failed to marshal compose file: %w", err)
-	}
-	if err := os.WriteFile(composePath, data, 0o600); err != nil {
-		return fmt.Errorf("failed to write compose file: %w", err)
-	}
 	return nil
 }
 

@@ -56,10 +56,6 @@ RUN test -n "$GREETING" || (echo "ERROR: GREETING project parameter is required"
 
 ## Worked example
 
-### Creating a Project
-
-Users can initialize a new Project, resulting in an empty `compose.yaml` file.
-
 ## Parameter Hints
 
 Parameter definitions may include `hints`, which Implementations can use to discover, filter, or suggest suitable parameter values. Hints do not define validation constraints, and Implementations may ignore hints they do not understand.
