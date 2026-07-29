@@ -45,34 +45,6 @@ func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider)
 	return applyArgs(composeFilePath, resolvedArgs)
 }
 
-func RemoveService(composeFilePath, serviceName string) error {
-	fileToRead, err := os.Open(composeFilePath)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = fileToRead.Close() }()
-	project, err := compose.ReadNode(fileToRead)
-	if err != nil {
-		return err
-	}
-
-	if err := compose.RemoveService(project, serviceName); err != nil {
-		return fmt.Errorf("failed to remove service %s: %w", serviceName, err)
-	}
-
-	fileToWrite, err := os.Create(composeFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to open compose file for writing: %w", err)
-	}
-	defer func() { _ = fileToWrite.Close() }()
-
-	if err := compose.WriteNode(project, fileToWrite); err != nil {
-		return fmt.Errorf("failed to write compose file after removing service: %w", err)
-	}
-
-	return nil
-}
-
 func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
