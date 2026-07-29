@@ -45,7 +45,7 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 		assert.NoError(t, tunnel.Close(context.Background(), os.Stdout))
 	})
 
-	err = docker.TransferImagesViaRegistry(t.Context(), os.Stdout, composeFilePath, host, destinationHost, registryPort)
+	err = docker.TransferImagesViaRegistry(t.Context(), os.Stdout, host, destinationHost, composeFilePath, registryPort)
 
 	require.NoError(t, err)
 	requireImageExists(t, destinationHost, imageName)

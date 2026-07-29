@@ -26,7 +26,7 @@ services:
 		requireWriteFile(t, composeFilePath, composeFileContent)
 		var output bytes.Buffer
 
-		err := docker.PullImages(context.Background(), &output, composeFilePath, docker.LocalHost)
+		err := docker.PullImages(context.Background(), &output, docker.LocalHost, composeFilePath)
 
 		require.NoError(t, err)
 	})

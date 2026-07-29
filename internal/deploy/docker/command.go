@@ -13,7 +13,7 @@ func Command(ctx context.Context, host Host, args ...string) *exec.Cmd {
 	return exec.CommandContext(ctx, "docker", cmdArgs...)
 }
 
-func RunCommand(ctx context.Context, host Host, output io.Writer, args ...string) error {
+func RunCommand(ctx context.Context, output io.Writer, host Host, args ...string) error {
 	return run(Command(ctx, host, args...), output)
 }
 
@@ -23,7 +23,7 @@ func ComposeCommand(ctx context.Context, host Host, composeFile string, args ...
 	return exec.CommandContext(ctx, "docker", cmdArgs...)
 }
 
-func RunComposeCommand(ctx context.Context, host Host, composeFile string, output io.Writer, args ...string) error {
+func RunComposeCommand(ctx context.Context, output io.Writer, host Host, composeFile string, args ...string) error {
 	return run(ComposeCommand(ctx, host, composeFile, args...), output)
 }
 
