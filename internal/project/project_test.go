@@ -10,11 +10,9 @@ import (
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
-	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 type mockProjectSource struct {
@@ -29,20 +27,6 @@ func (m *mockProjectSource) CopyTo(destDir string) error {
 func (m *mockProjectSource) GetName() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
-}
-
-func TestInit(t *testing.T) {
-	t.Run("creates an empty compose file at the given location", func(t *testing.T) {
-		dir := t.TempDir()
-
-		require.NoError(t, project.Init(dir))
-
-		composeFile := filepath.Join(dir, project.ComposeFilename)
-		data := testutil.RequireReadFile(t, composeFile)
-		var p types.Project
-		require.NoError(t, yaml.Unmarshal([]byte(data), &p))
-		assert.Empty(t, p.Services)
-	})
 }
 
 func TestClone(t *testing.T) {
