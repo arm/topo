@@ -32,8 +32,7 @@ type Parameter struct {
 
 func FromContent(reader io.Reader) (Project, error) {
 	type composeFile struct {
-		Services map[string]any `yaml:"services"`
-		XTopo    Metadata       `yaml:"x-topo"`
+		XTopo Metadata `yaml:"x-topo"`
 	}
 
 	var parsed composeFile

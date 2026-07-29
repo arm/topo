@@ -26,11 +26,6 @@ func (m *mockProjectSource) CopyTo(destDir string) error {
 	return args.Error(0)
 }
 
-func (m *mockProjectSource) String() string {
-	args := m.Called()
-	return args.String(0)
-}
-
 func (m *mockProjectSource) GetName() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
@@ -58,7 +53,7 @@ func TestClone(t *testing.T) {
 services:
   app:
     image: nginx:alpine
-`, "demo-source")
+`)
 		var output bytes.Buffer
 
 		err := project.NewClone(destDir, mockSource, arguments.NewStrictProviderChain()).Run(&output)
@@ -78,7 +73,7 @@ services:
 services:
   app:
     image: nginx:alpine
-`, "demo-source")
+`)
 
 		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
 
@@ -101,7 +96,7 @@ x-topo:
     GREETING:
       description: "Greeting"
       required: true
-`, "demo-source")
+`)
 
 		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
 
@@ -111,14 +106,13 @@ x-topo:
 	})
 }
 
-func mockSourceWithContent(t *testing.T, content, sourceName string) *mockProjectSource {
+func mockSourceWithContent(t *testing.T, content string) *mockProjectSource {
 	mockSource := &mockProjectSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
 		testutil.RequireMkdirAll(t, destDir)
 		testutil.RequireWriteFile(t, filepath.Join(destDir, project.ComposeFilename), content)
 	})
-	mockSource.On("GetName").Maybe().Return(sourceName, nil)
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})

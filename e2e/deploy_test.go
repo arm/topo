@@ -18,27 +18,7 @@ func TestDeploy(t *testing.T) {
 	container := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
-	t.Run("Init, deploy and ps", func(t *testing.T) {
-		projectDir := t.TempDir()
-		composeFile := filepath.Join(projectDir, "compose.yaml")
-		t.Cleanup(func() {
-			composeDown(t, composeFile, container.SSHDestination)
-		})
-
-		requireInit(t, topo, projectDir)
-		require.FileExists(t, composeFile)
-		nameArgValue := "Topo"
-		expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
-
-		requireDeploy(t, topo, projectDir, container.SSHDestination)
-		port, err := testutil.GetContainerPublicPort(container.Name, "8080")
-		require.NoError(t, err)
-		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
-
-		requirePS(t, topo, projectDir, container.SSHDestination, nil, "hello-server", "8080")
-	})
-
-	t.Run("Clone and deploy", func(t *testing.T) {
+	t.Run("Clone, deploy, ps", func(t *testing.T) {
 		baseDir := t.TempDir()
 		cloneDir := filepath.Join(baseDir, "project")
 		composeFile := filepath.Join(cloneDir, "compose.yaml")
@@ -90,15 +70,6 @@ func requireClone(t *testing.T, topo string, projectDir string, cloneDir string,
 	out, err := cloneCmd.CombinedOutput()
 
 	require.NoErrorf(t, err, "clone failed: %s", out)
-}
-
-func requireInit(t *testing.T, topo, projectDir string) {
-	initCmd := exec.Command(topo, "init")
-	initCmd.Dir = projectDir
-
-	out, err := initCmd.CombinedOutput()
-
-	require.NoErrorf(t, err, "init failed: %s", out)
 }
 
 func requireDeploy(t *testing.T, topo, projectDir, sshDestination string, extraArgs ...string) {
