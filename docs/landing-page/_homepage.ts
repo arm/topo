@@ -1,7 +1,7 @@
 export type HomepageLink = {
   label: string;
-  to?: string;
-  href?: string;
+  to: string;
+  external?: boolean;
   variant: "primary" | "secondary";
 };
 
@@ -9,9 +9,7 @@ export type BottomCard = {
   label: string;
   title: string;
   description: string;
-  to?: string;
-  href?: string;
-  disabled?: boolean;
+  to: string;
   cta: string;
   variant: "primary" | "secondary";
 };
@@ -20,7 +18,6 @@ export type CodeExample = {
   label: string;
   title: string;
   description: string;
-  language: string;
   code: string;
 };
 
@@ -40,7 +37,8 @@ export const homepageContent = {
     },
     {
       label: "View repository",
-      href: "https://github.com/arm/topo",
+      to: "https://github.com/arm/topo",
+      external: true,
       variant: "secondary",
     },
   ] as HomepageLink[],
@@ -55,7 +53,6 @@ export const homepageContent = {
         title: "Know the target is ready.",
         description:
           "Verify the host, SSH connection, target, and hardware before deploying.",
-        language: "shell",
         code: `topo health --target pi@raspberrypi`,
       },
       {
@@ -63,15 +60,19 @@ export const homepageContent = {
         title: "Find projects that fit.",
         description:
           "Match projects to the capabilities available on the target device.",
-        language: "shell",
         code: `topo projects --target pi@raspberrypi`,
+      },
+      {
+        label: "Configure",
+        title: "Prepare the project.",
+        description: "Copy and configure a project on the host.",
+        code: `topo clone https://github.com/Arm-Examples/topo-welcome.git`,
       },
       {
         label: "Deploy",
         title: "Ship over SSH.",
         description:
           "Configure, build, transfer, and start the Compose project on the target.",
-        language: "shell",
         code: `topo deploy --target pi@raspberrypi`,
       },
     ] as CodeExample[],

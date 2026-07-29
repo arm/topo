@@ -156,94 +156,28 @@
   color: #d1bafc;
 }
 
-.buttonDisabled {
-  cursor: not-allowed;
-  pointer-events: none;
-  opacity: 0.7;
-}
-
 .heroVisual {
   display: flex;
   flex-direction: column;
   z-index: 1;
 }
 
-.installGrid {
-  display: grid;
-  gap: 0.8rem;
-}
-
 .heroDiagram {
+  color: #000;
   display: block;
   height: auto;
   width: 100%;
   max-width: 100%;
 }
 
+:global(html[data-theme="dark"]) .heroDiagram {
+  color: #fff;
+}
+
 @media screen and (min-width: 1440px) {
   .hero {
     grid-template-columns: 1fr minmax(620px, 900px);
   }
-}
-
-.installPanel {
-  min-width: 0;
-}
-
-.installPlatform {
-  margin-bottom: 0.45rem;
-  color: var(--ifm-color-primary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.codeBlock {
-  background: var(--arm-grey-05);
-  border: 1px solid var(--arm-grey-30);
-  border-radius: var(--ifm-code-border-radius);
-  padding: 0.9rem 1rem;
-  color: #333e48;
-  margin: 0;
-  overflow: auto;
-}
-
-:global(html:not([data-theme="dark"])) .codeBlock {
-  background: var(--arm-grey-05) !important;
-  border-color: var(--arm-grey-30);
-  color: #333e48 !important;
-}
-
-.codeBlock code {
-  background: transparent;
-  color: inherit;
-}
-
-:global(html[data-theme="dark"]) .codeBlock {
-  background: var(--arm-code-background);
-  border-color: var(--arm-code-border);
-  color: var(--arm-code-foreground);
-}
-
-.cardFooter {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.92rem;
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  background: var(--arm-blue);
-  border-radius: 50%;
-  display: inline-block;
-}
-
-:global(html[data-theme="dark"]) .dot {
-  background: #7233f7;
 }
 
 .codeSection {
@@ -276,7 +210,7 @@
 
 .codeGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -285,6 +219,8 @@
   border: 1px solid var(--arm-grey-30);
   border-radius: var(--ifm-card-border-radius);
   box-shadow: var(--ifm-global-shadow-lw);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -293,6 +229,7 @@
 }
 
 .exampleHead {
+  flex: 1;
   padding: 1rem 1rem 0.85rem;
 }
 
@@ -303,12 +240,17 @@
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
   border: 1px solid var(--ifm-color-emphasis-300);
-  background: var(--ifm-color-emphasis-100);
+  background: var(--arm-grey-05);
   color: var(--ifm-color-emphasis-700);
   font-size: 0.85rem;
   letter-spacing: 0.02rem;
   line-height: 1.5rem;
   gap: 0.5rem;
+}
+
+:global(html[data-theme="dark"]) .exampleTag {
+  background: var(--arm-code-background);
+  border-color: var(--arm-ink-70);
 }
 
 .exampleHead h3 {
@@ -347,15 +289,6 @@
 
 :global(html[data-theme="dark"]) .exampleCode code {
   color: var(--arm-code-foreground);
-}
-
-.exampleLang {
-  margin: 0;
-  padding: 0.55rem 1rem 0.7rem;
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .bottom {
@@ -406,34 +339,12 @@
   border-color: var(--arm-ink-70);
 }
 
+:global(html[data-theme="dark"]) .bottomCardLink:hover {
+  border-color: var(--ifm-color-primary);
+}
+
 .bottomCard h4 {
   margin: 0 0 1rem;
-}
-
-.tutorialsBox {
-  background: var(--ifm-card-background-color);
-  border: 1px solid var(--arm-grey-30);
-  border-radius: var(--ifm-card-border-radius);
-  padding: 1.2rem;
-  box-shadow: var(--ifm-global-shadow-lw);
-}
-
-:global(html[data-theme="dark"]) .tutorialsBox {
-  border-color: var(--arm-ink-70);
-}
-
-.tutorialsHeader {
-  margin: 0 0 0.8rem;
-}
-
-.tutorialsHeader h4 {
-  margin: 0;
-}
-
-.tutorialsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
 }
 
 .label {
@@ -452,11 +363,33 @@
 
 @media screen and (max-width: 960px) {
   .hero {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .heroContent {
+    display: contents;
+  }
+
+  .heroContent h1 {
+    order: 1;
+  }
+
+  .lead {
+    order: 2;
   }
 
   .heroVisual {
-    order: -1;
+    order: 3;
   }
 
+  .actions {
+    order: 4;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .codeGrid {
+    grid-template-columns: 1fr;
+  }
 }
