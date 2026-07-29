@@ -104,7 +104,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost
 	if err := term.PrintHeader(output, "Open registry SSH tunnel"); err != nil {
 		return err
 	}
-	tunnel, err := ssh.OpenSSHTunnel(ctx, output, targetHost, opts.Port, opts.UseControlSockets)
+	tunnel, err := ssh.OpenTunnel(ctx, output, targetHost, opts.Port, opts.UseControlSockets)
 	if err != nil {
 		return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Port)
 	}
@@ -131,7 +131,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost
 	return nil
 }
 
-func closeTunnel(output io.Writer, tunnel *ssh.SSHTunnel) error {
+func closeTunnel(output io.Writer, tunnel *ssh.Tunnel) error {
 	ctx, cancel := context.WithTimeout(context.Background(), tunnelCleanupTimeout)
 	defer cancel()
 

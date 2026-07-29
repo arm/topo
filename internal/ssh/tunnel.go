@@ -19,7 +19,7 @@ func ControlSocketPath(targetHost string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("topo-tunnel-%s", hostHash))
 }
 
-type SSHTunnel struct {
+type Tunnel struct {
 	useControlSockets bool
 	dest              string
 
@@ -27,8 +27,8 @@ type SSHTunnel struct {
 	closed  bool
 }
 
-func OpenSSHTunnel(ctx context.Context, w io.Writer, dest Destination, port string, useControlSockets bool) (*SSHTunnel, error) {
-	t := &SSHTunnel{
+func OpenTunnel(ctx context.Context, w io.Writer, dest Destination, port string, useControlSockets bool) (*Tunnel, error) {
+	t := &Tunnel{
 		useControlSockets: useControlSockets,
 		dest:              dest.String(),
 	}
@@ -63,7 +63,7 @@ func OpenSSHTunnel(ctx context.Context, w io.Writer, dest Destination, port stri
 	return t, nil
 }
 
-func (t *SSHTunnel) Close(ctx context.Context, w io.Writer) error {
+func (t *Tunnel) Close(ctx context.Context, w io.Writer) error {
 	if t.closed {
 		return nil
 	}

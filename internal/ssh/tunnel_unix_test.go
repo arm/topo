@@ -20,12 +20,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSSHTunnel(t *testing.T) {
+func TestTunnel(t *testing.T) {
 	t.Run("opens and closes through a control socket", func(t *testing.T) {
 		logPath := installFakeSSH(t)
 		destination := ssh.NewDestination("user@remote")
 
-		tunnel, openErr := ssh.OpenSSHTunnel(context.Background(), io.Discard, destination, "1337", true)
+		tunnel, openErr := ssh.OpenTunnel(context.Background(), io.Discard, destination, "1337", true)
 		require.NoError(t, openErr)
 		closeErr := tunnel.Close(context.Background(), io.Discard)
 
@@ -43,7 +43,7 @@ func TestSSHTunnel(t *testing.T) {
 		destination := ssh.NewDestination("user@remote")
 		var output bytes.Buffer
 
-		tunnel, err := ssh.OpenSSHTunnel(context.Background(), &output, destination, "1337", true)
+		tunnel, err := ssh.OpenTunnel(context.Background(), &output, destination, "1337", true)
 
 		require.NoError(t, err)
 		t.Cleanup(func() {
@@ -57,7 +57,7 @@ func TestSSHTunnel(t *testing.T) {
 		logPath := installFakeSSH(t)
 		destination := ssh.NewDestination("user@remote")
 
-		tunnel, openErr := ssh.OpenSSHTunnel(context.Background(), io.Discard, destination, "1338", false)
+		tunnel, openErr := ssh.OpenTunnel(context.Background(), io.Discard, destination, "1338", false)
 		require.NoError(t, openErr)
 		pid := readSSHPID(t, logPath+".pid")
 		closeErr := tunnel.Close(context.Background(), io.Discard)
@@ -72,7 +72,7 @@ func TestSSHTunnel(t *testing.T) {
 		logPath := installFakeSSH(t)
 		destination := ssh.NewDestination("user@remote")
 
-		tunnel, openErr := ssh.OpenSSHTunnel(context.Background(), nil, destination, "1339", true)
+		tunnel, openErr := ssh.OpenTunnel(context.Background(), nil, destination, "1339", true)
 		require.NoError(t, openErr)
 		firstCloseErr := tunnel.Close(context.Background(), nil)
 		secondCloseErr := tunnel.Close(context.Background(), nil)
