@@ -5,7 +5,6 @@ import (
 )
 
 type ResolvedProject struct {
-	Services   []Service
 	Parameters []arguments.ResolvedArg
 }
 
@@ -15,7 +14,6 @@ func Resolve(p Project, argProvider arguments.Provider) (ResolvedProject, error)
 		return ResolvedProject{}, err
 	}
 	return ResolvedProject{
-		Services:   p.Services,
 		Parameters: resolvedArgs,
 	}, nil
 }

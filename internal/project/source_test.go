@@ -186,31 +186,6 @@ func TestGitSource(t *testing.T) {
 		})
 	})
 
-	t.Run("String", func(t *testing.T) {
-		t.Run("returns git:URL#ref for HTTPS URLs when ref is set", func(t *testing.T) {
-			src := project.GitSource{
-				URL: "https://github.com/example/test.git",
-				Ref: "v1.0",
-			}
-			assert.Equal(t, "git:https://github.com/example/test.git#v1.0", src.String())
-		})
-
-		t.Run("returns git:URL#ref for SSH URLs when ref is set", func(t *testing.T) {
-			src := project.GitSource{
-				URL: "git@github.com:example/test.git",
-				Ref: "main",
-			}
-			assert.Equal(t, "git:git@github.com:example/test.git#main", src.String())
-		})
-
-		t.Run("returns git:URL when ref is empty", func(t *testing.T) {
-			src := project.GitSource{
-				URL: "https://github.com/example/test.git",
-				Ref: "",
-			}
-			assert.Equal(t, "git:https://github.com/example/test.git", src.String())
-		})
-	})
 	t.Run("GetName", func(t *testing.T) {
 		src := project.GitSource{
 			URL: "https://github.com/example/test.git",
@@ -222,20 +197,6 @@ func TestGitSource(t *testing.T) {
 }
 
 func TestDirSource(t *testing.T) {
-	t.Run("String", func(t *testing.T) {
-		t.Run("returns dir:path format", func(t *testing.T) {
-			src := project.DirSource{Path: "/path/to/project"}
-
-			assert.Equal(t, "dir:/path/to/project", src.String())
-		})
-
-		t.Run("returns dir:path for relative paths", func(t *testing.T) {
-			src := project.DirSource{Path: "./local/project"}
-
-			assert.Equal(t, "dir:./local/project", src.String())
-		})
-	})
-
 	t.Run("CopyTo", func(t *testing.T) {
 		t.Run("copies directory contents to destination", func(t *testing.T) {
 			srcDir := t.TempDir()

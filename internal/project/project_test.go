@@ -17,11 +17,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const emptyComposeProject = `
-name: example-project
-services: {}
-`
-
 type mockProjectSource struct {
 	mock.Mock
 }
@@ -124,16 +119,6 @@ func mockSourceWithContent(t *testing.T, content, sourceName string) *mockProjec
 		testutil.RequireWriteFile(t, filepath.Join(destDir, project.ComposeFilename), content)
 	})
 	mockSource.On("GetName").Maybe().Return(sourceName, nil)
-	t.Cleanup(func() {
-		mockSource.AssertExpectations(t)
-	})
-	return mockSource
-}
-
-func mockProjectSourceWithErrorOnCopy(t *testing.T, errToReturn error, sourceName string) *mockProjectSource {
-	mockSource := &mockProjectSource{}
-	mockSource.On("CopyTo", mock.Anything).Return(errToReturn)
-	mockSource.On("GetName").Return(sourceName, nil)
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})

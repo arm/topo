@@ -18,7 +18,7 @@ func TestDeploy(t *testing.T) {
 	container := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
-	t.Run("Init, extend, deploy and ps", func(t *testing.T) {
+	t.Run("Init, deploy and ps", func(t *testing.T) {
 		projectDir := t.TempDir()
 		composeFile := filepath.Join(projectDir, "compose.yaml")
 		t.Cleanup(func() {
@@ -29,8 +29,6 @@ func TestDeploy(t *testing.T) {
 		require.FileExists(t, composeFile)
 		nameArgValue := "Topo"
 		expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
-
-		requireExtend(t, topo, projectDir, composeFile, nameArgValue)
 
 		requireDeploy(t, topo, projectDir, container.SSHDestination)
 		port, err := testutil.GetContainerPublicPort(container.Name, "8080")
@@ -101,19 +99,6 @@ func requireInit(t *testing.T, topo, projectDir string) {
 	out, err := initCmd.CombinedOutput()
 
 	require.NoErrorf(t, err, "init failed: %s", out)
-}
-
-func requireExtend(t *testing.T, topo, projectDir, composeFile, customName string) {
-	templateDir, err := filepath.Abs("testdata/services/hello-server")
-	require.NoError(t, err)
-	extendCmd := exec.Command(topo, "extend", composeFile,
-		fmt.Sprintf("dir:%s", templateDir), "--",
-		fmt.Sprintf("NAME=%s", customName))
-	extendCmd.Dir = projectDir
-
-	out, err := extendCmd.CombinedOutput()
-
-	require.NoErrorf(t, err, "extend failed: %s", out)
 }
 
 func requireDeploy(t *testing.T, topo, projectDir, sshDestination string, extraArgs ...string) {

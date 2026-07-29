@@ -82,14 +82,6 @@ x-topo:
 Use the Topo CLI to verify your Projects locally.
 
 ```sh
-# Create a compose.yaml
-topo init
-
-# Use your Project using the local directory option `dir:`
-topo extend compose.yaml dir:./path/to/my-project
-
-# The CLI will prompt for project parameters specified in your service
-
 # Verify build success
 topo deploy --target root@some-ssh-target
 ```
