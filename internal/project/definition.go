@@ -3,8 +3,6 @@ package project
 import (
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 
 	"github.com/arm/topo/internal/output/logger"
 	"gopkg.in/yaml.v3"
@@ -14,12 +12,6 @@ const ComposeFilename = "compose.yaml"
 
 type Project struct {
 	Metadata Metadata
-	Services []Service
-}
-
-type Service struct {
-	Name string
-	Data map[string]any
 }
 
 type Metadata struct {
@@ -40,8 +32,7 @@ type Parameter struct {
 
 func FromContent(reader io.Reader) (Project, error) {
 	type composeFile struct {
-		Services map[string]any `yaml:"services"`
-		XTopo    Metadata       `yaml:"x-topo"`
+		XTopo Metadata `yaml:"x-topo"`
 	}
 
 	var parsed composeFile
@@ -50,30 +41,9 @@ func FromContent(reader io.Reader) (Project, error) {
 		return Project{}, fmt.Errorf("failed to decode project: %w", err)
 	}
 
-	var services []Service
-	for name, svc := range parsed.Services {
-		services = append(services, Service{
-			Data: svc.(map[string]any),
-			Name: name,
-		})
-	}
-
 	return Project{
-		Services: services,
 		Metadata: parsed.XTopo,
 	}, nil
-}
-
-func FromDir(destDir string) (Project, error) {
-	composeServicePath := filepath.Join(destDir, ComposeFilename)
-
-	f, err := os.Open(composeServicePath)
-	if err != nil {
-		return Project{}, err
-	}
-	defer func() { _ = f.Close() }()
-
-	return FromContent(f)
 }
 
 type rawMetadata struct {

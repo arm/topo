@@ -60,43 +60,6 @@ RUN test -n "$GREETING" || (echo "ERROR: GREETING project parameter is required"
 
 Users can initialize a new Project, resulting in an empty `compose.yaml` file.
 
-### Extending Projects with Project Services
-
-When users extend a Project with services defined in another Project, Implementations must handle project parameter collection and validation. The examples below illustrate how a CLI interface might handle this:
-
-**Interactive Mode**
-Implementations may choose to prompt users when required parameters are missing:
-
-```
-$ topo extend ...
-
-Missing Project Parameter
-The greeting message to display in the container
-GREETING (required)> Sup
-```
-
-**Direct Parameter Specification**
-Implementations may support providing parameters directly:
-
-```
-$ topo extend ... GREETING=Sup`
-```
-
-**Non-Interactive Mode)**
-Implementations may support a non-interactive mode that errors on missing required parameters:
-
-```
-$ topo extend ... --no-prompt
-
-error: "Missing project parameters"
-missing_parameters:
-    GREETING:
-      description: |
-          The greeting message to display in the container
-      required: true
-      example: "Hello from Arm SME"
-```
-
 ## Parameter Hints
 
 Parameter definitions may include `hints`, which Implementations can use to discover, filter, or suggest suitable parameter values. Hints do not define validation constraints, and Implementations may ignore hints they do not understand.
@@ -118,33 +81,6 @@ Recommended hint key conventions include:
 
 - `huggingface.task` — suggests a Hugging Face task or pipeline filter, such as `text-generation`
 - `file.format` — suggests a desired artifact or file format, such as `gguf`
-
-### Processing Steps
-
-When users extend a Project with another Project, Implementations should perform the following steps:
-
-1.  Retrieve the Project repository (e.g., clone to a local subdirectory)
-1.  Parse the Project's `compose.yaml` and read parameter metadata from `x-topo.parameters`
-1.  Collect values for any required parameters from `x-topo.parameters` (e.g., by prompting the user)
-1.  Update the Project's `compose.yaml` with a service definition that extends the retrieved Project
-1.  Set the `services.<service-name>.build.args` with the collected values when those parameters are consumed as Docker build arguments
-
-### Resulting Configuration
-
-After adding the service with project parameters, the compose file is updated:
-
-**compose.yaml**
-
-```yaml
-services:
-  cool-service:
-    extends:
-      file: ./cool-service/compose.yaml
-      service: welcome
-    build:
-      args:
-        GREETING: "Sup"
-```
 
 ## Project Configuration Layering
 

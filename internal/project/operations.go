@@ -10,7 +10,6 @@ import (
 	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/operation"
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
 )
@@ -46,110 +45,6 @@ func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider)
 	}
 
 	return applyArgs(composeFilePath, resolvedArgs)
-}
-
-func Extend(targetComposeFile string, src Source, argProvider arguments.Provider) error {
-	project, err := compose.ReadProject(targetComposeFile)
-	logger.Info("reading project compose file")
-	if err != nil {
-		return fmt.Errorf("failed to read project: %w", err)
-	}
-
-	absoluteTargetComposeFile, err := filepath.Abs(targetComposeFile)
-	if err != nil {
-		return fmt.Errorf("failed to get absolute path of target compose file: %w", err)
-	}
-	currentDir := filepath.Dir(absoluteTargetComposeFile)
-
-	originalDirName, err := src.GetName()
-	if err != nil {
-		return fmt.Errorf("failed to get repo name from source: %w", err)
-	}
-
-	copiedDirName := originalDirName
-	for i := 1; ; i++ {
-		destPath := filepath.Join(currentDir, copiedDirName)
-		_, err := os.Stat(destPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				break
-			} else {
-				return fmt.Errorf("failed to check if directory exists: %w", err)
-			}
-		}
-		copiedDirName = fmt.Sprintf("%s_%d", originalDirName, i)
-	}
-
-	destDir := filepath.Join(currentDir, copiedDirName)
-
-	var success bool
-	defer func() {
-		if !success {
-			_ = os.RemoveAll(destDir)
-		}
-	}()
-
-	logger.Info(fmt.Sprintf("copying project to %q", destDir))
-
-	if err := src.CopyTo(destDir); err != nil {
-		return fmt.Errorf("failed to copy project: %w", err)
-	}
-
-	if info, err := os.Stat(destDir); err != nil || !info.IsDir() {
-		return fmt.Errorf("failed to find copied project directory: %w", err)
-	}
-
-	p, err := FromDir(destDir)
-	if err != nil {
-		return fmt.Errorf("failed to load project from %s: %w", src.String(), err)
-	}
-	if len(p.Services) == 0 {
-		return fmt.Errorf("project found in directory %s has no services", destDir)
-	}
-
-	resolvedProject, err := Resolve(p, argProvider)
-	if err != nil {
-		return err
-	}
-	resolvedArgs := argsToMap(resolvedProject.Parameters)
-
-	extendedComposeFilePath := filepath.Join(copiedDirName, ComposeFilename)
-	usedArgs := map[string]bool{}
-	for _, service := range resolvedProject.Services {
-		serviceArgs := compose.FilterResolvedBuildArgs(service.Data, resolvedArgs)
-		for k := range serviceArgs {
-			usedArgs[k] = true
-		}
-		newSvc := compose.CreateServiceByExtension(extendedComposeFilePath, service.Name, serviceArgs)
-		logger.Info(fmt.Sprintf("adding service %q to project", newSvc.Name))
-		if err := compose.InsertService(project, newSvc); err != nil {
-			return err
-		}
-	}
-	for argName := range resolvedArgs {
-		if !usedArgs[argName] {
-			logger.Warn(fmt.Sprintf("parameter %q was resolved but not found in any service build args", argName))
-		}
-	}
-
-	var allServicesVolumes []types.ServiceVolumeConfig
-	for _, service := range resolvedProject.Services {
-		volumes, err := compose.ExtractNamedServiceVolumes(service.Data)
-		if err != nil {
-			return err
-		}
-		allServicesVolumes = append(allServicesVolumes, volumes...)
-	}
-	compose.RegisterVolumes(project, allServicesVolumes)
-
-	err = compose.WriteProject(project, targetComposeFile)
-	if err != nil {
-		return err
-	}
-
-	success = true
-	logger.Info("successfully extended project")
-	return nil
 }
 
 func RemoveService(composeFilePath, serviceName string) error {
@@ -240,12 +135,12 @@ func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]argu
 	if err != nil {
 		return nil, err
 	}
-	resolvedProject, err := Resolve(p, argProvider)
+	resolvedParameters, err := Resolve(p, argProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	return resolvedProject.Parameters, nil
+	return resolvedParameters, nil
 }
 
 func argsToMap(args []arguments.ResolvedArg) map[string]string {

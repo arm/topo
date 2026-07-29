@@ -19,7 +19,6 @@ func (e DestDirExistsError) Error() string {
 
 type Source interface {
 	CopyTo(destDir string) error
-	String() string
 	GetName() (string, error)
 }
 
@@ -165,13 +164,6 @@ func isHexDigit(r rune) bool {
 		(r >= 'A' && r <= 'F')
 }
 
-func (g GitSource) String() string {
-	if g.Ref != "" {
-		return fmt.Sprintf("git:%s#%s", g.URL, g.Ref)
-	}
-	return fmt.Sprintf("git:%s", g.URL)
-}
-
 func (g GitSource) GetName() (string, error) {
 	base := filepath.Base(strings.TrimSpace(g.URL))
 	base = strings.TrimSuffix(base, ".git")
@@ -211,10 +203,6 @@ func (d DirSource) CopyTo(destDir string) error {
 	}
 
 	return copyDir(d.Path, destDir)
-}
-
-func (d DirSource) String() string {
-	return fmt.Sprintf("dir:%s", d.Path)
 }
 
 func (d DirSource) GetName() (string, error) {

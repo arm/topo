@@ -4,20 +4,12 @@ import (
 	"github.com/arm/topo/internal/arguments"
 )
 
-type ResolvedProject struct {
-	Services   []Service
-	Parameters []arguments.ResolvedArg
-}
-
-func Resolve(p Project, argProvider arguments.Provider) (ResolvedProject, error) {
+func Resolve(p Project, argProvider arguments.Provider) ([]arguments.ResolvedArg, error) {
 	resolvedArgs, err := argProvider.Provide(castParameters(p.Metadata.Parameters))
 	if err != nil {
-		return ResolvedProject{}, err
+		return nil, err
 	}
-	return ResolvedProject{
-		Services:   p.Services,
-		Parameters: resolvedArgs,
-	}, nil
+	return resolvedArgs, nil
 }
 
 func castParameters(toCast []Parameter) []arguments.Arg {
