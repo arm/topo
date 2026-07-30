@@ -12,7 +12,7 @@ import (
 type Project = ProjectElement
 
 const (
-	defaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + Version + "/catalog/"
+	defaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + CatalogMajorVersion + "/catalog/"
 	DefaultCatalogURL = defaultURL + "catalog.json"
 )
 

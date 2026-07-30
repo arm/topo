@@ -13,10 +13,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
+
+var catalogSchemaVersionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 
 const (
 	quicktypeVersion     = "26.0.0"
@@ -36,8 +40,11 @@ func run() error {
 		return fmt.Errorf("expected one catalog version; usage: go run ./scripts/generate_catalog_types VERSION")
 	}
 
-	catalogVersion := os.Args[1]
-	schemaURL := defaultSchemaBaseURL + url.PathEscape(catalogVersion) + "/catalog/catalog.schema.json"
+	catalogSchemaVersion := os.Args[1]
+	if err := validateCatalogVersion(catalogSchemaVersion); err != nil {
+		return err
+	}
+	schemaURL := defaultSchemaBaseURL + url.PathEscape(catalogSchemaVersion) + "/catalog/catalog.schema.json"
 
 	ctx, cancel := context.WithTimeout(context.Background(), generationTimeout)
 	defer cancel()
@@ -46,7 +53,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	return generateTypes(ctx, schemaURL, catalogVersion, outputFile)
+	return generateTypes(ctx, schemaURL, catalogSchemaVersion, outputFile)
+}
+
+func validateCatalogVersion(version string) error {
+	if !catalogSchemaVersionPattern.MatchString(version) {
+		return fmt.Errorf("catalog version %q must use vMAJOR.MINOR.PATCH format, for example v1.1.2", version)
+	}
+	return nil
 }
 
 func generatedOutputPath() (string, error) {
@@ -75,7 +89,7 @@ func generateTypes(ctx context.Context, schemaURL string, catalogVersion string,
 		return fmt.Errorf("quicktype %s failed for schema %q: %w", quicktypeVersion, schemaURL, err)
 	}
 
-	formatted, err := addVersionConstant(generated, catalogVersion)
+	formatted, err := addCatalogVersionConstant(generated, catalogVersion)
 	if err != nil {
 		return fmt.Errorf("failed to format quicktype output from schema %q: %w", schemaURL, err)
 	}
@@ -86,7 +100,7 @@ func generateTypes(ctx context.Context, schemaURL string, catalogVersion string,
 	return nil
 }
 
-func addVersionConstant(generated []byte, catalogVersion string) ([]byte, error) {
+func addCatalogVersionConstant(generated []byte, version string) ([]byte, error) {
 	fileSet := token.NewFileSet()
 	file, err := parser.ParseFile(fileSet, "catalog_schema_generated.go", generated, parser.ParseComments)
 	if err != nil {
@@ -96,8 +110,8 @@ func addVersionConstant(generated []byte, catalogVersion string) ([]byte, error)
 	versionDeclaration := &ast.GenDecl{
 		Tok: token.CONST,
 		Specs: []ast.Spec{&ast.ValueSpec{
-			Names:  []*ast.Ident{ast.NewIdent("Version")},
-			Values: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(catalogVersion)}},
+			Names:  []*ast.Ident{ast.NewIdent("CatalogMajorVersion")},
+			Values: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(majorVersion(version))}},
 		}},
 	}
 	declarationIndex := 0
@@ -115,4 +129,9 @@ func addVersionConstant(generated []byte, catalogVersion string) ([]byte, error)
 		return nil, fmt.Errorf("failed to format generated types: %w", err)
 	}
 	return formatted.Bytes(), nil
+}
+
+func majorVersion(version string) string {
+	major, _, _ := strings.Cut(version, ".")
+	return major
 }

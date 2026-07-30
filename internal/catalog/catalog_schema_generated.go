@@ -8,7 +8,7 @@ package catalog
 
 import "encoding/json"
 
-const Version = "v1"
+const CatalogMajorVersion = "v1"
 
 func UnmarshalCatalogDocument(data []byte) (CatalogDocument, error) {
 	var r CatalogDocument
