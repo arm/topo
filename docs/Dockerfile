@@ -1,6 +1,9 @@
 FROM node:26-slim
 
-ENV ARM_DOCS_PACKAGE_VERSION=0.5.1
+ARG NPM_CONFIG_REGISTRY
+ENV NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY}
+
+ENV ARM_DOCS_PACKAGE_VERSION=0.6.0
 ENV PNPM_VERSION=10.33.3
 
 RUN apt-get update && \
@@ -12,6 +15,3 @@ RUN apt-get update && \
 
 RUN npm install -g pnpm@${PNPM_VERSION}
 
-EXPOSE 3000
-ENTRYPOINT ["arm-docs", "preview"]
-CMD [ "--docs-root", "/app/docs" ]

@@ -1,9 +1,12 @@
 services:
-  docs-preview:
+  docs-dev:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org/}
+    command: ["arm-docs", "preview", "--docs-root", "/app/docs"]
     ports:
       - "3000:3000"
     volumes:
-      - .:/app/docs
+      - .:/app/docs:ro

@@ -78,7 +78,7 @@ Skill-specific instructions should stay workflow-focused. Put stable common voca
 
 ## Docs
 
-### Previewing the docs locally
+## Developing the docs
 
 Use the provided compose project to preview docs changes locally:
 
