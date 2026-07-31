@@ -1,20 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"go/ast"
 	"go/format"
-	"go/parser"
-	"go/token"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 )
 
@@ -80,7 +75,8 @@ func generateTypes(schemaURL string, catalogVersion string, outputFile string) e
 		return fmt.Errorf("quicktype %s failed for schema %q: %w", quicktypeVersion, schemaURL, err)
 	}
 
-	formatted, err := addCatalogVersionConstant(generated, catalogVersion)
+	generated = fmt.Appendf(generated, "\nconst CatalogMajorVersion = %q\n", majorVersion(catalogVersion))
+	formatted, err := format.Source(generated)
 	if err != nil {
 		return fmt.Errorf("failed to format quicktype output from schema %q: %w", schemaURL, err)
 	}
@@ -89,37 +85,6 @@ func generateTypes(schemaURL string, catalogVersion string, outputFile string) e
 		return fmt.Errorf("failed to write generated types to %q: %w", outputFile, err)
 	}
 	return nil
-}
-
-func addCatalogVersionConstant(generated []byte, version string) ([]byte, error) {
-	fileSet := token.NewFileSet()
-	file, err := parser.ParseFile(fileSet, "catalog_schema_generated.go", generated, parser.ParseComments)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse quicktype output: %w", err)
-	}
-
-	versionDeclaration := &ast.GenDecl{
-		Tok: token.CONST,
-		Specs: []ast.Spec{&ast.ValueSpec{
-			Names:  []*ast.Ident{ast.NewIdent("CatalogMajorVersion")},
-			Values: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(majorVersion(version))}},
-		}},
-	}
-	declarationIndex := 0
-	for index, declaration := range file.Decls {
-		if generalDeclaration, ok := declaration.(*ast.GenDecl); ok && generalDeclaration.Tok == token.IMPORT {
-			declarationIndex = index + 1
-		}
-	}
-	file.Decls = append(file.Decls, nil)
-	copy(file.Decls[declarationIndex+1:], file.Decls[declarationIndex:])
-	file.Decls[declarationIndex] = versionDeclaration
-
-	var formatted bytes.Buffer
-	if err := format.Node(&formatted, fileSet, file); err != nil {
-		return nil, fmt.Errorf("failed to format generated types: %w", err)
-	}
-	return formatted.Bytes(), nil
 }
 
 func majorVersion(version string) string {

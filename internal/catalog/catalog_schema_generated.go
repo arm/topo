@@ -8,8 +8,6 @@ package catalog
 
 import "encoding/json"
 
-const CatalogMajorVersion = "v1"
-
 func UnmarshalCatalogDocument(data []byte) (CatalogDocument, error) {
 	var r CatalogDocument
 	err := json.Unmarshal(data, &r)
@@ -66,3 +64,5 @@ type Schema string
 const (
 	HTTPSRawGithubusercontentCOMArmTopoProjectCatalogMainDataCatalogSchemaJSON Schema = "https://raw.githubusercontent.com/arm/topo-project-catalog/main/data/catalog.schema.json"
 )
+
+const CatalogMajorVersion = "v1"
