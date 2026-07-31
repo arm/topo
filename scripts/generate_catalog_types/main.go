@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strings"
 )
 
 var catalogSchemaVersionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
@@ -61,7 +60,7 @@ func generatedOutputPath() (string, error) {
 	return filepath.Join(repositoryRoot, "internal", "catalog", "catalog_schema_generated.go"), nil
 }
 
-func generateTypes(schemaURL string, catalogVersion string, outputFile string) error {
+func generateTypes(schemaURL string, catalogSchemaVersion string, outputFile string) error {
 	// #nosec G702 -- schemaURL is passed as an argument without invoking a shell.
 	command := exec.Command("npx", "--yes", "quicktype@"+quicktypeVersion,
 		"--src-lang", "schema", "--lang", "go", "--package", "catalog",
@@ -75,7 +74,7 @@ func generateTypes(schemaURL string, catalogVersion string, outputFile string) e
 		return fmt.Errorf("quicktype %s failed for schema %q: %w", quicktypeVersion, schemaURL, err)
 	}
 
-	generated = fmt.Appendf(generated, "\nconst CatalogMajorVersion = %q\n", majorVersion(catalogVersion))
+	generated = fmt.Appendf(generated, "\nconst CatalogSchemaVersion = %q\n", catalogSchemaVersion)
 	formatted, err := format.Source(generated)
 	if err != nil {
 		return fmt.Errorf("failed to format quicktype output from schema %q: %w", schemaURL, err)
@@ -85,9 +84,4 @@ func generateTypes(schemaURL string, catalogVersion string, outputFile string) e
 		return fmt.Errorf("failed to write generated types to %q: %w", outputFile, err)
 	}
 	return nil
-}
-
-func majorVersion(version string) string {
-	major, _, _ := strings.Cut(version, ".")
-	return major
 }

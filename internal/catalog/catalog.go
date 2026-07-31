@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -11,10 +12,15 @@ import (
 
 type Project = ProjectElement
 
-const (
-	defaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + CatalogMajorVersion + "/catalog/"
+var (
+	defaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + majorVersion(CatalogSchemaVersion) + "/catalog/"
 	DefaultCatalogURL = defaultURL + "catalog.json"
 )
+
+func majorVersion(version string) string {
+	major, _, _ := strings.Cut(version, ".")
+	return major
+}
 
 func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 	data, err := fetchProjectsJSON(ctx, url)
@@ -25,11 +31,30 @@ func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 }
 
 func parseProjects(b []byte) ([]Project, error) {
+	catalogVersion, versionErr := unmarshalCatalogVersion(b)
 	catalog, err := UnmarshalCatalogDocument(b)
 	if err != nil {
+		if versionErr == nil && catalogVersion != "" && catalogVersion != CatalogSchemaVersion {
+			return nil, fmt.Errorf(
+				"failed to unmarshal catalog: catalog version %q differs from generated schema version %q: %w",
+				catalogVersion,
+				CatalogSchemaVersion,
+				err,
+			)
+		}
 		return nil, fmt.Errorf("failed to unmarshal catalog: %w", err)
 	}
 	return catalog.Projects, nil
+}
+
+func unmarshalCatalogVersion(b []byte) (string, error) {
+	var header struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(b, &header); err != nil {
+		return "", err
+	}
+	return header.Version, nil
 }
 
 func fetchProjectsJSON(ctx context.Context, url string) ([]byte, error) {

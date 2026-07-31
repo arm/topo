@@ -23,6 +23,8 @@ type CatalogDocument struct {
 	// Schema URL for editor and tooling discovery.
 	Schema   *Schema          `json:"$schema,omitempty"`
 	Projects []ProjectElement `json:"projects"`
+	// Catalog version.
+	Version string `json:"version"`
 }
 
 type ProjectElement struct {
@@ -65,4 +67,4 @@ const (
 	HTTPSRawGithubusercontentCOMArmTopoProjectCatalogMainDataCatalogSchemaJSON Schema = "https://raw.githubusercontent.com/arm/topo-project-catalog/main/data/catalog.schema.json"
 )
 
-const CatalogMajorVersion = "v1"
+const CatalogSchemaVersion = "v2.0.0"
