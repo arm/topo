@@ -22,6 +22,24 @@ func NewSocket(url string) Socket {
 	return Socket{url: url}
 }
 
+func (socket Socket) ConfigurePodmanEnv(environment []string) []string {
+	if socket == LocalSocket {
+		return environment
+	}
+	return append(environment, "CONTAINER_HOST="+socket.url)
+}
+
+func (socket Socket) ConfigureComposeEnv(environment []string) ([]string, error) {
+	if socket == LocalSocket {
+		url, err := ResolveLocalComposeSocket(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		return append(environment, "DOCKER_HOST="+url), nil
+	}
+	return append(environment, "DOCKER_HOST="+socket.url), nil
+}
+
 type podmanConnection struct {
 	Name      string
 	URI       string
@@ -44,7 +62,7 @@ type machinePipe struct {
 
 // ResolveLocalComposeSocket returns the host-accessible Podman API endpoint
 // that the external Compose provider must use for a local deployment.
-func ResolveLocalComposeSocket(ctx context.Context) (Socket, error) {
+func ResolveLocalComposeSocket(ctx context.Context) (string, error) {
 	if runtime.GOOS == "darwin" {
 		return resolveDarwinComposeSocket(ctx)
 	}
@@ -54,72 +72,72 @@ func ResolveLocalComposeSocket(ctx context.Context) (Socket, error) {
 	return resolveNativeComposeSocket(ctx)
 }
 
-func resolveNativeComposeSocket(ctx context.Context) (Socket, error) {
+func resolveNativeComposeSocket(ctx context.Context) (string, error) {
 	output, err := exec.CommandContext(ctx, "podman", "info", "--format", "{{.Host.RemoteSocket.Path}}").Output()
 	if err != nil {
-		return Socket{}, fmt.Errorf("failed to get Podman API socket: %w", err)
+		return "", fmt.Errorf("failed to get Podman API socket: %w", err)
 	}
 
 	socketURL, err := unixSocketURL(strings.TrimSpace(string(output)))
 	if err != nil {
-		return Socket{}, err
+		return "", err
 	}
 	if err := requireSocket(socketURL); err != nil {
-		return Socket{}, err
+		return "", err
 	}
-	return NewSocket(socketURL), nil
+	return socketURL, nil
 }
 
-func resolveDarwinComposeSocket(ctx context.Context) (Socket, error) {
+func resolveDarwinComposeSocket(ctx context.Context) (string, error) {
 	connection, err := defaultPodmanConnection(ctx)
 	if err != nil {
-		return Socket{}, err
+		return "", err
 	}
 	if !connection.IsMachine {
 		if isDarwinComposeEndpoint(connection.URI) {
-			return NewSocket(connection.URI), nil
+			return connection.URI, nil
 		}
-		return Socket{}, fmt.Errorf("default Podman connection %q has no Compose-compatible endpoint", connection.Name)
+		return "", fmt.Errorf("default Podman connection %q has no Compose-compatible endpoint", connection.Name)
 	}
 
 	info, err := inspectPodmanMachine(ctx, connection)
 	if err != nil {
-		return Socket{}, err
+		return "", err
 	}
 	if info.PodmanSocket == nil {
-		return Socket{}, fmt.Errorf("podman machine %q has no host-accessible API socket", connection.Name)
+		return "", fmt.Errorf("podman machine %q has no host-accessible API socket", connection.Name)
 	}
 	socketURL, err := unixSocketURL(info.PodmanSocket.Path)
 	if err != nil {
-		return Socket{}, err
+		return "", err
 	}
-	return NewSocket(socketURL), nil
+	return socketURL, nil
 }
 
-func resolveWindowsComposeSocket(ctx context.Context) (Socket, error) {
+func resolveWindowsComposeSocket(ctx context.Context) (string, error) {
 	connection, err := defaultPodmanConnection(ctx)
 	if err != nil {
-		return Socket{}, err
+		return "", err
 	}
 	if !connection.IsMachine {
 		if isWindowsComposeEndpoint(connection.URI) {
-			return NewSocket(connection.URI), nil
+			return connection.URI, nil
 		}
-		return Socket{}, fmt.Errorf("default Podman connection %q has no Compose-compatible endpoint", connection.Name)
+		return "", fmt.Errorf("default Podman connection %q has no Compose-compatible endpoint", connection.Name)
 	}
 
 	info, err := inspectPodmanMachine(ctx, connection)
 	if err != nil {
-		return Socket{}, err
+		return "", err
 	}
 	if info.PodmanPipe == nil {
-		return Socket{}, fmt.Errorf("podman machine %q has no host-accessible API pipe", connection.Name)
+		return "", fmt.Errorf("podman machine %q has no host-accessible API pipe", connection.Name)
 	}
 	pipeURL, err := namedPipeURL(info.PodmanPipe.Path)
 	if err != nil {
-		return Socket{}, err
+		return "", err
 	}
-	return NewSocket(pipeURL), nil
+	return pipeURL, nil
 }
 
 func inspectPodmanMachine(ctx context.Context, connection podmanConnection) (machineConnectionInfo, error) {
