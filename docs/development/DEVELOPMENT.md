@@ -92,7 +92,7 @@ The documentation preview is available at `http://localhost:3000` and automatica
 
 Topo uses the catalog version declared in `internal/catalog/catalog_schema_generated.go`. The same version selects both the catalog and its schema from Artifactory.
 
-Generating the Go types requires Node.js 20 or newer, `npx`, and access to Artifactory. Pass the catalog version to the generator:
+Generating the Go types requires Node.js 20 or newer, `npx`, and access to the internet. Pass the catalog version to the generator:
 
 ```sh
 go run ./scripts/generate_catalog_types v1
