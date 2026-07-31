@@ -10,32 +10,49 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 )
 
 type Socket struct {
-	url string
+	url                string
+	localComposeSocket *localComposeSocket
 }
 
-var LocalSocket Socket
+type localComposeSocket struct {
+	mutex sync.Mutex
+	url   string
+}
+
+var LocalSocket = Socket{localComposeSocket: &localComposeSocket{}}
 
 func NewSocket(url string) Socket {
 	return Socket{url: url}
 }
 
 func (socket Socket) ConfigurePodmanEnv(environment []string) []string {
-	if socket == LocalSocket {
+	if socket.url == "" {
 		return environment
 	}
 	return append(environment, "CONTAINER_HOST="+socket.url)
 }
 
 func (socket Socket) ConfigureComposeEnv(environment []string) ([]string, error) {
-	if socket == LocalSocket {
+	if socket.localComposeSocket == nil {
+		return append(environment, "DOCKER_HOST="+socket.url), nil
+	}
+	return socket.localComposeSocket.ConfigureEnv(environment)
+}
+
+func (socket *localComposeSocket) ConfigureEnv(environment []string) ([]string, error) {
+	socket.mutex.Lock()
+	defer socket.mutex.Unlock()
+
+	if socket.url == "" {
 		url, err := ResolveLocalComposeSocket(context.Background())
 		if err != nil {
 			return nil, err
 		}
-		return append(environment, "DOCKER_HOST="+url), nil
+		socket.url = url
 	}
 	return append(environment, "DOCKER_HOST="+socket.url), nil
 }
