@@ -5,7 +5,7 @@ import type { ReactElement } from "react";
 import { homepageContent } from "./_homepage";
 import ExternalLinkIcon from "./external-link.svg";
 import styles from "./index.module.css";
-import TopoOverviewDiagram from "../static/img/topo-overview.svg";
+import TopoOverviewDiagram from "@site/project-static/img/topo-overview.svg";
 
 function joinClasses(...parts: Array<string | undefined | false>): string {
   return parts.filter(Boolean).join(" ");
