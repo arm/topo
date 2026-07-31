@@ -21,10 +21,10 @@ func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch projects: %w", err)
 	}
-	return parseProjects(ctx, data)
+	return parseProjects(data)
 }
 
-func parseProjects(ctx context.Context, b []byte) ([]Project, error) {
+func parseProjects(b []byte) ([]Project, error) {
 	catalog, err := UnmarshalCatalogDocument(b)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal catalog: %w", err)
