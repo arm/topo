@@ -3,7 +3,6 @@ package docker_test
 import (
 	"context"
 	"fmt"
-	"io"
 	"path/filepath"
 	"testing"
 
@@ -21,7 +20,7 @@ func TestDeployment(t *testing.T) {
 		requireImageDoesNotExist(t, docker.LocalHost, imageName)
 		deployOptions := docker.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), t.Output(), composeFilePath, deployOptions)
 
 		require.NoError(t, err)
 		requireImageExists(t, docker.LocalHost, imageName)
@@ -35,7 +34,7 @@ func TestDeployment(t *testing.T) {
 		requireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
 		deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
 
-		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), t.Output(), composeFilePath, deployOptions)
 
 		require.NoError(t, err)
 		requireImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
@@ -60,7 +59,7 @@ func TestDeployment(t *testing.T) {
 			},
 		}
 
-		err := docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), t.Output(), composeFilePath, deployOptions)
 
 		require.NoError(t, err)
 		requireImageExists(t, remoteCommandHost, imageName)
