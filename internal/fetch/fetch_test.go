@@ -15,7 +15,7 @@ import (
 func TestGet(t *testing.T) {
 	t.Run("returns response body for successful request", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
-			response.WriteHeader(http.StatusAccepted)
+			response.WriteHeader(http.StatusOK)
 			_, _ = response.Write([]byte("contents"))
 		}))
 		defer server.Close()
