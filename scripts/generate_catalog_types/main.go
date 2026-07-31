@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -17,7 +16,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var catalogSchemaVersionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
@@ -25,7 +23,6 @@ var catalogSchemaVersionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9
 const (
 	quicktypeVersion     = "26.0.0"
 	defaultSchemaBaseURL = "https://artifacts.tools.arm.com/devx-topo-project-catalog/"
-	generationTimeout    = 2 * time.Minute
 )
 
 func main() {
@@ -46,14 +43,11 @@ func run() error {
 	}
 	schemaURL := defaultSchemaBaseURL + url.PathEscape(catalogSchemaVersion) + "/catalog/catalog.schema.json"
 
-	ctx, cancel := context.WithTimeout(context.Background(), generationTimeout)
-	defer cancel()
-
 	outputFile, err := generatedOutputPath()
 	if err != nil {
 		return err
 	}
-	return generateTypes(ctx, schemaURL, catalogSchemaVersion, outputFile)
+	return generateTypes(schemaURL, catalogSchemaVersion, outputFile)
 }
 
 func validateCatalogVersion(version string) error {
@@ -72,17 +66,14 @@ func generatedOutputPath() (string, error) {
 	return filepath.Join(repositoryRoot, "internal", "catalog", "catalog_schema_generated.go"), nil
 }
 
-func generateTypes(ctx context.Context, schemaURL string, catalogVersion string, outputFile string) error {
+func generateTypes(schemaURL string, catalogVersion string, outputFile string) error {
 	// #nosec G702 -- schemaURL is passed as an argument without invoking a shell.
-	command := exec.CommandContext(ctx, "npx", "--yes", "quicktype@"+quicktypeVersion,
+	command := exec.Command("npx", "--yes", "quicktype@"+quicktypeVersion,
 		"--src-lang", "schema", "--lang", "go", "--package", "catalog",
 		"--top-level", "CatalogDocument", schemaURL)
 	command.Stderr = os.Stderr
 	generated, err := command.Output()
 	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return fmt.Errorf("quicktype timed out after %s while reading schema %q", generationTimeout, schemaURL)
-		}
 		if errors.Is(err, exec.ErrNotFound) {
 			return fmt.Errorf("starting quicktype failed: npx was not found; install Node.js 20 or newer: %w", err)
 		}
