@@ -29,7 +29,7 @@ func Get(ctx context.Context, rawURL string) ([]byte, error) {
 		return nil, fmt.Errorf("sending request failed: %w", err)
 	}
 
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+	if response.StatusCode != http.StatusOK {
 		statusErr := fmt.Errorf("request failed: HTTP %d (%s)", response.StatusCode, response.Status)
 		return nil, errors.Join(statusErr, response.Body.Close())
 	}
