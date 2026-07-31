@@ -53,14 +53,14 @@ export const homepageContent = {
         title: "Know the target is ready.",
         description:
           "Verify the host, SSH connection, target, and hardware before deploying.",
-        code: `topo health --target pi@raspberrypi`,
+        code: `topo health --target user@target.example`,
       },
       {
         label: "Discover",
         title: "Find projects that fit.",
         description:
           "Match projects to the capabilities available on the target device.",
-        code: `topo projects --target pi@raspberrypi`,
+        code: `topo projects --target user@target.example`,
       },
       {
         label: "Configure",
@@ -73,7 +73,7 @@ export const homepageContent = {
         title: "Ship over SSH.",
         description:
           "Configure, build, transfer, and start the Compose project on the target.",
-        code: `topo deploy --target pi@raspberrypi`,
+        code: `topo deploy --target user@target.example`,
       },
     ] as CodeExample[],
   },
