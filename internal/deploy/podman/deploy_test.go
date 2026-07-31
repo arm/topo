@@ -24,7 +24,9 @@ func TestDeploy(t *testing.T) {
 	err := podman.Deploy(t.Context(), io.Discard, composeFile)
 
 	require.NoError(t, err)
-	assertContainersRunning(t, projectName)
+	socket, err := podman.ResolveLocalComposeSocket(t.Context())
+	require.NoError(t, err)
+	assertContainersRunning(t, projectName, socket)
 }
 
 func requireLocalPodman(t *testing.T) {
@@ -40,9 +42,9 @@ func requireLocalPodman(t *testing.T) {
 	}
 }
 
-func assertContainersRunning(t *testing.T, projectName string) {
+func assertContainersRunning(t *testing.T, projectName string, socket podman.Socket) {
 	t.Helper()
-	cmd := podman.Command(t.Context(), "ps", "--format", "json", "--all",
+	cmd := podman.Command(t.Context(), socket, "ps", "--format", "json", "--all",
 		"--filter", "label=com.docker.compose.project="+projectName,
 	)
 	var diagnostics bytes.Buffer
@@ -84,7 +86,7 @@ CMD ["tail", "-f", "/dev/null"]
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		removeOutput, err := podman.Command(ctx, "image", "rm", "-f", imageName).CombinedOutput()
+		removeOutput, err := podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
@@ -97,7 +99,12 @@ func cleanupComposeProject(t *testing.T, composeFile string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := podman.ComposeCommand(ctx, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
+	socket, err := podman.ResolveLocalComposeSocket(ctx)
+	if err != nil {
+		t.Logf("failed to resolve local Podman Compose socket: %v", err)
+		return
+	}
+	cmd := podman.ComposeCommand(ctx, socket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("Podman Compose cleanup failed: %v: %s", err, output)
 	}
