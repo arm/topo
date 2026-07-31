@@ -24,9 +24,7 @@ func TestDeploy(t *testing.T) {
 	err := podman.Deploy(t.Context(), io.Discard, composeFile)
 
 	require.NoError(t, err)
-	socket, err := podman.ResolveLocalComposeSocket(t.Context())
-	require.NoError(t, err)
-	assertContainersRunning(t, projectName, socket)
+	assertContainersRunning(t, projectName, podman.LocalSocket)
 }
 
 func requireLocalPodman(t *testing.T) {
@@ -99,12 +97,11 @@ func cleanupComposeProject(t *testing.T, composeFile string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	socket, err := podman.ResolveLocalComposeSocket(ctx)
+	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
 	if err != nil {
-		t.Logf("failed to resolve local Podman Compose socket: %v", err)
+		t.Logf("failed to configure Podman Compose: %v", err)
 		return
 	}
-	cmd := podman.ComposeCommand(ctx, socket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("Podman Compose cleanup failed: %v: %s", err, output)
 	}
