@@ -7,7 +7,7 @@ import TabItem from "@theme/TabItem";
 
 # Install Topo
 
-Install Topo on a [host](glossary.md#host) to deploy applications to an Arm-based Linux [target](glossary.md#target). The host and target can be separate systems. You can also use one AArch64 Linux system as both the host and target.
+Install Topo on a [host](glossary.md#host) (your development machine) to deploy applications to an Arm-based Linux [target](glossary.md#target) via SSH. The host and target may be the same machine.
 
 ## Supported systems
 
@@ -15,9 +15,9 @@ Topo release binaries support the following host systems:
 
 | Host operating system | Host architecture       |
 | --------------------- | ----------------------- |
-| Linux                 | AMD64 and Arm64         |
-| macOS                 | Intel and Apple silicon |
-| Windows               | x64 and Arm64           |
+| Linux                 | Arm64 and x86_64        |
+| macOS                 | Apple silicon and Intel |
+| Windows               | Arm64 and x64           |
 
 A target must run Linux on AArch64 (`linux/arm64`). Topo uses Docker to build images on the host and run containers on the target.
 
@@ -29,7 +29,7 @@ Install the following tools on the host:
 - OpenSSH client
 - Git to clone [Topo Projects](glossary.md#topo-project) from Git repositories
 
-Topo also needs network access to download releases, clone projects, and pull container images. Network requirements vary by project because project builds can download additional dependencies.
+The Topo host needs network access to download releases, clone projects, and pull container images. Network requirements vary by project because project builds can download additional dependencies.
 
 ## Prepare the target
 

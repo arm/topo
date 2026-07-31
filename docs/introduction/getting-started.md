@@ -4,7 +4,7 @@ After you [install Topo](install.mdx), use this guide to check a [target](glossa
 
 :::note
 
-The commands in this guide use `pi@raspberrypi` as the target. Replace this value with the SSH destination for your target. Topo accepts an SSH alias, a value such as `user@host`, or a URL such as `ssh://user@host:2222`.
+The commands in this guide use `user@target.example` as an example SSH destination. Replace it with your target's SSH destination, such as an SSH alias, `user@hostname`, or `ssh://user@hostname:2222`.
 
 :::
 
@@ -13,15 +13,15 @@ The commands in this guide use `pi@raspberrypi` as the target. Replace this valu
 Run the health checks:
 
 ```sh
-topo health --target pi@raspberrypi
+topo health --target user@target.example
 ```
 
 Topo checks the required [host](glossary.md#host) tools, SSH connection, target container engine, and target hardware. Resolve all errors and review each warning. When available, the report includes commands to correct problems.
 
-If the target host key is unknown, confirm the target identity. Then run the suggested command to accept the key. If public-key authentication is not configured, run the following command after you accept the host key:
+If the target's SSH host key is unknown, confirm the target identity. Then run the suggested command to accept the key. If public-key authentication is not configured, run the following command after you accept the host key:
 
 ```sh
-topo setup-keys --target pi@raspberrypi
+topo setup-keys --target user@target.example
 ```
 
 This command creates a dedicated key, copies the public key to the target, and updates your SSH configuration. The target must permit password authentication for the initial key transfer. If it does not, configure a public key through your existing device management process.
@@ -33,7 +33,7 @@ Run `topo health` again and confirm that no checks report an error. You can igno
 List the available projects and check their compatibility with the target hardware:
 
 ```sh
-topo projects --target pi@raspberrypi
+topo projects --target user@target.example
 ```
 
 The output includes a clone command for each project.
@@ -54,7 +54,7 @@ Change to the project directory and deploy it:
 
 ```sh
 cd topo-welcome
-topo deploy --target pi@raspberrypi
+topo deploy --target user@target.example
 ```
 
 Topo builds or pulls the images on the host, transfers them to the target, and starts the services. Run commands that manage the deployment from the project directory. These commands use the `compose.yaml` file in the current directory.
@@ -64,19 +64,19 @@ Topo builds or pulls the images on the host, transfers them to the target, and s
 List the running containers for the project:
 
 ```sh
-topo ps --target pi@raspberrypi
+topo ps --target user@target.example
 ```
 
 Check the `Address` column in the `topo ps` output for accessible service endpoints.
 
-After you change the project, run `topo deploy --target pi@raspberrypi` again. Docker and Topo reuse cached layers where possible to reduce deployment time.
+After you change the project, run `topo deploy --target user@target.example` again. Docker and Topo reuse cached layers where possible to reduce deployment time.
 
 ## Stop the deployment
 
 From the project directory, stop the services:
 
 ```sh
-topo stop --target pi@raspberrypi
+topo stop --target user@target.example
 ```
 
 This command stops the services but does not remove their containers.

@@ -25,10 +25,10 @@ export const homepageContent = {
   meta: {
     title: "Topo",
     description:
-      "Discover Arm device capabilities and deploy containerised software over SSH.",
+      "Discover, configure, and deploy projects to SSH targets.",
   },
-  headline: "Build on your laptop. Run on Arm with Topo.",
-  lead: "Topo discovers Arm device features, automatically filters supported projects, and simplifies configuration and deployment of containerised software over SSH.",
+  headline: "Bootstrap and accelerate Arm Linux development with Topo",
+  lead: "Discover container-based projects which unlock the potential of your Arm device. Configure them for your use case. Deploy and iterate over SSH.",
   heroLinks: [
     {
       label: "Overview",
@@ -53,14 +53,14 @@ export const homepageContent = {
         title: "Know the target is ready.",
         description:
           "Verify the host, SSH connection, target, and hardware before deploying.",
-        code: `topo health --target pi@raspberrypi`,
+        code: `topo health --target user@target.example`,
       },
       {
         label: "Discover",
         title: "Find projects that fit.",
         description:
           "Match projects to the capabilities available on the target device.",
-        code: `topo projects --target pi@raspberrypi`,
+        code: `topo projects --target user@target.example`,
       },
       {
         label: "Configure",
@@ -73,7 +73,7 @@ export const homepageContent = {
         title: "Ship over SSH.",
         description:
           "Configure, build, transfer, and start the Compose project on the target.",
-        code: `topo deploy --target pi@raspberrypi`,
+        code: `topo deploy --target user@target.example`,
       },
     ] as CodeExample[],
   },
@@ -82,16 +82,16 @@ export const homepageContent = {
       label: "Getting started",
       title: "Install and deploy with Topo",
       description:
-        "Install Topo, check a target, and deploy your first project.",
+        "Install Topo and deploy your first project.",
       to: "/introduction/install",
       cta: "Install Topo",
       variant: "secondary",
     },
     {
       label: "Project specification",
-      title: "Build hardware-aware projects",
+      title: "Author your own Topo Projects",
       description:
-        "Add Topo metadata to a standard Compose project.",
+        "Add Topo metadata to a standard Compose project to enable hardware compatibility matching and configuration.",
       to: "/project-specification",
       cta: "Read the specification",
       variant: "secondary",
