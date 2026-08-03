@@ -163,15 +163,10 @@
 }
 
 .heroDiagram {
-  color: #000;
   display: block;
   height: auto;
   width: 100%;
   max-width: 100%;
-}
-
-:global(html[data-theme="dark"]) .heroDiagram {
-  color: #fff;
 }
 
 @media screen and (min-width: 1440px) {
