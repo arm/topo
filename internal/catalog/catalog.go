@@ -1,5 +1,7 @@
 package catalog
 
+//go:generate go run ../../scripts/generate_catalog_types v2.0.0
+
 import (
 	"context"
 	"encoding/json"

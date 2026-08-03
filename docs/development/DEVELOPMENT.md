@@ -90,15 +90,15 @@ The documentation preview is available at `http://localhost:3000` and automatica
 
 ## Updating the catalog schema
 
-Topo uses the catalog version declared in `internal/catalog/catalog_schema_generated.go`. The same version selects both the catalog and its schema from Artifactory.
+The catalog schema version is declared by the `go:generate` directive in `internal/catalog/catalog.go` and copied into `internal/catalog/catalog_schema_generated.go`. Its major component also selects the catalog version used by Topo.
 
-Generating the Go types requires Node.js 20 or newer, `npx`, and access to the internet. Pass the catalog version to the generator:
+Generating the Go types requires Node.js 20 or newer, `npx`, and access to the internet. From the repository root, run:
 
 ```sh
-go run ./scripts/generate_catalog_types v1
+go generate ./internal/catalog
 ```
 
-The generator downloads that version's `catalog.schema.json`, generates the catalog Go types with the pinned Quicktype version, and rewrites `internal/catalog/catalog_schema_generated.go`. To move to another published major version, replace `v1` with that version.
+The generator downloads the configured version's `catalog.schema.json`, generates the catalog Go types with the pinned Quicktype version, and rewrites `internal/catalog/catalog_schema_generated.go`. To use another schema release, update the directive in `internal/catalog/catalog.go` and rerun the command.
 
 Commit the newly generated catalog schema types file and raise a PR to update the main branch.
 
