@@ -169,6 +169,9 @@ func deleteContainer(containerName string) {
 }
 
 func acceptHostKey(c *Container) error {
+	// Published ports are reused, so remove a key left by an earlier ephemeral
+	// container before accepting the key for this container.
+	removeHostKey(c)
 	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("ssh", c.SSHDestination, "-o", "StrictHostKeyChecking=accept-new", "true")
 	output, err := cmd.CombinedOutput()

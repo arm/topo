@@ -65,7 +65,8 @@ func TestListProjectsFromURL(t *testing.T) {
 		_, err := catalog.ListProjectsFromURL(context.Background(), url)
 
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "failed to unmarshal catalog")
+		assert.ErrorContains(t, err, "failed to parse catalog")
+		assert.ErrorContains(t, err, `requested catalog version "" is incompatible`)
 	})
 
 	t.Run("reports catalog and schema versions when incompatible catalog fails to unmarshal", func(t *testing.T) {
@@ -81,7 +82,7 @@ func TestListProjectsFromURL(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, fmt.Sprintf(
-			`catalog version %q differs from generated schema version %q`,
+			`requested catalog version %q is incompatible with supported schema version %q`,
 			catalogVersion,
 			catalog.CatalogSchemaVersion,
 		))
@@ -91,8 +92,10 @@ func TestListProjectsFromURL(t *testing.T) {
 func asJSON(projects []catalog.Project) []byte {
 	data, err := json.Marshal(struct {
 		Projects []catalog.Project `json:"projects"`
+		Version  string            `json:"version"`
 	}{
 		Projects: projects,
+		Version:  catalog.CatalogSchemaVersion,
 	})
 	if err != nil {
 		panic(err)

@@ -34,16 +34,18 @@ func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 
 func parseProjects(b []byte) ([]Project, error) {
 	catalogVersion, versionErr := unmarshalCatalogVersion(b)
+	catalogVersionMajor := majorVersion(catalogVersion)
+	SchemaVersionMajor := majorVersion(CatalogSchemaVersion)
+	if catalogVersionMajor != SchemaVersionMajor {
+		return nil, fmt.Errorf(
+			"failed to parse catalog: requested catalog version %q is incompatible with supported schema version %q: %w",
+			catalogVersion,
+			CatalogSchemaVersion,
+			versionErr,
+		)
+	}
 	catalog, err := UnmarshalCatalogDocument(b)
 	if err != nil {
-		if versionErr == nil && catalogVersion != "" && catalogVersion != CatalogSchemaVersion {
-			return nil, fmt.Errorf(
-				"failed to parse catalog: requested catalog version %q is incompatible with supported schema version %q: %w",
-				catalogVersion,
-				CatalogSchemaVersion,
-				err,
-			)
-		}
 		return nil, fmt.Errorf("failed to unmarshal catalog: %w", err)
 	}
 	return catalog.Projects, nil
