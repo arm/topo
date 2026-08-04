@@ -38,7 +38,7 @@ func parseProjects(b []byte) ([]Project, error) {
 	if err != nil {
 		if versionErr == nil && catalogVersion != "" && catalogVersion != CatalogSchemaVersion {
 			return nil, fmt.Errorf(
-				"failed to unmarshal catalog: catalog version %q differs from generated schema version %q: %w",
+				"failed to parse catalog: requested catalog version %q is incompatible with supported schema version %q: %w",
 				catalogVersion,
 				CatalogSchemaVersion,
 				err,
