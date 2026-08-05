@@ -138,7 +138,7 @@ jobs:
         run: |
           publisher_run_url="$(gh workflow run sign-and-release.yml \
             --repo Arm-Debug/topo-publisher \
-            --ref v10 \
+            --ref retry-for-mac \
             --field source-run-id="${{ github.run_id }}" \
             --field release-version="$VERSION" \
             --field pre-release="${{ inputs.pre-release }}")"
