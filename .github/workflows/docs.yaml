@@ -1,0 +1,65 @@
+name: Docs CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+
+      - name: Generate docs config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./docs/scripts/generate-docs-config.sh --include-head
+
+      - name: Validate docs site
+        uses: ARM-software/docs-action/validate@v0.2.0
+        with:
+          docs-root: docs
+          site-id: topo
+
+  publish-staging:
+    needs: validate
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+
+      - name: Generate docs config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./docs/scripts/generate-docs-config.sh --include-head
+
+      - name: AWS GitHub OIDC Login
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: arn:aws:iam::529607359382:role/Proj-GHA-topo-s3-upload
+          aws-region: eu-west-1
+
+      - name: Publish docs site
+        uses: ARM-software/docs-action/publish@v0.2.0
+        with:
+          docs-root: docs
+          site-id: topo
+          environment: staging
