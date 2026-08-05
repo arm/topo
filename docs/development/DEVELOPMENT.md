@@ -87,3 +87,19 @@ docker compose up
 ```
 
 The documentation preview is available at `http://localhost:3000` and automatically reloads when files change.
+
+## Updating the catalog schema
+
+The catalog schema version is declared by the `go:generate` directive in `internal/catalog/catalog.go` and copied into `internal/catalog/catalog_schema_generated.go`. Its major component also selects the catalog version used by Topo.
+
+Generating the Go types requires Node.js 20 or newer, `npx`, and access to the internet. From the repository root, run:
+
+```sh
+go generate ./internal/catalog
+```
+
+The generator downloads the configured version's `catalog.schema.json`, generates the catalog Go types with the pinned Quicktype version, and rewrites `internal/catalog/catalog_schema_generated.go`. To use another schema release, update the directive in `internal/catalog/catalog.go` and rerun the command.
+
+Commit the newly generated catalog schema types file and raise a PR to update the main branch.
+
+Available catalog versions and schemas are published in the [Topo Project Catalog Artifactory repository](https://artifacts.tools.arm.com/devx-topo-project-catalog/).

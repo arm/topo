@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 
 	archiveutil "github.com/arm/topo/internal/archive"
+	"github.com/arm/topo/internal/fetch"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/version"
@@ -100,26 +99,10 @@ func BinaryName(name string) string {
 }
 
 func downloadArchive(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create download request: %w", err)
-	}
-	// #nosec G704 -- request to a hardcoded, trusted URL
-	resp, err := http.DefaultClient.Do(req)
+	data, err := fetch.Get(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download archive: %w", err)
 	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to download archive from %s: HTTP %d", url, resp.StatusCode)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read archive: %w", err)
-	}
-
 	return data, nil
 }
 

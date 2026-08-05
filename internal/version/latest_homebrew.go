@@ -3,11 +3,9 @@ package version
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"regexp"
 
-	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/fetch"
 )
 
 const HomebrewFormulaURL = "https://raw.githubusercontent.com/arm/homebrew-topo/main/Formula/topo.rb"
@@ -15,30 +13,9 @@ const HomebrewFormulaURL = "https://raw.githubusercontent.com/arm/homebrew-topo/
 var homebrewFormulaVersionRe = regexp.MustCompile(`(?m)^\s*version\s+"([^"]+)"\s*$`)
 
 func FetchLatestHomebrew(ctx context.Context, formulaURL string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, formulaURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("creating Homebrew formula request: %w", err)
-	}
-
-	// #nosec G704 -- request to a hardcoded, trusted URL
-	resp, err := http.DefaultClient.Do(req)
+	body, err := fetch.Get(ctx, formulaURL)
 	if err != nil {
 		return "", fmt.Errorf("fetching Homebrew formula: %w", err)
-	}
-	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
-			logger.Error(fmt.Sprintf("failed to close Homebrew formula response body: %v", err))
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("fetching Homebrew formula: HTTP %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("reading Homebrew formula: %w", err)
 	}
 
 	return ParseHomebrewFormulaVersion(string(body))

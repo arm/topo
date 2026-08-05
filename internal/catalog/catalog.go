@@ -1,41 +1,28 @@
 package catalog
 
+//go:generate go run ../../scripts/generate_catalog_types v2.0.0
+
 import (
-	"bytes"
 	"context"
-	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"strings"
 
-	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/arm/topo/internal/fetch"
 )
 
-//go:embed data/catalog.json
-var catalogJSON []byte
+type Project = ProjectElement
 
-//go:embed data/catalog.schema.json
-var catalogSchemaJSON []byte
+var (
+	majorCatalogVersion = majorVersion(CatalogSchemaVersion)
+	defaultURL          = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + majorCatalogVersion + "/catalog/"
+	DefaultCatalogURL   = defaultURL + "catalog.json"
+)
 
-type catalogDocument struct {
-	Schema   string    `json:"$schema,omitempty"`
-	Projects []Project `json:"projects"`
-}
-
-type Project struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Features    []string `json:"features"`
-	URL         string   `json:"url"`
-	Ref         string   `json:"ref"`
-}
-
-func ListBuiltinProjects() ([]Project, error) {
-	return parseProjects(catalogJSON)
+func majorVersion(version string) string {
+	major, _, _ := strings.Cut(version, ".")
+	return major
 }
 
 func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
@@ -47,39 +34,31 @@ func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 }
 
 func parseProjects(b []byte) ([]Project, error) {
-	if err := validateAgainstSchema(b); err != nil {
-		return nil, fmt.Errorf("failed schema validation: %w", err)
+	catalogVersion, versionErr := unmarshalCatalogVersion(b)
+	schemaVersionMajor := majorVersion(CatalogSchemaVersion)
+	if majorVersion(catalogVersion) != schemaVersionMajor {
+		return nil, fmt.Errorf(
+			"failed to parse catalog: requested catalog version %q is incompatible with supported schema version %q: %w",
+			catalogVersion,
+			CatalogSchemaVersion,
+			versionErr,
+		)
 	}
-
-	var catalog catalogDocument
-	if err := json.Unmarshal(b, &catalog); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal projects: %w", err)
+	catalog, err := UnmarshalCatalogDocument(b)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal catalog: %w", err)
 	}
-
 	return catalog.Projects, nil
 }
 
-func validateAgainstSchema(b []byte) error {
-	const projectsSchemaURL = "https://raw.githubusercontent.com/arm/topo/main/internal/catalog/data/catalog.schema.json"
-
-	compiler := jsonschema.NewCompiler()
-	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(catalogSchemaJSON))
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal schema: %w", err)
+func unmarshalCatalogVersion(b []byte) (string, error) {
+	var header struct {
+		Version string `json:"version"`
 	}
-	if err := compiler.AddResource(projectsSchemaURL, schemaDoc); err != nil {
-		return fmt.Errorf("failed to add schema resource: %w", err)
+	if err := json.Unmarshal(b, &header); err != nil {
+		return "", err
 	}
-	schema, err := compiler.Compile(projectsSchemaURL)
-	if err != nil {
-		return fmt.Errorf("failed to compile schema: %w", err)
-	}
-
-	jsonDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal projects: %w", err)
-	}
-	return schema.Validate(jsonDoc)
+	return header.Version, nil
 }
 
 func fetchProjectsJSON(ctx context.Context, url string) ([]byte, error) {
@@ -92,42 +71,9 @@ func fetchProjectsJSON(ctx context.Context, url string) ([]byte, error) {
 		return data, nil
 	}
 
-	data, err := httpGet(ctx, url)
+	data, err := fetch.Get(ctx, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch project: %w", err)
 	}
 	return data, nil
-}
-
-func httpGet(ctx context.Context, rawURL string) ([]byte, error) {
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return nil, err
-	}
-
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported URL scheme: %s", parsedURL.Scheme)
-	}
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		parsedURL.String(),
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.DefaultClient.Do(req) // #nosec G704 -- URL is explicitly provided by the CLI user and scheme-validated above.
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close() // nolint:errcheck
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("request failed: %s", resp.Status)
-	}
-
-	return io.ReadAll(resp.Body)
 }
