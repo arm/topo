@@ -15,8 +15,9 @@ import (
 type Project = ProjectElement
 
 var (
-	defaultURL        = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + majorVersion(CatalogSchemaVersion) + "/catalog/"
-	DefaultCatalogURL = defaultURL + "catalog.json"
+	majorCatalogVersion = majorVersion(CatalogSchemaVersion)
+	defaultURL          = "https://artifacts.tools.arm.com/devx-topo-project-catalog/" + majorCatalogVersion + "/catalog/"
+	DefaultCatalogURL   = defaultURL + "catalog.json"
 )
 
 func majorVersion(version string) string {
@@ -34,9 +35,8 @@ func ListProjectsFromURL(ctx context.Context, url string) ([]Project, error) {
 
 func parseProjects(b []byte) ([]Project, error) {
 	catalogVersion, versionErr := unmarshalCatalogVersion(b)
-	catalogVersionMajor := majorVersion(catalogVersion)
-	SchemaVersionMajor := majorVersion(CatalogSchemaVersion)
-	if catalogVersionMajor != SchemaVersionMajor {
+	schemaVersionMajor := majorVersion(CatalogSchemaVersion)
+	if majorVersion(catalogVersion) != schemaVersionMajor {
 		return nil, fmt.Errorf(
 			"failed to parse catalog: requested catalog version %q is incompatible with supported schema version %q: %w",
 			catalogVersion,

@@ -69,7 +69,21 @@ func TestListProjectsFromURL(t *testing.T) {
 		assert.ErrorContains(t, err, `requested catalog version "" is incompatible`)
 	})
 
-	t.Run("reports catalog and schema versions when incompatible catalog fails to unmarshal", func(t *testing.T) {
+	t.Run("errors when catalog fails to unmarshal", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "file.json")
+		testutil.RequireWriteFile(t, path, fmt.Sprintf(
+			`{"projects":"invalid","version":%q}`,
+			catalog.CatalogSchemaVersion,
+		))
+
+		url := fmt.Sprintf("file://%s", path)
+		_, err := catalog.ListProjectsFromURL(context.Background(), url)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to unmarshal catalog")
+	})
+
+	t.Run("reports incompatible catalog", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "file.json")
 		catalogVersion := "v0.0.0"
 		if catalogVersion == catalog.CatalogSchemaVersion {
