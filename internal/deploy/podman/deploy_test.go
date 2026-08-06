@@ -3,27 +3,54 @@ package podman_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/ssh"
+	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDeploy(t *testing.T) {
 	requireLocalPodman(t)
-	composeFile := deploymentFixture(t)
-	t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
 
-	err := podman.Deploy(t.Context(), io.Discard, composeFile)
+	t.Run("deploys to localhost", func(t *testing.T) {
+		composeFile, projectName := deploymentFixture(t)
+		t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
+		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-	require.NoError(t, err)
-	assertContainersRunning(t, composeFile)
+		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+
+		require.NoError(t, err)
+		assertContainersRunning(t, projectName, podman.LocalSocket)
+	})
+
+	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
+		target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
+		composeFile, projectName := deploymentFixture(t)
+		fixPodmanInDockerQuirk(t, composeFile)
+		targetHost := ssh.NewDestination(target.SSHDestination)
+		options := podman.DeployOptions{TargetHost: targetHost}
+
+		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+
+		require.NoError(t, err)
+		tunnel, err := ssh.OpenTCPToUnixSocketTunnel(context.Background(), io.Discard, targetHost, "/run/podman/podman.sock")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, tunnel.Close())
+		})
+		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
+	})
 }
 
 func requireLocalPodman(t *testing.T) {
@@ -39,24 +66,27 @@ func requireLocalPodman(t *testing.T) {
 	}
 }
 
-func assertContainersRunning(t *testing.T, composeFile string) {
+func assertContainersRunning(t *testing.T, projectName string, socket podman.Socket) {
 	t.Helper()
-	cmd := podman.ComposeCommand(t.Context(), composeFile, "ps", "--format", "json", "--all")
+	cmd := podman.Command(t.Context(), socket,
+		"ps", "--format", "json", "--all",
+		"--filter", "label=com.docker.compose.project="+projectName,
+	)
 	var diagnostics bytes.Buffer
 	cmd.Stderr = &diagnostics
 	output, err := cmd.Output()
 	require.NoError(t, err, "stdout: %s\nstderr: %s", output, diagnostics.String())
-	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported; stderr: %s", diagnostics.String())
 
-	containers, err := unmarshalNDJSON(output)
-	require.NoError(t, err)
+	var containers []map[string]any
+	require.NoError(t, json.Unmarshal(output, &containers))
+	require.NotEmpty(t, containers, "no containers reported; stderr: %s", diagnostics.String())
 
 	for _, container := range containers {
-		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Name"], container["State"])
+		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Names"], container["State"])
 	}
 }
 
-func deploymentFixture(t *testing.T) string {
+func deploymentFixture(t *testing.T) (string, string) {
 	t.Helper()
 	tempDir := t.TempDir()
 	testName := sanitiseTestName(t)
@@ -81,12 +111,40 @@ CMD ["tail", "-f", "/dev/null"]
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		removeOutput, err := podman.Command(ctx, "image", "rm", "-f", imageName).CombinedOutput()
+		removeOutput, err := podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	return composeFile
+	return composeFile, "test-project-" + testName
+}
+
+// fixPodmanInDockerQuirk avoids a Docker Desktop nested-container restriction.
+// The Podman target inherits oom_score_adj: 200, but Podman otherwise starts
+// each service with oom_score_adj: 0. Docker Desktop rejects that decrease, so
+// this adds oom_score_adj: 200 to each fixture service, for example:
+//
+//	services:
+//	  app:
+//	    oom_score_adj: 200
+func fixPodmanInDockerQuirk(t *testing.T, composeFile string) {
+	t.Helper()
+	contents, err := os.ReadFile(composeFile)
+	require.NoError(t, err)
+
+	var definition map[string]any
+	require.NoError(t, yaml.Unmarshal(contents, &definition))
+	services, ok := definition["services"].(map[string]any)
+	require.True(t, ok, "Compose file services must be a mapping")
+	for name, value := range services {
+		service, ok := value.(map[string]any)
+		require.Truef(t, ok, "service %q must be a mapping", name)
+		service["oom_score_adj"] = 200
+	}
+
+	contents, err = yaml.Marshal(definition)
+	require.NoError(t, err)
+	requireWriteFile(t, composeFile, string(contents))
 }
 
 func cleanupComposeProject(t *testing.T, composeFile string) {
@@ -94,7 +152,11 @@ func cleanupComposeProject(t *testing.T, composeFile string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := podman.ComposeCommand(ctx, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
+	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
+	if err != nil {
+		t.Logf("failed to configure Podman Compose: %v", err)
+		return
+	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("Podman Compose cleanup failed: %v: %s", err, output)
 	}

@@ -11,22 +11,32 @@ import (
 
 const composeProvider = "docker-compose"
 
-func Command(ctx context.Context, args ...string) *exec.Cmd {
-	return exec.CommandContext(ctx, "podman", args...)
+func Command(ctx context.Context, socket Socket, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "podman", args...)
+	cmd.Env = socket.ConfigurePodmanEnv(os.Environ())
+	return cmd
 }
 
-func ComposeCommand(ctx context.Context, composeFile string, args ...string) *exec.Cmd {
+func ComposeCommand(ctx context.Context, socket Socket, composeFile string, args ...string) (*exec.Cmd, error) {
 	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
 	cmd := exec.CommandContext(ctx, "podman", composeArgs...)
 	cmd.Env = append(os.Environ(),
 		"PODMAN_COMPOSE_PROVIDER="+composeProvider,
 		"PODMAN_COMPOSE_WARNING_LOGS=false",
 	)
-	return cmd
+	var err error
+	cmd.Env, err = socket.ConfigureComposeEnv(cmd.Env)
+	if err != nil {
+		return nil, err
+	}
+	return cmd, nil
 }
 
-func RunComposeCommand(ctx context.Context, output io.Writer, composeFile string, args ...string) error {
-	cmd := ComposeCommand(ctx, composeFile, args...)
+func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, composeFile string, args ...string) error {
+	cmd, err := ComposeCommand(ctx, socket, composeFile, args...)
+	if err != nil {
+		return err
+	}
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Run(); err != nil {
