@@ -1,6 +1,7 @@
 package compose_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -223,5 +224,45 @@ services:
 		require.NoError(t, err)
 
 		assert.YAMLEq(t, composeFileContents, string(got))
+	})
+
+	t.Run("inherits environment variables from .env file", func(t *testing.T) {
+		dir := t.TempDir()
+		serviceName := "test-service"
+		composeFileContents := fmt.Sprintf(`
+name: test
+services:
+  %s:
+    image: ${IMAGE_NAME}
+`, serviceName)
+		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
+		imageName := "image-from-env"
+		testutil.RequireWriteFile(t, filepath.Join(dir, ".env"), fmt.Sprintf("IMAGE_NAME=%s", imageName))
+
+		proj, err := compose.ReadProject(composeFilePath)
+		require.NoError(t, err)
+
+		require.Contains(t, proj.Services, serviceName)
+		require.Equal(t, proj.Services[serviceName].Image, imageName)
+	})
+
+	t.Run("inherits env vars from environment", func(t *testing.T) {
+		dir := t.TempDir()
+		serviceName := "test-service"
+		composeFileContents := fmt.Sprintf(`
+name: test
+services:
+  %s:
+    image: ${IMAGE_NAME}
+`, serviceName)
+		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
+		imageName := "image-from-env"
+		t.Setenv("IMAGE_NAME", imageName)
+
+		proj, err := compose.ReadProject(composeFilePath)
+		require.NoError(t, err)
+
+		require.Contains(t, proj.Services, serviceName)
+		require.Equal(t, proj.Services[serviceName].Image, imageName)
 	})
 }
