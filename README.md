@@ -1,6 +1,6 @@
 # Topo
 
-Discover and deploy containerised software to Arm hardware over SSH.
+Discover, configure, and deploy containerised software to Arm hardware over SSH.
 
 Point Topo at any Arm-based Linux device to discover Topo Projects that showcase its capabilities. Pick one and Topo helps you configure it for your use case, then deploys it in minutes. The result? A standard Docker Compose project to learn from, modify, or use as a starting point for your own work.
 
