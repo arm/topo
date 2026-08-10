@@ -47,7 +47,16 @@ func ReadProject(targetProjectFile string) (*types.Project, error) {
 		[]string{targetProjectFile},
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
+		cli.WithEnvFiles(),
 	)
+	if err != nil {
+		return nil, err
+	}
+	err = cli.WithOsEnv(options)
+	if err != nil {
+		return nil, err
+	}
+	err = cli.WithDotEnv(options)
 	if err != nil {
 		return nil, err
 	}
