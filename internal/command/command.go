@@ -24,7 +24,7 @@ func QuoteArg(s string) string {
 		return "''"
 	}
 
-	if strings.ContainsAny(s, " \t\n\"'\\$`") {
+	if strings.ContainsAny(s, " \t\n\"'\\/[/]$`") {
 		return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
 	}
 

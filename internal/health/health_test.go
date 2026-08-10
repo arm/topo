@@ -133,7 +133,7 @@ func TestGenerateTargetReport(t *testing.T) {
 
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
 		assert.Equal(t, "Remove the old SSH host key from known_hosts, then retry", got.Connectivity.Fix.Description)
-		assert.Equal(t, "ssh-keygen -R \"[my-target]:2222\"", got.Connectivity.Fix.Command)
+		assert.Equal(t, "ssh-keygen -R '[my-target]:2222'", got.Connectivity.Fix.Command)
 	})
 }
 

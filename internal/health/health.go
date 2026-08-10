@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
@@ -174,7 +175,7 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 		sshConfig := ssh.NewConfig(status.Destination)
 		check.Fix = &Fix{
 			Description: "Remove the old SSH host key from known_hosts, then retry",
-			Command:     fmt.Sprintf("ssh-keygen -R %q", sshConfig.AsKnownHostsEntry()),
+			Command:     fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(sshConfig.AsKnownHostsEntry())),
 		}
 	}
 	return check
