@@ -46,7 +46,7 @@ Clone the project:
 topo clone https://github.com/Arm-Examples/topo-welcome.git
 ```
 
-When you run the `topo clone` command, Topo prompts for values that configure the project. You can also pass values through the command line or a configuration file.
+When you run the `topo clone` command, Topo prompts for values that configure the project. Alternatively, you can also pass values through the command line directly.
 
 ## Deploy the project
 
