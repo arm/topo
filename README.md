@@ -26,7 +26,7 @@ $ topo clone https://github.com/Arm-Examples/topo-llama-web-ui.git
 Provide: Choose which Large Language Model you wish to use
 Example: Qwen/Qwen2.5-Coder-7B-Instruct-GGUF
 Default: unsloth/SmolLM2-135M-Instruct-GGUF
-MODEL> google/gemma-7b
+MODEL> microsoft/Phi-3-mini-4k-instruct-gguf
 ```
 
 ### Deploy
