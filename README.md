@@ -2,8 +2,7 @@
 
 Discover, configure, and deploy containerised software to Arm hardware over SSH.
 
-### Discover
-Point Topo at any Arm-based Linux device to discover [Topo Projects](docs/project-specification/README.md) that showcase its capabilities.
+*Discover* - Point Topo at any Arm-based Linux device to discover [Topo Projects](docs/project-specification/README.md) that showcase its capabilities.
 
 ```console
 $ topo projects --target user@my-linux-device
@@ -16,8 +15,7 @@ $ topo projects --target user@my-linux-device
 ...
 ```
 
-### Configure 
-Topo Projects extend Docker Compose with additional metadata, allowing Topo to configure Projects for your use case.
+*Configure* - Topo Projects extend Docker Compose with additional metadata, allowing Topo to configure Projects for your use case.
 
 ```console
 $ topo clone https://github.com/Arm-Examples/topo-llama-web-ui.git
@@ -29,8 +27,7 @@ Default: unsloth/SmolLM2-135M-Instruct-GGUF
 MODEL> microsoft/Phi-3-mini-4k-instruct-gguf
 ```
 
-### Deploy
-One command to build your project, transfer it over SSH to your Linux target, and launch it. Deploys are idempotent and use container image caching to enable rapid iteration as you make changes.
+*Deploy* - One command to build your project, transfer it over SSH to your Linux target, and launch it.
 
 ```console
 $ topo deploy --target user@my-linux-device
