@@ -159,4 +159,27 @@ x-topo:
 
 		assert.YAMLEq(t, want, got)
 	})
+
+	t.Run("leaves skipped optional parameters unchanged", func(t *testing.T) {
+		dir := t.TempDir()
+		composeFileContents := `services:
+  app:
+    build:
+      args:
+        FOO: current
+x-topo:
+  parameters:
+    FOO:
+      required: false
+      default: default
+`
+		composeFilePath := filepath.Join(dir, project.ComposeFilename)
+		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
+		argProvider := arguments.NewStrictProviderChain(arguments.NewStaticProvider())
+
+		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
+
+		require.NoError(t, err)
+		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
+	})
 }
