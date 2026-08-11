@@ -1,8 +1,9 @@
 package arguments
 
-import "strings"
-
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // StrictProviderChain chains multiple providers and ensures all required arguments are resolved.
 // It stops early once all required arguments are satisfied.
@@ -37,10 +38,6 @@ func (p *StrictProviderChain) Provide(args []Arg) ([]ResolvedArg, error) {
 		if allRequiredProvided(args, provided) {
 			break
 		}
-	}
-
-	if len(remaining) > 0 {
-		defaultNonProvided(remaining, provided)
 	}
 
 	if err := validateRequiredProvided(args, provided); err != nil {
@@ -91,14 +88,6 @@ func allRequiredProvided(args []Arg, provided map[string]string) bool {
 		}
 	}
 	return true
-}
-
-func defaultNonProvided(remaining []Arg, provided map[string]string) {
-	for _, arg := range remaining {
-		if arg.Default != "" {
-			provided[arg.Name] = arg.Default
-		}
-	}
 }
 
 func validateRequiredProvided(args []Arg, provided map[string]string) error {
