@@ -50,7 +50,7 @@ Because this is valid Compose, any Project can be run with plain `docker compose
 A curated project catalog can be found either via:
 
 - the [topo projects](https://github.com/arm/topo#2-find-a-topo-project) command or
-- the [Topo Project Catalog](https://github.com/arm/topo-project-catalog/blob/main/data/catalog.json).
+- the [published Topo Project Catalog](https://artifacts.tools.arm.com/devx-topo-project-catalog/v2/catalog/catalog.json).
 
 We welcome any contributors who wish to add their own Project to the project catalog to submit a Pull Request as indicated below.
 
@@ -59,7 +59,7 @@ We welcome any contributors who wish to add their own Project to the project cat
 If you want your Project to be added to the project catalog:
 
 1. Review the [Authoring Topo Projects section of the Specification](01-authoring-projects.md).
-2. [Validate Schema Compliance](./README.md#validate-schema-compliance) of your proposed Project.
+2. [Validate Schema Compliance](#validate-schema-compliance) of your proposed Project.
 3. Open a Pull Request in the `Topo Project Catalog` repository to update the [catalog sources](https://github.com/arm/topo-project-catalog/blob/main/data/github_sources.json).
 
 ### Validate Schema Compliance
