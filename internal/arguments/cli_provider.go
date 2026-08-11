@@ -36,7 +36,7 @@ func (p *CLIProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 
 	for key := range p.input {
 		if !seen[key] {
-			return nil, fmt.Errorf("unknown argument: %s", key)
+			return nil, fmt.Errorf("unknown parameter: %s", key)
 		}
 	}
 

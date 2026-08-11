@@ -76,7 +76,7 @@ func TestConfigure(t *testing.T) {
 		out, err := cmd.CombinedOutput()
 
 		require.Error(t, err)
-		assert.Contains(t, string(out), "unknown argument: UNKNOWN")
+		assert.Contains(t, string(out), "unknown parameter: UNKNOWN")
 		got := testutil.RequireReadFile(t, composePath)
 		assert.Equal(t, original, got)
 	})

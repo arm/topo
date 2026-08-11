@@ -52,7 +52,7 @@ func TestCLIProvider(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid argument format")
 	})
 
-	t.Run("errors on unknown argument", func(t *testing.T) {
+	t.Run("errors on unknown parameter", func(t *testing.T) {
 		provider, err := arguments.NewCLIProvider([]string{"UNKNOWN=value"})
 		require.NoError(t, err)
 
@@ -63,7 +63,7 @@ func TestCLIProvider(t *testing.T) {
 		_, err = provider.Provide(args)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unknown argument: UNKNOWN")
+		assert.Contains(t, err.Error(), "unknown parameter: UNKNOWN")
 	})
 
 	t.Run("returns arguments in requested order", func(t *testing.T) {
