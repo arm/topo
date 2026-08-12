@@ -285,6 +285,46 @@ services:
 		assert.YAMLEq(t, want, string(got))
 	})
 
+	t.Run("extended services add resolved args missing from existing build args", func(t *testing.T) {
+		project := yamlToNode(t, `
+services:
+  mapping-args:
+    extends:
+      service: base
+    build:
+      args:
+        EXISTING: value
+  sequence-args:
+    extends:
+      service: base
+    build:
+      args: ["EXISTING=value"]
+`)
+		args := map[string]string{"PLATFORM": "my-cool-platform"}
+
+		err := compose.ApplyArgs(project, args)
+
+		require.NoError(t, err)
+		got, err := yaml.Marshal(project)
+		require.NoError(t, err)
+		want := `
+services:
+  mapping-args:
+    extends:
+      service: base
+    build:
+      args:
+        EXISTING: value
+        PLATFORM: my-cool-platform
+  sequence-args:
+    extends:
+      service: base
+    build:
+      args: ["EXISTING=value", "PLATFORM=my-cool-platform"]
+`
+		assert.YAMLEq(t, want, string(got))
+	})
+
 	t.Run("mixed services with extends and inline build args both get args applied", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:

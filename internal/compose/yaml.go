@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
@@ -44,35 +43,31 @@ func ApplyArgs(root *yaml.Node, toApply map[string]string) error {
 
 	for i := 0; i < len(services.Content); i += 2 {
 		svc := services.Content[i+1]
-		hasExtends := find(svc, "extends") != nil
-		build := find(svc, "build")
+		addMissing := find(svc, "extends") != nil
 
+		build := find(svc, "build")
 		if build == nil {
-			if !hasExtends {
+			if !addMissing {
 				continue
 			}
-			argsNode := newArgsMappingNode(toApply, used)
-			build = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-			build.Content = append(build.Content, scalarNode("args"), argsNode)
+			build = mappingNode()
 			svc.Content = append(svc.Content, scalarNode("build"), build)
-			continue
 		}
 
 		args := find(build, "args")
 		if args == nil {
-			if !hasExtends {
+			if !addMissing {
 				continue
 			}
-			argsNode := newArgsMappingNode(toApply, used)
-			build.Content = append(build.Content, scalarNode("args"), argsNode)
-			continue
+			args = mappingNode()
+			build.Content = append(build.Content, scalarNode("args"), args)
 		}
 
 		switch args.Kind {
 		case yaml.MappingNode:
-			applyArgsMappingNode(args, toApply, used)
+			applyArgsMappingNode(args, toApply, used, addMissing)
 		case yaml.SequenceNode:
-			applyArgsSequenceNode(args, toApply, used)
+			applyArgsSequenceNode(args, toApply, used, addMissing)
 		default:
 			return fmt.Errorf("unsupported YAML node kind for build.args: %v", args.Kind)
 		}
@@ -100,7 +95,9 @@ func WriteNode(project *yaml.Node, target io.Writer) error {
 	return nil
 }
 
-func applyArgsMappingNode(args *yaml.Node, toApply map[string]string, used map[string]bool) {
+func applyArgsMappingNode(args *yaml.Node, toApply map[string]string, used map[string]bool, add bool) {
+	changed := map[string]bool{}
+
 	for j := 0; j < len(args.Content); j += 2 {
 		k := args.Content[j]
 		v := args.Content[j+1]
@@ -108,12 +105,24 @@ func applyArgsMappingNode(args *yaml.Node, toApply map[string]string, used map[s
 			if k.Value == argName {
 				v.Value = argValue
 				used[argName] = true
+				changed[argName] = true
+			}
+		}
+	}
+
+	if add && len(changed) < len(toApply) {
+		for argName, argValue := range toApply {
+			if !changed[argName] {
+				args.Content = append(args.Content, scalarNode(argName), scalarNode(argValue))
+				used[argName] = true
 			}
 		}
 	}
 }
 
-func applyArgsSequenceNode(args *yaml.Node, toApply map[string]string, used map[string]bool) {
+func applyArgsSequenceNode(args *yaml.Node, toApply map[string]string, used map[string]bool, add bool) {
+	changed := map[string]bool{}
+
 	for _, node := range args.Content {
 		name := node.Value
 
@@ -126,6 +135,16 @@ func applyArgsSequenceNode(args *yaml.Node, toApply map[string]string, used map[
 			if name == argName {
 				node.Value = fmt.Sprintf("%s=%s", argName, argValue)
 				used[argName] = true
+				changed[argName] = true
+			}
+		}
+	}
+
+	if add && len(changed) < len(toApply) {
+		for argName, argValue := range toApply {
+			if !changed[argName] {
+				args.Content = append(args.Content, scalarNode(fmt.Sprintf("%s=%s", argName, argValue)))
+				used[argName] = true
 			}
 		}
 	}
@@ -135,18 +154,8 @@ func scalarNode(value string) *yaml.Node {
 	return &yaml.Node{Kind: yaml.ScalarNode, Value: value, Tag: "!!str"}
 }
 
-func newArgsMappingNode(toApply map[string]string, used map[string]bool) *yaml.Node {
-	node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	keys := make([]string, 0, len(toApply))
-	for k := range toApply {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, name := range keys {
-		node.Content = append(node.Content, scalarNode(name), scalarNode(toApply[name]))
-		used[name] = true
-	}
-	return node
+func mappingNode() *yaml.Node {
+	return &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 }
 
 func find(m *yaml.Node, key string) *yaml.Node {
