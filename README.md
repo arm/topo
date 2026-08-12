@@ -1,10 +1,44 @@
 # Topo
 
-Discover and deploy containerised software to Arm hardware over SSH.
+Discover, configure, and deploy containerised software to Arm hardware over SSH.
 
-Point Topo at any Arm-based Linux device to discover Topo Projects that showcase its capabilities. Pick one and Topo helps you configure it for your use case, then deploys it in minutes. The result? A standard Docker Compose project to learn from, modify, or use as a starting point for your own work.
+**Discover** - Point Topo at any Arm-based Linux device to discover [Topo Projects](docs/project-specification/README.md) that showcase its capabilities.
 
-Already have a Compose project? Topo gives you a fast, incremental build-deploy loop over SSH.
+```console
+$ topo projects --target user@my-linux-device
+...
+✅ Topo llama.cpp WebUI Chat
+  Clone:
+    topo clone https://github.com/Arm-Examples/topo-llama-web-ui.git
+
+  LLM chat application with Arm CPU inference provided by llama.cpp.
+...
+```
+
+**Configure** - Topo Projects extend Docker Compose with additional metadata, allowing Topo to configure Projects for your use case.
+
+```console
+$ topo clone https://github.com/Arm-Examples/topo-llama-web-ui.git
+...
+┌─ Configure project ───────────────────────────────────
+Provide: Choose which Large Language Model you wish to use
+Example: Qwen/Qwen2.5-Coder-7B-Instruct-GGUF
+Default: unsloth/SmolLM2-135M-Instruct-GGUF
+MODEL> microsoft/Phi-3-mini-4k-instruct-gguf
+```
+
+**Deploy** - One command to build your project, transfer it over SSH to your Linux target, and launch it.
+
+```console
+$ topo deploy --target user@my-linux-device
+...
+┌─ Deployment Success ──────────────────────────────────
+    Topo llama.cpp WebUI Chat is running.
+
+    Open http://<target-ip>:8080 in your browser to start chatting.
+
+    Run `topo ps` to see deployed containers
+```
 
 ## Who is this for?
 
@@ -15,21 +49,6 @@ Already have a Compose project? Topo gives you a fast, incremental build-deploy 
 **You have a heterogeneous device and want to use all of it.** Your board has remote processors like a Cortex-M that normally need separate toolchains and manual firmware loading. Topo and [Remoteproc Runtime](https://github.com/arm/remoteproc-runtime) let you orchestrate the whole device as one Docker Compose project.
 
 Not sure what these terms mean? The [glossary](docs/introduction/glossary.md) defines Topo's core concepts.
-
-## What does it look like?
-
-```sh
-# Check your target is ready
-topo health --target pi@raspberrypi
-
-# See which projects match your hardware
-topo projects --target pi@raspberrypi
-
-# Clone one and configure it for your target
-topo clone https://github.com/Arm-Examples/topo-welcome.git
-cd topo-welcome/
-topo deploy --target pi@raspberrypi
-```
 
 ## Highlights
 
