@@ -1,8 +1,10 @@
 package arguments
 
-import "strings"
-
-import "fmt"
+import (
+	"fmt"
+	"slices"
+	"strings"
+)
 
 // StrictProviderChain chains multiple providers and ensures all required arguments are resolved.
 // It stops early once all required arguments are satisfied.
@@ -34,16 +36,12 @@ func (p *StrictProviderChain) Provide(args []Arg) ([]ResolvedArg, error) {
 
 		remaining = filterProvided(remaining, provided)
 
-		if allRequiredProvided(args, provided) {
+		if allRequiredResolved(args, provided) {
 			break
 		}
 	}
 
-	if len(remaining) > 0 {
-		defaultNonProvided(remaining, provided)
-	}
-
-	if err := validateRequiredProvided(args, provided); err != nil {
+	if err := validateRequiredResolved(args, provided); err != nil {
 		return nil, err
 	}
 
@@ -82,32 +80,30 @@ func filterProvided(args []Arg, provided map[string]string) []Arg {
 	return remaining
 }
 
-func allRequiredProvided(args []Arg, provided map[string]string) bool {
+func allRequiredResolved(args []Arg, provided map[string]string) bool {
 	for _, arg := range args {
-		if arg.Required {
-			if value, exists := provided[arg.Name]; !exists || value == "" {
-				return false
-			}
+		if arg.Required && !isResolved(arg, provided) {
+			return false
 		}
 	}
 	return true
 }
 
-func defaultNonProvided(remaining []Arg, provided map[string]string) {
-	for _, arg := range remaining {
-		if arg.Default != "" {
-			provided[arg.Name] = arg.Default
-		}
+func isResolved(arg Arg, provided map[string]string) bool {
+	if value, exists := provided[arg.Name]; exists {
+		return value != ""
 	}
+	if len(arg.CurrentValues) == 0 {
+		return false
+	}
+	return !slices.Contains(arg.CurrentValues, "")
 }
 
-func validateRequiredProvided(args []Arg, provided map[string]string) error {
+func validateRequiredResolved(args []Arg, provided map[string]string) error {
 	var missing []Arg
 	for _, arg := range args {
-		if arg.Required {
-			if value, exists := provided[arg.Name]; !exists || value == "" {
-				missing = append(missing, arg)
-			}
+		if arg.Required && !isResolved(arg, provided) {
+			missing = append(missing, arg)
 		}
 	}
 

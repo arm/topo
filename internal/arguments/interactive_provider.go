@@ -47,12 +47,19 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 			}
 		}
 
-		requiredLabel := ""
-		if arg.Required {
-			requiredLabel = " (required)"
+		if len(arg.CurrentValues) > 0 {
+			_, err := fmt.Fprintf(p.output, "Current: %s\n", strings.Join(arg.CurrentValues, ", "))
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		_, err = fmt.Fprintf(p.output, "%s%s> ", arg.Name, requiredLabel)
+		label := "optional"
+		if arg.Required {
+			label = "required"
+		}
+
+		_, err = fmt.Fprintf(p.output, "%s (%s, press Enter to skip)> ", arg.Name, label)
 		if err != nil {
 			return nil, err
 		}

@@ -44,11 +44,11 @@
                   },
                   "required": {
                     "type": "boolean",
-                    "description": "If `true`, Implementations must enforce input or error"
+                    "description": "If `true`, Implementations must enforce that a value is set for this parameter when configuring the Project"
                   },
                   "default": {
                     "type": "string",
-                    "description": "Value used if user skips input (only valid when not required)"
+                    "description": "Suggested value displayed in user prompts; not applied automatically"
                   },
                   "example": {
                     "type": "string",

@@ -1,11 +1,12 @@
 package arguments
 
 type Arg struct {
-	Name        string
-	Description string
-	Required    bool
-	Example     string
-	Default     string
+	Name          string
+	Description   string
+	Required      bool
+	Example       string
+	Default       string
+	CurrentValues []string
 }
 
 type ResolvedArg struct {
