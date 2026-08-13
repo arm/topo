@@ -16,4 +16,4 @@ Running `topo deploy` should be sufficient to build and start the application. D
 
 ### Be fast to build and iterate
 
-The best Topo Projects are fast to build, deploy, and iterate on. See [Build Optimization](https://github.com/arm/topo/blob/main/docs/project-specification/04-build-optimization.md) or use the [`topo-project-optimize-deployment` skill](https://github.com/arm/topo#project-authoring-skills) for guidance on specific performance best practices.
+The best Topo Projects are fast to build, deploy, and iterate on. See [Build Optimization](04-build-optimization.md) or use the [`topo-project-optimize-deployment` skill](https://github.com/arm/topo#project-authoring-skills) for guidance on specific performance best practices.

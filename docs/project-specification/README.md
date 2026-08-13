@@ -42,6 +42,8 @@ Because this is valid Compose, any Project can be run with plain `docker compose
   - [Authoring Topo Projects](01-authoring-projects.md)
   - [Project Configuration](02-project-configuration.md)
   - [Schema Compliance](03-schema.md)
+  - [Build Optimization](04-build-optimization.md)
+  - [Authoring Best Practices](05-authoring-best-practices.md)
 - Machine-readable schema:
   - [`schema/topo-project-specification.json`](https://github.com/arm/topo/blob/main/docs/project-specification/schema/topo-project-specification.json)
 
@@ -58,9 +60,10 @@ We welcome any contributors who wish to add their own Project to the project cat
 
 If you want your Project to be added to the project catalog:
 
-1. Review the [Authoring Topo Projects section of the Specification](01-authoring-projects.md).
-2. [Validate Schema Compliance](#validate-schema-compliance) of your proposed Project.
-3. Open a Pull Request in the `Topo Project Catalog` repository to update the [catalog sources](https://github.com/arm/topo-project-catalog/blob/main/data/github_sources.json).
+1. Review the [Authoring Best Practices](05-authoring-best-practices.md).
+2. Review the catalog's [Project Acceptance Criteria](https://github.com/arm/topo-project-catalog/blob/main/docs/project-acceptance-criteria.md).
+3. [Validate Schema Compliance](#validate-schema-compliance) of your proposed Project.
+4. Open a Pull Request in the `Topo Project Catalog` repository to update the [catalog sources](https://github.com/arm/topo-project-catalog/blob/main/data/github_sources.json).
 
 ### Validate Schema Compliance
 
