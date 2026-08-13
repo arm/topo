@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
@@ -50,7 +51,7 @@ func ApplyArgs(composeFilePath string, toApply map[string]string) error {
 		}
 	}
 
-	for argName := range toApply {
+	for _, argName := range sortedKeys(toApply) {
 		if !used[argName] {
 			logger.Warn(fmt.Sprintf("arg %q was resolved but not found in any service build args", argName))
 		}
@@ -72,7 +73,7 @@ func writeNode(composeFilePath string, project *yaml.Node) error {
 		return err
 	}
 	_ = enc.Close()
-	if err := os.WriteFile(composeFilePath, buf.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(composeFilePath, buf.Bytes(), 0o0644); err != nil {
 		return err
 	}
 	return nil
@@ -114,7 +115,8 @@ func applyArgs(svc *yaml.Node, fullSvc types.ServiceConfig, toApply map[string]s
 	}
 
 	appliedAny := false
-	for argName, argValue := range toApply {
+	for _, argName := range sortedKeys(toApply) {
+		argValue := toApply[argName]
 		_, shouldAppend := fullArgs[argName]
 		applied, err := applyArg(args, argName, argValue, shouldAppend)
 		if err != nil {
@@ -189,6 +191,15 @@ func applyArgSequenceNode(args *yaml.Node, argName string, argValue string, shou
 	}
 
 	return false
+}
+
+func sortedKeys(values map[string]string) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func scalarNode(value string) *yaml.Node {
