@@ -42,36 +42,7 @@ func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider)
 		return nil
 	}
 
-	return applyArgs(composeFilePath, resolvedArgs)
-}
-
-func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
-	f, err := os.Open(composeFilePath)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-
-	yamlNodes, err := compose.ReadNode(f)
-	if err != nil {
-		return err
-	}
-
-	err = compose.ApplyArgs(yamlNodes, argsToMap(args))
-	if err != nil {
-		return fmt.Errorf("error applying parameters to project file: %w", err)
-	}
-
-	outFile, err := os.Create(composeFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to open compose file for writing: %w", err)
-	}
-	defer func() { _ = outFile.Close() }()
-
-	if err := compose.WriteNode(yamlNodes, outFile); err != nil {
-		return fmt.Errorf("failed to write compose file after applying parameters: %w", err)
-	}
-	return nil
+	return compose.ApplyArgs(composeFilePath, argsToMap(resolvedArgs))
 }
 
 func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]arguments.ResolvedArg, error) {

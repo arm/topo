@@ -1,7 +1,6 @@
 package compose_test
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
@@ -10,44 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
-
-func TestReadNode(t *testing.T) {
-	t.Run("parses compose yaml into nodes", func(t *testing.T) {
-		composeFileContents := `name: test
-services:
-  test-service:
-    build:
-      context: .
-`
-		composeFileReader := strings.NewReader(composeFileContents)
-
-		got, err := compose.ReadNode(composeFileReader)
-
-		require.NoError(t, err)
-		gotYAML, err := yaml.Marshal(got)
-		require.NoError(t, err)
-		assert.YAMLEq(t, composeFileContents, string(gotYAML))
-	})
-
-	t.Run("returns error when compose file is empty", func(t *testing.T) {
-		composeFileReader := strings.NewReader("")
-
-		got, err := compose.ReadNode(composeFileReader)
-
-		assert.Error(t, err)
-		assert.Nil(t, got)
-		assert.Contains(t, err.Error(), "empty")
-	})
-
-	t.Run("returns error when yaml is invalid", func(t *testing.T) {
-		composeFileReader := strings.NewReader("invalid: yaml: content:")
-
-		got, err := compose.ReadNode(composeFileReader)
-
-		assert.Error(t, err)
-		assert.Nil(t, got)
-	})
-}
 
 func TestApplyArgs(t *testing.T) {
 	t.Run("updates all matching services when arg matches in multiple services", func(t *testing.T) {
@@ -349,27 +310,6 @@ services:
       args: ["FOO=new-foo", "BAR=new-bar"]
 `
 		assert.YAMLEq(t, want, string(got))
-	})
-}
-
-func TestWriteNode(t *testing.T) {
-	t.Run("writes YAML node to compose file", func(t *testing.T) {
-		want := `
-name: test
-services:
-  test-service:
-    build:
-      context: .
-      args: ["FOO=new-foo", "BAR=new-bar"]
-`
-		project := yamlToNode(t, want)
-		var buf bytes.Buffer
-
-		err := compose.WriteNode(project, &buf)
-		require.NoError(t, err)
-
-		got := buf.String()
-		assert.YAMLEq(t, want, got)
 	})
 }
 
