@@ -55,6 +55,11 @@ func TestQuoteArg(t *testing.T) {
 			arg:  `C:\Users\runner\AppData\Local\Temp\custom-compose.yaml`,
 			want: `'C:\Users\runner\AppData\Local\Temp\custom-compose.yaml'`,
 		},
+		{
+			name: "arg with square brackets",
+			arg:  "custom[compose].yaml",
+			want: "'custom[compose].yaml'",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
