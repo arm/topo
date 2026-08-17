@@ -1,6 +1,7 @@
 package arguments
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -59,12 +60,16 @@ type MissingArgsError []Arg
 
 func (e MissingArgsError) Error() string {
 	var msg strings.Builder
-	msg.WriteString("missing required parameters:\n")
+	msg.WriteString("missing value(s) for required parameters:\n")
 	for _, arg := range e {
 		fmt.Fprintf(&msg, "  %s:\n", arg.Name)
 		fmt.Fprintf(&msg, "    description: %s\n", arg.Description)
 		if arg.Example != "" {
 			fmt.Fprintf(&msg, "    example: %s\n", arg.Example)
+		}
+		currentValues, err := json.Marshal(arg.CurrentValues)
+		if err == nil {
+			fmt.Fprintf(&msg, "    # current: %s\n", currentValues)
 		}
 	}
 	return msg.String()

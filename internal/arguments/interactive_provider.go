@@ -40,13 +40,6 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 			}
 		}
 
-		if arg.Default != "" {
-			_, err := fmt.Fprintf(p.output, "Default: %s\n", arg.Default)
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		if len(arg.CurrentValues) > 0 {
 			_, err := fmt.Fprintf(p.output, "Current: %s\n", strings.Join(arg.CurrentValues, ", "))
 			if err != nil {

@@ -20,8 +20,7 @@ services:
     platform: linux/arm64
     build:
       context: .
-      # Optional default: allows running with plain docker compose
-      # Not used by Implementations that read x-topo.parameters
+      # Initial value: allows running with plain docker compose
       args:
         GREETING: "Hello, World"
 
@@ -65,7 +64,7 @@ x-topo:
   parameters:
     MODEL:
       description: "Model artifact reference"
-      default: "bartowski/Qwen_Qwen3.5-0.8B-GGUF:SmolLM2-135M-Instruct-Q4_K_M.gguf"
+      example: "bartowski/Qwen_Qwen3.5-0.8B-GGUF:SmolLM2-135M-Instruct-Q4_K_M.gguf"
       hints:
         huggingface.task: text-generation
         file.format: gguf
@@ -80,7 +79,7 @@ Recommended hint key conventions include:
 
 ### Projects Satisfying Requirements
 
-Projects can provide default `build.args` values that satisfy requirements from Projects they extend. When a Project provides a value for a parameter that another Project marks as `required: true`, that parameter effectively becomes **optional** for end users.
+Projects can provide initial `build.args` values that satisfy requirements from Projects they extend. When a Project provides a value for a parameter that another Project marks as `required: true`, that parameter effectively becomes **optional** for end users.
 
 **Extended Project's compose.yaml**
 
@@ -138,14 +137,14 @@ x-topo:
   name: "My Project"
   parameters:
     MODEL:
-      description: "hugging face model ID to use"
+      description: "Hugging Face model ID to use"
       required: true
-      default: qwen3:7B
+      example: qwen3:7B
 ```
 
 The effective required parameters for the Project are:
 
 - Project-level parameters marked as `required: true`
-- Extended Project parameters marked as `required: true` that the parent Project hasn't provided defaults for
+- Extended Project parameters marked as `required: true` that the parent Project has not provided values for
 
 When users create a new Project from an existing Project, Implementations should collect required parameters in the same manner as when extending an existing Project with another Project.

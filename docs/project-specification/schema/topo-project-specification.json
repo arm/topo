@@ -48,7 +48,7 @@
                   },
                   "default": {
                     "type": "string",
-                    "description": "Suggested value displayed in user prompts; not applied automatically"
+                    "description": "Deprecated. Current Topo versions ignore this property."
                   },
                   "example": {
                     "type": "string",

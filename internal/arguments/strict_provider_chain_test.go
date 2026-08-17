@@ -166,7 +166,6 @@ func TestStrictMultiProvider(t *testing.T) {
 		args := []arguments.Arg{{
 			Name:          "CINNAMON",
 			Required:      true,
-			Default:       "default",
 			CurrentValues: []string{"current", "${CINNAMON}"},
 		}}
 
@@ -182,7 +181,6 @@ func TestStrictMultiProvider(t *testing.T) {
 		arg := arguments.Arg{
 			Name:          "CINNAMON",
 			Required:      true,
-			Default:       "default",
 			CurrentValues: []string{"current", ""},
 		}
 
@@ -191,17 +189,7 @@ func TestStrictMultiProvider(t *testing.T) {
 		assert.Equal(t, arguments.MissingArgsError{arg}, err)
 	})
 
-	t.Run("does not let defaults satisfy required arguments", func(t *testing.T) {
-		provider := arguments.NewStaticProvider()
-		multi := arguments.NewStrictProviderChain(provider)
-		arg := arguments.Arg{Name: "CINNAMON", Required: true, Default: "default"}
-
-		_, err := multi.Provide([]arguments.Arg{arg})
-
-		assert.Equal(t, arguments.MissingArgsError{arg}, err)
-	})
-
-	t.Run("does not provide resolved args when no default provided", func(t *testing.T) {
+	t.Run("does not resolve omitted optional arguments", func(t *testing.T) {
 		provider1 := arguments.NewStaticProvider()
 		multi := arguments.NewStrictProviderChain(provider1)
 		args := []arguments.Arg{

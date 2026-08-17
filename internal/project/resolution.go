@@ -20,7 +20,6 @@ func castParameters(parameters []Parameter, currentValues map[string][]string) [
 			Description:   parameter.Description,
 			Required:      parameter.Required,
 			Example:       parameter.Example,
-			Default:       parameter.Default,
 			CurrentValues: currentValues[parameter.Name],
 		}
 	}

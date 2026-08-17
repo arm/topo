@@ -43,13 +43,12 @@ func TestInteractiveProvider(t *testing.T) {
 		assert.Contains(t, output.String(), "GREETING (required, press Enter to skip)>")
 	})
 
-	t.Run("skips empty inputs without applying defaults", func(t *testing.T) {
+	t.Run("skips empty inputs", func(t *testing.T) {
 		input := strings.NewReader("\n")
 		output := &bytes.Buffer{}
 		provider := arguments.NewInteractiveProvider(input, output)
-		args := []arguments.Arg{{Name: "OPTIONAL", Default: "default"}}
 
-		got, err := provider.Provide(args)
+		got, err := provider.Provide([]arguments.Arg{{Name: "OPTIONAL"}})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
