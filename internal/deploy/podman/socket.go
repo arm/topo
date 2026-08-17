@@ -40,10 +40,10 @@ func (socket Socket) ConfigureComposeEnv(ctx context.Context, environment []stri
 	if socket.localComposeSocket == nil {
 		return append(environment, "DOCKER_HOST="+socket.url), nil
 	}
-	return socket.localComposeSocket.ConfigureEnv(ctx, environment)
+	return socket.localComposeSocket.configureEnv(ctx, environment)
 }
 
-func (socket *localComposeSocket) ConfigureEnv(ctx context.Context, environment []string) ([]string, error) {
+func (socket *localComposeSocket) configureEnv(ctx context.Context, environment []string) ([]string, error) {
 	socket.mutex.Lock()
 	defer socket.mutex.Unlock()
 
