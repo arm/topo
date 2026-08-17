@@ -37,24 +37,32 @@ func (socket Socket) ConfigurePodmanEnv(environment []string) []string {
 }
 
 func (socket Socket) ConfigureComposeEnv(ctx context.Context, environment []string) ([]string, error) {
-	if socket.localComposeSocket == nil {
-		return append(environment, "DOCKER_HOST="+socket.url), nil
+	socketURL, err := socket.getComposeSocketURL(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return socket.localComposeSocket.configureEnv(ctx, environment)
+	return append(environment, "DOCKER_HOST="+socketURL), nil
 }
 
-func (socket *localComposeSocket) configureEnv(ctx context.Context, environment []string) ([]string, error) {
+func (socket Socket) getComposeSocketURL(ctx context.Context) (string, error) {
+	if socket.localComposeSocket == nil {
+		return socket.url, nil
+	}
+	return socket.localComposeSocket.getURL(ctx)
+}
+
+func (socket *localComposeSocket) getURL(ctx context.Context) (string, error) {
 	socket.mutex.Lock()
 	defer socket.mutex.Unlock()
 
 	if socket.url == "" {
 		url, err := ResolveLocalComposeSocket(ctx)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		socket.url = url
 	}
-	return append(environment, "DOCKER_HOST="+socket.url), nil
+	return socket.url, nil
 }
 
 type podmanConnection struct {
