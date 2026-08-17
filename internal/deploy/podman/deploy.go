@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/ssh"
-	"golang.org/x/sync/errgroup"
 )
 
 type DeployOptions struct {
@@ -45,10 +43,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 		}()
 
 		targetSocket = NewSocket(tunnel.SocketURL())
-		if err := term.PrintHeader(output, "Transfer images"); err != nil {
-			return err
-		}
-		if err := transferImages(ctx, output, targetSocket, composeFile); err != nil {
+		if err := transferImagesViaPipe(ctx, output, LocalSocket, targetSocket, composeFile); err != nil {
 			return err
 		}
 	}
@@ -86,47 +81,11 @@ func buildAndPullImages(ctx context.Context, output io.Writer, socket Socket, co
 	return PullImages(ctx, output, socket, composeFile)
 }
 
-func transferImages(ctx context.Context, output io.Writer, socket Socket, composeFile string) error {
-	images, err := compose.ImageNames(composeFile)
-	if err != nil {
+func transferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Socket, composeFile string) error {
+	if err := term.PrintHeader(output, "Transfer images"); err != nil {
 		return err
 	}
-	for _, image := range images {
-		if err := transferImage(ctx, output, socket, image); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func transferImage(ctx context.Context, output io.Writer, socket Socket, image string) error {
-	pipeReader, pipeWriter := io.Pipe()
-	saveCommand := Command(ctx, LocalSocket, "save", image)
-	loadCommand := Command(ctx, socket, "load")
-	saveCommand.Stdout = pipeWriter
-	saveCommand.Stderr = output
-	loadCommand.Stdin = pipeReader
-	loadCommand.Stdout = output
-	loadCommand.Stderr = output
-
-	var group errgroup.Group
-	group.Go(func() error {
-		err := saveCommand.Run()
-		_ = pipeWriter.CloseWithError(err)
-		if err != nil {
-			return fmt.Errorf("failed to save Podman image %s: %w", image, err)
-		}
-		return nil
-	})
-	group.Go(func() error {
-		err := loadCommand.Run()
-		_ = pipeReader.CloseWithError(err)
-		if err != nil {
-			return fmt.Errorf("failed to load Podman image %s: %w", image, err)
-		}
-		return nil
-	})
-	return group.Wait()
+	return TransferImagesViaPipe(ctx, output, source, destination, composeFile)
 }
 
 func closeRemoteTunnel(tunnel *ssh.TCPToUnixSocketTunnel) error {
