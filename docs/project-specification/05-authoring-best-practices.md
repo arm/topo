@@ -1,4 +1,4 @@
-# Topo Project Authoring Best Practices
+# Project Authoring Best Practices
 
 Recommendations for delivering the best and most consistent user experience with Topo Projects
 
@@ -6,7 +6,7 @@ Recommendations for delivering the best and most consistent user experience with
 
 `x-topo` contains attributes that help users discover and use your Project. Ensure you have considered all available attributes in the schema and used them as appropriate.
 
-The [Topo project-authoring skills](https://github.com/arm/topo#project-authoring-skills) can help you lint and improve your Project.
+The [Project-authoring skills](https://github.com/arm/topo#project-authoring-skills) can help you lint and improve your Project.
 
 ## Only require `topo deploy` to build and run
 
@@ -16,4 +16,4 @@ Running `topo deploy` should be sufficient to build and start the application. D
 
 ### Be fast to build and iterate
 
-The best Topo Projects are fast to build, deploy, and iterate on. See [Build Optimization](04-build-optimization.md) or use the [`topo-project-optimize-deployment` skill](https://github.com/arm/topo#project-authoring-skills) for guidance on specific performance best practices.
+The best Projects are fast to build, deploy, and iterate on. See [Build Optimization](04-build-optimization.md) or use the [`topo-project-optimize-deployment` skill](https://github.com/arm/topo#project-authoring-skills) for guidance on specific performance best practices.
