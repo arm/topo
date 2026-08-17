@@ -1,6 +1,6 @@
 module github.com/arm/topo
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/compose-spec/compose-go/v2 v2.13.0
