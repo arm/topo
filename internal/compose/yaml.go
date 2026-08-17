@@ -49,7 +49,7 @@ func ApplyArgs(root *yaml.Node, toApply map[string]string) error {
 		if args == nil {
 			if find(svc, "extends") != nil {
 				name := services.Content[i].Value
-				logger.Warn(fmt.Sprintf("service %q uses 'extends' but no build args. Topo requires services to explicitly define build args for configuration and as such this service may not be fully configured. Add an empty `build.args` entry to the service to suppress this message", name))
+				logger.Warn(fmt.Sprintf("service %q uses `extends` without `build.args`; inherited build args will not be configured. Declare the required args on this service, or set `build.args: {}` to silence this warning", name))
 			}
 
 			continue
