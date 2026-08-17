@@ -3,13 +3,8 @@ package podman_test
 import (
 	"testing"
 
-	deploytestutil "github.com/arm/topo/internal/deploy/testutil"
 	gtestutil "github.com/arm/topo/internal/testutil"
 )
-
-func unmarshalNDJSON(ndJSON []byte) ([]deploytestutil.JsonObject, error) {
-	return deploytestutil.UnmarshalNDJSON(ndJSON)
-}
 
 func sanitiseTestName(t *testing.T) string {
 	t.Helper()

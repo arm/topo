@@ -3,6 +3,7 @@ package podman_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -17,13 +18,13 @@ import (
 
 func TestDeploy(t *testing.T) {
 	requireLocalPodman(t)
-	composeFile := deploymentFixture(t)
+	composeFile, projectName := deploymentFixture(t)
 	t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
 
 	err := podman.Deploy(t.Context(), io.Discard, composeFile)
 
 	require.NoError(t, err)
-	assertContainersRunning(t, composeFile)
+	assertContainersRunning(t, projectName, podman.LocalSocket)
 }
 
 func requireLocalPodman(t *testing.T) {
@@ -39,24 +40,26 @@ func requireLocalPodman(t *testing.T) {
 	}
 }
 
-func assertContainersRunning(t *testing.T, composeFile string) {
+func assertContainersRunning(t *testing.T, projectName string, socket podman.Socket) {
 	t.Helper()
-	cmd := podman.ComposeCommand(t.Context(), composeFile, "ps", "--format", "json", "--all")
+	cmd := podman.Command(t.Context(), socket, "ps", "--format", "json", "--all",
+		"--filter", "label=com.docker.compose.project="+projectName,
+	)
 	var diagnostics bytes.Buffer
 	cmd.Stderr = &diagnostics
 	output, err := cmd.Output()
 	require.NoError(t, err, "stdout: %s\nstderr: %s", output, diagnostics.String())
-	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported; stderr: %s", diagnostics.String())
 
-	containers, err := unmarshalNDJSON(output)
-	require.NoError(t, err)
+	var containers []map[string]any
+	require.NoError(t, json.Unmarshal(output, &containers))
+	require.NotEmpty(t, containers, "no containers reported; stderr: %s", diagnostics.String())
 
 	for _, container := range containers {
-		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Name"], container["State"])
+		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Names"], container["State"])
 	}
 }
 
-func deploymentFixture(t *testing.T) string {
+func deploymentFixture(t *testing.T) (string, string) {
 	t.Helper()
 	tempDir := t.TempDir()
 	testName := sanitiseTestName(t)
@@ -81,12 +84,12 @@ CMD ["tail", "-f", "/dev/null"]
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		removeOutput, err := podman.Command(ctx, "image", "rm", "-f", imageName).CombinedOutput()
+		removeOutput, err := podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	return composeFile
+	return composeFile, "test-project-" + testName
 }
 
 func cleanupComposeProject(t *testing.T, composeFile string) {
@@ -94,7 +97,11 @@ func cleanupComposeProject(t *testing.T, composeFile string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := podman.ComposeCommand(ctx, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
+	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
+	if err != nil {
+		t.Logf("failed to configure Podman Compose: %v", err)
+		return
+	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("Podman Compose cleanup failed: %v: %s", err, output)
 	}

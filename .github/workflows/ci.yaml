@@ -138,6 +138,32 @@ jobs:
         run: |
           podman machine init --cpus 2 --memory 2048 --now
 
+      - name: Start Podman API service (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          runtime_dir="${XDG_RUNTIME_DIR:-$RUNNER_TEMP/podman-runtime}"
+          mkdir -p "$runtime_dir/podman"
+
+          if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+            chmod 700 "$runtime_dir"
+            echo "XDG_RUNTIME_DIR=$runtime_dir" >> "$GITHUB_ENV"
+            export XDG_RUNTIME_DIR="$runtime_dir"
+          fi
+
+          socket_path="$XDG_RUNTIME_DIR/podman/podman.sock"
+          if [ ! -S "$socket_path" ]; then
+            podman system service --time=0 "unix://$socket_path" >"$RUNNER_TEMP/podman-system-service.log" 2>&1 &
+          fi
+
+          for _ in {1..20}; do
+            [ -S "$socket_path" ] && exit 0
+            sleep 1
+          done
+
+          cat "$RUNNER_TEMP/podman-system-service.log" >&2 || true
+          exit 1
+
       - name: Verify Podman test prerequisites (Linux)
         if: runner.os == 'Linux'
         shell: bash
