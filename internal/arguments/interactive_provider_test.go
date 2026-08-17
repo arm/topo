@@ -60,13 +60,13 @@ func TestInteractiveProvider(t *testing.T) {
 		provider := arguments.NewInteractiveProvider(input, output)
 		args := []arguments.Arg{{
 			Name:          "GREETING",
-			CurrentValues: []string{"Hello"},
+			CurrentValues: []string{"Hello", ""},
 		}}
 
 		got, err := provider.Provide(args)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
-		assert.Contains(t, output.String(), "Current: Hello")
+		assert.Contains(t, output.String(), `Current: ["Hello",""]`)
 	})
 }

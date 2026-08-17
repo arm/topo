@@ -216,19 +216,21 @@ func TestMissingArgsError(t *testing.T) {
 				Example:     "Hello",
 			},
 			{
-				Name:        "PORT",
-				Description: "Port number",
+				Name:          "PORT",
+				Description:   "Port number",
+				CurrentValues: []string{"8080", ""},
 			},
 		}
 
 		got := err.Error()
 
-		want := `missing required parameters:
+		want := `missing value(s) for required parameters:
   GREETING:
     description: The greeting message
     example: Hello
   PORT:
     description: Port number
+    # current: ["8080",""]
 `
 		assert.Equal(t, want, got)
 	})

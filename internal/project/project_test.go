@@ -67,7 +67,7 @@ services:
 		assert.FileExists(t, composeFilePath)
 	})
 
-	t.Run("preserves a required parameter placeholder", func(t *testing.T) {
+	t.Run("preserves current build arg values", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		composeFileContents := `services:
@@ -75,11 +75,14 @@ services:
     build:
       args:
         GREETING: ${GREETING}
+  app-2:
+    build:
+      args:
+        GREETING: "goodbye!"
 x-topo:
   parameters:
     GREETING:
       required: true
-      default: Hello
 `
 		mockSource := mockSourceWithContent(t, composeFileContents)
 		provider := arguments.NewInteractiveProvider(strings.NewReader("\n"), &bytes.Buffer{})
@@ -185,7 +188,7 @@ x-topo:
 		assert.YAMLEq(t, want, got)
 	})
 
-	t.Run("rejects required parameters when any current value is empty", func(t *testing.T) {
+	t.Run("rejects empty input for required parameters when any current value is empty", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `services:
   configured:
@@ -208,7 +211,7 @@ x-topo:
 
 		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
 
-		require.ErrorContains(t, err, "missing required parameters")
+		require.ErrorContains(t, err, "missing value(s) for required parameters")
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
 	})
 

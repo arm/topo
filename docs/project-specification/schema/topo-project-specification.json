@@ -44,7 +44,7 @@
                   },
                   "required": {
                     "type": "boolean",
-                    "description": "If `true`, Implementations must enforce that a value is set for this parameter when configuring the Project"
+                    "description": "If `true`, Implementations must enforce that all build args values are set for this parameter when configuring the Project"
                   },
                   "default": {
                     "type": "string",

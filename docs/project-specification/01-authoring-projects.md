@@ -71,7 +71,6 @@ x-topo:
     <PARAMETER_NAME>:
       description: string # Optional
       required: boolean # Optional
-      default: string # Ignored in current Topo versions - remains for compatibility. Define defaults in service `build.args`.
       example: string # Optional
 ```
 

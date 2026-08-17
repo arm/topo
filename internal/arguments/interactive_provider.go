@@ -41,7 +41,7 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 		}
 
 		if len(arg.CurrentValues) > 0 {
-			_, err := fmt.Fprintf(p.output, "Current: %s\n", strings.Join(arg.CurrentValues, ", "))
+			_, err := fmt.Fprintf(p.output, "Current: %s\n", formatCurrentValues(arg.CurrentValues))
 			if err != nil {
 				return nil, err
 			}

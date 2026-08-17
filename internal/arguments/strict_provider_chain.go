@@ -1,7 +1,6 @@
 package arguments
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -67,9 +66,8 @@ func (e MissingArgsError) Error() string {
 		if arg.Example != "" {
 			fmt.Fprintf(&msg, "    example: %s\n", arg.Example)
 		}
-		currentValues, err := json.Marshal(arg.CurrentValues)
-		if err == nil {
-			fmt.Fprintf(&msg, "    # current: %s\n", currentValues)
+		if len(arg.CurrentValues) > 0 {
+			fmt.Fprintf(&msg, "    # current: %s\n", formatCurrentValues(arg.CurrentValues))
 		}
 	}
 	return msg.String()
