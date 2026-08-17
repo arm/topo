@@ -142,11 +142,14 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          runtime_dir="$RUNNER_TEMP/podman-runtime"
+          runtime_dir="${XDG_RUNTIME_DIR:-$RUNNER_TEMP/podman-runtime}"
           mkdir -p "$runtime_dir/podman"
-          chmod 700 "$runtime_dir"
-          echo "XDG_RUNTIME_DIR=$runtime_dir" >> "$GITHUB_ENV"
-          export XDG_RUNTIME_DIR="$runtime_dir"
+
+          if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+            chmod 700 "$runtime_dir"
+            echo "XDG_RUNTIME_DIR=$runtime_dir" >> "$GITHUB_ENV"
+            export XDG_RUNTIME_DIR="$runtime_dir"
+          fi
 
           socket_path="$XDG_RUNTIME_DIR/podman/podman.sock"
           if [ ! -S "$socket_path" ]; then
