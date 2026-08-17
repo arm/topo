@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
@@ -44,27 +43,15 @@ func ApplyArgs(root *yaml.Node, toApply map[string]string) error {
 
 	for i := 0; i < len(services.Content); i += 2 {
 		svc := services.Content[i+1]
-		hasExtends := find(svc, "extends") != nil
 		build := find(svc, "build")
-
-		if build == nil {
-			if !hasExtends {
-				continue
-			}
-			argsNode := newArgsMappingNode(toApply, used)
-			build = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-			build.Content = append(build.Content, scalarNode("args"), argsNode)
-			svc.Content = append(svc.Content, scalarNode("build"), build)
-			continue
-		}
-
 		args := find(build, "args")
+
 		if args == nil {
-			if !hasExtends {
-				continue
+			if find(svc, "extends") != nil {
+				name := services.Content[i].Value
+				logger.Warn(fmt.Sprintf("service %q uses 'extends' but no build args. Topo requires services to explicitly define build args for configuration and as such this service may not be fully configured. Add an empty `build.args` entry to the service to suppress this message", name))
 			}
-			argsNode := newArgsMappingNode(toApply, used)
-			build.Content = append(build.Content, scalarNode("args"), argsNode)
+
 			continue
 		}
 
@@ -131,25 +118,11 @@ func applyArgsSequenceNode(args *yaml.Node, toApply map[string]string, used map[
 	}
 }
 
-func scalarNode(value string) *yaml.Node {
-	return &yaml.Node{Kind: yaml.ScalarNode, Value: value, Tag: "!!str"}
-}
-
-func newArgsMappingNode(toApply map[string]string, used map[string]bool) *yaml.Node {
-	node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	keys := make([]string, 0, len(toApply))
-	for k := range toApply {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, name := range keys {
-		node.Content = append(node.Content, scalarNode(name), scalarNode(toApply[name]))
-		used[name] = true
-	}
-	return node
-}
-
 func find(m *yaml.Node, key string) *yaml.Node {
+	if m == nil {
+		return nil
+	}
+
 	for i := 0; i < len(m.Content); i += 2 {
 		if m.Content[i].Value == key {
 			return m.Content[i+1]
