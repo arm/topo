@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
-	"strings"
 
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/deploy/post_deploy"
@@ -28,7 +26,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	targetSocket := LocalSocket
 	var tunnel *ssh.TCPToUnixSocketTunnel
 	if !options.TargetHost.IsPlainLocalhost() {
-		remoteSocketPath, err := remotePodmanSocketPath(ctx, options.TargetHost)
+		remoteSocketPath, err := ResolveRemoteSocketPath(ctx, options.TargetHost)
 		if err != nil {
 			return err
 		}
@@ -129,19 +127,6 @@ func transferImage(ctx context.Context, output io.Writer, socket Socket, image s
 		return nil
 	})
 	return group.Wait()
-}
-
-func remotePodmanSocketPath(ctx context.Context, target ssh.Destination) (string, error) {
-	output, _, err := ssh.RunCommand(ctx, target, "podman info --format '{{.Host.RemoteSocket.Path}}'", nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to get remote Podman socket path: %w", err)
-	}
-
-	socketPath := strings.TrimPrefix(strings.TrimSpace(output), "unix://")
-	if !filepath.IsAbs(socketPath) {
-		return "", fmt.Errorf("remote Podman reported a non-local API socket path %q", socketPath)
-	}
-	return socketPath, nil
 }
 
 func closeRemoteTunnel(tunnel *ssh.TCPToUnixSocketTunnel) error {

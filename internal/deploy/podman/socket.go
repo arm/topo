@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/arm/topo/internal/ssh"
 )
 
 type Socket struct {
@@ -95,6 +97,21 @@ func ResolveLocalComposeSocket(ctx context.Context) (string, error) {
 		return resolveWindowsComposeSocket(ctx)
 	}
 	return resolveNativeComposeSocket(ctx)
+}
+
+// ResolveRemoteSocketPath returns the absolute Unix socket path reported by Podman
+// on target.
+func ResolveRemoteSocketPath(ctx context.Context, target ssh.Destination) (string, error) {
+	output, _, err := ssh.RunCommand(ctx, target, "podman info --format '{{.Host.RemoteSocket.Path}}'", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to get remote Podman socket path: %w", err)
+	}
+
+	socketPath := strings.TrimPrefix(strings.TrimSpace(output), "unix://")
+	if !filepath.IsAbs(socketPath) {
+		return "", fmt.Errorf("remote Podman reported a non-local API socket path %q", socketPath)
+	}
+	return socketPath, nil
 }
 
 func resolveNativeComposeSocket(ctx context.Context) (string, error) {
