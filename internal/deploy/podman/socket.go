@@ -36,19 +36,19 @@ func (socket Socket) ConfigurePodmanEnv(environment []string) []string {
 	return append(environment, "CONTAINER_HOST="+socket.url)
 }
 
-func (socket Socket) ConfigureComposeEnv(environment []string) ([]string, error) {
+func (socket Socket) ConfigureComposeEnv(ctx context.Context, environment []string) ([]string, error) {
 	if socket.localComposeSocket == nil {
 		return append(environment, "DOCKER_HOST="+socket.url), nil
 	}
-	return socket.localComposeSocket.ConfigureEnv(environment)
+	return socket.localComposeSocket.ConfigureEnv(ctx, environment)
 }
 
-func (socket *localComposeSocket) ConfigureEnv(environment []string) ([]string, error) {
+func (socket *localComposeSocket) ConfigureEnv(ctx context.Context, environment []string) ([]string, error) {
 	socket.mutex.Lock()
 	defer socket.mutex.Unlock()
 
 	if socket.url == "" {
-		url, err := ResolveLocalComposeSocket(context.Background())
+		url, err := ResolveLocalComposeSocket(ctx)
 		if err != nil {
 			return nil, err
 		}

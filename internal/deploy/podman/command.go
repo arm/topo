@@ -25,7 +25,7 @@ func ComposeCommand(ctx context.Context, socket Socket, composeFile string, args
 		"PODMAN_COMPOSE_WARNING_LOGS=false",
 	)
 	var err error
-	cmd.Env, err = socket.ConfigureComposeEnv(cmd.Env)
+	cmd.Env, err = socket.ConfigureComposeEnv(ctx, cmd.Env)
 	if err != nil {
 		return nil, err
 	}
