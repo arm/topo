@@ -16,7 +16,16 @@ type DeployOptions struct {
 }
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, options DeployOptions) (deployErr error) {
-	if err := buildAndPullImages(ctx, output, LocalSocket, composeFile); err != nil {
+	if err := term.PrintHeader(output, "Build images"); err != nil {
+		return err
+	}
+	if err := BuildImages(ctx, output, LocalSocket, composeFile); err != nil {
+		return err
+	}
+	if err := term.PrintHeader(output, "Pull images"); err != nil {
+		return err
+	}
+	if err := PullImages(ctx, output, LocalSocket, composeFile); err != nil {
 		return err
 	}
 
@@ -62,19 +71,6 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 		return err
 	}
 	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
-}
-
-func buildAndPullImages(ctx context.Context, output io.Writer, socket Socket, composeFile string) error {
-	if err := term.PrintHeader(output, "Build images"); err != nil {
-		return err
-	}
-	if err := BuildImages(ctx, output, socket, composeFile); err != nil {
-		return err
-	}
-	if err := term.PrintHeader(output, "Pull images"); err != nil {
-		return err
-	}
-	return PullImages(ctx, output, socket, composeFile)
 }
 
 func transferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Socket, composeFile string) error {
