@@ -49,7 +49,7 @@ func ApplyArgs(root *yaml.Node, toApply map[string]string) error {
 		if args == nil {
 			if find(svc, "extends") != nil {
 				name := services.Content[i].Value
-				logger.Warn(fmt.Sprintf("service %q uses `extends` without `build.args`; inherited build args will not be configured. Declare the required args on this service, or set `build.args: {}` to silence this warning", name))
+				logger.Warn(fmt.Sprintf("service %q uses `extends` without `build.args`; inherited build args will not be configured. declare the required args on this service, or set `build.args: {}` to silence this warning", name))
 			}
 
 			continue
