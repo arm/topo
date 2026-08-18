@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -108,7 +109,7 @@ func ResolveRemoteSocketPath(ctx context.Context, target ssh.Destination) (strin
 	}
 
 	socketPath := strings.TrimPrefix(strings.TrimSpace(output), "unix://")
-	if !filepath.IsAbs(socketPath) {
+	if !path.IsAbs(socketPath) {
 		return "", fmt.Errorf("remote Podman reported a non-local API socket path %q", socketPath)
 	}
 	return socketPath, nil
