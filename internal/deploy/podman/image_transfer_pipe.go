@@ -37,7 +37,7 @@ func transferImageViaPipe(ctx context.Context, output io.Writer, source, destina
 		err := saveCommand.Run()
 		_ = pipeWriter.CloseWithError(err)
 		if err != nil {
-			return fmt.Errorf("failed to save Podman image %s: %w", image, err)
+			return fmt.Errorf("failed to save image %s: %w", image, err)
 		}
 		return nil
 	})
@@ -45,7 +45,7 @@ func transferImageViaPipe(ctx context.Context, output io.Writer, source, destina
 		err := loadCommand.Run()
 		_ = pipeReader.CloseWithError(err)
 		if err != nil {
-			return fmt.Errorf("failed to load Podman image %s: %w", image, err)
+			return fmt.Errorf("failed to load image %s: %w", image, err)
 		}
 		return nil
 	})
