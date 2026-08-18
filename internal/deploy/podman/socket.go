@@ -129,7 +129,6 @@ func TunnelRemoteSocketPath(ctx context.Context, w io.Writer, target ssh.Destina
 		return nil, fmt.Errorf("failed to open remote Podman socket tunnel: %w", err)
 	}
 	return tunnel, nil
-
 }
 
 func resolveNativeComposeSocket(ctx context.Context) (string, error) {
