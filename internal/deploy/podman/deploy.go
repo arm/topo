@@ -24,17 +24,10 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	targetSocket := LocalSocket
 	var tunnel *ssh.TCPToUnixSocketTunnel
 	if !options.TargetHost.IsPlainLocalhost() {
-		remoteSocketPath, err := ResolveRemoteSocketPath(ctx, options.TargetHost)
+		var err error
+		tunnel, err = openRemotePodmanSocketTunnel(ctx, output, options.TargetHost)
 		if err != nil {
 			return err
-		}
-		logger.Info(fmt.Sprintf("discovered remote Podman socket path: %s", remoteSocketPath))
-		if err := term.PrintHeader(output, "Open Podman socket SSH tunnel"); err != nil {
-			return err
-		}
-		tunnel, err = ssh.OpenTCPToUnixSocketTunnel(ctx, output, options.TargetHost, remoteSocketPath)
-		if err != nil {
-			return fmt.Errorf("failed to open remote Podman socket tunnel: %w", err)
 		}
 		defer func() {
 			if tunnel != nil {
@@ -79,6 +72,22 @@ func buildAndPullImages(ctx context.Context, output io.Writer, socket Socket, co
 		return err
 	}
 	return PullImages(ctx, output, socket, composeFile)
+}
+
+func openRemotePodmanSocketTunnel(ctx context.Context, output io.Writer, destination ssh.Destination) (*ssh.TCPToUnixSocketTunnel, error) {
+	if err := term.PrintHeader(output, "Open Podman socket SSH tunnel"); err != nil {
+		return nil, err
+	}
+	remoteSocketPath, err := ResolveRemoteSocketPath(ctx, destination)
+	if err != nil {
+		return nil, err
+	}
+	logger.Info(fmt.Sprintf("discovered remote Podman socket path: %s", remoteSocketPath))
+	tunnel, err := ssh.OpenTCPToUnixSocketTunnel(ctx, output, destination, remoteSocketPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open remote Podman socket tunnel: %w", err)
+	}
+	return tunnel, nil
 }
 
 func transferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Socket, composeFile string) error {
