@@ -36,9 +36,7 @@ func TestTransferImagesViaPipe(t *testing.T) {
 
 func assertImageExists(t *testing.T, socket podman.Socket, imageName string) {
 	t.Helper()
-
 	err := podman.Command(t.Context(), socket, "image", "exists", imageName).Run()
-
 	assert.NoError(t, err)
 }
 
