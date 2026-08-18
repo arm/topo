@@ -71,7 +71,6 @@ func deployWithPodman(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	targetHost := ssh.NewDestination(targetArg)
 
 	composeFile, err := getComposeFileName(cmd)
 	if err != nil {
@@ -82,7 +81,7 @@ func deployWithPodman(cmd *cobra.Command) error {
 	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
-		options := podman.DeployOptions{TargetHost: targetHost}
+		options := podman.DeployOptions{TargetHost: ssh.NewDestination(targetArg)}
 		return podman.Deploy(ctx, os.Stdout, composeFile, options)
 	})
 }
