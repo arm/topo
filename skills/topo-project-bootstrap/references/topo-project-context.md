@@ -15,10 +15,13 @@ Use Topo vocabulary precisely:
 Refresh spec-sensitive context at runtime before making or validating Project changes. Authoritative references, in order:
 
 - Published Topo Project Specification schema: `https://raw.githubusercontent.com/arm/topo/refs/heads/main/docs/project-specification/schema/topo-project-specification.json`.
-- Published Topo Project Specification docs: `https://github.com/arm/topo/tree/main/docs/project-specification`, especially `README.md`, `01-authoring-projects.md`, `02-project-configuration.md`, and `03-schema.md`.
+- Published Topo Project Specification docs: `https://github.com/arm/topo/tree/main/docs/project-specification`, especially `README.md`, `01-authoring-projects.md`, `02-project-configuration.md`, `03-schema.md`, and `05-authoring-best-practices.md`.
+- Topo Project Catalog acceptance policy: `https://github.com/arm/topo-project-catalog/blob/main/docs/project-acceptance-criteria.md`.
 - Published Topo glossary for domain terms: `https://github.com/arm/topo/blob/main/docs/introduction/glossary.md`.
 - Compose Spec for standard Compose semantics. Do not invent non-standard Compose keys except the root-level `x-topo` extension.
 
 When references conflict, prefer the schema for validation behavior, then the specification docs for authoring intent, then the target repository's actual Compose behavior for the smallest safe change.
+
+Keep specification requirements, authoring best practices, and catalog policy distinct. The schema and specification define whether a Project is valid. The authoring best practices provide technical guidance for making Projects accurate, reproducible, adaptable, tested, and fast to iterate. The catalog applies additional curation and acceptance policy. Only apply catalog policy when the user asks about catalog inclusion, submission, acceptance, or readiness.
 
 When validating changes, check if `topo` is installed, and prompt the user for an SSH target to test against. `topo clone dir:./path/to/project` can be used to test project parameters, `topo deploy` can be used to test build and deploy.

@@ -1,11 +1,11 @@
 ---
 name: topo-project-lint
-description: Check Topo Project metadata correctness. Use when validating compose.yaml x-topo metadata, README alignment, deployment success messages, or project parameter wiring.
+description: Check Topo Project correctness and catalog readiness. Use when validating compose.yaml x-topo metadata, README alignment, deployment success messages, project parameter wiring, or catalog acceptance criteria.
 ---
 
 # Topo Project Lint
 
-Use this skill when the user asks to lint, validate, check, review, or fix Topo Project metadata correctness.
+Use this skill when the user asks to lint, validate, check, review, or fix Topo Project metadata correctness or catalog readiness.
 
 Before acting, read `references/topo-project-context.md` for shared Topo Project vocabulary, authoritative references, and validation expectations.
 
@@ -18,6 +18,7 @@ Run these checks in order. If the user asked you to fix issues, make the smalles
 3. Check that `x-topo.name` and `x-topo.description` match `README.md`.
 4. Check that `x-topo.deployment_success_message` exists and is useful.
 5. Check that every `x-topo.parameters` entry is consumed by the corresponding Docker build.
+6. If catalog readiness was requested, assess the Project against the catalog's current Project Acceptance Criteria.
 
 ## Checks
 
@@ -61,6 +62,14 @@ Run these checks in order. If the user asked you to fix issues, make the smalles
 - Flag `services.<service>.build.args` entries that look user-configurable but are missing from `x-topo.parameters` when the user asked for a comprehensive lint.
 - Do not require runtime-only environment variables to appear in `x-topo.parameters`; this check is only for Docker build arguments.
 
+### 6. Catalog Readiness
+
+- Run this check only when the user asks about catalog inclusion, acceptance, submission, or readiness.
+- Read the current catalog acceptance policy from `https://github.com/arm/topo-project-catalog/blob/main/docs/project-acceptance-criteria.md` before assessing the Project. Do not substitute Topo's authoring best practices for catalog policy.
+- Apply the technical guidance from Topo's authoring best practices first, then assess the additional selection and quality thresholds defined by the catalog.
+- Distinguish repository evidence from checks that were actually run. Do not infer reliability, target compatibility, or performance from metadata alone.
+- Treat schema failures, inaccurate compatibility declarations, and required manual pre-deployment steps as blocking. Report subjective acceptance decisions and tests requiring unavailable target hardware as needing maintainer or hardware validation.
+
 ## Reporting
 
-Report findings in the same order as the checks. Include file paths, line numbers when available, the validation command used, and whether each check passed or failed. If changes were made, summarize the files edited and the re-validation result.
+Report findings in the same order as the checks. Include file paths, line numbers when available, the validation command used, and whether each check passed or failed. For catalog-readiness reviews, separate confirmed evidence, blocking issues, and unverified criteria. If changes were made, summarize the files edited and the re-validation result.
