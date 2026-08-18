@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,7 +43,7 @@ func TestDeploy(t *testing.T) {
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
 
 		require.NoError(t, err)
-		tunnel, err := ssh.OpenTCPToUnixSocketTunnel(context.Background(), io.Discard, targetHost, "/run/podman/podman.sock")
+		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetHost)
 		require.NoError(t, err)
 		t.Cleanup(func() {
 			require.NoError(t, tunnel.Close())

@@ -3,7 +3,6 @@ package podman_test
 import (
 	"context"
 	"fmt"
-	"io"
 	"path/filepath"
 	"testing"
 	"time"
@@ -20,7 +19,7 @@ func TestTransferImagesViaPipe(t *testing.T) {
 	composeFile, imageName := imageTransferFixture(t)
 	target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
 	targetHost := ssh.NewDestination(target.SSHDestination)
-	tunnel, err := ssh.OpenTCPToUnixSocketTunnel(t.Context(), io.Discard, targetHost, "/run/podman/podman.sock")
+	tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetHost)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, tunnel.Close())
