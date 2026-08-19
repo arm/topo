@@ -14,12 +14,14 @@ func TransferImagesViaPipe(ctx context.Context, output io.Writer, source, destin
 	if err != nil {
 		return err
 	}
+
+	var group errgroup.Group
 	for _, image := range images {
-		if err := transferImageViaPipe(ctx, output, source, destination, image); err != nil {
-			return err
-		}
+		group.Go(func() error {
+			return transferImageViaPipe(ctx, output, source, destination, image)
+		})
 	}
-	return nil
+	return group.Wait()
 }
 
 func transferImageViaPipe(ctx context.Context, output io.Writer, source, destination Socket, image string) error {
