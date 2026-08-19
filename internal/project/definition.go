@@ -17,11 +17,10 @@ type Project struct {
 }
 
 type Metadata struct {
-	Name                     string
-	Description              string
-	DeploymentSuccessMessage string
-	Features                 []string
-	Parameters               []Parameter
+	Name        string
+	Description string
+	Features    []string
+	Parameters  []Parameter
 }
 
 type Parameter struct {
@@ -57,12 +56,11 @@ func FromContent(reader io.Reader) (Project, error) {
 }
 
 type rawMetadata struct {
-	Name                     string                  `yaml:"name"`
-	Description              string                  `yaml:"description"`
-	DeploymentSuccessMessage string                  `yaml:"deployment_success_message"`
-	Features                 []string                `yaml:"features,omitempty"`
-	Parameters               map[string]rawParameter `yaml:"parameters,omitempty"`
-	Args                     map[string]rawParameter `yaml:"args,omitempty"`
+	Name        string                  `yaml:"name"`
+	Description string                  `yaml:"description"`
+	Features    []string                `yaml:"features,omitempty"`
+	Parameters  map[string]rawParameter `yaml:"parameters,omitempty"`
+	Args        map[string]rawParameter `yaml:"args,omitempty"`
 }
 
 type rawParameter struct {
@@ -79,7 +77,6 @@ func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
 
 	t.Name = raw.Name
 	t.Description = raw.Description
-	t.DeploymentSuccessMessage = raw.DeploymentSuccessMessage
 	t.Features = raw.Features
 	parametersNode := findMappingValue(node, "parameters")
 	parameters := raw.Parameters

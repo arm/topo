@@ -3,11 +3,11 @@ package post_deploy
 import (
 	"fmt"
 	"io"
-	"os"
 
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/ssh"
 )
 
 func DefaultMessage(composeFile string) string {
@@ -18,22 +18,24 @@ func DefaultMessage(composeFile string) string {
 	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", cmdtext.QuoteArg(composeFile))
 }
 
-func getSuccessMessage(composeFile string) (string, error) {
-	f, err := os.Open(composeFile)
+func getSuccessMessage(composeFile string, target ssh.Destination) (string, error) {
+	composeProject, err := compose.ReadProjectWithEnv(composeFile, env.ComposeEnv(target))
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = f.Close() }()
 
-	p, err := project.FromContent(f)
-	if err != nil {
+	var metadata struct {
+		DeploymentSuccessMessage string `mapstructure:"deployment_success_message"`
+	}
+	found, err := composeProject.Extensions.Get("x-topo", &metadata)
+	if err != nil || !found {
 		return "", err
 	}
-	return p.Metadata.DeploymentSuccessMessage, nil
+	return metadata.DeploymentSuccessMessage, nil
 }
 
-func PrintDeploySuccess(output io.Writer, composeFile, defaultMessage string) error {
-	successMessage, err := getSuccessMessage(composeFile)
+func PrintDeploySuccess(output io.Writer, composeFile string, target ssh.Destination, defaultMessage string) error {
+	successMessage, err := getSuccessMessage(composeFile, target)
 	if err != nil {
 		return err
 	}

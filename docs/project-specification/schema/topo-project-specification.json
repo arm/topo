@@ -29,7 +29,7 @@
             },
             "deployment_success_message": {
               "type": "string",
-              "description": "Message displayed to the user after a successful deployment. If omitted, a default message is shown."
+              "description": "Message displayed after a successful deployment. Supports Compose interpolation. Topo provides TOPO_TARGET and TOPO_TARGET_HOSTNAME when rendering this message. If omitted, a default message is shown."
             },
             "parameters": {
               "type": "object",

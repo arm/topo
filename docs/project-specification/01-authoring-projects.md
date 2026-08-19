@@ -74,6 +74,20 @@ x-topo:
       example: string # Optional
 ```
 
+### Deployment success message
+
+`deployment_success_message` supports standard Compose interpolation. Topo provides these additional variables when it displays the message:
+
+- `TOPO_TARGET`: The complete SSH destination in URI form, such as `ssh://user@board.local`.
+- `TOPO_TARGET_HOSTNAME`: The Target hostname resolved from the SSH configuration, such as `board.local`.
+
+```yaml
+x-topo:
+  name: "web-app"
+  deployment_success_message: |
+    Open http://${TOPO_TARGET_HOSTNAME:-localhost}:8080
+```
+
 ---
 
 ## 4. Testing Your Project
