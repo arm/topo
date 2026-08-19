@@ -48,7 +48,7 @@
                   },
                   "default": {
                     "type": "string",
-                    "description": "Deprecated. Current Topo versions ignore this property."
+                    "description": "Deprecated. Topo versions >11.0.1 ignore this property."
                   },
                   "example": {
                     "type": "string",
