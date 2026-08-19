@@ -9,9 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -25,7 +23,7 @@ func TestTunnel(t *testing.T) {
 		logPath := installFakeSSH(t)
 		destination := ssh.NewDestination("user@remote")
 
-		tunnel, openErr := ssh.OpenTunnel(context.Background(), io.Discard, destination, "1337", true)
+		tunnel, openErr := ssh.OpenTunnel(context.Background(), io.Discard, destination, "1337")
 		require.NoError(t, openErr)
 		closeErr := tunnel.Close(context.Background(), io.Discard)
 
@@ -43,7 +41,7 @@ func TestTunnel(t *testing.T) {
 		destination := ssh.NewDestination("user@remote")
 		var output bytes.Buffer
 
-		tunnel, err := ssh.OpenTunnel(context.Background(), &output, destination, "1337", true)
+		tunnel, err := ssh.OpenTunnel(context.Background(), &output, destination, "1337")
 
 		require.NoError(t, err)
 		t.Cleanup(func() {
@@ -53,26 +51,11 @@ func TestTunnel(t *testing.T) {
 		assert.Contains(t, output.String(), "ssh stderr")
 	})
 
-	t.Run("closes a running tunnel process", func(t *testing.T) {
-		logPath := installFakeSSH(t)
-		destination := ssh.NewDestination("user@remote")
-
-		tunnel, openErr := ssh.OpenTunnel(context.Background(), io.Discard, destination, "1338", false)
-		require.NoError(t, openErr)
-		pid := readSSHPID(t, logPath+".pid")
-		closeErr := tunnel.Close(context.Background(), io.Discard)
-
-		require.NoError(t, closeErr)
-		// ESRCH means no process exists with the supplied PID.
-		processErr := syscall.Kill(pid, 0)
-		assert.ErrorIs(t, processErr, syscall.ESRCH)
-	})
-
 	t.Run("close is idempotent", func(t *testing.T) {
 		logPath := installFakeSSH(t)
 		destination := ssh.NewDestination("user@remote")
 
-		tunnel, openErr := ssh.OpenTunnel(context.Background(), nil, destination, "1339", true)
+		tunnel, openErr := ssh.OpenTunnel(context.Background(), nil, destination, "1339")
 		require.NoError(t, openErr)
 		firstCloseErr := tunnel.Close(context.Background(), nil)
 		secondCloseErr := tunnel.Close(context.Background(), nil)
@@ -108,21 +91,6 @@ esac
 	t.Setenv("TOPO_TEST_SSH_LOG", logPath)
 	t.Setenv("PATH", directory+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return logPath
-}
-
-func readSSHPID(t *testing.T, pidPath string) int {
-	t.Helper()
-
-	var pid int
-	require.Eventually(t, func() bool {
-		content, err := os.ReadFile(pidPath)
-		if err != nil {
-			return false
-		}
-		pid, err = strconv.Atoi(strings.TrimSpace(string(content)))
-		return err == nil
-	}, time.Second, 10*time.Millisecond)
-	return pid
 }
 
 func readSSHInvocations(t *testing.T, logPath string, count int) []string {

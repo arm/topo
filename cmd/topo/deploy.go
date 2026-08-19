@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -116,7 +115,6 @@ func deployWithDocker(cmd *cobra.Command) error {
 		deployOpts.Registry = &docker.RegistryConfig{
 			Port:                resolvedPort,
 			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-			UseControlSockets:   docker.SupportsSSHControlSockets(runtime.GOOS),
 		}
 	}
 	switch {
