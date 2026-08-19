@@ -60,6 +60,21 @@ var PasswordlessSSHContainer = ContainerSpec{
 	},
 }
 
+var PodmanContainer = ContainerSpec{
+	context: relPath("podman"),
+	image:   "topo-e2e-podman:latest",
+	runArgs: []string{"--privileged"},
+	setup: func(c *Container) error {
+		if err := acceptHostKey(c); err != nil {
+			return err
+		}
+		return waitForPodmanService(c)
+	},
+	cleanup: func(c *Container) {
+		removeHostKey(c)
+	},
+}
+
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	t.Helper()
 	if testing.Short() {
@@ -204,6 +219,24 @@ func waitForPort(host string, port string, timeout time.Duration) error {
 	}
 
 	return fmt.Errorf("port %s not ready: %w", addr, lastErr)
+}
+
+func waitForPodmanService(c *Container) error {
+	deadline := time.Now().Add(20 * time.Second)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		// #nosec G204 -- ignore as its a test helper
+		cmd := exec.Command("docker", "exec", c.Name, "podman", "--url", "unix:///run/podman/podman.sock", "info")
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		lastErr = fmt.Errorf("%w output: %s", err, strings.TrimSpace(string(output)))
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return fmt.Errorf("podman service not ready: %w", lastErr)
 }
 
 func waitForDockerDaemon(c *Container) error {

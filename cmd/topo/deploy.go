@@ -71,9 +71,6 @@ func deployWithPodman(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	if !ssh.NewDestination(targetArg).IsPlainLocalhost() {
-		return fmt.Errorf("podman deployments only support the localhost target")
-	}
 
 	composeFile, err := getComposeFileName(cmd)
 	if err != nil {
@@ -84,7 +81,8 @@ func deployWithPodman(cmd *cobra.Command) error {
 	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
-		return podman.Deploy(ctx, os.Stdout, composeFile)
+		options := podman.DeployOptions{TargetHost: ssh.NewDestination(targetArg)}
+		return podman.Deploy(ctx, os.Stdout, composeFile, options)
 	})
 }
 

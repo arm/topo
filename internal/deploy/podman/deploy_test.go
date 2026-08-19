@@ -5,26 +5,49 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/ssh"
+	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDeploy(t *testing.T) {
 	requireLocalPodman(t)
-	composeFile, projectName := deploymentFixture(t)
-	t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
 
-	err := podman.Deploy(t.Context(), io.Discard, composeFile)
+	t.Run("deploys to localhost", func(t *testing.T) {
+		composeFile, projectName := deploymentFixture(t)
+		t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
+		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-	require.NoError(t, err)
-	assertContainersRunning(t, projectName, podman.LocalSocket)
+		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+
+		require.NoError(t, err)
+		assertContainersRunning(t, projectName, podman.LocalSocket)
+	})
+
+	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
+		target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
+		composeFile, projectName := deploymentFixture(t)
+		targetHost := ssh.NewDestination(target.SSHDestination)
+		options := podman.DeployOptions{TargetHost: targetHost}
+
+		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+
+		require.NoError(t, err)
+		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetHost)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, tunnel.Close())
+		})
+		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
+	})
 }
 
 func requireLocalPodman(t *testing.T) {
@@ -42,7 +65,8 @@ func requireLocalPodman(t *testing.T) {
 
 func assertContainersRunning(t *testing.T, projectName string, socket podman.Socket) {
 	t.Helper()
-	cmd := podman.Command(t.Context(), socket, "ps", "--format", "json", "--all",
+	cmd := podman.Command(t.Context(), socket,
+		"ps", "--format", "json", "--all",
 		"--filter", "label=com.docker.compose.project="+projectName,
 	)
 	var diagnostics bytes.Buffer
@@ -75,6 +99,8 @@ services:
     image: docker.io/library/alpine:latest
     command: ["tail", "-f", "/dev/null"]
 `, "test-project-"+testName, imageName)
+	composeFileContent, err := fixPodmanInDockerQuirk(composeFileContent)
+	require.NoError(t, err)
 	requireWriteFile(t, composeFile, composeFileContent)
 	requireWriteFile(t, filepath.Join(tempDir, "Dockerfile"), `
 FROM docker.io/library/alpine:latest
@@ -90,6 +116,38 @@ CMD ["tail", "-f", "/dev/null"]
 		}
 	})
 	return composeFile, "test-project-" + testName
+}
+
+// fixPodmanInDockerQuirk avoids a Docker Desktop nested-container restriction.
+// The Podman target inherits oom_score_adj: 200, but Podman otherwise starts
+// each service with oom_score_adj: 0. Docker Desktop rejects that decrease, so
+// this adds oom_score_adj: 200 to each fixture service, for example:
+//
+//	services:
+//	  app:
+//	    oom_score_adj: 200
+func fixPodmanInDockerQuirk(contents string) (string, error) {
+	var definition map[string]any
+	if err := yaml.Unmarshal([]byte(contents), &definition); err != nil {
+		return "", err
+	}
+	services, ok := definition["services"].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("Compose file services must be a mapping")
+	}
+	for name, value := range services {
+		service, ok := value.(map[string]any)
+		if !ok {
+			return "", fmt.Errorf("service %q must be a mapping", name)
+		}
+		service["oom_score_adj"] = 200
+	}
+
+	updatedContents, err := yaml.Marshal(definition)
+	if err != nil {
+		return "", err
+	}
+	return string(updatedContents), nil
 }
 
 func cleanupComposeProject(t *testing.T, composeFile string) {
