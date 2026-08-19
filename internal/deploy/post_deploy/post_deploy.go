@@ -19,7 +19,7 @@ func DefaultMessage(composeFile string) string {
 }
 
 func getSuccessMessage(composeFile string, target ssh.Destination) (string, error) {
-	composeProject, err := compose.ReadProjectWithEnvironment(composeFile, env.ComposeEnv(target))
+	composeProject, err := compose.ReadProjectWithEnv(composeFile, env.ComposeEnv(target))
 	if err != nil {
 		return "", err
 	}

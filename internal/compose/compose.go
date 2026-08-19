@@ -45,18 +45,18 @@ func ReadProject(targetProjectFile string) (*types.Project, error) {
 	return readProject(targetProjectFile, nil)
 }
 
-func ReadProjectWithEnvironment(targetProjectFile string, environment []string) (*types.Project, error) {
-	return readProject(targetProjectFile, environment)
+func ReadProjectWithEnv(targetProjectFile string, env []string) (*types.Project, error) {
+	return readProject(targetProjectFile, env)
 }
 
-func readProject(targetProjectFile string, environment []string) (*types.Project, error) {
+func readProject(targetProjectFile string, env []string) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
 		[]string{targetProjectFile},
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 		cli.WithEnvFiles(),
-		cli.WithEnv(environment),
+		cli.WithEnv(env),
 	)
 	if err != nil {
 		return nil, err
