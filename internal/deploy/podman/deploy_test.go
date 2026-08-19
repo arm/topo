@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -36,7 +35,6 @@ func TestDeploy(t *testing.T) {
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
 		target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
 		composeFile, projectName := deploymentFixture(t)
-		fixPodmanInDockerQuirk(t, composeFile)
 		targetHost := ssh.NewDestination(target.SSHDestination)
 		options := podman.DeployOptions{TargetHost: targetHost}
 
@@ -101,6 +99,8 @@ services:
     image: docker.io/library/alpine:latest
     command: ["tail", "-f", "/dev/null"]
 `, "test-project-"+testName, imageName)
+	composeFileContent, err := fixPodmanInDockerQuirk(composeFileContent)
+	require.NoError(t, err)
 	requireWriteFile(t, composeFile, composeFileContent)
 	requireWriteFile(t, filepath.Join(tempDir, "Dockerfile"), `
 FROM docker.io/library/alpine:latest
@@ -126,24 +126,28 @@ CMD ["tail", "-f", "/dev/null"]
 //	services:
 //	  app:
 //	    oom_score_adj: 200
-func fixPodmanInDockerQuirk(t *testing.T, composeFile string) {
-	t.Helper()
-	contents, err := os.ReadFile(composeFile)
-	require.NoError(t, err)
-
+func fixPodmanInDockerQuirk(contents string) (string, error) {
 	var definition map[string]any
-	require.NoError(t, yaml.Unmarshal(contents, &definition))
+	if err := yaml.Unmarshal([]byte(contents), &definition); err != nil {
+		return "", err
+	}
 	services, ok := definition["services"].(map[string]any)
-	require.True(t, ok, "Compose file services must be a mapping")
+	if !ok {
+		return "", fmt.Errorf("Compose file services must be a mapping")
+	}
 	for name, value := range services {
 		service, ok := value.(map[string]any)
-		require.Truef(t, ok, "service %q must be a mapping", name)
+		if !ok {
+			return "", fmt.Errorf("service %q must be a mapping", name)
+		}
 		service["oom_score_adj"] = 200
 	}
 
-	contents, err = yaml.Marshal(definition)
-	require.NoError(t, err)
-	requireWriteFile(t, composeFile, string(contents))
+	updatedContents, err := yaml.Marshal(definition)
+	if err != nil {
+		return "", err
+	}
+	return string(updatedContents), nil
 }
 
 func cleanupComposeProject(t *testing.T, composeFile string) {
