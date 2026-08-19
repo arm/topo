@@ -68,11 +68,11 @@ func (t *TCPToUnixSocketTunnel) Close() error {
 func availableLoopbackAddress() (string, error) {
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
-		return "", fmt.Errorf("failed to reserve tunnel port: %w", err)
+		return "", fmt.Errorf("failed to reserve a local loopback address for the SSH tunnel: %w", err)
 	}
 	address := listener.Addr().String()
 	if err := listener.Close(); err != nil {
-		return "", fmt.Errorf("failed to release tunnel port %s: %w", address, err)
+		return "", fmt.Errorf("failed to release local loopback address %s for the SSH tunnel: %w", address, err)
 	}
 	return address, nil
 }
