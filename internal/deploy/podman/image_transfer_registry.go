@@ -2,6 +2,7 @@ package podman
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -46,7 +47,7 @@ func tagImageForRegistry(ctx context.Context, output io.Writer, sourceSocket Soc
 	return RunCommand(ctx, output, sourceSocket, "tag", image, registryTag)
 }
 
-func pushImageToRegistry(ctx context.Context, output io.Writer, sourceSocket Socket, registryTag string) (string, error) {
+func pushImageToRegistry(ctx context.Context, output io.Writer, sourceSocket Socket, registryTag string) (digestReference string, pushErr error) {
 	digestFile, err := os.CreateTemp("", "topo-registry-digest-*")
 	if err != nil {
 		return "", fmt.Errorf("create registry digest file: %w", err)
@@ -55,11 +56,17 @@ func pushImageToRegistry(ctx context.Context, output io.Writer, sourceSocket Soc
 	if err := digestFile.Close(); err != nil {
 		return "", fmt.Errorf("close registry digest file: %w", err)
 	}
-	defer os.Remove(digestFilePath)
+	defer func() {
+		// #nosec G703 -- digestFilePath is returned by os.CreateTemp.
+		if err := os.Remove(digestFilePath); err != nil {
+			pushErr = errors.Join(pushErr, fmt.Errorf("remove registry digest file: %w", err))
+		}
+	}()
 
 	if err := RunCommand(ctx, output, sourceSocket, "push", "--tls-verify=false", "--digestfile", digestFilePath, registryTag); err != nil {
 		return "", err
 	}
+	// #nosec G703 -- digestFilePath is returned by os.CreateTemp.
 	digestBytes, err := os.ReadFile(digestFilePath)
 	if err != nil {
 		return "", fmt.Errorf("read registry digest file: %w", err)
