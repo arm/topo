@@ -23,6 +23,18 @@ func LoadConfig(dest Destination) (Config, error) {
 	return ParseConfigFromBytes(output), nil
 }
 
+func ResolveHostName(dest Destination) (string, error) {
+	if dest.IsPlainLocalhost() {
+		return dest.Host, nil
+	}
+
+	config, err := LoadConfig(dest)
+	if err != nil {
+		return "", err
+	}
+	return config.HostName, nil
+}
+
 func ParseConfigFromBytes(data []byte) Config {
 	var config Config
 	scanner := bufio.NewScanner(bytes.NewReader(data))

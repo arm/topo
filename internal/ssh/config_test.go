@@ -5,7 +5,19 @@ import (
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestResolveHostName(t *testing.T) {
+	t.Run("does not execute ssh for plain localhost", func(t *testing.T) {
+		t.Setenv("PATH", "") // remove SSH from path
+
+		got, err := ssh.ResolveHostName(ssh.PlainLocalhost)
+
+		require.NoError(t, err)
+		assert.Equal(t, "localhost", got)
+	})
+}
 
 func TestParseConfigFromBytes(t *testing.T) {
 	t.Run("parses basic config fields", func(t *testing.T) {

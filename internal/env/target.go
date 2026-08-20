@@ -14,13 +14,9 @@ const (
 
 func SetTargetEnv(target string) error {
 	destination := ssh.NewDestination(target)
-	hostName := destination.Host
-	if !destination.IsPlainLocalhost() {
-		sshConfig, err := ssh.LoadConfig(destination)
-		if err != nil {
-			return err
-		}
-		hostName = sshConfig.HostName
+	hostName, err := ssh.ResolveHostName(destination)
+	if err != nil {
+		return err
 	}
 	vars := map[string]string{
 		TargetVariable:         destination.String(),
