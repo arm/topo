@@ -36,8 +36,6 @@ const (
 	containerEnginePodman containerEngine = "podman"
 )
 
-var deployOpts docker.DeployOptions
-
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy services using the compose file",
@@ -132,7 +130,7 @@ func deployWithDocker(cmd *cobra.Command, targetArg string) error {
 		return err
 	}
 
-	deployOpts.TargetHost = ssh.NewDestination(targetArg)
+	deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination(targetArg)}
 	if docker.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
 		deployOpts.Registry = &docker.RegistryConfig{
 			Port:                resolvedPort,
