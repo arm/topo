@@ -6,7 +6,6 @@ import (
 
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/ssh"
 )
 
 func DefaultMessage(composeFile string) string {
@@ -33,7 +32,7 @@ func getSuccessMessage(composeFile string) (string, error) {
 	return metadata.DeploymentSuccessMessage, nil
 }
 
-func PrintDeploySuccess(output io.Writer, composeFile string, target ssh.Destination, defaultMessage string) error {
+func PrintDeploySuccess(output io.Writer, composeFile, defaultMessage string) error {
 	successMessage, err := getSuccessMessage(composeFile)
 	if err != nil {
 		return err

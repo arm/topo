@@ -11,6 +11,7 @@ import (
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -80,7 +81,7 @@ func getComposeFileName(cmd *cobra.Command) (string, error) {
 	return compose.FindDefaultFile()
 }
 
-const targetEnvVar = "TOPO_TARGET"
+const targetEnvVar = env.TargetVariable
 
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
@@ -111,6 +112,9 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 	t, exists := lookupTarget(cmd)
 	if !exists {
 		return "", fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
+	}
+	if err := env.SetTargetEnvironment(ssh.NewDestination(t)); err != nil {
+		return "", err
 	}
 	return t, nil
 }

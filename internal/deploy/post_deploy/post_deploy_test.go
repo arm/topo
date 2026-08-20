@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/post_deploy"
+	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ services:
 `)
 		var buf bytes.Buffer
 
-		err := post_deploy.PrintDeploySuccess(&buf, composeFile, ssh.PlainLocalhost, "Run `topo ps` to see deployed containers")
+		err := post_deploy.PrintDeploySuccess(&buf, composeFile, "Run `topo ps` to see deployed containers")
 
 		require.NoError(t, err)
 		assert.Equal(t, "Deployment complete!\n", buf.String())
@@ -41,36 +42,37 @@ services:
 `)
 		var buf bytes.Buffer
 
-		err := post_deploy.PrintDeploySuccess(&buf, composeFile, ssh.PlainLocalhost, "default message")
+		err := post_deploy.PrintDeploySuccess(&buf, composeFile, "default message")
 
 		require.NoError(t, err)
 		assert.Equal(t, "default message\n", buf.String())
 	})
 
-	t.Run("interpolates the target in deployment_success_message", func(t *testing.T) {
+	t.Run("interpolates env vars in deployment_success_message", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFile := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, composeFile, `
 name: test-project
 x-topo:
-  deployment_success_message: "${COMPOSE_PROJECT_NAME} deployed to ${TOPO_TARGET} at ${TOPO_TARGET_HOSTNAME}"
+  deployment_success_message: "${COMPOSE_PROJECT_NAME} deployed to ${TOPO_TARGET} at ${TOPO_TARGET_HOSTNAME} - ${EXTRA_MESSAGE}"
 services:
   app:
     image: nginx
 `)
 		var buf bytes.Buffer
-		target := ssh.NewDestination("user@localhost")
+		require.NoError(t, env.SetTargetEnvironment(ssh.NewDestination("user@localhost")))
+		t.Setenv("EXTRA_MESSAGE", "cool!")
 
-		err := post_deploy.PrintDeploySuccess(&buf, composeFile, target, "default message")
+		err := post_deploy.PrintDeploySuccess(&buf, composeFile, "default message")
 
 		require.NoError(t, err)
-		assert.Equal(t, "test-project deployed to ssh://user@localhost at localhost\n", buf.String())
+		assert.Equal(t, "test-project deployed to ssh://user@localhost at localhost - cool!\n", buf.String())
 	})
 
 	t.Run("returns error when compose file does not exist", func(t *testing.T) {
 		var buf bytes.Buffer
 
-		err := post_deploy.PrintDeploySuccess(&buf, "nonexistent.yaml", ssh.PlainLocalhost, "Run `topo ps` to see deployed containers")
+		err := post_deploy.PrintDeploySuccess(&buf, "nonexistent.yaml", "Run `topo ps` to see deployed containers")
 
 		require.Error(t, err)
 	})
