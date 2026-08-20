@@ -42,21 +42,12 @@ func PullableServices(composeFilePath string) ([]string, error) {
 }
 
 func ReadProject(targetProjectFile string) (*types.Project, error) {
-	return readProject(targetProjectFile, nil)
-}
-
-func ReadProjectWithEnv(targetProjectFile string, env []string) (*types.Project, error) {
-	return readProject(targetProjectFile, env)
-}
-
-func readProject(targetProjectFile string, env []string) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
 		[]string{targetProjectFile},
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 		cli.WithEnvFiles(),
-		cli.WithEnv(env),
 	)
 	if err != nil {
 		return nil, err

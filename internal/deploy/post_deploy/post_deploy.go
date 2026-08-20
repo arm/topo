@@ -6,8 +6,6 @@ import (
 
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/env"
-	"github.com/arm/topo/internal/ssh"
 )
 
 func DefaultMessage(composeFile string) string {
@@ -18,8 +16,8 @@ func DefaultMessage(composeFile string) string {
 	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", cmdtext.QuoteArg(composeFile))
 }
 
-func getSuccessMessage(composeFile string, target ssh.Destination) (string, error) {
-	composeProject, err := compose.ReadProjectWithEnv(composeFile, env.ComposeEnv(target))
+func getSuccessMessage(composeFile string) (string, error) {
+	composeProject, err := compose.ReadProject(composeFile)
 	if err != nil {
 		return "", err
 	}
@@ -34,8 +32,8 @@ func getSuccessMessage(composeFile string, target ssh.Destination) (string, erro
 	return metadata.DeploymentSuccessMessage, nil
 }
 
-func PrintDeploySuccess(output io.Writer, composeFile string, target ssh.Destination, defaultMessage string) error {
-	successMessage, err := getSuccessMessage(composeFile, target)
+func PrintDeploySuccess(output io.Writer, composeFile, defaultMessage string) error {
+	successMessage, err := getSuccessMessage(composeFile)
 	if err != nil {
 		return err
 	}

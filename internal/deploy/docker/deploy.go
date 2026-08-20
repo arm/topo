@@ -74,7 +74,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
 		return err
 	}
-	return post_deploy.PrintDeploySuccess(output, composeFile, opts.TargetHost, post_deploy.DefaultMessage(composeFile))
+	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
 }
 
 func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceHost, targetHost Host, composeFile string) error {

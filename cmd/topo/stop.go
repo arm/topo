@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/ssh"
 
 	"github.com/spf13/cobra"
@@ -22,6 +23,10 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		cmd.SilenceUsage = true
 
 		targetArg, err := requireTarget(cmd)
+		if err != nil {
+			return err
+		}
+		err = env.SetTargetEnv(targetArg)
 		if err != nil {
 			return err
 		}

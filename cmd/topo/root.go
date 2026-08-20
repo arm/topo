@@ -80,7 +80,7 @@ func getComposeFileName(cmd *cobra.Command) (string, error) {
 	return compose.FindDefaultFile()
 }
 
-const targetEnvVar = "TOPO_TARGET"
+const targetEnvVar = env.TargetVariable
 
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
