@@ -40,7 +40,7 @@ func TestInteractiveProvider(t *testing.T) {
 		assert.Equal(t, want, got)
 		assert.Contains(t, output.String(), "The greeting message")
 		assert.Contains(t, output.String(), "Example: Hello")
-		assert.Contains(t, output.String(), "GREETING (required)>")
+		assert.Contains(t, output.String(), "GREETING (required, press Enter to skip)>")
 	})
 
 	t.Run("skips empty inputs", func(t *testing.T) {
@@ -48,13 +48,25 @@ func TestInteractiveProvider(t *testing.T) {
 		output := &bytes.Buffer{}
 		provider := arguments.NewInteractiveProvider(input, output)
 
-		args := []arguments.Arg{
-			{Name: "OPTIONAL", Required: false},
-		}
+		got, err := provider.Provide([]arguments.Arg{{Name: "OPTIONAL"}})
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("shows current values", func(t *testing.T) {
+		input := strings.NewReader("\n")
+		output := &bytes.Buffer{}
+		provider := arguments.NewInteractiveProvider(input, output)
+		args := []arguments.Arg{{
+			Name:          "GREETING",
+			CurrentValues: []string{"Hello", ""},
+		}}
 
 		got, err := provider.Provide(args)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
+		assert.Contains(t, output.String(), `Current: ["Hello",""]`)
 	})
 }

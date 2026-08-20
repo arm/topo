@@ -71,7 +71,6 @@ x-topo:
     <PARAMETER_NAME>:
       description: string # Optional
       required: boolean # Optional
-      default: string # Optional
       example: string # Optional
 ```
 

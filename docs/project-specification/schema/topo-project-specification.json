@@ -44,11 +44,11 @@
                   },
                   "required": {
                     "type": "boolean",
-                    "description": "If `true`, Implementations must enforce input or error"
+                    "description": "If `true`, Implementations must enforce that all build args values are set for this parameter when configuring the Project"
                   },
                   "default": {
                     "type": "string",
-                    "description": "Value used if user skips input (only valid when not required)"
+                    "description": "Deprecated. Topo versions >11.0.1 ignore this property."
                   },
                   "example": {
                     "type": "string",

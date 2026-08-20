@@ -3,6 +3,7 @@ package project
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
 	"gopkg.in/yaml.v3"
@@ -11,7 +12,8 @@ import (
 const ComposeFilename = "compose.yaml"
 
 type Project struct {
-	Metadata Metadata
+	Metadata               Metadata
+	currentParameterValues map[string][]string
 }
 
 type Metadata struct {
@@ -26,7 +28,6 @@ type Parameter struct {
 	Description string
 	Required    bool
 	Example     string
-	Default     string
 }
 
 func FromContent(reader io.Reader) (Project, error) {
@@ -34,14 +35,23 @@ func FromContent(reader io.Reader) (Project, error) {
 		XTopo Metadata `yaml:"x-topo"`
 	}
 
-	var parsed composeFile
+	var document yaml.Node
 	decoder := yaml.NewDecoder(reader)
-	if err := decoder.Decode(&parsed); err != nil {
+	if err := decoder.Decode(&document); err != nil {
+		return Project{}, fmt.Errorf("failed to decode project: %w", err)
+	}
+	if len(document.Content) == 0 {
+		return Project{}, fmt.Errorf("failed to decode project: compose file is empty")
+	}
+
+	var parsed composeFile
+	if err := document.Decode(&parsed); err != nil {
 		return Project{}, fmt.Errorf("failed to decode project: %w", err)
 	}
 
 	return Project{
-		Metadata: parsed.XTopo,
+		Metadata:               parsed.XTopo,
+		currentParameterValues: parseCurrentParameterValues(document.Content[0]),
 	}, nil
 }
 
@@ -57,7 +67,6 @@ type rawParameter struct {
 	Description string `yaml:"description"`
 	Required    bool   `yaml:"required"`
 	Example     string `yaml:"example,omitempty"`
-	Default     string `yaml:"default,omitempty"`
 }
 
 func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
@@ -69,11 +78,11 @@ func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
 	t.Name = raw.Name
 	t.Description = raw.Description
 	t.Features = raw.Features
-	parametersNode := findMetadataNode(node, "parameters")
+	parametersNode := findMappingValue(node, "parameters")
 	parameters := raw.Parameters
 	if len(parameters) == 0 && len(raw.Args) > 0 {
 		logger.Warn("x-topo.args is deprecated; use x-topo.parameters instead")
-		parametersNode = findMetadataNode(node, "args")
+		parametersNode = findMappingValue(node, "args")
 		parameters = raw.Args
 	}
 	t.Parameters = parseParametersInOrder(parametersNode, parameters)
@@ -81,19 +90,54 @@ func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-func findMetadataNode(node *yaml.Node, key string) *yaml.Node {
+func findMappingValue(node *yaml.Node, key string) *yaml.Node {
+	node = resolveAlias(node)
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
 	for i := 0; i < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
-			return node.Content[i+1]
+			return resolveAlias(node.Content[i+1])
 		}
 	}
 
 	return nil
 }
 
+func parseCurrentParameterValues(root *yaml.Node) map[string][]string {
+	values := make(map[string][]string)
+	services := findMappingValue(root, "services")
+	if services == nil {
+		return values
+	}
+
+	for i := 0; i < len(services.Content); i += 2 {
+		build := findMappingValue(services.Content[i+1], "build")
+		args := findMappingValue(build, "args")
+		if args == nil {
+			continue
+		}
+
+		switch args.Kind {
+		case yaml.MappingNode:
+			for j := 0; j < len(args.Content); j += 2 {
+				name := args.Content[j].Value
+				value := resolveAlias(args.Content[j+1]).Value
+				values[name] = append(values[name], value)
+			}
+		case yaml.SequenceNode:
+			for _, node := range args.Content {
+				name, value, _ := strings.Cut(resolveAlias(node).Value, "=")
+				values[name] = append(values[name], value)
+			}
+		}
+	}
+
+	return values
+}
+
 func parseParametersInOrder(parametersNode *yaml.Node, parametersMap map[string]rawParameter) []Parameter {
 	var result []Parameter
-	parametersNode = resolveAlias(parametersNode)
 	if parametersNode == nil {
 		return result
 	}
@@ -106,7 +150,6 @@ func parseParametersInOrder(parametersNode *yaml.Node, parametersMap map[string]
 				Description: metadata.Description,
 				Required:    metadata.Required,
 				Example:     metadata.Example,
-				Default:     metadata.Default,
 			})
 		}
 	}

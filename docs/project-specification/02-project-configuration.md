@@ -20,8 +20,7 @@ services:
     platform: linux/arm64
     build:
       context: .
-      # Optional default: allows running with plain docker compose
-      # Not used by Implementations that read x-topo.parameters
+      # Initial value: allows running with plain docker compose
       args:
         GREETING: "Hello, World"
 
@@ -65,7 +64,7 @@ x-topo:
   parameters:
     MODEL:
       description: "Model artifact reference"
-      default: "bartowski/Qwen_Qwen3.5-0.8B-GGUF:SmolLM2-135M-Instruct-Q4_K_M.gguf"
+      example: "bartowski/Qwen_Qwen3.5-0.8B-GGUF:SmolLM2-135M-Instruct-Q4_K_M.gguf"
       hints:
         huggingface.task: text-generation
         file.format: gguf

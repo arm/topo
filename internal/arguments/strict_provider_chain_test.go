@@ -160,27 +160,36 @@ func TestStrictMultiProvider(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("provides resolved args when default provided", func(t *testing.T) {
-		provider1 := arguments.NewStaticProvider()
-		multi := arguments.NewStrictProviderChain(provider1)
-		args := []arguments.Arg{
-			{
-				Name:     "CINNAMON",
-				Required: true,
-				Default:  "filled",
-			},
-		}
+	t.Run("allows required arguments with non-empty current values", func(t *testing.T) {
+		provider := arguments.NewStaticProvider()
+		multi := arguments.NewStrictProviderChain(provider)
+		args := []arguments.Arg{{
+			Name:          "CINNAMON",
+			Required:      true,
+			CurrentValues: []string{"current", "${CINNAMON}"},
+		}}
 
 		got, err := multi.Provide(args)
 
 		require.NoError(t, err)
-		want := []arguments.ResolvedArg{
-			{Name: "CINNAMON", Value: "filled"},
-		}
-		assert.Equal(t, want, got)
+		assert.Empty(t, got)
 	})
 
-	t.Run("does not provide resolved args when no default provided", func(t *testing.T) {
+	t.Run("errors when any current value is empty", func(t *testing.T) {
+		provider := arguments.NewStaticProvider()
+		multi := arguments.NewStrictProviderChain(provider)
+		arg := arguments.Arg{
+			Name:          "CINNAMON",
+			Required:      true,
+			CurrentValues: []string{"current", ""},
+		}
+
+		_, err := multi.Provide([]arguments.Arg{arg})
+
+		assert.Equal(t, arguments.MissingArgsError{arg}, err)
+	})
+
+	t.Run("does not resolve omitted optional arguments", func(t *testing.T) {
 		provider1 := arguments.NewStaticProvider()
 		multi := arguments.NewStrictProviderChain(provider1)
 		args := []arguments.Arg{
@@ -207,19 +216,21 @@ func TestMissingArgsError(t *testing.T) {
 				Example:     "Hello",
 			},
 			{
-				Name:        "PORT",
-				Description: "Port number",
+				Name:          "PORT",
+				Description:   "Port number",
+				CurrentValues: []string{"8080", ""},
 			},
 		}
 
 		got := err.Error()
 
-		want := `missing required parameters:
+		want := `missing value(s) for required parameters:
   GREETING:
     description: The greeting message
     example: Hello
   PORT:
     description: Port number
+    # current: ["8080",""]
 `
 		assert.Equal(t, want, got)
 	})
