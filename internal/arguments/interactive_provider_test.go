@@ -18,10 +18,11 @@ func TestInteractiveProvider(t *testing.T) {
 
 		args := []arguments.Arg{
 			{
-				Name:        "GREETING",
-				Description: "The greeting message",
-				Required:    true,
-				Example:     "Hello",
+				Name:          "GREETING",
+				Description:   "The greeting message",
+				Required:      true,
+				Example:       "Hello",
+				CurrentValues: []string{"CURRENT GREETING HELLO!"},
 			},
 			{
 				Name:        "PORT",
