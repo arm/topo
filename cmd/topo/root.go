@@ -112,11 +112,6 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 	if !exists {
 		return "", fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
 	}
-	for name, value := range env.TargetEnv(t) {
-		if err := os.Setenv(name, value); err != nil {
-			return "", fmt.Errorf("failed to set %s: %w", name, err)
-		}
-	}
 	return t, nil
 }
 

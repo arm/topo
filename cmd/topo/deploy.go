@@ -59,19 +59,22 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		if parsedEngine == containerEnginePodman {
-			return deployWithPodman(cmd)
+		targetArg, err := requireTarget(cmd)
+		if err != nil {
+			return err
 		}
-		return deployWithDocker(cmd)
+		err = env.SetTargetEnv(targetArg)
+		if err != nil {
+			return err
+		}
+		if parsedEngine == containerEnginePodman {
+			return deployWithPodman(cmd, targetArg)
+		}
+		return deployWithDocker(cmd, targetArg)
 	},
 }
 
-func deployWithPodman(cmd *cobra.Command) error {
-	targetArg, err := requireTarget(cmd)
-	if err != nil {
-		return err
-	}
-
+func deployWithPodman(cmd *cobra.Command, targetArg string) error {
 	composeFile, err := getComposeFileName(cmd)
 	if err != nil {
 		return err
@@ -86,15 +89,11 @@ func deployWithPodman(cmd *cobra.Command) error {
 	})
 }
 
-func deployWithDocker(cmd *cobra.Command) error {
+func deployWithDocker(cmd *cobra.Command, targetArg string) error {
 	if cmd.Flags().Changed("registry-port") && noRegistry {
 		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 	}
 
-	targetArg, err := requireTarget(cmd)
-	if err != nil {
-		return err
-	}
 	composeFile, err := getComposeFileName(cmd)
 	if err != nil {
 		return err

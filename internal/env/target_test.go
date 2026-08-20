@@ -1,22 +1,23 @@
 package env_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/arm/topo/internal/env"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestTargetEnv(t *testing.T) {
-	t.Run("returns a map with the target and hostname", func(t *testing.T) {
-		target := "ssh://user@foobar.example:8080"
-		want := map[string]string{
-			env.TargetVariable:         target,
-			env.TargetHostnameVariable: "foobar.example",
-		}
+func TestSetTargetEnv(t *testing.T) {
+	t.Run("sets the resolved target environment", func(t *testing.T) {
+		t.Setenv(env.TargetVariable, "ssh://stale.example")
+		t.Setenv(env.TargetHostnameVariable, "stale.example")
 
-		got := env.TargetEnv(target)
+		err := env.SetTargetEnv("user@target.example")
 
-		assert.Equal(t, want, got)
+		require.NoError(t, err)
+		assert.Equal(t, "ssh://user@target.example", os.Getenv(env.TargetVariable))
+		assert.Equal(t, "target.example", os.Getenv(env.TargetHostnameVariable))
 	})
 }
