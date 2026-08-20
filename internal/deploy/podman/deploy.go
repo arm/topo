@@ -73,11 +73,11 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
 }
 
-func transferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Socket, composeFile string) error {
+func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, composeFile string) error {
 	if err := term.PrintHeader(output, "Transfer images"); err != nil {
 		return err
 	}
-	return TransferImagesViaPipe(ctx, output, source, destination, composeFile)
+	return TransferImagesViaPipe(ctx, output, sourceSocket, targetSocket, composeFile)
 }
 
 func closeRemoteTunnel(tunnel *ssh.TCPToUnixSocketTunnel) error {

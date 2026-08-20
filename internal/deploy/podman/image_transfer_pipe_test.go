@@ -18,8 +18,8 @@ func TestTransferImagesViaPipe(t *testing.T) {
 	requireLocalPodman(t)
 	composeFile, imageName := imageTransferFixture(t)
 	target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
-	targetHost := ssh.NewDestination(target.SSHDestination)
-	tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetHost)
+	targetDestination := ssh.NewDestination(target.SSHDestination)
+	tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, tunnel.Close())

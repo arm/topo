@@ -35,13 +35,13 @@ func TestDeploy(t *testing.T) {
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
 		target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
 		composeFile, projectName := deploymentFixture(t)
-		targetHost := ssh.NewDestination(target.SSHDestination)
-		options := podman.DeployOptions{TargetHost: targetHost}
+		targetDestination := ssh.NewDestination(target.SSHDestination)
+		options := podman.DeployOptions{TargetHost: targetDestination}
 
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
 
 		require.NoError(t, err)
-		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetHost)
+		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
 		require.NoError(t, err)
 		t.Cleanup(func() {
 			require.NoError(t, tunnel.Close())
