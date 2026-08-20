@@ -31,7 +31,7 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	targetSocket := podman.NewSocket(targetSocketTunnel.SocketURL())
 	assertImageDoesNotExist(t, targetSocket, imageName)
 
-	registryTunnel, err := ssh.OpenTunnel(context.Background(), t.Output(), targetDestination, registryPort, false)
+	registryTunnel, err := ssh.OpenTunnel(context.Background(), t.Output(), targetDestination, registryPort)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, registryTunnel.Close(context.Background(), t.Output()))
