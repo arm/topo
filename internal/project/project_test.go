@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/arguments"
@@ -66,6 +67,33 @@ services:
 		assert.FileExists(t, composeFilePath)
 	})
 
+	t.Run("preserves current build arg values", func(t *testing.T) {
+		dir := t.TempDir()
+		destDir := filepath.Join(dir, "demo")
+		composeFileContents := `services:
+  app:
+    build:
+      args:
+        GREETING: ${GREETING}
+  app-2:
+    build:
+      args:
+        GREETING: "goodbye!"
+x-topo:
+  parameters:
+    GREETING:
+      required: true
+`
+		mockSource := mockSourceWithContent(t, composeFileContents)
+		provider := arguments.NewInteractiveProvider(strings.NewReader("\n"), &bytes.Buffer{})
+
+		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain(provider))
+
+		require.NoError(t, err)
+		composeFilePath := filepath.Join(destDir, project.ComposeFilename)
+		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
+	})
+
 	t.Run("removes destination directory when parameter resolution fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
@@ -74,7 +102,7 @@ services:
   app:
     build:
       args:
-        GREETING: ${GREETING}
+        GREETING: ""
 x-topo:
   parameters:
     GREETING:
@@ -158,5 +186,54 @@ x-topo:
 		got := testutil.RequireReadFile(t, composeFilePath)
 
 		assert.YAMLEq(t, want, got)
+	})
+
+	t.Run("rejects empty input for required parameters when any current value is empty", func(t *testing.T) {
+		dir := t.TempDir()
+		composeFileContents := `services:
+  configured:
+    build:
+      args:
+        FOO: current
+  empty:
+    build:
+      args:
+        FOO: ""
+x-topo:
+  parameters:
+    FOO:
+      required: true
+      default: default
+`
+		composeFilePath := filepath.Join(dir, project.ComposeFilename)
+		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
+		argProvider := arguments.NewStrictProviderChain(arguments.NewStaticProvider())
+
+		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
+
+		require.ErrorContains(t, err, "missing value(s) for required parameters")
+		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
+	})
+
+	t.Run("recognizes current values in sequence build args", func(t *testing.T) {
+		dir := t.TempDir()
+		composeFileContents := `services:
+  app:
+    build:
+      args: ["FOO=current"]
+x-topo:
+  parameters:
+    FOO:
+      required: true
+      default: default
+`
+		composeFilePath := filepath.Join(dir, project.ComposeFilename)
+		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
+		argProvider := arguments.NewStrictProviderChain(arguments.NewStaticProvider())
+
+		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
+
+		require.NoError(t, err)
+		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
 	})
 }
