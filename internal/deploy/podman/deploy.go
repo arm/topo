@@ -29,6 +29,10 @@ type DeployOptions struct {
 	Registry   *RegistryConfig
 }
 
+func SupportsRegistry(noRegistry bool, destination ssh.Destination) bool {
+	return !noRegistry && !destination.IsPlainLocalhost()
+}
+
 func Deploy(ctx context.Context, output io.Writer, composeFile string, options DeployOptions) (deployErr error) {
 	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
