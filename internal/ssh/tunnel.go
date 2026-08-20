@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/arm/topo/internal/command"
 )
@@ -27,9 +28,9 @@ type Tunnel struct {
 	closed  bool
 }
 
-func OpenTunnel(ctx context.Context, w io.Writer, dest Destination, port string, useControlSockets bool) (*Tunnel, error) {
+func OpenTunnel(ctx context.Context, w io.Writer, dest Destination, port string) (*Tunnel, error) {
 	t := &Tunnel{
-		useControlSockets: useControlSockets,
+		useControlSockets: areControlSocketsSupported(),
 		dest:              dest.String(),
 	}
 
@@ -49,7 +50,7 @@ func OpenTunnel(ctx context.Context, w io.Writer, dest Destination, port string,
 	cmd.Stdout = w
 	cmd.Stderr = w
 
-	if useControlSockets {
+	if t.useControlSockets {
 		if err := cmd.Run(); err != nil {
 			return nil, command.FormatError(cmd.Args, err)
 		}
@@ -92,6 +93,10 @@ func (t *Tunnel) Close(ctx context.Context, w io.Writer) error {
 
 	t.closed = true
 	return nil
+}
+
+func areControlSocketsSupported() bool {
+	return runtime.GOOS != "windows"
 }
 
 func killCommand(cmd *exec.Cmd) error {
