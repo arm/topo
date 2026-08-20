@@ -20,7 +20,7 @@ func LoadConfig(dest Destination) (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to query SSH config for '%s': %w", dest.String(), err)
 	}
-	return ParseConfigFromBytes(output), nil
+	return ParseConfig(output), nil
 }
 
 func ResolveHostName(dest Destination) (string, error) {
@@ -35,7 +35,7 @@ func ResolveHostName(dest Destination) (string, error) {
 	return config.HostName, nil
 }
 
-func ParseConfigFromBytes(data []byte) Config {
+func ParseConfig(data []byte) Config {
 	var config Config
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for scanner.Scan() {
@@ -74,7 +74,7 @@ func GetUserFromConfig(dest Destination) (string, error) {
 }
 
 func ResolveConfiguredUser(dest Destination, configOutput []byte) (string, error) {
-	hostConfig := ParseConfigFromBytes(configOutput)
+	hostConfig := ParseConfig(configOutput)
 
 	if IsExplicitHostConfig(dest.Host, configOutput) {
 		if hostConfig.User != "" && dest.User != "" && hostConfig.User != dest.User {

@@ -19,14 +19,14 @@ func TestResolveHostName(t *testing.T) {
 	})
 }
 
-func TestParseConfigFromBytes(t *testing.T) {
+func TestParseConfig(t *testing.T) {
 	t.Run("parses basic config fields", func(t *testing.T) {
 		input := []byte(`hostname springfield.nuclear.gov
 user homer
 port 1234
 `)
 
-		got := ssh.ParseConfigFromBytes(input)
+		got := ssh.ParseConfig(input)
 
 		want := ssh.Config{
 			HostName: "springfield.nuclear.gov",
@@ -42,7 +42,7 @@ identityfile ~/.ssh/id_ed25519
 user homer
 `)
 
-		got := ssh.ParseConfigFromBytes(input)
+		got := ssh.ParseConfig(input)
 
 		want := ssh.Config{
 			HostName: "springfield.nuclear.gov",
@@ -52,7 +52,7 @@ user homer
 	})
 
 	t.Run("returns empty config for empty input", func(t *testing.T) {
-		got := ssh.ParseConfigFromBytes([]byte{})
+		got := ssh.ParseConfig([]byte{})
 
 		want := ssh.Config{}
 		assert.Equal(t, want, got)
@@ -61,7 +61,7 @@ user homer
 	t.Run("matching is case-insensitive", func(t *testing.T) {
 		input := []byte(`HoStNaMe kwik.e.mart`)
 
-		got := ssh.ParseConfigFromBytes(input)
+		got := ssh.ParseConfig(input)
 
 		want := ssh.Config{
 			HostName: "kwik.e.mart",
