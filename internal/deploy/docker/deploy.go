@@ -22,7 +22,6 @@ type RegistryConfig struct {
 	ContainerName       string
 	Port                string
 	SkipRemotePortCheck bool
-	UseControlSockets   bool
 }
 
 type DeployOptions struct {
@@ -33,10 +32,6 @@ type DeployOptions struct {
 
 func SupportsRegistry(noRegistry bool, dest ssh.Destination) bool {
 	return !noRegistry && !dest.IsPlainLocalhost()
-}
-
-func SupportsSSHControlSockets(goos string) bool {
-	return goos != "windows"
 }
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) error {
@@ -104,7 +99,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost
 	if err := term.PrintHeader(output, "Open registry SSH tunnel"); err != nil {
 		return err
 	}
-	tunnel, err := ssh.OpenTunnel(ctx, output, targetHost, opts.Port, opts.UseControlSockets)
+	tunnel, err := ssh.OpenTunnel(ctx, output, targetHost, opts.Port)
 	if err != nil {
 		return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Port)
 	}
