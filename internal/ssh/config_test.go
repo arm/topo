@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewConfigFromBytes(t *testing.T) {
+func TestParseConfigFromBytes(t *testing.T) {
 	t.Run("parses basic config fields", func(t *testing.T) {
 		input := []byte(`hostname springfield.nuclear.gov
 user homer
 port 1234
 `)
 
-		got := ssh.NewConfigFromBytes(input)
+		got := ssh.ParseConfigFromBytes(input)
 
 		want := ssh.Config{
 			HostName: "springfield.nuclear.gov",
@@ -30,7 +30,7 @@ identityfile ~/.ssh/id_ed25519
 user homer
 `)
 
-		got := ssh.NewConfigFromBytes(input)
+		got := ssh.ParseConfigFromBytes(input)
 
 		want := ssh.Config{
 			HostName: "springfield.nuclear.gov",
@@ -40,7 +40,7 @@ user homer
 	})
 
 	t.Run("returns empty config for empty input", func(t *testing.T) {
-		got := ssh.NewConfigFromBytes([]byte{})
+		got := ssh.ParseConfigFromBytes([]byte{})
 
 		want := ssh.Config{}
 		assert.Equal(t, want, got)
@@ -49,7 +49,7 @@ user homer
 	t.Run("matching is case-insensitive", func(t *testing.T) {
 		input := []byte(`HoStNaMe kwik.e.mart`)
 
-		got := ssh.NewConfigFromBytes(input)
+		got := ssh.ParseConfigFromBytes(input)
 
 		want := ssh.Config{
 			HostName: "kwik.e.mart",
