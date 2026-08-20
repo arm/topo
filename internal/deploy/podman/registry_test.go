@@ -84,7 +84,6 @@ func TestEnsureRegistryRunning(t *testing.T) {
 
 		err = podman.EnsureRegistryRunning(t.Context(), &output, containerName, port)
 
-		t.Logf("registry port-conflict command output: %s", output.String())
 		require.Error(t, err)
 		assert.ErrorContains(t, err, fmt.Sprintf("port is already in use, this could be an existing %s or another process", containerName))
 	})

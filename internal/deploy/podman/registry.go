@@ -92,9 +92,11 @@ func runRegistryContainer(ctx context.Context, containerName, port string, outpu
 		return nil
 	}
 	commandErrorOutput := strings.ToLower(commandOutput.String())
-	// Linux's pasta backend reports "Address in use",
+	// pasta reports either "Address in use" or "Address already in use",
 	// while Podman machine's macOS port-forwarding proxy reports "proxy already running".
-	if strings.Contains(commandErrorOutput, "address in use") || strings.Contains(commandErrorOutput, "proxy already running") {
+	if strings.Contains(commandErrorOutput, "address in use") ||
+		strings.Contains(commandErrorOutput, "address already in use") ||
+		strings.Contains(commandErrorOutput, "proxy already running") {
 		return fmt.Errorf("%w\nport is already in use, this could be an existing %s or another process", err, containerName)
 	}
 	return err
