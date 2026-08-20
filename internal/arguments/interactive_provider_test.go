@@ -18,10 +18,11 @@ func TestInteractiveProvider(t *testing.T) {
 
 		args := []arguments.Arg{
 			{
-				Name:        "GREETING",
-				Description: "The greeting message",
-				Required:    true,
-				Example:     "Hello",
+				Name:          "GREETING",
+				Description:   "The greeting message",
+				Required:      true,
+				Example:       "Hello",
+				CurrentValues: []string{"CURRENT GREETING HELLO!"},
 			},
 			{
 				Name:        "PORT",
@@ -40,7 +41,7 @@ func TestInteractiveProvider(t *testing.T) {
 		assert.Equal(t, want, got)
 		assert.Contains(t, output.String(), "The greeting message")
 		assert.Contains(t, output.String(), "Example: Hello")
-		assert.Contains(t, output.String(), "GREETING (required, press Enter to skip)>")
+		assert.Contains(t, output.String(), "GREETING (required, leave blank to keep current)>")
 	})
 
 	t.Run("skips empty inputs", func(t *testing.T) {
