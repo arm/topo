@@ -6,8 +6,6 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/post_deploy"
-	"github.com/arm/topo/internal/env"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,19 +52,18 @@ services:
 		testutil.RequireWriteFile(t, composeFile, `
 name: test-project
 x-topo:
-  deployment_success_message: "${COMPOSE_PROJECT_NAME} deployed to ${TOPO_TARGET} at ${TOPO_TARGET_HOSTNAME} - ${EXTRA_MESSAGE}"
+  deployment_success_message: "${COMPOSE_PROJECT_NAME} deployed - ${EXTRA_MESSAGE}"
 services:
   app:
     image: nginx
 `)
 		var buf bytes.Buffer
-		require.NoError(t, env.SetTargetEnvironment(ssh.NewDestination("user@localhost")))
 		t.Setenv("EXTRA_MESSAGE", "cool!")
 
 		err := post_deploy.PrintDeploySuccess(&buf, composeFile, "default message")
 
 		require.NoError(t, err)
-		assert.Equal(t, "test-project deployed to ssh://user@localhost at localhost - cool!\n", buf.String())
+		assert.Equal(t, "test-project deployed - cool!\n", buf.String())
 	})
 
 	t.Run("returns error when compose file does not exist", func(t *testing.T) {

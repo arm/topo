@@ -11,7 +11,6 @@ import (
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -113,8 +112,10 @@ func requireTarget(cmd *cobra.Command) (string, error) {
 	if !exists {
 		return "", fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
 	}
-	if err := env.SetTargetEnvironment(ssh.NewDestination(t)); err != nil {
-		return "", err
+	for name, value := range env.TargetEnv(t) {
+		if err := os.Setenv(name, value); err != nil {
+			return "", fmt.Errorf("failed to set %s: %w", name, err)
+		}
 	}
 	return t, nil
 }
