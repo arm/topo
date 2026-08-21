@@ -31,10 +31,6 @@ type DeployOptions struct {
 	Registry     *RegistryConfig
 }
 
-func SupportsRegistry(noRegistry bool, dest ssh.Destination) bool {
-	return !noRegistry && !dest.IsPlainLocalhost()
-}
-
 func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) error {
 	sourceHost := LocalHost
 
