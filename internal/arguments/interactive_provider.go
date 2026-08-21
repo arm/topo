@@ -51,8 +51,11 @@ func (p *InteractiveProvider) Provide(args []Arg) ([]ResolvedArg, error) {
 		if arg.Required {
 			label = "required"
 		}
+		if len(arg.CurrentValues) > 0 {
+			label += ", leave blank to keep current"
+		}
 
-		_, err = fmt.Fprintf(p.output, "%s (%s, press Enter to skip)> ", arg.Name, label)
+		_, err = fmt.Fprintf(p.output, "%s (%s)> ", arg.Name, label)
 		if err != nil {
 			return nil, err
 		}
