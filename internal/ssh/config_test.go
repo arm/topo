@@ -5,19 +5,31 @@ import (
 
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewConfigFromBytes(t *testing.T) {
+func TestResolveHostname(t *testing.T) {
+	t.Run("does not execute ssh for plain localhost", func(t *testing.T) {
+		t.Setenv("PATH", "") // remove SSH from path
+
+		got, err := ssh.ResolveHostname(ssh.PlainLocalhost)
+
+		require.NoError(t, err)
+		assert.Equal(t, "localhost", got)
+	})
+}
+
+func TestParseConfig(t *testing.T) {
 	t.Run("parses basic config fields", func(t *testing.T) {
 		input := []byte(`hostname springfield.nuclear.gov
 user homer
 port 1234
 `)
 
-		got := ssh.NewConfigFromBytes(input)
+		got := ssh.ParseConfig(input)
 
 		want := ssh.Config{
-			HostName: "springfield.nuclear.gov",
+			Hostname: "springfield.nuclear.gov",
 			User:     "homer",
 			Port:     "1234",
 		}
@@ -30,17 +42,17 @@ identityfile ~/.ssh/id_ed25519
 user homer
 `)
 
-		got := ssh.NewConfigFromBytes(input)
+		got := ssh.ParseConfig(input)
 
 		want := ssh.Config{
-			HostName: "springfield.nuclear.gov",
+			Hostname: "springfield.nuclear.gov",
 			User:     "homer",
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("returns empty config for empty input", func(t *testing.T) {
-		got := ssh.NewConfigFromBytes([]byte{})
+		got := ssh.ParseConfig([]byte{})
 
 		want := ssh.Config{}
 		assert.Equal(t, want, got)
@@ -49,10 +61,10 @@ user homer
 	t.Run("matching is case-insensitive", func(t *testing.T) {
 		input := []byte(`HoStNaMe kwik.e.mart`)
 
-		got := ssh.NewConfigFromBytes(input)
+		got := ssh.ParseConfig(input)
 
 		want := ssh.Config{
-			HostName: "kwik.e.mart",
+			Hostname: "kwik.e.mart",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -66,17 +78,17 @@ func TestAsKnownHostsEntry(t *testing.T) {
 	}{
 		{
 			desc: "hostname without port",
-			cfg:  ssh.Config{HostName: "my-target"},
+			cfg:  ssh.Config{Hostname: "my-target"},
 			want: "my-target",
 		},
 		{
 			desc: "hostname with default ssh port",
-			cfg:  ssh.Config{HostName: "my-target", Port: "22"},
+			cfg:  ssh.Config{Hostname: "my-target", Port: "22"},
 			want: "my-target",
 		},
 		{
 			desc: "hostname with non-standard port",
-			cfg:  ssh.Config{HostName: "my-target", Port: "2222"},
+			cfg:  ssh.Config{Hostname: "my-target", Port: "2222"},
 			want: "[my-target]:2222",
 		},
 	}

@@ -10,33 +10,32 @@ import (
 )
 
 type Config struct {
-	HostName string
+	Hostname string
 	User     string
 	Port     string
 }
 
-func NewConfig(dest Destination) Config {
-	output, err := readConfig(dest)
+func LoadConfig(dest Destination) (Config, error) {
+	output, err := queryConfig(dest)
 	if err != nil {
-		return Config{}
+		return Config{}, fmt.Errorf("failed to query SSH config for '%s': %w", dest.String(), err)
 	}
-	return NewConfigFromBytes(output)
+	return ParseConfig(output), nil
 }
 
-func ResolveHostName(ctx context.Context, dest Destination) (string, error) {
-	output, err := readConfigContext(ctx, dest)
-	if err != nil {
-		return "", fmt.Errorf("could not resolve SSH configuration for %q: %w", dest.String(), err)
+func ResolveHostname(dest Destination) (string, error) {
+	if dest.IsPlainLocalhost() {
+		return dest.Host, nil
 	}
 
-	hostName := NewConfigFromBytes(output).HostName
-	if hostName == "" {
-		return "", fmt.Errorf("could not resolve SSH hostname for %q: SSH configuration did not provide a hostname", dest.String())
+	config, err := LoadConfig(dest)
+	if err != nil {
+		return "", err
 	}
-	return hostName, nil
+	return config.Hostname, nil
 }
 
-func NewConfigFromBytes(data []byte) Config {
+func ParseConfig(data []byte) Config {
 	var config Config
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for scanner.Scan() {
@@ -48,7 +47,7 @@ func NewConfigFromBytes(data []byte) Config {
 		}
 		switch strings.ToLower(fields[0]) {
 		case "hostname":
-			config.HostName = fields[1]
+			config.Hostname = fields[1]
 		case "user":
 			config.User = fields[1]
 		case "port":
@@ -60,14 +59,14 @@ func NewConfigFromBytes(data []byte) Config {
 
 func (c Config) AsKnownHostsEntry() string {
 	if c.Port == "" || c.Port == "22" {
-		return c.HostName
+		return c.Hostname
 	}
 
-	return fmt.Sprintf("[%s]:%s", c.HostName, c.Port)
+	return fmt.Sprintf("[%s]:%s", c.Hostname, c.Port)
 }
 
 func GetUserFromConfig(dest Destination) (string, error) {
-	output, err := readConfig(Destination{Host: dest.Host, Port: dest.Port})
+	output, err := queryConfig(Destination{Host: dest.Host, Port: dest.Port})
 	if err != nil {
 		return "", err
 	}
@@ -75,7 +74,7 @@ func GetUserFromConfig(dest Destination) (string, error) {
 }
 
 func ResolveConfiguredUser(dest Destination, configOutput []byte) (string, error) {
-	hostConfig := NewConfigFromBytes(configOutput)
+	hostConfig := ParseConfig(configOutput)
 
 	if IsExplicitHostConfig(dest.Host, configOutput) {
 		if hostConfig.User != "" && dest.User != "" && hostConfig.User != dest.User {
@@ -125,10 +124,10 @@ func IsExplicitHostConfig(host string, config []byte) bool {
 	return false
 }
 
-func readConfig(dest Destination) ([]byte, error) {
-	return readConfigContext(context.Background(), dest)
+func queryConfig(dest Destination) ([]byte, error) {
+	return queryConfigContext(context.Background(), dest)
 }
 
-func readConfigContext(ctx context.Context, dest Destination) ([]byte, error) {
+func queryConfigContext(ctx context.Context, dest Destination) ([]byte, error) {
 	return exec.CommandContext(ctx, "ssh", "-v", "-G", dest.String()).CombinedOutput()
 }
