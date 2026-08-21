@@ -12,7 +12,6 @@ import (
 
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
-	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -33,15 +32,41 @@ func TestDeploy(t *testing.T) {
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
-		target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
+		podmanContainer := startPodmanInContainer(t)
 		composeFile, projectName := deploymentFixture(t)
-		targetHost := ssh.NewDestination(target.SSHDestination)
-		options := podman.DeployOptions{TargetHost: targetHost}
+		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
+		options := podman.DeployOptions{TargetHost: targetDestination}
 
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
 
 		require.NoError(t, err)
-		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetHost)
+		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, tunnel.Close())
+		})
+		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
+	})
+
+	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
+		registryPort := requireAvailableTCPPort(t)
+		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
+		t.Cleanup(func() { cleanupRegistryContainer(t, registryContainerName) })
+		podmanContainer := startPodmanInContainer(t)
+		composeFile, projectName := deploymentFixture(t)
+		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
+		options := podman.DeployOptions{
+			TargetHost: targetDestination,
+			Registry: &podman.RegistryConfig{
+				ContainerName: registryContainerName,
+				Port:          registryPort,
+			},
+		}
+
+		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+
+		require.NoError(t, err)
+		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
 		require.NoError(t, err)
 		t.Cleanup(func() {
 			require.NoError(t, tunnel.Close())
@@ -148,6 +173,14 @@ func fixPodmanInDockerQuirk(contents string) (string, error) {
 		return "", err
 	}
 	return string(updatedContents), nil
+}
+
+func cleanupRegistryContainer(t *testing.T, containerName string) {
+	t.Helper()
+	output, err := podman.Command(context.Background(), podman.LocalSocket, "rm", "-f", containerName).CombinedOutput()
+	if err != nil {
+		t.Logf("failed to remove registry container: %v: %s", err, output)
+	}
 }
 
 func cleanupComposeProject(t *testing.T, composeFile string) {

@@ -36,8 +36,6 @@ const (
 	containerEnginePodman containerEngine = "podman"
 )
 
-var deployOpts docker.DeployOptions
-
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy services using the compose file",
@@ -74,6 +72,10 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 }
 
 func deployWithPodman(cmd *cobra.Command, targetArg string) error {
+	if cmd.Flags().Changed("registry-port") && noRegistry {
+		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
+	}
+
 	composeFile, err := getComposeFileName(cmd)
 	if err != nil {
 		return err
@@ -82,8 +84,27 @@ func deployWithPodman(cmd *cobra.Command, targetArg string) error {
 		return err
 	}
 
+	resolvedPort, err := resolvePort(cmd, registryPort)
+	if err != nil {
+		return err
+	}
+	if err := validatePort(resolvedPort); err != nil {
+		return err
+	}
+
+	targetHost := ssh.NewDestination(targetArg)
+	options := podman.DeployOptions{TargetHost: targetHost}
+	if podman.SupportsRegistry(noRegistry, targetHost) {
+		options.Registry = &podman.RegistryConfig{
+			Port:                resolvedPort,
+			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+		}
+	}
+	if options.Registry == nil {
+		logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
+	}
+
 	return executeDeployment(cmd, func(ctx context.Context) error {
-		options := podman.DeployOptions{TargetHost: ssh.NewDestination(targetArg)}
 		return podman.Deploy(ctx, os.Stdout, composeFile, options)
 	})
 }
@@ -109,7 +130,7 @@ func deployWithDocker(cmd *cobra.Command, targetArg string) error {
 		return err
 	}
 
-	deployOpts.TargetHost = ssh.NewDestination(targetArg)
+	deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination(targetArg)}
 	if docker.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
 		deployOpts.Registry = &docker.RegistryConfig{
 			Port:                resolvedPort,

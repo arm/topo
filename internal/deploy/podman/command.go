@@ -12,9 +12,20 @@ import (
 const composeProvider = "docker-compose"
 
 func Command(ctx context.Context, socket Socket, args ...string) *exec.Cmd {
+	// #nosec G702 -- Podman arguments are passed directly, not interpreted by a shell.
 	cmd := exec.CommandContext(ctx, "podman", args...)
 	cmd.Env = socket.ConfigurePodmanEnv(os.Environ())
 	return cmd
+}
+
+func RunCommand(ctx context.Context, output io.Writer, socket Socket, args ...string) error {
+	cmd := Command(ctx, socket, args...)
+	cmd.Stdout = output
+	cmd.Stderr = output
+	if err := cmd.Run(); err != nil {
+		return command.FormatError(cmd.Args, err)
+	}
+	return nil
 }
 
 func ComposeCommand(ctx context.Context, socket Socket, composeFile string, args ...string) (*exec.Cmd, error) {

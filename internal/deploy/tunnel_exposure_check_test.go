@@ -1,4 +1,4 @@
-package docker_test
+package deploy_test
 
 import (
 	"context"
@@ -9,15 +9,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/ssh"
+	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCheckTunnelExposure(t *testing.T) {
 	t.Run("fails when the SSH hostname cannot be resolved", func(t *testing.T) {
-		err := docker.CheckTunnelExposure(context.Background(), io.Discard, ssh.Destination{
+		err := deploy.CheckTunnelExposure(context.Background(), io.Discard, ssh.Destination{
 			Host: "not-a-host",
 		}, "12345")
 
@@ -27,25 +28,25 @@ func TestCheckTunnelExposure(t *testing.T) {
 	})
 
 	t.Run("succeeds when the remote port refuses the connection", func(t *testing.T) {
-		target := startContainer(t, passwordlessSSHContainer)
+		target := gtestutil.StartContainer(t, gtestutil.PasswordlessSSHContainer)
 		dest := ssh.NewDestination(target.SSHDestination)
 		port := "12345"
 		openSocket(t, dest, "127.0.0.1", port)
 		var output strings.Builder
 
-		err := docker.CheckTunnelExposure(context.Background(), &output, dest, port)
+		err := deploy.CheckTunnelExposure(context.Background(), &output, dest, port)
 
 		assert.NoError(t, err)
 		assert.Equal(t, fmt.Sprintf("Registry port %s is bound to remote loopback only\n", port), output.String())
 	})
 
 	t.Run("fails when the remote port accepts a connection", func(t *testing.T) {
-		target := startContainer(t, passwordlessSSHContainer)
+		target := gtestutil.StartContainer(t, gtestutil.PasswordlessSSHContainer)
 		dest := ssh.NewDestination(target.SSHDestination)
 		port := "12345"
 		openSocket(t, dest, "0.0.0.0", port)
 
-		err := docker.CheckTunnelExposure(context.Background(), io.Discard, dest, port)
+		err := deploy.CheckTunnelExposure(context.Background(), io.Discard, dest, port)
 
 		assert.EqualError(t, err, fmt.Sprintf("the remote SSH server is exposing forwarded registry port %s beyond remote loopback; configure the SSH server to bind remote forwards to loopback only, or use `--skip-remote-port-check` if you understand that the registry may be reachable without SSH authentication", port))
 	})

@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/ssh"
@@ -111,7 +112,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost
 		if err := term.PrintHeader(output, "Check registry tunnel is not exposed on remote network"); err != nil {
 			return err
 		}
-		if err := CheckTunnelExposure(ctx, output, targetHost, opts.Port); err != nil {
+		if err := deploy.CheckTunnelExposure(ctx, output, targetHost, opts.Port); err != nil {
 			return err
 		}
 	}
