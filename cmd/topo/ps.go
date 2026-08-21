@@ -32,14 +32,17 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		dest := ssh.NewDestination(targetArg)
-		hostName := ssh.NewConfig(dest).HostName
+		hostname, err := ssh.ResolveHostname(dest)
+		if err != nil {
+			return err
+		}
 		allContainers, err := cmd.Flags().GetBool("all")
 		if err != nil {
 			panic("internal error: all flag not registered: " + err.Error())
 		}
 
 		host := docker.NewHostFromDestination(dest)
-		containers, err := docker.ListContainers(composeFile, host, hostName, allContainers)
+		containers, err := docker.ListContainers(composeFile, host, hostname, allContainers)
 		if err != nil {
 			return err
 		}
