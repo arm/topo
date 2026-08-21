@@ -45,7 +45,7 @@ type InspectedHostConfig struct {
 	Annotations map[string]string `json:"Annotations"`
 }
 
-func ListContainers(composeFile string, h Host, hostName string, all bool) ([]Container, error) {
+func ListContainers(composeFile string, h Host, hostname string, all bool) ([]Container, error) {
 	rawJSON, err := getContainers(composeFile, h, all)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func ListContainers(composeFile string, h Host, hostName string, all bool) ([]Co
 	if err != nil {
 		return nil, err
 	}
-	containers := RemapAddresses(raws, hostName)
+	containers := RemapAddresses(raws, hostname)
 
 	domains, err := getProcessingDomains(raws, h)
 	if err != nil {
@@ -170,7 +170,7 @@ func BuildProcessingDomainLookup(inspected []InspectedContainer) map[string]stri
 	return lookup
 }
 
-func RemapAddresses(raws []PSContainer, hostName string) []Container {
+func RemapAddresses(raws []PSContainer, hostname string) []Container {
 	containers := make([]Container, len(raws))
 	for i, raw := range raws {
 		containers[i] = Container{
@@ -179,7 +179,7 @@ func RemapAddresses(raws []PSContainer, hostName string) []Container {
 			Image:   raw.Image,
 			State:   raw.State,
 			Status:  raw.Status,
-			Address: publishedAddress(raw.Ports, hostName),
+			Address: publishedAddress(raw.Ports, hostname),
 		}
 	}
 	return containers
@@ -192,8 +192,8 @@ func processingDomainFromLookup(raw PSContainer, lookup map[string]string) strin
 	return hostProcessingDomain
 }
 
-func publishedAddress(rawPorts, hostName string) string {
-	if hostName == "" {
+func publishedAddress(rawPorts, hostname string) string {
+	if hostname == "" {
 		return rawPorts
 	}
 	parts := strings.Split(rawPorts, ", ")
@@ -201,7 +201,7 @@ func publishedAddress(rawPorts, hostName string) string {
 		if idx := strings.Index(part, "->"); idx != -1 {
 			part = part[:idx]
 		}
-		parts[i] = strings.ReplaceAll(part, "0.0.0.0", hostName)
+		parts[i] = strings.ReplaceAll(part, "0.0.0.0", hostname)
 	}
 	return strings.Join(parts, ", ")
 }
