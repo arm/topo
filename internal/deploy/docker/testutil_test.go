@@ -14,10 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	dinDContainer            = gtestutil.DinDContainer
-	passwordlessSSHContainer = gtestutil.PasswordlessSSHContainer
-)
+var dinDContainer = gtestutil.DinDContainer
 
 func requireDocker(t *testing.T) {
 	t.Helper()
