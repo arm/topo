@@ -74,6 +74,6 @@ x-topo:
 
 Recommended hint key conventions include:
 
-- `meta.type` - suggests a type or set of types to identify valid values for this parameter, such as `huggingface.repo-id` or `git.uri`
+- `meta.type` — suggests a type or set of types to identify valid values for this parameter, such as `huggingface.repo-id` or `git.uri`
 - `model.task` — suggests a Hugging Face task or pipeline filter, such as `text-generation`
 - `model.format` — suggests a desired artifact or file format, such as `gguf`
