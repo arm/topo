@@ -32,9 +32,9 @@ func TestDeploy(t *testing.T) {
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
-		target := startContainer(t)
+		podmanContainer := startPodmanInContainer(t)
 		composeFile, projectName := deploymentFixture(t)
-		targetDestination := ssh.NewDestination(target.SSHDestination)
+		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 		options := podman.DeployOptions{TargetHost: targetDestination}
 
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
@@ -52,9 +52,9 @@ func TestDeploy(t *testing.T) {
 		registryPort := requireAvailableTCPPort(t)
 		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
 		t.Cleanup(func() { cleanupRegistryContainer(t, registryContainerName) })
-		target := startContainer(t)
+		podmanContainer := startPodmanInContainer(t)
 		composeFile, projectName := deploymentFixture(t)
-		targetDestination := ssh.NewDestination(target.SSHDestination)
+		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 		options := podman.DeployOptions{
 			TargetHost: targetDestination,
 			Registry: &podman.RegistryConfig{

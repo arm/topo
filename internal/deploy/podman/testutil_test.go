@@ -16,7 +16,7 @@ func sanitiseTestName(t *testing.T) string {
 	return gtestutil.SanitiseTestName(t)
 }
 
-func startContainer(t *testing.T) *gtestutil.Container {
+func startPodmanInContainer(t *testing.T) *gtestutil.Container {
 	t.Helper()
 	return gtestutil.StartContainer(t, gtestutil.PodmanContainer)
 }

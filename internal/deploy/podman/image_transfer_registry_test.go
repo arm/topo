@@ -21,8 +21,8 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 
 	composeFile, imageName := imageTransferFixture(t)
 	require.NoError(t, podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, composeFile))
-	target := startContainer(t)
-	targetDestination := ssh.NewDestination(target.SSHDestination)
+	podmanContainer := startPodmanInContainer(t)
+	targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 	targetSocketTunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
 	require.NoError(t, err)
 	t.Cleanup(func() {
