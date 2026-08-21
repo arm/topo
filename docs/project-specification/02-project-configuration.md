@@ -57,7 +57,7 @@ RUN test -n "$GREETING" || (echo "ERROR: GREETING project parameter is required"
 
 Parameter definitions may include `hints`, which Implementations can use to discover, filter, or suggest suitable parameter values. Hints do not define validation constraints, and Implementations may ignore hints they do not understand.
 
-Hint keys must use lowercase dotted namespaces to avoid collisions, such as `huggingface.task` or `file.format`. Hint values may be strings, numbers, booleans, or arrays of those scalar values.
+Hint keys must use lowercase dotted namespaces to avoid collisions, such as `model.task` and `meta.type`. Hint values may be strings, numbers, booleans, or arrays of those scalar values.
 
 ```yaml
 x-topo:
@@ -66,11 +66,14 @@ x-topo:
       description: "Model artifact reference"
       example: "bartowski/Qwen_Qwen3.5-0.8B-GGUF:SmolLM2-135M-Instruct-Q4_K_M.gguf"
       hints:
-        huggingface.task: text-generation
-        file.format: gguf
+        meta.type:
+          - huggingface.repo-id
+        model.task: text-generation
+        model.format: gguf
 ```
 
 Recommended hint key conventions include:
 
-- `huggingface.task` — suggests a Hugging Face task or pipeline filter, such as `text-generation`
-- `file.format` — suggests a desired artifact or file format, such as `gguf`
+- `meta.type` - suggests a type or set of types to identify valid values for this parameter, such as `huggingface.repo-id` or `git.uri`
+- `model.task` — suggests a Hugging Face task or pipeline filter, such as `text-generation`
+- `model.format` — suggests a desired artifact or file format, such as `gguf`
