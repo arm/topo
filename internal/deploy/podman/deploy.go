@@ -25,8 +25,9 @@ type RegistryConfig struct {
 }
 
 type DeployOptions struct {
-	TargetHost ssh.Destination
-	Registry   *RegistryConfig
+	RecreateMode RecreateMode
+	TargetHost   ssh.Destination
+	Registry     *RegistryConfig
 }
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, options DeployOptions) (deployErr error) {
@@ -74,7 +75,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	if err := term.PrintHeader(output, "Start services"); err != nil {
 		return err
 	}
-	if err := StartServices(ctx, output, targetSocket, composeFile); err != nil {
+	if err := StartServices(ctx, output, targetSocket, composeFile, options.RecreateMode); err != nil {
 		return err
 	}
 
