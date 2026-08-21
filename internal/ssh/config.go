@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	HostName string
+	Hostname string
 	User     string
 	Port     string
 }
@@ -23,7 +23,7 @@ func LoadConfig(dest Destination) (Config, error) {
 	return ParseConfig(output), nil
 }
 
-func ResolveHostName(dest Destination) (string, error) {
+func ResolveHostname(dest Destination) (string, error) {
 	if dest.IsPlainLocalhost() {
 		return dest.Host, nil
 	}
@@ -32,7 +32,7 @@ func ResolveHostName(dest Destination) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return config.HostName, nil
+	return config.Hostname, nil
 }
 
 func ParseConfig(data []byte) Config {
@@ -47,7 +47,7 @@ func ParseConfig(data []byte) Config {
 		}
 		switch strings.ToLower(fields[0]) {
 		case "hostname":
-			config.HostName = fields[1]
+			config.Hostname = fields[1]
 		case "user":
 			config.User = fields[1]
 		case "port":
@@ -59,10 +59,10 @@ func ParseConfig(data []byte) Config {
 
 func (c Config) AsKnownHostsEntry() string {
 	if c.Port == "" || c.Port == "22" {
-		return c.HostName
+		return c.Hostname
 	}
 
-	return fmt.Sprintf("[%s]:%s", c.HostName, c.Port)
+	return fmt.Sprintf("[%s]:%s", c.Hostname, c.Port)
 }
 
 func GetUserFromConfig(dest Destination) (string, error) {

@@ -32,7 +32,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		dest := ssh.NewDestination(targetArg)
-		hostName, err := ssh.ResolveHostName(dest)
+		hostname, err := ssh.ResolveHostname(dest)
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		host := docker.NewHostFromDestination(dest)
-		containers, err := docker.ListContainers(composeFile, host, hostName, allContainers)
+		containers, err := docker.ListContainers(composeFile, host, hostname, allContainers)
 		if err != nil {
 			return err
 		}

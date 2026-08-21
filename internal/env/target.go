@@ -14,13 +14,13 @@ const (
 
 func SetTargetEnv(target string) error {
 	destination := ssh.NewDestination(target)
-	hostName, err := ssh.ResolveHostName(destination)
+	hostname, err := ssh.ResolveHostname(destination)
 	if err != nil {
 		return err
 	}
 	vars := map[string]string{
 		TargetVariable:         destination.String(),
-		TargetHostnameVariable: hostName,
+		TargetHostnameVariable: hostname,
 	}
 	for name, value := range vars {
 		if err := os.Setenv(name, value); err != nil {
