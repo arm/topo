@@ -94,6 +94,12 @@ func deployWithPodman(cmd *cobra.Command, targetArg string) error {
 
 	targetHost := ssh.NewDestination(targetArg)
 	options := podman.DeployOptions{TargetHost: targetHost}
+	switch {
+	case forceRecreate:
+		options.RecreateMode = podman.RecreateModeForce
+	case noRecreate:
+		options.RecreateMode = podman.RecreateModeNone
+	}
 	if podman.SupportsRegistry(noRegistry, targetHost) {
 		options.Registry = &podman.RegistryConfig{
 			Port:                resolvedPort,
