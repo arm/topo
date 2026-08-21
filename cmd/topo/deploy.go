@@ -94,14 +94,11 @@ func deployWithPodman(cmd *cobra.Command, targetArg string) error {
 
 	targetHost := ssh.NewDestination(targetArg)
 	options := podman.DeployOptions{TargetHost: targetHost}
-	if podman.SupportsRegistry(noRegistry, targetHost) {
+	if !noRegistry {
 		options.Registry = &podman.RegistryConfig{
 			Port:                resolvedPort,
 			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
 		}
-	}
-	if options.Registry == nil {
-		logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
 	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
@@ -131,7 +128,7 @@ func deployWithDocker(cmd *cobra.Command, targetArg string) error {
 	}
 
 	deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination(targetArg)}
-	if docker.SupportsRegistry(noRegistry, deployOpts.TargetHost) {
+	if !noRegistry {
 		deployOpts.Registry = &docker.RegistryConfig{
 			Port:                resolvedPort,
 			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
@@ -142,10 +139,6 @@ func deployWithDocker(cmd *cobra.Command, targetArg string) error {
 		deployOpts.RecreateMode = docker.RecreateModeForce
 	case noRecreate:
 		deployOpts.RecreateMode = docker.RecreateModeNone
-	}
-
-	if deployOpts.Registry == nil {
-		logger.Warn("registry transfer is not yet supported with this configuration. Falling back to direct transfer.")
 	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
