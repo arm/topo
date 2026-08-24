@@ -19,6 +19,15 @@ func NewSocket(url string) Socket {
 	return Socket{url: url}
 }
 
+// NewRemoteSocket returns a Podman SSH connection to the target's API socket.
+func NewRemoteSocket(ctx context.Context, target ssh.Destination) (Socket, error) {
+	remoteSocketPath, err := ResolveRemoteSocketPath(ctx, target)
+	if err != nil {
+		return Socket{}, err
+	}
+	return NewSocket(target.String() + remoteSocketPath), nil
+}
+
 func (socket Socket) ConfigurePodmanEnv(environment []string) []string {
 	if socket.url == "" {
 		return environment
@@ -39,13 +48,4 @@ func ResolveRemoteSocketPath(ctx context.Context, target ssh.Destination) (strin
 		return "", fmt.Errorf("remote Podman reported a non-local API socket path %q", socketPath)
 	}
 	return socketPath, nil
-}
-
-// NewRemoteSocket returns a Podman SSH connection to the target's API socket.
-func NewRemoteSocket(ctx context.Context, target ssh.Destination) (Socket, error) {
-	remoteSocketPath, err := ResolveRemoteSocketPath(ctx, target)
-	if err != nil {
-		return Socket{}, err
-	}
-	return NewSocket(target.String() + remoteSocketPath), nil
 }
