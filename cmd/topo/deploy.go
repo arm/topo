@@ -100,6 +100,12 @@ func deployWithPodman(cmd *cobra.Command, targetArg string) error {
 			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
 		}
 	}
+	switch {
+	case forceRecreate:
+		options.RecreateMode = podman.RecreateModeForce
+	case noRecreate:
+		options.RecreateMode = podman.RecreateModeNone
+	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
 		return podman.Deploy(ctx, os.Stdout, composeFile, options)
