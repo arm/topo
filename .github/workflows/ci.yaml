@@ -85,7 +85,10 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --yes podman podman-compose
+          sudo apt-get install --yes podman python3-venv
+          python3 -m venv "$RUNNER_TEMP/podman-compose"
+          "$RUNNER_TEMP/podman-compose/bin/pip" install "podman-compose==1.6.0"
+          echo "$RUNNER_TEMP/podman-compose/bin" >> "$GITHUB_PATH"
 
       - name: Install Podman and podman-compose provider (Windows)
         if: runner.os == 'Windows'
@@ -108,7 +111,7 @@ jobs:
             throw "Unable to locate podman.exe after installation"
           }
 
-          python -m pip install --user podman-compose
+          python -m pip install --user "podman-compose==1.6.0"
           $pythonScriptsDirectory = python -c "import sysconfig; print(sysconfig.get_path('scripts', scheme='nt_user'))"
 
           $podmanDirectory | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
