@@ -47,6 +47,8 @@ On Windows, install [Windows Subsystem for Linux 2 (WSL 2)](https://aka.ms/wslin
 
 Follow the [Rancher Desktop installation instructions](https://docs.rancherdesktop.io/getting-started/installation/) for your host. When Rancher Desktop starts for the first time, select **dockerd (moby)** as the container engine. Topo does not require Kubernetes. You can change these settings later in **Preferences**.
 
+On macOS and Linux, select **Automatic** to add the Rancher Desktop tools to `PATH`. If you select **Manual**, add `~/.rd/bin` to `PATH` yourself.
+
 Start Rancher Desktop before you use Topo, and keep it running.
 
 ### Colima
