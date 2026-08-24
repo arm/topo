@@ -3,11 +3,9 @@ package podman
 import (
 	"context"
 	"fmt"
-	"io"
 	"path"
 	"strings"
 
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -43,16 +41,11 @@ func ResolveRemoteSocketPath(ctx context.Context, target ssh.Destination) (strin
 	return socketPath, nil
 }
 
-// TunnelRemoteSocketPath resolves remote socket path on the target and tunnels it to a tcp endpoint on the host.
-func TunnelRemoteSocketPath(ctx context.Context, w io.Writer, target ssh.Destination) (*ssh.TCPToUnixSocketTunnel, error) {
+// NewRemoteSocket returns a Podman SSH connection to the target's API socket.
+func NewRemoteSocket(ctx context.Context, target ssh.Destination) (Socket, error) {
 	remoteSocketPath, err := ResolveRemoteSocketPath(ctx, target)
 	if err != nil {
-		return nil, err
+		return Socket{}, err
 	}
-	logger.Info(fmt.Sprintf("discovered remote Podman socket path: %s", remoteSocketPath))
-	tunnel, err := ssh.OpenTCPToUnixSocketTunnel(ctx, w, target, remoteSocketPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open remote Podman socket tunnel: %w", err)
-	}
-	return tunnel, nil
+	return NewSocket(target.String() + remoteSocketPath), nil
 }

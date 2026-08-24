@@ -40,12 +40,9 @@ func TestDeploy(t *testing.T) {
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
 
 		require.NoError(t, err)
-		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+		targetSocket, err := podman.NewRemoteSocket(context.Background(), targetDestination)
 		require.NoError(t, err)
-		t.Cleanup(func() {
-			require.NoError(t, tunnel.Close())
-		})
-		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
+		assertContainersRunning(t, projectName, targetSocket)
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
@@ -66,12 +63,9 @@ func TestDeploy(t *testing.T) {
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
 
 		require.NoError(t, err)
-		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+		targetSocket, err := podman.NewRemoteSocket(context.Background(), targetDestination)
 		require.NoError(t, err)
-		t.Cleanup(func() {
-			require.NoError(t, tunnel.Close())
-		})
-		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
+		assertContainersRunning(t, projectName, targetSocket)
 	})
 }
 
