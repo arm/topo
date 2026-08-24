@@ -80,8 +80,8 @@ func requireLocalPodman(t *testing.T) {
 	if _, err := exec.LookPath("podman"); err != nil {
 		t.Skip("podman is not installed")
 	}
-	if _, err := exec.LookPath("docker-compose"); err != nil {
-		t.Skip("docker-compose is not installed")
+	if _, err := exec.LookPath("podman-compose"); err != nil {
+		t.Skip("podman-compose is not installed")
 	}
 	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
 		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
@@ -188,11 +188,7 @@ func cleanupComposeProject(t *testing.T, composeFile string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
-	if err != nil {
-		t.Logf("failed to configure Podman Compose: %v", err)
-		return
-	}
+	cmd := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("Podman Compose cleanup failed: %v: %s", err, output)
 	}

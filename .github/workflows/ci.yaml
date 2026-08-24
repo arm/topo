@@ -80,31 +80,16 @@ jobs:
           #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
           ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
 
-      - name: Install Podman and Docker Compose provider (Linux)
+      - name: Install Podman and podman-compose provider (Linux)
         if: runner.os == 'Linux'
         shell: bash
-        env:
-          COMPOSE_VERSION: v2.32.4
         run: |
           sudo apt-get update
-          sudo apt-get install --yes podman
+          sudo apt-get install --yes podman podman-compose
 
-          case "$(uname -m)" in
-            x86_64) compose_arch=x86_64 ;;
-            aarch64|arm64) compose_arch=aarch64 ;;
-            *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
-          esac
-
-          curl --fail --location --show-error \
-            "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${compose_arch}" \
-            --output /tmp/docker-compose
-          sudo install --mode 0755 /tmp/docker-compose /usr/local/bin/docker-compose
-
-      - name: Install Podman and Docker Compose provider (Windows)
+      - name: Install Podman and podman-compose provider (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          COMPOSE_VERSION: v2.32.4
         run: |
           winget install --exact --id RedHat.Podman `
             --silent `
@@ -123,14 +108,11 @@ jobs:
             throw "Unable to locate podman.exe after installation"
           }
 
-          $toolsDirectory = Join-Path $env:RUNNER_TEMP "container-tools"
-          New-Item -ItemType Directory -Force $toolsDirectory | Out-Null
-          Invoke-WebRequest `
-            -Uri "https://github.com/docker/compose/releases/download/$env:COMPOSE_VERSION/docker-compose-windows-x86_64.exe" `
-            -OutFile (Join-Path $toolsDirectory "docker-compose.exe")
+          python -m pip install --user podman-compose
+          $pythonScriptsDirectory = python -c "import sysconfig; print(sysconfig.get_path('scripts', scheme='nt_user'))"
 
           $podmanDirectory | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
-          $toolsDirectory | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
+          $pythonScriptsDirectory | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Start Podman machine (Windows)
         if: runner.os == 'Windows'
@@ -138,40 +120,13 @@ jobs:
         run: |
           podman machine init --cpus 2 --memory 2048 --now
 
-      - name: Start Podman API service (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          runtime_dir="${XDG_RUNTIME_DIR:-$RUNNER_TEMP/podman-runtime}"
-          mkdir -p "$runtime_dir/podman"
-
-          if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
-            chmod 700 "$runtime_dir"
-            echo "XDG_RUNTIME_DIR=$runtime_dir" >> "$GITHUB_ENV"
-            export XDG_RUNTIME_DIR="$runtime_dir"
-          fi
-
-          socket_path="$XDG_RUNTIME_DIR/podman/podman.sock"
-          if [ ! -S "$socket_path" ]; then
-            podman system service --time=0 "unix://$socket_path" >"$RUNNER_TEMP/podman-system-service.log" 2>&1 &
-          fi
-
-          for _ in {1..20}; do
-            [ -S "$socket_path" ] && exit 0
-            sleep 1
-          done
-
-          cat "$RUNNER_TEMP/podman-system-service.log" >&2 || true
-          exit 1
-
       - name: Verify Podman test prerequisites (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
           podman version
           podman info
-          docker-compose version
-          podman compose version
+          podman-compose version
 
       - name: Verify Podman test prerequisites (Windows)
         if: runner.os == 'Windows'
@@ -179,8 +134,7 @@ jobs:
         run: |
           podman version
           podman info
-          docker-compose version
-          podman compose version
+          podman-compose version
 
       - name: Checkout repository
         uses: actions/checkout@v7

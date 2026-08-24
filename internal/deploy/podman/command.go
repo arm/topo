@@ -9,7 +9,7 @@ import (
 	"github.com/arm/topo/internal/command"
 )
 
-const composeProvider = "docker-compose"
+const composeProvider = "podman-compose"
 
 func Command(ctx context.Context, socket Socket, args ...string) *exec.Cmd {
 	// #nosec G702 -- Podman arguments are passed directly, not interpreted by a shell.
@@ -28,26 +28,19 @@ func RunCommand(ctx context.Context, output io.Writer, socket Socket, args ...st
 	return nil
 }
 
-func ComposeCommand(ctx context.Context, socket Socket, composeFile string, args ...string) (*exec.Cmd, error) {
+func ComposeCommand(ctx context.Context, socket Socket, composeFile string, args ...string) *exec.Cmd {
 	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
 	cmd := exec.CommandContext(ctx, "podman", composeArgs...)
 	cmd.Env = append(os.Environ(),
 		"PODMAN_COMPOSE_PROVIDER="+composeProvider,
 		"PODMAN_COMPOSE_WARNING_LOGS=false",
 	)
-	var err error
-	cmd.Env, err = socket.ConfigureComposeEnv(ctx, cmd.Env)
-	if err != nil {
-		return nil, err
-	}
-	return cmd, nil
+	cmd.Env = socket.ConfigurePodmanEnv(cmd.Env)
+	return cmd
 }
 
 func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, composeFile string, args ...string) error {
-	cmd, err := ComposeCommand(ctx, socket, composeFile, args...)
-	if err != nil {
-		return err
-	}
+	cmd := ComposeCommand(ctx, socket, composeFile, args...)
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Run(); err != nil {
