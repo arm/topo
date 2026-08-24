@@ -39,6 +39,12 @@ Start Docker Desktop before you use Topo, and keep it running. Signing in to Doc
 
 [Rancher Desktop](https://rancherdesktop.io/) is an open source desktop application for macOS, Windows, and Linux. It includes the Docker CLI and Docker Compose.
 
+:::note
+
+On Windows, install [Windows Subsystem for Linux 2 (WSL 2)](https://aka.ms/wslinstall) before you install Rancher Desktop.
+
+:::
+
 Follow the [Rancher Desktop installation instructions](https://docs.rancherdesktop.io/getting-started/installation/) for your host. When Rancher Desktop starts for the first time, select **dockerd (moby)** as the container engine. Topo does not require Kubernetes. You can change these settings later in **Preferences**.
 
 Start Rancher Desktop before you use Topo, and keep it running.
