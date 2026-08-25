@@ -26,6 +26,8 @@ const (
 
 type SoftwareDependency int
 
+const containerEngineInstallURL = "https://github.com/arm/topo#install-a-container-engine"
+
 const (
 	UnsetSoftwareDependency SoftwareDependency = iota
 	Docker
@@ -84,10 +86,16 @@ var HostRequiredDependencies = []Dependency{
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,
 		Checks: []Check{
-			BinaryExists{},
+			BinaryExists{
+				Fix: &Fix{
+					Description: "Install a supported container engine. See " + containerEngineInstallURL,
+				},
+			},
 			CommandSuccessful{
 				Cmd: "docker info",
-				Fix: &Fix{Description: "Ensure current user can run docker commands"},
+				Fix: &Fix{
+					Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL,
+				},
 			},
 		},
 	},
@@ -99,7 +107,7 @@ var HostRequiredDependencies = []Dependency{
 			CommandSuccessful{
 				Cmd: "docker compose",
 				Fix: &Fix{
-					Description: "Ensure Docker Compose is installed as a plugin for Docker",
+					Description: "Ensure Docker Compose is installed as a plugin for Docker. See " + containerEngineInstallURL,
 				},
 			},
 			DockerComposeMinVersion{
@@ -116,10 +124,16 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 			Label:          "Container Engine",
 			SoftwareEnumID: Docker,
 			Checks: []Check{
-				BinaryExists{},
+				BinaryExists{
+					Fix: &Fix{
+						Description: "Install a supported container engine. See " + containerEngineInstallURL,
+					},
+				},
 				CommandSuccessful{
 					Cmd: "docker info",
-					Fix: &Fix{Description: "Ensure current user can run docker commands"},
+					Fix: &Fix{
+						Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL,
+					},
 				},
 			},
 		},
