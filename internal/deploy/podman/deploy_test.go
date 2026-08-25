@@ -40,12 +40,9 @@ func TestDeploy(t *testing.T) {
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
 
 		require.NoError(t, err)
-		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+		targetSocket, err := podman.NewRemoteSocket(context.Background(), targetDestination)
 		require.NoError(t, err)
-		t.Cleanup(func() {
-			require.NoError(t, tunnel.Close())
-		})
-		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
+		assertContainersRunning(t, projectName, targetSocket)
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
@@ -66,12 +63,9 @@ func TestDeploy(t *testing.T) {
 		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
 
 		require.NoError(t, err)
-		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+		targetSocket, err := podman.NewRemoteSocket(context.Background(), targetDestination)
 		require.NoError(t, err)
-		t.Cleanup(func() {
-			require.NoError(t, tunnel.Close())
-		})
-		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
+		assertContainersRunning(t, projectName, targetSocket)
 	})
 }
 
@@ -80,8 +74,8 @@ func requireLocalPodman(t *testing.T) {
 	if _, err := exec.LookPath("podman"); err != nil {
 		t.Skip("podman is not installed")
 	}
-	if _, err := exec.LookPath("docker-compose"); err != nil {
-		t.Skip("docker-compose is not installed")
+	if _, err := exec.LookPath("podman-compose"); err != nil {
+		t.Skip("podman-compose is not installed")
 	}
 	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
 		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
@@ -188,11 +182,7 @@ func cleanupComposeProject(t *testing.T, composeFile string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
-	if err != nil {
-		t.Logf("failed to configure Podman Compose: %v", err)
-		return
-	}
+	cmd := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("Podman Compose cleanup failed: %v: %s", err, output)
 	}

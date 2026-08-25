@@ -23,12 +23,8 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	require.NoError(t, podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, composeFile))
 	podmanContainer := startPodmanInContainer(t)
 	targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
-	targetSocketTunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+	targetSocket, err := podman.NewRemoteSocket(context.Background(), targetDestination)
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, targetSocketTunnel.Close())
-	})
-	targetSocket := podman.NewSocket(targetSocketTunnel.SocketURL())
 	assertImageDoesNotExist(t, targetSocket, imageName)
 
 	registryTunnel, err := ssh.OpenTunnel(context.Background(), t.Output(), targetDestination, registryPort)
