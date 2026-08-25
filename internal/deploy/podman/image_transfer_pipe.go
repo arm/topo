@@ -10,7 +10,7 @@ import (
 )
 
 func TransferImagesViaPipe(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, composeFile string) error {
-	images, err := compose.ImageNames(composeFile)
+	images, err := compose.PodmanImageNames(composeFile)
 	if err != nil {
 		return err
 	}

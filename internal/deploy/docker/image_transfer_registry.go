@@ -14,7 +14,7 @@ import (
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 
 func TransferImagesViaRegistry(ctx context.Context, output io.Writer, source, destination Host, composeFile, port string) error {
-	images, err := compose.ImageNames(composeFile)
+	images, err := compose.DockerImageNames(composeFile)
 	if err != nil {
 		return err
 	}

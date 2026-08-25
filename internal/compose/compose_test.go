@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestImageNames(t *testing.T) {
+func TestDockerImageNames(t *testing.T) {
 	t.Run("returns explicit and generated image names", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "compose.yaml")
 		testutil.RequireWriteFile(t, path, `
@@ -28,7 +28,7 @@ services:
     image: worker:dev
 `)
 
-		got, err := compose.ImageNames(path)
+		got, err := compose.DockerImageNames(path)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"nginx:1.27", "springfield-api", "worker:dev"}, got)
@@ -45,7 +45,7 @@ services:
     image: nginx:1.27
 `)
 
-		got, err := compose.ImageNames(path)
+		got, err := compose.DockerImageNames(path)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{filepath.Base(dir) + "-api", "nginx:1.27"}, got)
@@ -75,7 +75,7 @@ services:
       service: build-base
 `)
 
-		got, err := compose.ImageNames(path)
+		got, err := compose.DockerImageNames(path)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"duff:latest", "springfield-api"}, got)
@@ -97,7 +97,7 @@ services:
     image: busybox:1.36
 `)
 
-		got, err := compose.ImageNames(path)
+		got, err := compose.DockerImageNames(path)
 
 		require.NoError(t, err)
 		assert.True(t, sort.StringsAreSorted(got))
@@ -107,10 +107,25 @@ services:
 		path := filepath.Join(t.TempDir(), "compose.yaml")
 		testutil.RequireWriteFile(t, path, `{invalid`)
 
-		_, err := compose.ImageNames(path)
+		_, err := compose.DockerImageNames(path)
 
 		assert.Error(t, err)
 	})
+}
+
+func TestPodmanImageNames(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "compose.yaml")
+	testutil.RequireWriteFile(t, path, `
+name: springfield
+services:
+  api:
+    build: .
+`)
+
+	got, err := compose.PodmanImageNames(path)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"springfield_api"}, got)
 }
 
 func TestPullableServices(t *testing.T) {

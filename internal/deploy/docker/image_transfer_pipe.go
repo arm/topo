@@ -10,7 +10,7 @@ import (
 )
 
 func TransferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Host, composeFile string) error {
-	images, err := compose.ImageNames(composeFile)
+	images, err := compose.DockerImageNames(composeFile)
 	if err != nil {
 		return err
 	}

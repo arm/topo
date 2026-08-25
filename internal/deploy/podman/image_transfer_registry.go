@@ -12,7 +12,7 @@ import (
 )
 
 func TransferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, composeFile, port string) error {
-	images, err := compose.ImageNames(composeFile)
+	images, err := compose.PodmanImageNames(composeFile)
 	if err != nil {
 		return err
 	}
