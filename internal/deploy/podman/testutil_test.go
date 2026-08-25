@@ -31,22 +31,42 @@ func requireAvailableTCPPort(t *testing.T) string {
 	return gtestutil.RequireAvailableTCPPort(t, "127.0.0.1")
 }
 
-func imageTransferFixture(t *testing.T) (string, string) {
+type imageTransferFixture struct {
+	composeFile string
+	imageNames  []string
+}
+
+func newImageTransferFixture(t *testing.T) imageTransferFixture {
 	t.Helper()
-	temporaryDirectory := t.TempDir()
-	composeFile := filepath.Join(temporaryDirectory, "compose.yaml")
-	imageName := "test-image-" + sanitiseTestName(t)
+
+	dir := t.TempDir()
+	testName := sanitiseTestName(t)
+	projectName := "test-project-" + testName
+	explicitImageName := "test-image-" + testName
+	generatedImageName := projectName + "_generated"
+	composeFile := filepath.Join(dir, "compose.yaml")
+
 	requireWriteFile(t, composeFile, fmt.Sprintf(`
+name: %s
 services:
-  test:
+  explicit:
     build: .
     image: %s
-`, imageName))
-	requireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), "FROM docker.io/library/alpine:latest\n")
+  generated:
+    build: .
+`, projectName, explicitImageName))
+	requireWriteFile(t, filepath.Join(dir, "Dockerfile"), `FROM docker.io/library/alpine:latest`)
+
+	fixture := imageTransferFixture{
+		composeFile: composeFile,
+		imageNames:  []string{explicitImageName, generatedImageName},
+	}
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		_ = podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).Run()
+		for _, imageName := range fixture.imageNames {
+			_ = podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).Run()
+		}
 	})
-	return composeFile, imageName
+	return fixture
 }

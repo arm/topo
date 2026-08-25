@@ -13,18 +13,20 @@ import (
 
 func TestTransferImagesViaPipe(t *testing.T) {
 	requireLocalPodman(t)
-	composeFile, imageName := imageTransferFixture(t)
+	fixture := newImageTransferFixture(t)
 	target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
 	targetDestination := ssh.NewDestination(target.SSHDestination)
 	remoteSocket, err := podman.NewRemoteSocket(context.Background(), targetDestination)
 	require.NoError(t, err)
-	err = podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, composeFile)
+	err = podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, fixture.composeFile)
 	require.NoError(t, err)
 
-	err = podman.TransferImagesViaPipe(t.Context(), t.Output(), podman.LocalSocket, remoteSocket, composeFile)
+	err = podman.TransferImagesViaPipe(t.Context(), t.Output(), podman.LocalSocket, remoteSocket, fixture.composeFile)
 
 	require.NoError(t, err)
-	assertImageExists(t, remoteSocket, imageName)
+	for _, imageName := range fixture.imageNames {
+		assertImageExists(t, remoteSocket, imageName)
+	}
 }
 
 func assertImageExists(t *testing.T, socket podman.Socket, imageName string) {
