@@ -9,8 +9,20 @@ if [[ ${1:-} == --include-head ]]; then
 fi
 
 first_docs_major=8
+docs_major_versions_max=5
 release_refs=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1000 --json tagName \
-  --jq "[.[].tagName | select((capture(\"^v?(?<major>[0-9]+)[.]0[.]0$\")?.major | tonumber) >= $first_docs_major)][:5][]")
+  --jq "
+    def major_version: ltrimstr(\"v\") | split(\".\")[0] | tonumber;
+
+    [
+      .[].tagName
+      | select(test(\"^v?[0-9]+[.][0-9]+[.][0-9]+$\"))
+      | select(major_version >= $first_docs_major)
+    ]
+    | unique_by(major_version)
+    | reverse
+    | .[:$docs_major_versions_max][]
+  ")
 
 jq --arg release_refs "$release_refs" --argjson include_head "$include_head" '
   .versions = [
