@@ -63,18 +63,18 @@ Not sure what these terms mean? The [glossary](docs/introduction/glossary.md) de
 
 **Host machine** (where you run `topo`):
 
-- [Docker](#install-docker)
+- [Docker](#install-a-container-engine)
 - OpenSSH Client
 
 **Target machine** (the remote Arm system):
 
 - Reachable with SSH
 - Linux on ARM64
-- [Docker](#install-docker)
+- [Docker](#install-a-container-engine)
 
 The host and target can be the same system. If you're working directly on an Arm Linux system, use `--target localhost`.
 
-### Install Docker
+### Install a Container Engine
 
 See [Install Docker for Topo](docs/introduction/container-engines.md) for supported installation methods and verification steps.
 
