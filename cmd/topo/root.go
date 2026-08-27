@@ -100,9 +100,13 @@ func addContainerEngineFlag(cmd *cobra.Command) {
 }
 
 func getSelectedEngine(cmd *cobra.Command) (containerEngine, error) {
+	if cmd.Flags().Lookup(containerEngineFlag) == nil {
+		return containerEngineDocker, nil
+	}
+
 	value, err := cmd.Flags().GetString(containerEngineFlag)
 	if err != nil {
-		panic(fmt.Sprintf("internal error: container engine flag not registered: %v", err))
+		panic(fmt.Sprintf("internal error: container engine flag is not a string: %v", err))
 	}
 
 	selectedEngine := containerEngine(value)
