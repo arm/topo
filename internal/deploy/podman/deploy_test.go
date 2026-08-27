@@ -1,9 +1,7 @@
 package podman_test
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +10,6 @@ import (
 
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -85,26 +82,6 @@ func requireLocalPodman(t *testing.T) {
 	}
 	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
 		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
-	}
-}
-
-func assertContainersRunning(t *testing.T, projectName string, socket podman.Socket) {
-	t.Helper()
-	cmd := podman.Command(t.Context(), socket,
-		"ps", "--format", "json", "--all",
-		"--filter", "label=com.docker.compose.project="+projectName,
-	)
-	var diagnostics bytes.Buffer
-	cmd.Stderr = &diagnostics
-	output, err := cmd.Output()
-	require.NoError(t, err, "stdout: %s\nstderr: %s", output, diagnostics.String())
-
-	var containers []map[string]any
-	require.NoError(t, json.Unmarshal(output, &containers))
-	require.NotEmpty(t, containers, "no containers reported; stderr: %s", diagnostics.String())
-
-	for _, container := range containers {
-		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Names"], container["State"])
 	}
 }
 

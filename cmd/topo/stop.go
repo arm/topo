@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/ssh"
 
@@ -22,6 +23,10 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
 
+		selectedEngine, err := getSelectedEngine(cmd)
+		if err != nil {
+			return err
+		}
 		targetArg, err := requireTarget(cmd)
 		if err != nil {
 			return err
@@ -37,7 +42,9 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		dest := ssh.NewDestination(targetArg)
-
+		if selectedEngine == containerEnginePodman {
+			return podman.Stop(cmd.Context(), os.Stdout, composeFile, dest)
+		}
 		return docker.Stop(cmd.Context(), os.Stdout, composeFile, dest)
 	},
 }
@@ -45,5 +52,8 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 func init() {
 	addTargetFlag(topoStopCmd)
 	addComposeFileFlag(topoStopCmd)
+	if experimentalFeaturesEnabled() {
+		addEngineFlag(topoStopCmd)
+	}
 	rootCmd.AddCommand(topoStopCmd)
 }
