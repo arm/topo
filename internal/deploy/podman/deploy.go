@@ -30,7 +30,7 @@ type DeployOptions struct {
 	Registry     *RegistryConfig
 }
 
-func Deploy(ctx context.Context, output io.Writer, composeFile string, options DeployOptions) error {
+func Deploy(ctx context.Context, output io.Writer, composeFile string, options DeployOptions) (deployErr error) {
 	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
 	}
@@ -45,16 +45,24 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	}
 
 	targetSocket := LocalSocket
+	var tunnel *ssh.TCPToUnixSocketTunnel
 	if !options.TargetHost.IsPlainLocalhost() {
-		if err := term.PrintHeader(output, "Discover Podman remote socket"); err != nil {
+		if err := term.PrintHeader(output, "Open Podman socket SSH tunnel"); err != nil {
 			return err
 		}
 
 		var err error
-		targetSocket, err = NewRemoteSocket(ctx, options.TargetHost)
+		tunnel, err = TunnelRemoteSocketPath(ctx, output, options.TargetHost)
 		if err != nil {
 			return err
 		}
+		defer func() {
+			if tunnel != nil {
+				deployErr = errors.Join(deployErr, closeRemoteTunnel(tunnel))
+			}
+		}()
+
+		targetSocket = NewSocket(tunnel.SocketURL())
 		if options.Registry == nil {
 			if err := transferImagesViaPipe(ctx, output, LocalSocket, targetSocket, composeFile); err != nil {
 				return err
@@ -69,6 +77,13 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	}
 	if err := StartServices(ctx, output, targetSocket, composeFile, options.RecreateMode); err != nil {
 		return err
+	}
+
+	if tunnel != nil {
+		if err := closeRemoteTunnel(tunnel); err != nil {
+			return err
+		}
+		tunnel = nil
 	}
 
 	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
@@ -135,4 +150,11 @@ func closeRegistryTunnel(output io.Writer, tunnel *ssh.Tunnel) error {
 		closeError = fmt.Errorf("failed to close SSH tunnel: %w", closeError)
 	}
 	return errors.Join(headerError, closeError)
+}
+
+func closeRemoteTunnel(tunnel *ssh.TCPToUnixSocketTunnel) error {
+	if err := tunnel.Close(); err != nil {
+		return fmt.Errorf("failed to close remote Podman socket tunnel: %w", err)
+	}
+	return nil
 }
