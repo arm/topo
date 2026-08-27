@@ -10,8 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var psEngine string
-
 var topoPsCmd = &cobra.Command{
 	Use:   "ps",
 	Short: "List containers on the target for the current Compose project.",
@@ -24,7 +22,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
 
-		parsedEngine, err := parseContainerEngine(psEngine)
+		selectedEngine, err := getSelectedEngine(cmd)
 		if err != nil {
 			return err
 		}
@@ -48,7 +46,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			panic("internal error: all flag not registered: " + err.Error())
 		}
 
-		if parsedEngine == containerEnginePodman {
+		if selectedEngine == containerEnginePodman {
 			containers, err := podman.ListContainers(composeFile, dest, hostname, allContainers)
 			if err != nil {
 				return err
@@ -102,7 +100,7 @@ func init() {
 	addComposeFileFlag(topoPsCmd)
 	topoPsCmd.Flags().BoolP("all", "a", false, "show all containers, including stopped")
 	if experimentalFeaturesEnabled() {
-		topoPsCmd.Flags().StringVar(&psEngine, "engine", string(containerEngineDocker), "container engine to use (docker or podman)")
+		addContainerEngineFlag(topoPsCmd)
 	}
 	rootCmd.AddCommand(topoPsCmd)
 }
