@@ -91,7 +91,7 @@ const (
 
 const containerEngineFlag = "engine"
 
-func addContainerEngineFlag(cmd *cobra.Command) {
+func addEngineFlag(cmd *cobra.Command) {
 	cmd.Flags().String(
 		containerEngineFlag,
 		string(containerEngineDocker),
