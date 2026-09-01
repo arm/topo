@@ -27,7 +27,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		err := podman.Deploy(t.Context(), &bytes.Buffer{}, composeFile, podman.DeployOptions{TargetHost: ssh.PlainLocalhost})
+		err := podman.Deploy(t.Context(), &bytes.Buffer{}, composeFile, podman.DeployOptions{})
 
 		require.ErrorContains(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments`)
 	})
