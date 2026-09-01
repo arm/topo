@@ -82,6 +82,40 @@ func getComposeFileName(cmd *cobra.Command) (string, error) {
 
 const targetEnvVar = env.TargetVariable
 
+type containerEngine string
+
+const (
+	containerEngineDocker containerEngine = "docker"
+	containerEnginePodman containerEngine = "podman"
+)
+
+const containerEngineFlag = "engine"
+
+func addEngineFlag(cmd *cobra.Command) {
+	cmd.Flags().String(
+		containerEngineFlag,
+		string(containerEngineDocker),
+		"container engine to use (docker or podman)",
+	)
+}
+
+func getSelectedEngine(cmd *cobra.Command) (containerEngine, error) {
+	if cmd.Flags().Lookup(containerEngineFlag) == nil {
+		return containerEngineDocker, nil
+	}
+
+	value, err := cmd.Flags().GetString(containerEngineFlag)
+	if err != nil {
+		panic(fmt.Sprintf("internal error: container engine flag is not a string: %v", err))
+	}
+
+	selectedEngine := containerEngine(value)
+	if selectedEngine != containerEngineDocker && selectedEngine != containerEnginePodman {
+		return "", fmt.Errorf("invalid engine %q: must be docker or podman", value)
+	}
+	return selectedEngine, nil
+}
+
 func addTargetFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP(
 		"target", "t", "",
