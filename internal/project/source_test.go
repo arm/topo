@@ -184,6 +184,34 @@ func TestGitSource(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, firstCommit, gitOutput(t, dstDir, "rev-parse", "HEAD"))
 		})
+
+		t.Run("preserves line endings when Git enables autocrlf", func(t *testing.T) {
+			const script = "#!/bin/sh\nexit 0\n"
+			repoDir, commit := createGitRepoWithFile(t, "entrypoint.sh", script)
+			t.Setenv("GIT_CONFIG_COUNT", "1")
+			t.Setenv("GIT_CONFIG_KEY_0", "core.autocrlf")
+			t.Setenv("GIT_CONFIG_VALUE_0", "true")
+
+			t.Run("reference clone", func(t *testing.T) {
+				dstDir := filepath.Join(t.TempDir(), "dest")
+				src := project.GitSource{URL: repoDir}
+
+				err := src.CopyTo(dstDir)
+
+				require.NoError(t, err)
+				testutil.AssertFileContents(t, script, filepath.Join(dstDir, "entrypoint.sh"))
+			})
+
+			t.Run("commit checkout", func(t *testing.T) {
+				dstDir := filepath.Join(t.TempDir(), "dest")
+				src := project.GitSource{URL: repoDir, Ref: commit}
+
+				err := src.CopyTo(dstDir)
+
+				require.NoError(t, err)
+				testutil.AssertFileContents(t, script, filepath.Join(dstDir, "entrypoint.sh"))
+			})
+		})
 	})
 
 	t.Run("GetName", func(t *testing.T) {
@@ -341,10 +369,7 @@ func TestDirSource(t *testing.T) {
 func createGitRepoWithTwoCommits(t *testing.T) (string, string) {
 	t.Helper()
 
-	repoDir := t.TempDir()
-	runGit(t, repoDir, "init")
-	runGit(t, repoDir, "config", "user.name", "Topo Test")
-	runGit(t, repoDir, "config", "user.email", "topo@example.com")
+	repoDir := createGitRepo(t)
 	testutil.RequireWriteFile(t, filepath.Join(repoDir, "content.txt"), "first")
 	runGit(t, repoDir, "add", ".")
 	runGit(t, repoDir, "commit", "-m", "first")
@@ -355,6 +380,29 @@ func createGitRepoWithTwoCommits(t *testing.T) (string, string) {
 	runGit(t, repoDir, "commit", "-m", "second")
 
 	return repoDir, firstCommit
+}
+
+func createGitRepoWithFile(t *testing.T, name, content string) (string, string) {
+	t.Helper()
+
+	repoDir := createGitRepo(t)
+	testutil.RequireWriteFile(t, filepath.Join(repoDir, name), content)
+	runGit(t, repoDir, "add", ".")
+	runGit(t, repoDir, "commit", "-m", "add file")
+
+	return repoDir, gitOutput(t, repoDir, "rev-parse", "HEAD")
+}
+
+func createGitRepo(t *testing.T) string {
+	t.Helper()
+
+	repoDir := t.TempDir()
+	runGit(t, repoDir, "init")
+	runGit(t, repoDir, "config", "user.name", "Topo Test")
+	runGit(t, repoDir, "config", "user.email", "topo@example.com")
+	runGit(t, repoDir, "config", "commit.gpgSign", "false")
+	runGit(t, repoDir, "config", "core.autocrlf", "false")
+	return repoDir
 }
 
 func runGit(t *testing.T, dir string, args ...string) {
