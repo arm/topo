@@ -12,15 +12,28 @@ import (
 
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestDeploy(t *testing.T) {
-	requireLocalPodman(t)
+	t.Run("rejects runtime before accessing Podman", func(t *testing.T) {
+		composeFile := testutil.WriteComposeFile(t, t.TempDir(), `
+services:
+  firmware:
+    image: alpine
+    runtime: io.containerd.remoteproc.v1
+`)
+
+		err := podman.Deploy(t.Context(), &bytes.Buffer{}, composeFile, podman.DeployOptions{})
+
+		require.ErrorContains(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments`)
+	})
 
 	t.Run("deploys to localhost", func(t *testing.T) {
+		requireLocalPodman(t)
 		composeFile, projectName := deploymentFixture(t)
 		t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
 		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
@@ -32,6 +45,7 @@ func TestDeploy(t *testing.T) {
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
+		requireLocalPodman(t)
 		podmanContainer := startPodmanInContainer(t)
 		composeFile, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
@@ -49,6 +63,7 @@ func TestDeploy(t *testing.T) {
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
+		requireLocalPodman(t)
 		registryPort := requireAvailableTCPPort(t)
 		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
 		t.Cleanup(func() { cleanupRegistryContainer(t, registryContainerName) })
