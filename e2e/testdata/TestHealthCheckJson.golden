@@ -12,6 +12,11 @@
         "value": "ssh"
       },
       {
+        "name": "Git",
+        "status": "ok",
+        "value": "git"
+      },
+      {
         "name": "Container Engine",
         "status": "ok",
         "value": "docker"
