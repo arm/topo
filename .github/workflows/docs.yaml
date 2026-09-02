@@ -28,7 +28,7 @@ jobs:
         run: ./docs/scripts/generate-docs-config.sh --include-head
 
       - name: Validate docs site
-        uses: ARM-software/docs-action/validate@v0.2.0
+        uses: ARM-software/docs-action/validate@v0.3.1
         with:
           docs-root: docs
           site-id: topo
@@ -58,7 +58,7 @@ jobs:
           aws-region: eu-west-1
 
       - name: Publish docs site
-        uses: ARM-software/docs-action/publish@v0.2.0
+        uses: ARM-software/docs-action/publish@v0.3.1
         with:
           docs-root: docs
           site-id: topo
