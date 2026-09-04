@@ -34,6 +34,7 @@ func TestHealthCheck(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, out, "OpenSSH: ✅ (ssh)")
+		assert.Contains(t, out, "Git: ✅ (git)")
 		assert.Contains(t, out, "Container Engine: ✅")
 	})
 

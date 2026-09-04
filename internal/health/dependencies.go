@@ -82,6 +82,16 @@ var HostRequiredDependencies = []Dependency{
 		Checks: []Check{BinaryExists{}, OpenSSHAvailable{}},
 	},
 	{
+		Binary: "git",
+		Label:  "Git",
+		Checks: []Check{BinaryExists{
+			Severity: SeverityWarning,
+			Fix: &Fix{
+				Description: "Install Git and ensure its git executable is on PATH. See https://git-scm.com/downloads",
+			},
+		}},
+	},
+	{
 		Binary:         "docker",
 		Label:          "Container Engine",
 		SoftwareEnumID: Docker,

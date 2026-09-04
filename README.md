@@ -64,6 +64,7 @@ Not sure what these terms mean? The [glossary](docs/introduction/glossary.md) de
 **Host machine** (where you run `topo`):
 
 - [Docker](#install-a-container-engine)
+- [Git](https://git-scm.com/downloads)
 - OpenSSH Client
 
 **Target machine** (the remote Arm system):
