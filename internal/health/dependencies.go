@@ -85,6 +85,7 @@ var HostRequiredDependencies = []Dependency{
 		Binary: "git",
 		Label:  "Git",
 		Checks: []Check{BinaryExists{
+			Severity: SeverityWarning,
 			Fix: &Fix{
 				Description: "Install Git and ensure its git executable is on PATH. See https://git-scm.com/downloads",
 			},
