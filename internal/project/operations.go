@@ -7,24 +7,24 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/internal/parameter"
 )
 
-func Clone(path string, src Source, argProvider arguments.Provider) error {
-	return NewClone(path, src, argProvider).Run(nil)
+func Clone(path string, src Source, provider parameter.Provider) error {
+	return NewClone(path, src, provider).Run(nil)
 }
 
-func NewClone(path string, src Source, argProvider arguments.Provider) operation.Sequence {
+func NewClone(path string, src Source, provider parameter.Provider) operation.Sequence {
 	return operation.NewSequence(
 		copyProjectOperation{
 			path: path,
 			src:  src,
 		},
-		resolveArgsOperation{
-			path:        path,
-			argProvider: argProvider,
+		provideParametersOperation{
+			path:     path,
+			provider: provider,
 		},
 		printSummary{
 			path: path,
@@ -32,20 +32,20 @@ func NewClone(path string, src Source, argProvider arguments.Provider) operation
 	)
 }
 
-func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider) error {
-	resolvedArgs, err := resolveArgs(composeFilePath, argProvider)
+func ResolveAndApplyParameters(composeFilePath string, provider parameter.Provider) error {
+	provided, err := resolveParameters(composeFilePath, provider)
 	if err != nil {
 		return fmt.Errorf("failed to resolve parameters: %w", err)
 	}
 
-	if len(resolvedArgs) == 0 {
+	if len(provided) == 0 {
 		return nil
 	}
 
-	return applyArgs(composeFilePath, resolvedArgs)
+	return applyParameters(composeFilePath, provided)
 }
 
-func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
+func applyParameters(composeFilePath string, provided []parameter.Provided) error {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 		return err
 	}
 
-	err = compose.ApplyArgs(yamlNodes, argsToMap(args))
+	err = compose.ApplyParameters(yamlNodes, parametersToMap(provided))
 	if err != nil {
 		return fmt.Errorf("error applying parameters to project file: %w", err)
 	}
@@ -74,29 +74,42 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 	return nil
 }
 
-func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]arguments.ResolvedArg, error) {
+func resolveParameters(composeFilePath string, provider parameter.Provider) ([]parameter.Provided, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't read compose file: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
-	p, err := FromContent(f)
+	project, err := FromContent(f)
 	if err != nil {
 		return nil, err
 	}
-	resolvedParameters, err := Resolve(p, argProvider)
+	provided, err := provider.Provide(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
 	if err != nil {
 		return nil, err
 	}
-
-	return resolvedParameters, nil
+	return provided, nil
 }
 
-func argsToMap(args []arguments.ResolvedArg) map[string]string {
+func toDefinitions(parameters []Parameter, currentValues map[string][]string) []parameter.Definition {
+	definitions := make([]parameter.Definition, len(parameters))
+	for i, definition := range parameters {
+		definitions[i] = parameter.Definition{
+			Name:          definition.Name,
+			Description:   definition.Description,
+			Required:      definition.Required,
+			Example:       definition.Example,
+			CurrentValues: currentValues[definition.Name],
+		}
+	}
+	return definitions
+}
+
+func parametersToMap(provided []parameter.Provided) map[string]string {
 	result := map[string]string{}
-	for _, arg := range args {
-		result[arg.Name] = arg.Value
+	for _, entry := range provided {
+		result[entry.Name] = entry.Value
 	}
 	return result
 }
@@ -120,18 +133,18 @@ func (o copyProjectOperation) Run(_ io.Writer) error {
 	return nil
 }
 
-type resolveArgsOperation struct {
-	path        string
-	argProvider arguments.Provider
+type provideParametersOperation struct {
+	path     string
+	provider parameter.Provider
 }
 
-func (o resolveArgsOperation) Description() string {
+func (o provideParametersOperation) Description() string {
 	return "Configure project"
 }
 
-func (o resolveArgsOperation) Run(_ io.Writer) error {
+func (o provideParametersOperation) Run(_ io.Writer) error {
 	composeFile := filepath.Join(o.path, ComposeFilename)
-	if err := ResolveAndApplyArgs(composeFile, o.argProvider); err != nil {
+	if err := ResolveAndApplyParameters(composeFile, o.provider); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)
 		}
