@@ -2,7 +2,6 @@ package views_test
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -21,6 +20,7 @@ func TestHealthReport(t *testing.T) {
 						{
 							Name:   "Flux Capacitor",
 							Status: health.CheckStatusOK,
+							Value:  "flux",
 						},
 					},
 				},
@@ -30,8 +30,9 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
+			assert.Contains(t, out.String(), "── Host ")
 			assert.Contains(t, out.String(), "Flux Capacitor")
-			assert.Contains(t, out.String(), "✅")
+			assert.Contains(t, out.String(), " ✓ Flux Capacitor (flux)")
 		})
 
 		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
@@ -52,8 +53,7 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Container Engine")
-			assert.Contains(t, out.String(), "❌")
-			assert.Contains(t, out.String(), "docker not found on path")
+			assert.Contains(t, out.String(), " ✗ Container Engine (docker not found on path)")
 		})
 
 		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
@@ -75,8 +75,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "⚠️")
-			assert.Contains(t, out.String(), "no remoteproc devices found")
+			assert.Contains(t, out.String(), " ! Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 
 		t.Run("it renders an info icon for info checks", func(t *testing.T) {
@@ -98,8 +97,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "ℹ️")
-			assert.Contains(t, out.String(), "no remoteproc devices found")
+			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 
 		t.Run("it renders connection failures", func(t *testing.T) {
@@ -116,8 +114,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "Connected")
-			assert.Contains(t, out.String(), "❌")
+			assert.Contains(t, out.String(), " ✗ Connected")
 		})
 
 		t.Run("it renders the target destination", func(t *testing.T) {
@@ -129,7 +126,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "Destination: ssh://user@my-target")
+			assert.Contains(t, out.String(), "── Target: ssh://user@my-target ")
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
@@ -169,9 +166,29 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "Skin Care: ⚠️")
-			assert.Contains(t, out.String(), "  Fix:\n    Apply Working Hands Cream")
-			assert.Contains(t, out.String(), "  Command:\n    topo moisturise")
+			assert.Contains(t, out.String(), " ! Skin Care")
+			assert.Contains(t, out.String(), "   Fix:\n     Apply Working Hands Cream")
+			assert.Contains(t, out.String(), "   Command:\n     topo moisturise")
+		})
+
+		t.Run("it colors status labels when writing to a terminal", func(t *testing.T) {
+			toPrint := views.HealthReport{
+				Host: health.HostReport{Dependencies: []health.HealthCheck{
+					{Name: "Healthy", Status: health.CheckStatusOK},
+					{Name: "Broken", Status: health.CheckStatusError},
+					{Name: "Deprecated", Status: health.CheckStatusWarning},
+					{Name: "Skipped", Status: health.CheckStatusInfo},
+				}},
+			}
+
+			out, err := toPrint.AsPlain(true)
+
+			require.NoError(t, err)
+			assert.Contains(t, out, term.Color(term.Dim, "── "))
+			assert.Contains(t, out, term.Color(term.Green, " ✓ "))
+			assert.Contains(t, out, term.Color(term.Red, " ✗ "))
+			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
+			assert.Contains(t, out, term.Color(term.Blue, " i "))
 		})
 
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
@@ -182,8 +199,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			want := fmt.Sprintf("ℹ️ %s", hint)
-			assert.Contains(t, out.String(), want)
+			assert.Contains(t, out.String(), "\n"+hint)
 		})
 	})
 
