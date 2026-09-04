@@ -46,7 +46,7 @@ interactive prompts.`,
 
 		provider := parameter.NewStrictProviderChain(providers...)
 
-		return project.ResolveAndApplyParameters(composeFile, provider)
+		return project.Configure(composeFile, provider)
 	},
 }
 
