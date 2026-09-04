@@ -94,7 +94,7 @@ x-topo:
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
 	})
 
-	t.Run("removes destination directory when parameter resolution fails", func(t *testing.T) {
+	t.Run("removes destination directory when parameter configuration fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		mockSource := mockSourceWithContent(t, `
@@ -131,17 +131,17 @@ func mockSourceWithContent(t *testing.T, content string) *mockProjectSource {
 	return mockSource
 }
 
-func TestResolveAndApplyParameters(t *testing.T) {
+func TestConfigure(t *testing.T) {
 	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
 		provider := parameter.NewStrictProviderChain()
 
-		err := project.ResolveAndApplyParameters(invalidPath, provider)
+		err := project.Configure(invalidPath, provider)
 
 		require.ErrorContains(t, err, "can't read compose file")
 	})
 
-	t.Run("updates the compose file with resolved parameters", func(t *testing.T) {
+	t.Run("updates the compose file with provided parameters", func(t *testing.T) {
 		dir := t.TempDir()
 		composeFileContents := `
 services:
@@ -164,7 +164,7 @@ x-topo:
 		static := parameter.NewStaticProvider(parameter.Values{"FOO": "baz"})
 		provider := parameter.NewStrictProviderChain(static)
 
-		err := project.ResolveAndApplyParameters(composeFilePath, provider)
+		err := project.Configure(composeFilePath, provider)
 		require.NoError(t, err)
 
 		want := `
@@ -209,7 +209,7 @@ x-topo:
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
 		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
 
-		err := project.ResolveAndApplyParameters(composeFilePath, provider)
+		err := project.Configure(composeFilePath, provider)
 
 		require.ErrorContains(t, err, "missing value(s) for required parameters")
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
@@ -231,7 +231,7 @@ x-topo:
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
 		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
 
-		err := project.ResolveAndApplyParameters(composeFilePath, provider)
+		err := project.Configure(composeFilePath, provider)
 
 		require.NoError(t, err)
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// StrictProviderChain chains providers and ensures all required parameters are resolved.
+// StrictProviderChain chains providers and ensures all required parameters have values.
 // It stops early once all required parameters are satisfied.
 type StrictProviderChain struct {
 	providers []Provider
@@ -34,12 +34,12 @@ func (p *StrictProviderChain) Provide(definitions []Definition) (Values, error) 
 		maps.Copy(provided, values)
 		remaining = filterProvided(remaining, provided)
 
-		if allRequiredResolved(definitions, provided) {
+		if allRequiredHaveValues(definitions, provided) {
 			break
 		}
 	}
 
-	if err := validateRequiredResolved(definitions, provided); err != nil {
+	if err := validateRequiredValues(definitions, provided); err != nil {
 		return nil, err
 	}
 
@@ -74,16 +74,16 @@ func filterProvided(definitions []Definition, values Values) []Definition {
 	return remaining
 }
 
-func allRequiredResolved(definitions []Definition, values Values) bool {
+func allRequiredHaveValues(definitions []Definition, values Values) bool {
 	for _, definition := range definitions {
-		if definition.Required && !isResolved(definition, values) {
+		if definition.Required && !hasValue(definition, values) {
 			return false
 		}
 	}
 	return true
 }
 
-func isResolved(definition Definition, values Values) bool {
+func hasValue(definition Definition, values Values) bool {
 	if value, exists := values[definition.Name]; exists {
 		return value != ""
 	}
@@ -93,10 +93,10 @@ func isResolved(definition Definition, values Values) bool {
 	return !slices.Contains(definition.CurrentValues, "")
 }
 
-func validateRequiredResolved(definitions []Definition, values Values) error {
+func validateRequiredValues(definitions []Definition, values Values) error {
 	var missing []Definition
 	for _, definition := range definitions {
-		if definition.Required && !isResolved(definition, values) {
+		if definition.Required && !hasValue(definition, values) {
 			missing = append(missing, definition)
 		}
 	}

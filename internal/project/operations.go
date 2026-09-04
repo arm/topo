@@ -22,7 +22,7 @@ func NewClone(path string, src Source, provider parameter.Provider) operation.Se
 			path: path,
 			src:  src,
 		},
-		provideParametersOperation{
+		configureOperation{
 			path:     path,
 			provider: provider,
 		},
@@ -32,10 +32,10 @@ func NewClone(path string, src Source, provider parameter.Provider) operation.Se
 	)
 }
 
-func ResolveAndApplyParameters(composeFilePath string, provider parameter.Provider) error {
-	provided, err := resolveParameters(composeFilePath, provider)
+func Configure(composeFilePath string, provider parameter.Provider) error {
+	provided, err := collectValues(composeFilePath, provider)
 	if err != nil {
-		return fmt.Errorf("failed to resolve parameters: %w", err)
+		return fmt.Errorf("failed to collect parameter values: %w", err)
 	}
 
 	if len(provided) == 0 {
@@ -74,7 +74,7 @@ func applyParameters(composeFilePath string, provided parameter.Values) error {
 	return nil
 }
 
-func resolveParameters(composeFilePath string, provider parameter.Provider) (parameter.Values, error) {
+func collectValues(composeFilePath string, provider parameter.Provider) (parameter.Values, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't read compose file: %w", err)
@@ -125,18 +125,18 @@ func (o copyProjectOperation) Run(_ io.Writer) error {
 	return nil
 }
 
-type provideParametersOperation struct {
+type configureOperation struct {
 	path     string
 	provider parameter.Provider
 }
 
-func (o provideParametersOperation) Description() string {
+func (o configureOperation) Description() string {
 	return "Configure project"
 }
 
-func (o provideParametersOperation) Run(_ io.Writer) error {
+func (o configureOperation) Run(_ io.Writer) error {
 	composeFile := filepath.Join(o.path, ComposeFilename)
-	if err := ResolveAndApplyParameters(composeFile, o.provider); err != nil {
+	if err := Configure(composeFile, o.provider); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)
 		}
