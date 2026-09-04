@@ -33,15 +33,15 @@ func TestHealthCheck(t *testing.T) {
 		out, err := runCheckHealth(topo, container)
 		require.NoError(t, err)
 
-		assert.Contains(t, out, "[✓] OpenSSH (ssh)")
-		assert.Contains(t, out, "[✓] Container Engine (docker)")
+		assert.Contains(t, out, " ✓ OpenSSH (ssh)")
+		assert.Contains(t, out, " ✓ Container Engine (docker)")
 	})
 
 	t.Run("shows that it's connected to a valid target", func(t *testing.T) {
 		out, err := runCheckHealth(topo, container)
 		require.NoError(t, err)
 
-		assert.Contains(t, out, "[✓] Connectivity")
+		assert.Contains(t, out, " ✓ Connectivity")
 	})
 
 	t.Run("fails to connect to an invalid target", func(t *testing.T) {
@@ -51,7 +51,7 @@ func TestHealthCheck(t *testing.T) {
 		}
 		out, err := runCheckHealth(topo, &fakeContainer)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "[✗] Connectivity")
+		assert.Contains(t, out, " ✗ Connectivity")
 	})
 
 	t.Run("outputs JSON when specified", func(t *testing.T) {
