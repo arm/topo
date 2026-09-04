@@ -1,11 +1,11 @@
-package arguments
+package parameter
 
 import (
 	"encoding/json"
 	"fmt"
 )
 
-type Arg struct {
+type Definition struct {
 	Name          string
 	Description   string
 	Required      bool
@@ -13,13 +13,10 @@ type Arg struct {
 	CurrentValues []string
 }
 
-type ResolvedArg struct {
-	Name  string
-	Value string
-}
+type Values map[string]string
 
 type Provider interface {
-	Provide(args []Arg) ([]ResolvedArg, error)
+	Provide(definitions []Definition) (Values, error)
 }
 
 func formatCurrentValues(values []string) string {

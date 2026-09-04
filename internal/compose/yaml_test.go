@@ -49,8 +49,8 @@ services:
 	})
 }
 
-func TestApplyArgs(t *testing.T) {
-	t.Run("updates all matching services when arg matches in multiple services", func(t *testing.T) {
+func TestApplyParameters(t *testing.T) {
+	t.Run("updates all matching services when a parameter matches", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
   test-service:
@@ -64,9 +64,9 @@ services:
       args:
         FOO: elephant
 `)
-		args := map[string]string{"FOO": "baz"}
+		parameters := map[string]string{"FOO": "baz"}
 
-		err := compose.ApplyArgs(project, args)
+		err := compose.ApplyParameters(project, parameters)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -87,7 +87,7 @@ services:
 		assert.YAMLEq(t, want, string(got))
 	})
 
-	t.Run("when some services lack args only matching services are updated", func(t *testing.T) {
+	t.Run("when some services lack build args only matching services are updated", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
   with-arg:
@@ -101,9 +101,9 @@ services:
     build:
       context: .
 `)
-		args := map[string]string{"FOO": "baz"}
+		parameters := map[string]string{"FOO": "baz"}
 
-		err := compose.ApplyArgs(project, args)
+		err := compose.ApplyParameters(project, parameters)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -124,7 +124,7 @@ services:
 		assert.YAMLEq(t, want, string(got))
 	})
 
-	t.Run("when no args are provided returns nil and leaves project unchanged ", func(t *testing.T) {
+	t.Run("when no parameters are provided returns nil and leaves project unchanged", func(t *testing.T) {
 		yamlContents := `
 services:
   test-service:
@@ -135,7 +135,7 @@ services:
 `
 		project := yamlToNode(t, yamlContents)
 
-		err := compose.ApplyArgs(project, nil)
+		err := compose.ApplyParameters(project, nil)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -143,7 +143,7 @@ services:
 		assert.YAMLEq(t, yamlContents, string(got))
 	})
 
-	t.Run("when multiple args are provided applies all of them", func(t *testing.T) {
+	t.Run("when multiple parameters are provided applies all of them", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
   test-service:
@@ -153,12 +153,12 @@ services:
         FOO: foo
         BAR: bar
 `)
-		args := map[string]string{
+		parameters := map[string]string{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyArgs(project, args)
+		err := compose.ApplyParameters(project, parameters)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -175,7 +175,7 @@ services:
 		assert.YAMLEq(t, want, string(got))
 	})
 
-	t.Run("when resolved args are unused writes warning to provided writer", func(t *testing.T) {
+	t.Run("when provided parameters are unused returns nil", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
   test-service:
@@ -184,9 +184,9 @@ services:
       args:
         FOO: foo
 `)
-		args := map[string]string{"BAR": "baz"}
+		parameters := map[string]string{"BAR": "baz"}
 
-		err := compose.ApplyArgs(project, args)
+		err := compose.ApplyParameters(project, parameters)
 
 		require.NoError(t, err)
 	})
@@ -202,9 +202,9 @@ services:
       args:
         PLATFORM: old-value
 `)
-		args := map[string]string{"PLATFORM": "stm32mp257"}
+		parameters := map[string]string{"PLATFORM": "stm32mp257"}
 
-		err := compose.ApplyArgs(project, args)
+		err := compose.ApplyParameters(project, parameters)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -222,7 +222,7 @@ services:
 		assert.YAMLEq(t, want, string(got))
 	})
 
-	t.Run("when build args are a YAML sequence applies all resolved values", func(t *testing.T) {
+	t.Run("when build args are a YAML sequence applies all parameters", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
   test-service:
@@ -230,12 +230,12 @@ services:
       context: .
       args: ["FOO=foo", "BAR"]
 `)
-		args := map[string]string{
+		parameters := map[string]string{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyArgs(project, args)
+		err := compose.ApplyParameters(project, parameters)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)

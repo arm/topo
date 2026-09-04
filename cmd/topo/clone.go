@@ -4,8 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/spf13/cobra"
 )
@@ -63,21 +63,21 @@ interactive prompts.`,
 			cliArgs = args[1:]
 		}
 
-		var providers []arguments.Provider
+		var providers []parameter.Provider
 		if len(cliArgs) > 0 {
-			cliProvider, err := arguments.NewCLIProvider(cliArgs)
+			cliProvider, err := parameter.NewCLIProvider(cliArgs)
 			if err != nil {
 				return err
 			}
 			providers = append(providers, cliProvider)
 		}
 		if term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
-			providers = append(providers, arguments.NewInteractiveProvider(os.Stdin, os.Stdout))
+			providers = append(providers, parameter.NewInteractiveProvider(os.Stdin, os.Stdout))
 		}
 
-		argProvider := arguments.NewStrictProviderChain(providers...)
+		provider := parameter.NewStrictProviderChain(providers...)
 
-		return project.NewClone(path, projectSource, argProvider).Run(os.Stdout)
+		return project.NewClone(path, projectSource, provider).Run(os.Stdout)
 	},
 }
 
