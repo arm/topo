@@ -34,9 +34,9 @@ func TestInteractiveProvider(t *testing.T) {
 		got, err := provider.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{
-			{Name: "GREETING", Value: "Hello, World"},
-			{Name: "PORT", Value: "8080"},
+		want := parameter.Values{
+			"GREETING": "Hello, World",
+			"PORT":     "8080",
 		}
 		assert.Equal(t, want, got)
 		assert.Contains(t, output.String(), "The greeting message")

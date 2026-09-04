@@ -161,7 +161,7 @@ x-topo:
 `
 		composeFilePath := filepath.Join(dir, project.ComposeFilename)
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
-		static := parameter.NewStaticProvider(parameter.Provided{Name: "FOO", Value: "baz"})
+		static := parameter.NewStaticProvider(parameter.Values{"FOO": "baz"})
 		provider := parameter.NewStrictProviderChain(static)
 
 		err := project.ResolveAndApplyParameters(composeFilePath, provider)
@@ -207,7 +207,7 @@ x-topo:
 `
 		composeFilePath := filepath.Join(dir, project.ComposeFilename)
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
-		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider())
+		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
 
 		err := project.ResolveAndApplyParameters(composeFilePath, provider)
 
@@ -229,7 +229,7 @@ x-topo:
 `
 		composeFilePath := filepath.Join(dir, project.ComposeFilename)
 		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
-		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider())
+		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
 
 		err := project.ResolveAndApplyParameters(composeFilePath, provider)
 

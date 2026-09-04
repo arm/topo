@@ -23,13 +23,13 @@ func NewCLIProvider(cliArgs []string) (*CLIProvider, error) {
 	return &CLIProvider{input: parsed}, nil
 }
 
-func (p *CLIProvider) Provide(definitions []Definition) ([]Provided, error) {
-	var provided []Provided
+func (p *CLIProvider) Provide(definitions []Definition) (Values, error) {
+	provided := Values{}
 	seen := make(map[string]bool, len(p.input))
 
 	for _, definition := range definitions {
 		if value, ok := p.input[definition.Name]; ok {
-			provided = append(provided, Provided{Name: definition.Name, Value: value})
+			provided[definition.Name] = value
 			seen[definition.Name] = true
 		}
 	}

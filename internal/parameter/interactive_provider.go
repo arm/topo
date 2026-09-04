@@ -17,8 +17,8 @@ func NewInteractiveProvider(in io.Reader, out io.Writer) *InteractiveProvider {
 	return &InteractiveProvider{input: in, output: out}
 }
 
-func (p *InteractiveProvider) Provide(definitions []Definition) ([]Provided, error) {
-	var provided []Provided
+func (p *InteractiveProvider) Provide(definitions []Definition) (Values, error) {
+	provided := Values{}
 	scanner := bufio.NewScanner(p.input)
 
 	for i, definition := range definitions {
@@ -69,7 +69,7 @@ func (p *InteractiveProvider) Provide(definitions []Definition) ([]Provided, err
 
 		value := strings.TrimSpace(scanner.Text())
 		if value != "" {
-			provided = append(provided, Provided{Name: definition.Name, Value: value})
+			provided[definition.Name] = value
 		}
 	}
 
