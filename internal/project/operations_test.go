@@ -161,7 +161,7 @@ x-topo:
       example: bar
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		static := parameter.NewStaticProvider(parameter.Provided{Name: "FOO", Value: "baz"})
+		static := parameter.NewStaticProvider(parameter.Values{"FOO": "baz"})
 		provider := parameter.NewStrictProviderChain(static)
 
 		err := project.ResolveAndApplyParameters(composeFilePath, provider)
@@ -205,7 +205,7 @@ x-topo:
       default: default
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider())
+		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
 
 		err := project.ResolveAndApplyParameters(composeFilePath, provider)
 
@@ -225,7 +225,7 @@ x-topo:
       default: default
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider())
+		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
 
 		err := project.ResolveAndApplyParameters(composeFilePath, provider)
 

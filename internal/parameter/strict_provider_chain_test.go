@@ -14,12 +14,12 @@ type mockProvider struct {
 	mock.Mock
 }
 
-func (m *mockProvider) Provide(definitions []parameter.Definition) ([]parameter.Provided, error) {
+func (m *mockProvider) Provide(definitions []parameter.Definition) (parameter.Values, error) {
 	call := m.Called(definitions)
 	if call.Get(0) == nil {
 		return nil, call.Error(1)
 	}
-	return call.Get(0).([]parameter.Provided), call.Error(1)
+	return call.Get(0).(parameter.Values), call.Error(1)
 }
 
 func TestStrictProviderChain(t *testing.T) {
@@ -28,13 +28,13 @@ func TestStrictProviderChain(t *testing.T) {
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 		}
-		provider.On("Provide", definitions).Return([]parameter.Provided{{Name: "GREETING", Value: "Hello"}}, nil)
+		provider.On("Provide", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
 		chain := parameter.NewStrictProviderChain(provider)
 
 		got, err := chain.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{{Name: "GREETING", Value: "Hello"}}
+		want := parameter.Values{"GREETING": "Hello"}
 		assert.Equal(t, want, got)
 		provider.AssertExpectations(t)
 	})
@@ -46,7 +46,7 @@ func TestStrictProviderChain(t *testing.T) {
 			missing,
 			{Name: "PORT", Required: false},
 		}
-		provider.On("Provide", definitions).Return([]parameter.Provided{{Name: "PORT", Value: "8080"}}, nil)
+		provider.On("Provide", definitions).Return(parameter.Values{"PORT": "8080"}, nil)
 		chain := parameter.NewStrictProviderChain(provider)
 
 		_, err := chain.Provide(definitions)
@@ -61,13 +61,13 @@ func TestStrictProviderChain(t *testing.T) {
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider.On("Provide", definitions).Return([]parameter.Provided{{Name: "GREETING", Value: "Hello"}}, nil)
+		provider.On("Provide", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
 		chain := parameter.NewStrictProviderChain(provider)
 
 		got, err := chain.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{{Name: "GREETING", Value: "Hello"}}
+		want := parameter.Values{"GREETING": "Hello"}
 		assert.Equal(t, want, got)
 		provider.AssertExpectations(t)
 	})
@@ -94,13 +94,13 @@ func TestStrictProviderChain(t *testing.T) {
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider1.On("Provide", definitions).Return([]parameter.Provided{{Name: "GREETING", Value: "Hello"}}, nil)
+		provider1.On("Provide", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
 		chain := parameter.NewStrictProviderChain(provider1, provider2)
 
 		got, err := chain.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{{Name: "GREETING", Value: "Hello"}}
+		want := parameter.Values{"GREETING": "Hello"}
 		assert.Equal(t, want, got)
 		provider1.AssertExpectations(t)
 		provider2.AssertNotCalled(t, "Provide")
@@ -118,30 +118,30 @@ func TestStrictProviderChain(t *testing.T) {
 			{Name: "NAME", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider1.On("Provide", all).Return([]parameter.Provided{{Name: "GREETING", Value: "Hello"}}, nil)
-		provider2.On("Provide", remaining).Return([]parameter.Provided{{Name: "NAME", Value: "World"}}, nil)
+		provider1.On("Provide", all).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		provider2.On("Provide", remaining).Return(parameter.Values{"NAME": "World"}, nil)
 		chain := parameter.NewStrictProviderChain(provider1, provider2)
 
 		got, err := chain.Provide(all)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{
-			{Name: "GREETING", Value: "Hello"},
-			{Name: "NAME", Value: "World"},
+		want := parameter.Values{
+			"GREETING": "Hello",
+			"NAME":     "World",
 		}
 		assert.Equal(t, want, got)
 		provider1.AssertExpectations(t)
 		provider2.AssertExpectations(t)
 	})
 
-	t.Run("returns provided parameters in requested order", func(t *testing.T) {
-		provider1 := parameter.NewStaticProvider(
-			parameter.Provided{Name: "PORT", Value: "8080"},
-			parameter.Provided{Name: "NAME", Value: "Topo"},
-		)
-		provider2 := parameter.NewStaticProvider(
-			parameter.Provided{Name: "GREETING", Value: "Hello"},
-		)
+	t.Run("collects values from multiple providers", func(t *testing.T) {
+		provider1 := parameter.NewStaticProvider(parameter.Values{
+			"PORT": "8080",
+			"NAME": "Topo",
+		})
+		provider2 := parameter.NewStaticProvider(parameter.Values{
+			"GREETING": "Hello",
+		})
 		chain := parameter.NewStrictProviderChain(provider1, provider2)
 		definitions := []parameter.Definition{
 			{Name: "NAME", Required: true},
@@ -152,16 +152,16 @@ func TestStrictProviderChain(t *testing.T) {
 		got, err := chain.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{
-			{Name: "NAME", Value: "Topo"},
-			{Name: "GREETING", Value: "Hello"},
-			{Name: "PORT", Value: "8080"},
+		want := parameter.Values{
+			"NAME":     "Topo",
+			"GREETING": "Hello",
+			"PORT":     "8080",
 		}
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("allows required parameters with non-empty current values", func(t *testing.T) {
-		provider := parameter.NewStaticProvider()
+		provider := parameter.NewStaticProvider(nil)
 		chain := parameter.NewStrictProviderChain(provider)
 		definitions := []parameter.Definition{{
 			Name:          "CINNAMON",
@@ -176,7 +176,7 @@ func TestStrictProviderChain(t *testing.T) {
 	})
 
 	t.Run("errors when any current value is empty", func(t *testing.T) {
-		provider := parameter.NewStaticProvider()
+		provider := parameter.NewStaticProvider(nil)
 		chain := parameter.NewStrictProviderChain(provider)
 		definition := parameter.Definition{
 			Name:          "CINNAMON",
@@ -190,7 +190,7 @@ func TestStrictProviderChain(t *testing.T) {
 	})
 
 	t.Run("does not provide omitted optional parameters", func(t *testing.T) {
-		provider := parameter.NewStaticProvider()
+		provider := parameter.NewStaticProvider(nil)
 		chain := parameter.NewStrictProviderChain(provider)
 		definitions := []parameter.Definition{
 			{
@@ -202,7 +202,7 @@ func TestStrictProviderChain(t *testing.T) {
 		got, err := chain.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided(nil)
+		want := parameter.Values{}
 		assert.Equal(t, want, got)
 	})
 }

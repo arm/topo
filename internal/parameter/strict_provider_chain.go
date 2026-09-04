@@ -2,6 +2,7 @@ package parameter
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -16,8 +17,8 @@ func NewStrictProviderChain(providers ...Provider) *StrictProviderChain {
 	return &StrictProviderChain{providers: providers}
 }
 
-func (p *StrictProviderChain) Provide(definitions []Definition) ([]Provided, error) {
-	values := make(map[string]string)
+func (p *StrictProviderChain) Provide(definitions []Definition) (Values, error) {
+	provided := Values{}
 	remaining := definitions
 
 	for _, provider := range p.providers {
@@ -25,31 +26,21 @@ func (p *StrictProviderChain) Provide(definitions []Definition) ([]Provided, err
 			break
 		}
 
-		provided, err := provider.Provide(remaining)
+		values, err := provider.Provide(remaining)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, entry := range provided {
-			values[entry.Name] = entry.Value
-		}
+		maps.Copy(provided, values)
+		remaining = filterProvided(remaining, provided)
 
-		remaining = filterProvided(remaining, values)
-
-		if allRequiredResolved(definitions, values) {
+		if allRequiredResolved(definitions, provided) {
 			break
 		}
 	}
 
-	if err := validateRequiredResolved(definitions, values); err != nil {
+	if err := validateRequiredResolved(definitions, provided); err != nil {
 		return nil, err
-	}
-
-	var provided []Provided
-	for _, definition := range definitions {
-		if value, ok := values[definition.Name]; ok {
-			provided = append(provided, Provided{Name: definition.Name, Value: value})
-		}
 	}
 
 	return provided, nil
@@ -73,7 +64,7 @@ func (e MissingParametersError) Error() string {
 	return msg.String()
 }
 
-func filterProvided(definitions []Definition, values map[string]string) []Definition {
+func filterProvided(definitions []Definition, values Values) []Definition {
 	var remaining []Definition
 	for _, definition := range definitions {
 		if _, exists := values[definition.Name]; !exists {
@@ -83,7 +74,7 @@ func filterProvided(definitions []Definition, values map[string]string) []Defini
 	return remaining
 }
 
-func allRequiredResolved(definitions []Definition, values map[string]string) bool {
+func allRequiredResolved(definitions []Definition, values Values) bool {
 	for _, definition := range definitions {
 		if definition.Required && !isResolved(definition, values) {
 			return false
@@ -92,7 +83,7 @@ func allRequiredResolved(definitions []Definition, values map[string]string) boo
 	return true
 }
 
-func isResolved(definition Definition, values map[string]string) bool {
+func isResolved(definition Definition, values Values) bool {
 	if value, exists := values[definition.Name]; exists {
 		return value != ""
 	}
@@ -102,7 +93,7 @@ func isResolved(definition Definition, values map[string]string) bool {
 	return !slices.Contains(definition.CurrentValues, "")
 }
 
-func validateRequiredResolved(definitions []Definition, values map[string]string) error {
+func validateRequiredResolved(definitions []Definition, values Values) error {
 	var missing []Definition
 	for _, definition := range definitions {
 		if definition.Required && !isResolved(definition, values) {

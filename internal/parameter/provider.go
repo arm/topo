@@ -13,13 +13,10 @@ type Definition struct {
 	CurrentValues []string
 }
 
-type Provided struct {
-	Name  string
-	Value string
-}
+type Values map[string]string
 
 type Provider interface {
-	Provide(definitions []Definition) ([]Provided, error)
+	Provide(definitions []Definition) (Values, error)
 }
 
 func formatCurrentValues(values []string) string {

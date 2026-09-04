@@ -21,9 +21,9 @@ func TestCLIProvider(t *testing.T) {
 		got, err := provider.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{
-			{Name: "GREETING", Value: "Hello"},
-			{Name: "PORT", Value: "8080"},
+		want := parameter.Values{
+			"GREETING": "Hello",
+			"PORT":     "8080",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -39,8 +39,8 @@ func TestCLIProvider(t *testing.T) {
 		got, err := provider.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{
-			{Name: "CONNECTION_STRING", Value: "host=localhost;port=5432"},
+		want := parameter.Values{
+			"CONNECTION_STRING": "host=localhost;port=5432",
 		}
 		assert.Equal(t, want, got)
 	})
@@ -66,7 +66,7 @@ func TestCLIProvider(t *testing.T) {
 		assert.Contains(t, err.Error(), "unknown parameter: UNKNOWN")
 	})
 
-	t.Run("returns parameters in requested order", func(t *testing.T) {
+	t.Run("returns values for all known parameters", func(t *testing.T) {
 		provider, err := parameter.NewCLIProvider([]string{"PORT=8080", "GREETING=Hello", "NAME=Topo"})
 		require.NoError(t, err)
 
@@ -79,10 +79,10 @@ func TestCLIProvider(t *testing.T) {
 		got, err := provider.Provide(definitions)
 
 		require.NoError(t, err)
-		want := []parameter.Provided{
-			{Name: "NAME", Value: "Topo"},
-			{Name: "GREETING", Value: "Hello"},
-			{Name: "PORT", Value: "8080"},
+		want := parameter.Values{
+			"NAME":     "Topo",
+			"GREETING": "Hello",
+			"PORT":     "8080",
 		}
 		assert.Equal(t, want, got)
 	})

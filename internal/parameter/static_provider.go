@@ -2,13 +2,13 @@ package parameter
 
 // StaticProvider returns a fixed set of parameter values. Useful for testing.
 type StaticProvider struct {
-	values []Provided
+	values Values
 }
 
-func NewStaticProvider(values ...Provided) *StaticProvider {
+func NewStaticProvider(values Values) *StaticProvider {
 	return &StaticProvider{values: values}
 }
 
-func (p *StaticProvider) Provide(_ []Definition) ([]Provided, error) {
+func (p *StaticProvider) Provide(_ []Definition) (Values, error) {
 	return p.values, nil
 }

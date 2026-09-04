@@ -45,7 +45,7 @@ func ResolveAndApplyParameters(composeFilePath string, provider parameter.Provid
 	return applyParameters(composeFilePath, provided)
 }
 
-func applyParameters(composeFilePath string, provided []parameter.Provided) error {
+func applyParameters(composeFilePath string, provided parameter.Values) error {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func applyParameters(composeFilePath string, provided []parameter.Provided) erro
 		return err
 	}
 
-	err = compose.ApplyParameters(yamlNodes, parametersToMap(provided))
+	err = compose.ApplyParameters(yamlNodes, provided)
 	if err != nil {
 		return fmt.Errorf("error applying parameters to project file: %w", err)
 	}
@@ -74,7 +74,7 @@ func applyParameters(composeFilePath string, provided []parameter.Provided) erro
 	return nil
 }
 
-func resolveParameters(composeFilePath string, provider parameter.Provider) ([]parameter.Provided, error) {
+func resolveParameters(composeFilePath string, provider parameter.Provider) (parameter.Values, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't read compose file: %w", err)
@@ -104,14 +104,6 @@ func toDefinitions(parameters []Parameter, currentValues map[string][]string) []
 		}
 	}
 	return definitions
-}
-
-func parametersToMap(provided []parameter.Provided) map[string]string {
-	result := map[string]string{}
-	for _, entry := range provided {
-		result[entry.Name] = entry.Value
-	}
-	return result
 }
 
 type copyProjectOperation struct {
