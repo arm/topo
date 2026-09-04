@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const disableAutoCRLFConfig = "core.autocrlf=false"
+
 type DestDirExistsError struct {
 	Dir string
 }
@@ -95,7 +97,7 @@ func (g GitSource) CopyTo(destDir string) error {
 }
 
 func cloneRefTo(url, ref, destDir string) error {
-	args := []string{"clone", "--depth", "1"}
+	args := []string{"-c", disableAutoCRLFConfig, "clone", "--depth", "1"}
 	if ref != "" {
 		args = append(args, "--branch", ref)
 	}
@@ -125,7 +127,7 @@ func cloneCommitTo(url, commit, destDir string) error {
 	if err := runGit(destDir, "fetch", "--depth", "1", "origin", commit); err != nil {
 		return fmt.Errorf("failed to fetch git commit: %w", err)
 	}
-	if err := runGit(destDir, "checkout", "--quiet", "--detach", "FETCH_HEAD"); err != nil {
+	if err := runGit(destDir, "-c", disableAutoCRLFConfig, "checkout", "--quiet", "--detach", "FETCH_HEAD"); err != nil {
 		return fmt.Errorf("failed to check out git commit: %w", err)
 	}
 
