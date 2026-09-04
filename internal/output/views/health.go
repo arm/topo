@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"text/template"
 
 	"github.com/arm/topo/internal/health"
@@ -78,17 +77,8 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	return buf.String(), nil
 }
 
-const healthSectionWidth = 60
-
 func sectionHeading(heading string, isTTY bool) string {
-	const prefix = "── "
-
-	barWidth := max(healthSectionWidth-len(prefix)-len(heading)-1, 0)
-	suffix := " " + strings.Repeat("─", barWidth)
-	if !isTTY {
-		return prefix + heading + suffix
-	}
-	return term.Color(term.Dim, prefix) + heading + term.Color(term.Dim, suffix)
+	return term.Header(heading, isTTY)
 }
 
 func targetHeading(destination string, isTTY bool) string {

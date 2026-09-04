@@ -30,7 +30,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "── Host ")
+			assert.Contains(t, out.String(), "┌─ Host ")
 			assert.Contains(t, out.String(), "Flux Capacitor")
 			assert.Contains(t, out.String(), " ✓ Flux Capacitor (flux)")
 		})
@@ -126,7 +126,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "── Target: ssh://user@my-target ")
+			assert.Contains(t, out.String(), "┌─ Target: ssh://user@my-target ")
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
@@ -184,7 +184,7 @@ func TestHealthReport(t *testing.T) {
 			out, err := toPrint.AsPlain(true)
 
 			require.NoError(t, err)
-			assert.Contains(t, out, term.Color(term.Dim, "── "))
+			assert.Contains(t, out, term.Color(term.Dim, "┌─ "))
 			assert.Contains(t, out, term.Color(term.Green, " ✓ "))
 			assert.Contains(t, out, term.Color(term.Red, " ✗ "))
 			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
