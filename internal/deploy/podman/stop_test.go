@@ -17,9 +17,9 @@ func TestStop(t *testing.T) {
 		composeFile, projectName := deploymentFixture(t)
 		t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
 		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
-		require.NoError(t, podman.Deploy(t.Context(), io.Discard, composeFile, options))
+		require.NoError(t, podman.Deploy(t.Context(), t.Output(), composeFile, options))
 
-		err := podman.Stop(t.Context(), io.Discard, composeFile, ssh.PlainLocalhost)
+		err := podman.Stop(t.Context(), t.Output(), composeFile, ssh.PlainLocalhost)
 
 		require.NoError(t, err)
 		assertContainersStopped(t, projectName, podman.LocalSocket)
@@ -29,9 +29,9 @@ func TestStop(t *testing.T) {
 		podmanContainer := startPodmanInContainer(t)
 		composeFile, projectName := deploymentFixture(t)
 		target := ssh.NewDestination(podmanContainer.SSHDestination)
-		require.NoError(t, podman.Deploy(t.Context(), io.Discard, composeFile, podman.DeployOptions{TargetHost: target}))
+		require.NoError(t, podman.Deploy(t.Context(), t.Output(), composeFile, podman.DeployOptions{TargetHost: target}))
 
-		err := podman.Stop(t.Context(), io.Discard, composeFile, target)
+		err := podman.Stop(t.Context(), t.Output(), composeFile, target)
 
 		require.NoError(t, err)
 		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), io.Discard, target)
