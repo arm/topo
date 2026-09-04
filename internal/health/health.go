@@ -70,7 +70,7 @@ type CheckHostOptions struct {
 
 func CheckHost(opts CheckHostOptions) HostReport {
 	r := runner.NewLocal()
-	deps := HostRequiredDependencies
+	deps := HostRequiredDependencies()
 	if opts.SkipVersionChecks {
 		deps = RemoveVersionChecks(deps)
 	}

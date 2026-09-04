@@ -3,6 +3,7 @@ package health_test
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/arm/topo/internal/command"
@@ -10,61 +11,70 @@ import (
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestDependencyFormat(t *testing.T) {
-	t.Run("host dependencies are of the correct format", func(t *testing.T) {
-		for _, dep := range health.HostRequiredDependencies {
+func TestDependencies(t *testing.T) {
+	t.Run("ids are unique across all dependencies", func(t *testing.T) {
+		hostDeps := health.HostRequiredDependencies()
+		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"))
+
+		ids := make([]health.DependencyID, 0, len(hostDeps)+len(targetDeps))
+		for _, dep := range slices.Concat(hostDeps, targetDeps) {
+			require.NotEmpty(t, dep.ID, "%#v has empty id", dep)
+			require.NotContains(t, ids, dep.ID)
+			ids = append(ids, dep.ID)
+		}
+	})
+
+	t.Run("binary names are of the correct format", func(t *testing.T) {
+		hostDeps := health.HostRequiredDependencies()
+		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"))
+
+		for _, dep := range slices.Concat(hostDeps, targetDeps) {
 			assert.NoError(t, command.ValidateBinaryName(dep.Binary))
 		}
 	})
 
-	t.Run("target dependencies are of the correct format", func(t *testing.T) {
-		for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test")) {
-			assert.NoError(t, command.ValidateBinaryName(dep.Binary))
-		}
-	})
-
-	t.Run("target SoftwarePrerequisites reference valid dependencies", func(t *testing.T) {
-		availableEnums := make(map[health.SoftwareDependency]bool)
-		seenEnums := make(map[health.SoftwareDependency]string)
-
-		t.Run("There are no duplicate SoftwareEnumID assignments", func(t *testing.T) {
-			for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("user@my-target")) {
-				if dep.SoftwareEnumID != health.UnsetSoftwareDependency {
-					if existingDep, exists := seenEnums[dep.SoftwareEnumID]; exists {
-						t.Errorf("Duplicate SoftwareEnumID %d assigned to both %q and %q", dep.SoftwareEnumID, existingDep, dep.Binary)
-					}
-					seenEnums[dep.SoftwareEnumID] = dep.Binary
-					availableEnums[dep.SoftwareEnumID] = true
-				}
-			}
-		})
-
-		t.Run("all SoftwarePrerequisites reference valid SoftwareEnumID", func(t *testing.T) {
-			for _, dep := range health.TargetRequiredDependencies(ssh.NewDestination("user@my-target")) {
+	t.Run("host dependencies", func(t *testing.T) {
+		t.Run("prerequisites are fulfillable", func(t *testing.T) {
+			deps := health.HostRequiredDependencies()
+			ids := make([]health.DependencyID, 0, len(deps))
+			for _, dep := range deps {
+				ids = append(ids, dep.ID)
 				for _, prereq := range dep.SoftwarePrerequisites {
-					assert.True(t, availableEnums[prereq], "%q has SoftwarePrerequisites %v which is not provided by any dependency's SoftwareEnumID", dep.Binary, prereq)
+					require.Contains(t, ids, prereq)
 				}
 			}
 		})
 	})
-}
 
-func TestTargetRequiredDependencies(t *testing.T) {
-	t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
-		deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"))
+	t.Run("target dependencies", func(t *testing.T) {
+		t.Run("prerequisites are fulfillable", func(t *testing.T) {
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test"))
+			ids := make([]health.DependencyID, 0, len(deps))
+			for _, dep := range deps {
+				ids = append(ids, dep.ID)
+				for _, prereq := range dep.SoftwarePrerequisites {
+					require.Contains(t, ids, prereq)
+				}
+			}
+		})
 
-		dep, err := findDependencyByBinary(t, deps, "remoteproc-runtime")
-		assert.NoError(t, err)
-		wantBinaryExistsCheck := health.BinaryExists{
-			Severity: health.SeverityWarning,
-			Fix: &health.Fix{
-				Description: "Install the Remoteproc Runtime",
-				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
-			},
-		}
-		assert.Contains(t, dep.Checks, wantBinaryExistsCheck)
+		t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"))
+
+			dep, err := findDependencyByBinary(t, deps, "remoteproc-runtime")
+			assert.NoError(t, err)
+			wantBinaryExistsCheck := health.BinaryExists{
+				Severity: health.SeverityWarning,
+				Fix: &health.Fix{
+					Description: "Install the Remoteproc Runtime",
+					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+				},
+			}
+			assert.Contains(t, dep.Checks, wantBinaryExistsCheck)
+		})
 	})
 }
 
@@ -102,37 +112,54 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("omits dependency when none of its SoftwarePrerequisites are installed", func(t *testing.T) {
-		dockerDependecy := health.Dependency{Binary: "docker", Label: "Container Engine", Checks: []health.Check{health.BinaryExists{}}}
+	t.Run("omits dependency when any of its software prerequisites are not installed", func(t *testing.T) {
+		pineapple := health.Dependency{
+			ID:     health.DependencyID("pineapple"),
+			Binary: "pineapple",
+			Checks: []health.Check{health.BinaryExists{}},
+		}
+		cheese := health.Dependency{
+			ID:     health.DependencyID("cheese"),
+			Binary: "cheese",
+			Checks: []health.Check{health.BinaryExists{}},
+		}
 		deps := []health.Dependency{
-			dockerDependecy,
-			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists{}}},
+			pineapple,
+			cheese,
+			{
+				ID:                    "pizza",
+				SoftwarePrerequisites: []health.DependencyID{pineapple.ID, cheese.ID},
+			},
 		}
-		runner := &runner.Fake{
-			Binaries: []string{"runtime"},
-		}
-
-		got := health.PerformChecks(context.Background(), deps, runner)
-
-		wantDocker := health.DependencyStatus{Dependency: dockerDependecy, Error: runner.BinaryExists(context.Background(), dockerDependecy.Binary)}
-		want := []health.DependencyStatus{wantDocker}
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("checks dependency when one of its SoftwarePrerequisites is installed", func(t *testing.T) {
-		deps := []health.Dependency{
-			{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists{}}},
-			{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists{}}},
-		}
-		runner := &runner.Fake{
-			Binaries: []string{"runtime", "docker"},
-		}
+		runner := &runner.Fake{Binaries: []string{pineapple.Binary}}
 
 		got := health.PerformChecks(context.Background(), deps, runner)
 
 		want := []health.DependencyStatus{
-			{Dependency: health.Dependency{Binary: "docker", Label: "Container Engine", SoftwareEnumID: health.Docker, Checks: []health.Check{health.BinaryExists{}}}, Error: nil},
-			{Dependency: health.Dependency{Binary: "runtime", Label: "Runtime", SoftwarePrerequisites: []health.SoftwareDependency{health.Docker}, Checks: []health.Check{health.BinaryExists{}}}, Error: nil},
+			{Dependency: pineapple},
+			{Dependency: cheese, Error: runner.BinaryExists(context.Background(), cheese.Binary)},
+		}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("checks dependency when all of its software prerequisites are installed", func(t *testing.T) {
+		vader := health.Dependency{
+			ID:     health.DependencyID("vader"),
+			Binary: "vader",
+			Checks: []health.Check{health.BinaryExists{}},
+		}
+		luke := health.Dependency{
+			ID:                    "luke",
+			SoftwarePrerequisites: []health.DependencyID{vader.ID},
+		}
+		deps := []health.Dependency{vader, luke}
+		runner := &runner.Fake{Binaries: []string{vader.Binary}}
+
+		got := health.PerformChecks(context.Background(), deps, runner)
+
+		want := []health.DependencyStatus{
+			{Dependency: vader},
+			{Dependency: luke},
 		}
 		assert.Equal(t, want, got)
 	})
@@ -230,15 +257,15 @@ func TestPerformChecks(t *testing.T) {
 
 	t.Run("timeout skips unverified prerequisite dependents", func(t *testing.T) {
 		dockerDep := health.Dependency{
-			Binary:         "docker",
-			Label:          "Container Engine",
-			SoftwareEnumID: health.Docker,
-			Checks:         []health.Check{health.BinaryExists{}},
+			Binary: "docker",
+			Label:  "Container Engine",
+			ID:     health.DependencyID("docker"),
+			Checks: []health.Check{health.BinaryExists{}},
 		}
 		runtimeDep := health.Dependency{
 			Binary:                "runtime",
 			Label:                 "Runtime",
-			SoftwarePrerequisites: []health.SoftwareDependency{health.Docker},
+			SoftwarePrerequisites: []health.DependencyID{dockerDep.ID},
 			Checks:                []health.Check{health.BinaryExists{}},
 		}
 		standaloneDep := health.Dependency{
@@ -247,8 +274,8 @@ func TestPerformChecks(t *testing.T) {
 			Checks: []health.Check{health.BinaryExists{}},
 		}
 		r := &runner.Fake{
-			BinaryExistsErr: map[string]error{"docker": runner.ErrTimeout},
-			Binaries:        []string{"lscpu"},
+			BinaryExistsErr: map[string]error{dockerDep.Binary: runner.ErrTimeout},
+			Binaries:        []string{standaloneDep.Binary},
 		}
 
 		got := health.PerformChecks(context.Background(), []health.Dependency{dockerDep, runtimeDep, standaloneDep}, r)
@@ -293,7 +320,7 @@ func TestFilterByHardware(t *testing.T) {
 
 	t.Run("includes dependencies when hardware is present", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
+			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisites: []health.HardwareCapability{health.Remoteproc}},
 		}
 		hardware := map[health.HardwareCapability]struct{}{health.Remoteproc: {}}
 
@@ -304,7 +331,7 @@ func TestFilterByHardware(t *testing.T) {
 
 	t.Run("excludes dependencies when hardware is absent", func(t *testing.T) {
 		deps := []health.Dependency{
-			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
+			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisites: []health.HardwareCapability{health.Remoteproc}},
 		}
 		hardware := map[health.HardwareCapability]struct{}{}
 
@@ -316,7 +343,7 @@ func TestFilterByHardware(t *testing.T) {
 	t.Run("filters mixed dependencies correctly", func(t *testing.T) {
 		deps := []health.Dependency{
 			{Binary: "spaghetti", Label: "Food"},
-			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisite: []health.HardwareCapability{health.Remoteproc}},
+			{Binary: "remoteproc-runtime", Label: "Runtime", HardwarePrerequisites: []health.HardwareCapability{health.Remoteproc}},
 			{Binary: "pizza", Label: "Food"},
 		}
 
