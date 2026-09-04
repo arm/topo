@@ -28,7 +28,7 @@ jobs:
         run: ./docs/scripts/generate-docs-config.sh --include-head
 
       - name: Validate docs site
-        uses: ARM-software/docs-action/validate@v0.3.1
+        uses: ARM-software/docs-action/validate@v0.4.0
         with:
           docs-root: docs
           site-id: topo
