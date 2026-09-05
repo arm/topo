@@ -164,26 +164,7 @@ func TestPerformChecks(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("captures Fix from failing check", func(t *testing.T) {
-		dep := health.Dependency{
-			Binary: "vader.exe",
-			Label:  "Sith",
-			Checks: []health.Check{
-				health.BinaryExists{
-					Severity: health.SeverityWarning,
-					Fix:      &health.Fix{Description: "turn Anakin into a bad man"},
-				},
-			},
-		}
-		runner := &runner.Fake{}
-
-		got := health.PerformChecks(context.Background(), []health.Dependency{dep}, runner)
-
-		assert.Len(t, got, 1)
-		assert.Equal(t, &health.Fix{Description: "turn Anakin into a bad man"}, got[0].Fix)
-	})
-
-	t.Run("captures fix command from failing check", func(t *testing.T) {
+	t.Run("captures fix from failing check", func(t *testing.T) {
 		dep := health.Dependency{
 			Binary: "remoteproc-runtime",
 			Label:  "Remoteproc Runtime",
