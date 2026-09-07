@@ -77,7 +77,12 @@ func getComposeFileName(cmd *cobra.Command) (string, error) {
 		return compose.RequireFile(composeFile)
 	}
 
-	return compose.FindDefaultFile()
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	return compose.FindDefaultFile(cwd)
 }
 
 const targetEnvVar = env.TargetVariable

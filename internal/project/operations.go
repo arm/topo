@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/operation"
@@ -131,7 +130,11 @@ func (o configureOperation) Description() string {
 }
 
 func (o configureOperation) Run(_ io.Writer) error {
-	composeFile := filepath.Join(o.path, compose.DefaultFileName())
+	composeFile, err := compose.FindDefaultFile(o.path)
+	if err != nil {
+		return err
+	}
+
 	if err := Configure(composeFile, o.resolver); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)
