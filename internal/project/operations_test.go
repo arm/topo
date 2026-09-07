@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +42,7 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := project.NewClone(destDir, mockSource, arguments.NewStrictProviderChain()).Run(&output)
+		err := project.NewClone(destDir, mockSource, parameter.NewStrictResolverChain()).Run(&output)
 
 		require.NoError(t, err)
 		out := output.String()
@@ -61,7 +61,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
+		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -86,16 +86,16 @@ x-topo:
       required: true
 `
 		mockSource := mockSourceWithComposeFile(t, composeFileContents)
-		provider := arguments.NewInteractiveProvider(strings.NewReader("\n"), &bytes.Buffer{})
+		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain(provider))
+		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain(resolver))
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
 	})
 
-	t.Run("removes destination directory when parameter resolution fails", func(t *testing.T) {
+	t.Run("removes destination directory when parameter configuration fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		mockSource := mockSourceWithComposeFile(t, `
@@ -111,7 +111,7 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
+		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.Error(t, err)
 		_, statErr := os.Stat(destDir)
@@ -136,12 +136,18 @@ x-topo:
 `,
 		})
 
-		err := project.Clone(destDir, mockSource, arguments.NewStaticProvider(arguments.ResolvedArg{
-			Name:  "GREETING",
-			Value: "a-value",
+		err := project.Clone(destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
+			"GREETING": "a-value",
 		}))
 
 		require.NoError(t, err)
+	})
+}
+
+func mockSourceWithComposeFile(t *testing.T, content string) *mockProjectSource {
+	t.Helper()
+	return mockSourceWithContent(t, map[string]string{
+		compose.DefaultFileName(): content,
 	})
 }
 
@@ -161,24 +167,17 @@ func mockSourceWithContent(t *testing.T, files map[string]string) *mockProjectSo
 	return mockSource
 }
 
-func mockSourceWithComposeFile(t *testing.T, content string) *mockProjectSource {
-	t.Helper()
-	return mockSourceWithContent(t, map[string]string{
-		compose.DefaultFileName(): content,
-	})
-}
-
-func TestResolveAndApplyArgs(t *testing.T) {
+func TestConfigure(t *testing.T) {
 	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
-		argProvider := arguments.NewStrictProviderChain()
+		resolver := parameter.NewStrictResolverChain()
 
-		err := project.ResolveAndApplyArgs(invalidPath, argProvider)
+		err := project.Configure(invalidPath, resolver)
 
 		require.ErrorContains(t, err, "can't read compose file")
 	})
 
-	t.Run("updates the compose file with resolved parameters", func(t *testing.T) {
+	t.Run("updates the compose file with provided parameters", func(t *testing.T) {
 		composeFileContents := `
 services:
   app:
@@ -196,10 +195,10 @@ x-topo:
       example: bar
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
-		argProvider := arguments.NewStrictProviderChain(provider)
+		static := parameter.NewStaticResolver(parameter.Values{"FOO": "baz"})
+		resolver := parameter.NewStrictResolverChain(static)
 
-		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
+		err := project.Configure(composeFilePath, resolver)
 		require.NoError(t, err)
 
 		want := `
@@ -240,9 +239,9 @@ x-topo:
       default: default
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		argProvider := arguments.NewStrictProviderChain(arguments.NewStaticProvider())
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
 
-		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
+		err := project.Configure(composeFilePath, resolver)
 
 		require.ErrorContains(t, err, "missing value(s) for required parameters")
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
@@ -260,9 +259,9 @@ x-topo:
       default: default
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		argProvider := arguments.NewStrictProviderChain(arguments.NewStaticProvider())
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
 
-		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
+		err := project.Configure(composeFilePath, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
