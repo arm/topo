@@ -49,7 +49,7 @@ jobs:
       - name: Generate docs config
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./docs/scripts/generate-docs-config.sh --include-head
+        run: ./docs/scripts/generate-docs-config.sh
 
       - name: AWS GitHub OIDC Login
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
