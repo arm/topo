@@ -186,13 +186,13 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	for _, ds := range statuses {
 		hc := HealthCheck{Name: ds.Dependency.Label}
-		if ds.Failure == nil {
+		if ds.Result.Failure == nil {
 			hc.Status = CheckStatusOK
-			hc.Value = ds.Dependency.Binary
+			hc.Value = ds.Result.SuccessValue
 		} else {
-			hc.Status = checkStatusFromSeverity(ds.Failure.Severity)
-			hc.Value = ds.Failure.Message
-			hc.Fix = ds.Failure.Fix
+			hc.Status = checkStatusFromSeverity(ds.Result.Failure.Severity)
+			hc.Value = ds.Result.Failure.Message
+			hc.Fix = ds.Result.Failure.Fix
 		}
 		res = append(res, hc)
 	}
