@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/internal/compose"
 	"github.com/stretchr/testify/require"
 )
 
@@ -62,9 +62,9 @@ func SanitiseTestName(t testing.TB) string {
 	return name
 }
 
-func WriteComposeFile(t *testing.T, dir, content string) string {
+func RequireWriteComposeFile(t testing.TB, dir, content string) string {
 	t.Helper()
-	composePath := filepath.Join(dir, project.ComposeFilename)
+	composePath := filepath.Join(dir, compose.DefaultFileName())
 	RequireWriteFile(t, composePath, content)
 	return composePath
 }

@@ -18,7 +18,7 @@ import (
 
 func TestDeploy(t *testing.T) {
 	t.Run("rejects runtime before accessing Podman", func(t *testing.T) {
-		composeFile := testutil.WriteComposeFile(t, t.TempDir(), `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   firmware:
     image: alpine
@@ -106,7 +106,6 @@ func deploymentFixture(t *testing.T) (string, string) {
 	tempDir := t.TempDir()
 	testName := sanitiseTestName(t)
 	imageName := "test-image-" + testName
-	composeFile := filepath.Join(tempDir, "compose.yaml")
 	composeFileContent := fmt.Sprintf(`
 name: %s
 services:
@@ -119,8 +118,8 @@ services:
 `, "test-project-"+testName, imageName)
 	composeFileContent, err := fixPodmanInDockerQuirk(composeFileContent)
 	require.NoError(t, err)
-	requireWriteFile(t, composeFile, composeFileContent)
-	requireWriteFile(t, filepath.Join(tempDir, "Dockerfile"), `
+	composeFile := testutil.RequireWriteComposeFile(t, tempDir, composeFileContent)
+	testutil.RequireWriteFile(t, filepath.Join(tempDir, "Dockerfile"), `
 FROM docker.io/library/alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)

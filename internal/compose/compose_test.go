@@ -15,8 +15,7 @@ import (
 
 func TestImageNames(t *testing.T) {
 	t.Run("returns explicit and generated image names", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 name: springfield
 services:
   api:
@@ -36,8 +35,7 @@ services:
 
 	t.Run("uses the compose file directory when project name is omitted", func(t *testing.T) {
 		dir := t.TempDir()
-		path := filepath.Join(dir, "compose.yaml")
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, dir, `
 services:
   api:
     build: .
@@ -54,7 +52,6 @@ services:
 	t.Run("resolves image names from extended services", func(t *testing.T) {
 		dir := t.TempDir()
 		basePath := filepath.Join(dir, "base.yaml")
-		path := filepath.Join(dir, "compose.yaml")
 		testutil.RequireWriteFile(t, basePath, `
 services:
   image-base:
@@ -62,7 +59,7 @@ services:
   build-base:
     build: .
 `)
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, dir, `
 name: springfield
 services:
   duff:
@@ -82,8 +79,7 @@ services:
 	})
 
 	t.Run("returns sorted output", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 name: springfield
 services:
   zulu:
@@ -104,8 +100,7 @@ services:
 	})
 
 	t.Run("returns error for invalid yaml", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `{invalid`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `{invalid`)
 
 		_, err := compose.ImageNames(path)
 
@@ -115,8 +110,7 @@ services:
 
 func TestPullableServices(t *testing.T) {
 	t.Run("returns services without a build key", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   duff-beer:
     image: duff:7
@@ -131,8 +125,7 @@ services:
 	})
 
 	t.Run("excludes services with a build key", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   krusty-burger:
     build: .
@@ -148,8 +141,7 @@ services:
 	})
 
 	t.Run("returns empty slice when all services are buildable", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   krusty-burger:
     build: .
@@ -166,8 +158,7 @@ services:
 	})
 
 	t.Run("excludes services that extend a buildable service", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   krusty-burger:
     build: .
@@ -186,8 +177,7 @@ services:
 	})
 
 	t.Run("returns error for invalid yaml", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, path, `{invalid`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `{invalid`)
 
 		_, err := compose.PullableServices(path)
 
@@ -216,7 +206,7 @@ services:
         FOO: new-foo
         BAR: new-bar
 `
-		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
+		composeFilePath := testutil.RequireWriteComposeFile(t, dir, composeFileContents)
 		proj, err := compose.ReadProject(composeFilePath)
 		require.NoError(t, err)
 
@@ -235,7 +225,7 @@ services:
   %s:
     image: ${IMAGE_NAME}
 `, serviceName)
-		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
+		composeFilePath := testutil.RequireWriteComposeFile(t, dir, composeFileContents)
 		imageName := "image-from-env"
 		testutil.RequireWriteFile(t, filepath.Join(dir, ".env"), fmt.Sprintf("IMAGE_NAME=%s", imageName))
 
@@ -255,7 +245,7 @@ services:
   %s:
     image: ${IMAGE_NAME}
 `, serviceName)
-		composeFilePath := testutil.WriteComposeFile(t, dir, composeFileContents)
+		composeFilePath := testutil.RequireWriteComposeFile(t, dir, composeFileContents)
 		imageName := "image-from-env"
 		t.Setenv("IMAGE_NAME", imageName)
 

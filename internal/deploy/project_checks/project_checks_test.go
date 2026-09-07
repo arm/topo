@@ -10,7 +10,7 @@ import (
 
 func TestEnsureProjectIsLinuxArm64Ready(t *testing.T) {
 	t.Run("succeeds with valid platforms without variant", func(t *testing.T) {
-		composeFile := writeComposeFile(t, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   app:
     image: alpine
@@ -21,7 +21,7 @@ services:
 	})
 
 	t.Run("succeeds with valid platforms with variant", func(t *testing.T) {
-		composeFile := writeComposeFile(t, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   app:
     image: alpine
@@ -31,7 +31,7 @@ services:
 		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
 	})
 	t.Run("fails when platform missing", func(t *testing.T) {
-		composeFile := writeComposeFile(t, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   api:
     image: busybox
@@ -42,7 +42,7 @@ services:
 		require.Contains(t, err.Error(), "missing platform declaration")
 	})
 	t.Run("fails when platform is not linux/arm64", func(t *testing.T) {
-		composeFile := writeComposeFile(t, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   api:
     image: busybox
@@ -54,7 +54,7 @@ services:
 		require.Contains(t, err.Error(), "linux/amd64")
 	})
 	t.Run("skips remoteproc-runtime without platform", func(t *testing.T) {
-		composeFile := writeComposeFile(t, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   firmware:
     image: zephyr
@@ -64,7 +64,7 @@ services:
 		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
 	})
 	t.Run("succeeds with valid remoteproc-runtime", func(t *testing.T) {
-		composeFile := writeComposeFile(t, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   rtos-firmware:
     build:
@@ -74,9 +74,4 @@ services:
 
 		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(composeFile))
 	})
-}
-
-func writeComposeFile(t *testing.T, contents string) string {
-	t.Helper()
-	return testutil.WriteComposeFile(t, t.TempDir(), contents)
 }

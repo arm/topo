@@ -8,6 +8,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,12 +19,11 @@ func TestStop(t *testing.T) {
 	remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 	temporaryDirectory := t.TempDir()
 	dockerFilePath := filepath.Join(temporaryDirectory, "Dockerfile")
-	requireWriteFile(t, dockerFilePath, `
+	testutil.RequireWriteFile(t, dockerFilePath, `
 FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)
-	composeFilePath := filepath.Join(temporaryDirectory, "compose.yaml")
-	composeFileContent := fmt.Sprintf(`
+	composeFilePath := testutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
 name: %s
 services:
   busybox:
@@ -31,8 +31,7 @@ services:
     command: ["tail", "-f", "/dev/null"]
   a-service:
     build: .
-`, testProjectName(t))
-	requireWriteFile(t, composeFilePath, composeFileContent)
+`, testProjectName(t)))
 	t.Cleanup(func() { forceComposeDown(t, composeFilePath) })
 	deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
 	require.NoError(t, docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions))

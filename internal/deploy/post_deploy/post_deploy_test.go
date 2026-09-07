@@ -2,7 +2,6 @@ package post_deploy_test
 
 import (
 	"bytes"
-	"path/filepath"
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/post_deploy"
@@ -13,9 +12,7 @@ import (
 
 func TestPrintDeploySuccess(t *testing.T) {
 	t.Run("writes deployment_success_message from compose file", func(t *testing.T) {
-		dir := t.TempDir()
-		composeFile := filepath.Join(dir, "compose.yaml")
-		testutil.RequireWriteFile(t, composeFile, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 x-topo:
   deployment_success_message: "Deployment complete!"
 services:
@@ -31,9 +28,7 @@ services:
 	})
 
 	t.Run("writes default message when deployment_success_message is absent", func(t *testing.T) {
-		dir := t.TempDir()
-		composeFile := filepath.Join(dir, "compose.yaml")
-		testutil.RequireWriteFile(t, composeFile, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   app:
     image: nginx
@@ -47,9 +42,7 @@ services:
 	})
 
 	t.Run("interpolates env vars in deployment_success_message", func(t *testing.T) {
-		dir := t.TempDir()
-		composeFile := filepath.Join(dir, "compose.yaml")
-		testutil.RequireWriteFile(t, composeFile, `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 name: test-project
 x-topo:
   deployment_success_message: "${COMPOSE_PROJECT_NAME} deployed - ${EXTRA_MESSAGE}"

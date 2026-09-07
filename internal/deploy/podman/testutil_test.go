@@ -25,11 +25,6 @@ func startPodmanInContainer(t *testing.T) *gtestutil.Container {
 	return gtestutil.StartContainer(t, gtestutil.PodmanContainer)
 }
 
-func requireWriteFile(t *testing.T, path, content string) {
-	t.Helper()
-	gtestutil.RequireWriteFile(t, path, content)
-}
-
 func requireAvailableTCPPort(t *testing.T) string {
 	t.Helper()
 	return gtestutil.RequireAvailableTCPPort(t, "127.0.0.1")
@@ -66,15 +61,14 @@ func assertContainersInState(t *testing.T, projectName string, socket podman.Soc
 func imageTransferFixture(t *testing.T) (string, string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
-	composeFile := filepath.Join(temporaryDirectory, "compose.yaml")
 	imageName := "test-image-" + sanitiseTestName(t)
-	requireWriteFile(t, composeFile, fmt.Sprintf(`
+	composeFile := gtestutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
 services:
   test:
     build: .
     image: %s
 `, imageName))
-	requireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), "FROM docker.io/library/alpine:latest\n")
+	gtestutil.RequireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), "FROM docker.io/library/alpine:latest\n")
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

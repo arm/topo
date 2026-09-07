@@ -9,8 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ComposeFilename = "compose.yaml"
-
 type Project struct {
 	Metadata               Metadata
 	currentParameterValues map[string][]string

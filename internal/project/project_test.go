@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/arguments"
+	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,7 @@ services:
 		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain())
 
 		require.NoError(t, err)
-		composeFilePath := filepath.Join(destDir, project.ComposeFilename)
+		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
 		assert.FileExists(t, composeFilePath)
 	})
 
@@ -90,7 +91,7 @@ x-topo:
 		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain(provider))
 
 		require.NoError(t, err)
-		composeFilePath := filepath.Join(destDir, project.ComposeFilename)
+		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
 	})
 
@@ -119,11 +120,12 @@ x-topo:
 }
 
 func mockSourceWithContent(t *testing.T, content string) *mockProjectSource {
+	t.Helper()
 	mockSource := &mockProjectSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
 		testutil.RequireMkdirAll(t, destDir)
-		testutil.RequireWriteFile(t, filepath.Join(destDir, project.ComposeFilename), content)
+		testutil.RequireWriteComposeFile(t, destDir, content)
 	})
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
@@ -142,7 +144,6 @@ func TestResolveAndApplyArgs(t *testing.T) {
 	})
 
 	t.Run("updates the compose file with resolved parameters", func(t *testing.T) {
-		dir := t.TempDir()
 		composeFileContents := `
 services:
   app:
@@ -159,8 +160,7 @@ x-topo:
       required: true
       example: bar
 `
-		composeFilePath := filepath.Join(dir, project.ComposeFilename)
-		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
+		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
 		provider := arguments.NewStaticProvider(arguments.ResolvedArg{Name: "FOO", Value: "baz"})
 		argProvider := arguments.NewStrictProviderChain(provider)
 
@@ -189,7 +189,6 @@ x-topo:
 	})
 
 	t.Run("rejects empty input for required parameters when any current value is empty", func(t *testing.T) {
-		dir := t.TempDir()
 		composeFileContents := `services:
   configured:
     build:
@@ -205,8 +204,7 @@ x-topo:
       required: true
       default: default
 `
-		composeFilePath := filepath.Join(dir, project.ComposeFilename)
-		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
+		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
 		argProvider := arguments.NewStrictProviderChain(arguments.NewStaticProvider())
 
 		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)
@@ -216,7 +214,6 @@ x-topo:
 	})
 
 	t.Run("recognizes current values in sequence build args", func(t *testing.T) {
-		dir := t.TempDir()
 		composeFileContents := `services:
   app:
     build:
@@ -227,8 +224,7 @@ x-topo:
       required: true
       default: default
 `
-		composeFilePath := filepath.Join(dir, project.ComposeFilename)
-		testutil.RequireWriteFile(t, composeFilePath, composeFileContents)
+		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
 		argProvider := arguments.NewStrictProviderChain(arguments.NewStaticProvider())
 
 		err := project.ResolveAndApplyArgs(composeFilePath, argProvider)

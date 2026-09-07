@@ -16,8 +16,7 @@ import (
 
 func TestRequireFile(t *testing.T) {
 	t.Run("returns path when compose file exists", func(t *testing.T) {
-		composeFile := filepath.Join(t.TempDir(), "compose.yaml")
-		testutil.RequireWriteFile(t, composeFile, "")
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), "")
 
 		got, err := compose.RequireFile(composeFile)
 
