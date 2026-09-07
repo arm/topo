@@ -24,27 +24,22 @@ const (
 	Remoteproc HardwareCapability = iota
 )
 
-type SoftwareDependency int
-
 const containerEngineInstallURL = "https://github.com/arm/topo#install-a-container-engine"
 
-const (
-	UnsetSoftwareDependency SoftwareDependency = iota
-	Docker
-	Lscpu
-)
+type DependencyID string
 
 type Dependency struct {
+	ID                    DependencyID
 	Binary                string
 	Label                 string
 	Checks                []Check
-	SoftwareEnumID        SoftwareDependency
-	SoftwarePrerequisites []SoftwareDependency
-	HardwarePrerequisite  []HardwareCapability
+	SoftwarePrerequisites []DependencyID
+	HardwarePrerequisites []HardwareCapability
 }
 
-var HostRequiredDependencies = []Dependency{
-	{
+func HostRequiredDependencies() []Dependency {
+	topo := Dependency{
+		ID:     DependencyID("topo"),
 		Binary: "topo",
 		Label:  "Topo",
 		Checks: []Check{VersionMatches{
@@ -75,16 +70,19 @@ var HostRequiredDependencies = []Dependency{
 				return fix
 			},
 		}},
-	},
-	{
+	}
+
+	ssh := Dependency{
+		ID:     DependencyID("ssh"),
 		Binary: "ssh",
 		Label:  "OpenSSH",
 		Checks: []Check{BinaryExists{}, OpenSSHAvailable{}},
-	},
-	{
-		Binary:         "docker",
-		Label:          "Container Engine",
-		SoftwareEnumID: Docker,
+	}
+
+	docker := Dependency{
+		ID:     DependencyID("host-docker"),
+		Binary: "docker",
+		Label:  "Container Engine",
 		Checks: []Check{
 			BinaryExists{
 				Fix: &Fix{
@@ -98,11 +96,12 @@ var HostRequiredDependencies = []Dependency{
 				},
 			},
 		},
-	},
-	{
-		Binary:                "docker-compose",
-		Label:                 "Docker Compose",
-		SoftwarePrerequisites: []SoftwareDependency{Docker},
+	}
+
+	dockerCompose := Dependency{
+		ID:     DependencyID("docker-compose"),
+		Binary: "docker-compose",
+		Label:  "Docker Compose",
 		Checks: []Check{
 			CommandSuccessful{
 				Cmd: "docker compose",
@@ -114,65 +113,82 @@ var HostRequiredDependencies = []Dependency{
 				MinVersion: "2.21.0",
 			},
 		},
-	},
+		SoftwarePrerequisites: []DependencyID{docker.ID},
+	}
+
+	return []Dependency{
+		topo,
+		ssh,
+		docker,
+		dockerCompose,
+	}
 }
 
 func TargetRequiredDependencies(target ssh.Destination) []Dependency {
+	docker := Dependency{
+		ID:     DependencyID("target-docker"),
+		Binary: "docker",
+		Label:  "Container Engine",
+		Checks: []Check{
+			BinaryExists{
+				Fix: &Fix{
+					Description: "Install a supported container engine. See " + containerEngineInstallURL,
+				},
+			},
+			CommandSuccessful{
+				Cmd: "docker info",
+				Fix: &Fix{
+					Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL,
+				},
+			},
+		},
+	}
+
+	remoteprocRuntime := Dependency{
+		ID:                    DependencyID("remoteproc-runtime"),
+		Binary:                "remoteproc-runtime",
+		Label:                 "Remoteproc Runtime",
+		SoftwarePrerequisites: []DependencyID{docker.ID},
+		HardwarePrerequisites: []HardwareCapability{Remoteproc},
+		Checks: []Check{
+			BinaryExists{
+				Severity: SeverityWarning,
+				Fix: &Fix{
+					Description: "Install the Remoteproc Runtime",
+					Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
+				},
+			},
+		},
+	}
+	remoteprocRuntimeShim := Dependency{
+		ID:                    DependencyID("containerd-shim-remoteproc-v1"),
+		Binary:                "containerd-shim-remoteproc-v1",
+		Label:                 "Remoteproc Shim",
+		SoftwarePrerequisites: []DependencyID{docker.ID},
+		HardwarePrerequisites: []HardwareCapability{Remoteproc},
+		Checks: []Check{
+			BinaryExists{
+				Severity: SeverityWarning,
+				Fix: &Fix{
+					Description: "Install the Remoteproc Runtime",
+					Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
+				},
+			},
+		},
+	}
+
+	lscpu := Dependency{
+		ID:     DependencyID("lscpu"),
+		Binary: "lscpu",
+		Label:  "Hardware Info",
+		Checks: []Check{BinaryExists{}},
+	}
+
 	return []Dependency{
-		{
-			Binary:         "docker",
-			Label:          "Container Engine",
-			SoftwareEnumID: Docker,
-			Checks: []Check{
-				BinaryExists{
-					Fix: &Fix{
-						Description: "Install a supported container engine. See " + containerEngineInstallURL,
-					},
-				},
-				CommandSuccessful{
-					Cmd: "docker info",
-					Fix: &Fix{
-						Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL,
-					},
-				},
-			},
-		},
-		{
-			Binary:                "remoteproc-runtime",
-			Label:                 "Remoteproc Runtime",
-			SoftwarePrerequisites: []SoftwareDependency{Docker},
-			HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-			Checks: []Check{
-				BinaryExists{
-					Severity: SeverityWarning,
-					Fix: &Fix{
-						Description: "Install the Remoteproc Runtime",
-						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
-					},
-				},
-			},
-		},
-		{
-			Binary:                "containerd-shim-remoteproc-v1",
-			Label:                 "Remoteproc Shim",
-			SoftwarePrerequisites: []SoftwareDependency{Docker},
-			HardwarePrerequisite:  []HardwareCapability{Remoteproc},
-			Checks: []Check{
-				BinaryExists{
-					Severity: SeverityWarning,
-					Fix: &Fix{
-						Description: "Install the Remoteproc Runtime",
-						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
-					},
-				},
-			},
-		},
-		{
-			Binary:         "lscpu",
-			Label:          "Hardware Info",
-			SoftwareEnumID: Lscpu,
-			Checks:         []Check{BinaryExists{}},
-		},
+		docker,
+		remoteprocRuntime,
+		remoteprocRuntimeShim,
+		lscpu,
 	}
 }
 
@@ -185,7 +201,7 @@ type DependencyStatus struct {
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
 	result := make([]Dependency, 0, len(deps))
 	for _, dep := range deps {
-		if len(dep.HardwarePrerequisite) == 0 || hardwareCapabilityMatches(dep.HardwarePrerequisite, hardware) {
+		if len(dep.HardwarePrerequisites) == 0 || hardwareCapabilityMatches(dep.HardwarePrerequisites, hardware) {
 			result = append(result, dep)
 		}
 	}
@@ -202,11 +218,11 @@ func hardwareCapabilityMatches(required []HardwareCapability, available map[Hard
 }
 
 func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner.Runner) []DependencyStatus {
-	installed := make(map[SoftwareDependency]struct{})
+	healthy := make(map[DependencyID]struct{})
 	result := make([]DependencyStatus, 0, len(dependencies))
 
 	for _, dep := range dependencies {
-		if len(dep.SoftwarePrerequisites) > 0 && !hasAnyInstalledPrerequisite(dep.SoftwarePrerequisites, installed) {
+		if !allPrerequisitesFulfilled(dep.SoftwarePrerequisites, healthy) {
 			continue
 		}
 
@@ -214,13 +230,13 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 		var err error
 		for _, check := range dep.Checks {
 			fix, err = check.Run(ctx, runner, dep)
-			if _, ok := check.(BinaryExists); ok && err == nil {
-				installed[dep.SoftwareEnumID] = struct{}{}
-			}
-
 			if err != nil {
 				break
 			}
+		}
+
+		if err == nil {
+			healthy[dep.ID] = struct{}{}
 		}
 
 		result = append(result, DependencyStatus{
@@ -232,11 +248,11 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 	return result
 }
 
-func hasAnyInstalledPrerequisite(required []SoftwareDependency, installed map[SoftwareDependency]struct{}) bool {
-	for _, softwareDep := range required {
-		if _, exists := installed[softwareDep]; exists {
-			return true
+func allPrerequisitesFulfilled(required []DependencyID, healthy map[DependencyID]struct{}) bool {
+	for _, dep := range required {
+		if _, ok := healthy[dep]; !ok {
+			return false
 		}
 	}
-	return false
+	return true
 }
