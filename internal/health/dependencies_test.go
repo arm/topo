@@ -58,7 +58,7 @@ func TestDependencies(t *testing.T) {
 			assert.NoError(t, err)
 			result := dep.Check(context.Background(), &runner.Fake{})
 
-			assert.Equal(t, &health.CheckFailure{
+			assert.Equal(t, &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
 				Message:  `"remoteproc-runtime" not found in $PATH`,
 				Fix: &health.Fix{
@@ -206,12 +206,12 @@ func findDependencyByID(t *testing.T, deps []health.Dependency, id string) (heal
 	return health.Dependency{}, errors.New("dependency not found")
 }
 
-func passingCheck(_ context.Context, _ runner.Runner) health.CheckResult {
-	return health.CheckResult{SuccessValue: "passed"}
+func passingCheck(_ context.Context, _ runner.Runner) health.DependencyCheckResult {
+	return health.DependencyCheckResult{SuccessValue: "passed"}
 }
 
-func failingCheck(_ context.Context, _ runner.Runner) health.CheckResult {
-	return health.CheckResult{Failure: &health.CheckFailure{
+func failingCheck(_ context.Context, _ runner.Runner) health.DependencyCheckResult {
+	return health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 		Severity: health.SeverityError,
 		Message:  "very broken",
 		Fix:      &health.Fix{Description: "fix me please", Command: "rm -rf /"},

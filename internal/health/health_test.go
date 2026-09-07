@@ -201,7 +201,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 	t.Run("when a dependency has a successful result, health check reports its value", func(t *testing.T) {
 		statuses := []health.DependencyStatus{{
 			Dependency: health.Dependency{Label: "Container Engine"},
-			Result:     health.CheckResult{SuccessValue: "docker"},
+			Result:     health.DependencyCheckResult{SuccessValue: "docker"},
 		}}
 
 		got := extract(statuses)
@@ -213,7 +213,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 		statuses := []health.DependencyStatus{
 			{
 				Dependency: health.Dependency{Label: "Rube Goldberg"},
-				Result: health.CheckResult{Failure: &health.CheckFailure{
+				Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 					Severity: health.SeverityError,
 					Message:  "whatever not found on path",
 				}},
@@ -231,7 +231,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 		statuses := []health.DependencyStatus{
 			{
 				Dependency: health.Dependency{Label: "Remoteproc Runtime"},
-				Result: health.CheckResult{Failure: &health.CheckFailure{
+				Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 					Severity: health.SeverityWarning,
 					Message:  "remoteproc-runtime not found on path",
 				}},
@@ -249,7 +249,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 		statuses := []health.DependencyStatus{
 			{
 				Dependency: health.Dependency{Label: "Food"},
-				Result: health.CheckResult{Failure: &health.CheckFailure{
+				Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 					Severity: health.SeverityWarning,
 					Message:  "not enough pineapple",
 					Fix: &health.Fix{
