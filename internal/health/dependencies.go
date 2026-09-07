@@ -48,8 +48,8 @@ const (
 )
 
 type Fix struct {
-	Description string `json:"description"`
-	Command     string `json:"command,omitempty"`
+	Description string
+	Command     string
 }
 
 func HostRequiredDependencies(skipVersionChecks bool) []Dependency {

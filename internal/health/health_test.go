@@ -1,7 +1,6 @@
 package health_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGenerateHostReport(t *testing.T) {
@@ -133,65 +131,6 @@ func TestGenerateTargetReport(t *testing.T) {
 		assert.Equal(t, health.CheckStatusError, got.Connectivity.Status)
 		assert.Equal(t, "Remove the old SSH host key from known_hosts, then retry", got.Connectivity.Fix.Description)
 		assert.Equal(t, "ssh-keygen -R '[my-target]:2222'", got.Connectivity.Fix.Command)
-	})
-}
-
-func TestHostReport(t *testing.T) {
-	t.Run("MarshalJSON", func(t *testing.T) {
-		t.Run("nil dependencies are [] not null", func(t *testing.T) {
-			tr := health.HostReport{Dependencies: nil}
-
-			b, err := json.Marshal(tr)
-
-			require.NoError(t, err)
-			want := `{ "dependencies": [] }`
-			assert.JSONEq(t, want, string(b))
-		})
-
-		t.Run("omits command when fix has no command", func(t *testing.T) {
-			tr := health.HostReport{Dependencies: []health.HealthCheck{
-				{
-					Name:   "Container Engine",
-					Status: health.CheckStatusError,
-					Value:  "permission denied",
-					Fix: &health.Fix{
-						Description: "Ensure current user can run docker commands",
-					},
-				},
-			}}
-
-			b, err := json.Marshal(tr)
-
-			require.NoError(t, err)
-			want := `{
-				"dependencies": [
-					{
-						"name": "Container Engine",
-						"status": "error",
-						"value": "permission denied",
-						"fix": {
-							"description": "Ensure current user can run docker commands"
-						}
-					}
-				]
-			}`
-			assert.JSONEq(t, want, string(b))
-		})
-	})
-}
-
-func TestTargetReport(t *testing.T) {
-	t.Run("MarshalJSON", func(t *testing.T) {
-		t.Run("nil dependencies are [] not null", func(t *testing.T) {
-			tr := health.TargetReport{Dependencies: nil}
-
-			b, err := json.Marshal(tr)
-
-			require.NoError(t, err)
-			var result map[string]json.RawMessage
-			require.NoError(t, json.Unmarshal(b, &result))
-			assert.JSONEq(t, `[]`, string(result["dependencies"]))
-		})
 	})
 }
 

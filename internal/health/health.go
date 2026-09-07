@@ -2,7 +2,6 @@ package health
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -30,38 +29,22 @@ const (
 )
 
 type HealthCheck struct {
-	Name   string      `json:"name"`
-	Status CheckStatus `json:"status"`
-	Value  string      `json:"value"`
-	Fix    *Fix        `json:"fix,omitempty"`
+	Name   string
+	Status CheckStatus
+	Value  string
+	Fix    *Fix
 }
 
 type HostReport struct {
-	Dependencies []HealthCheck `json:"dependencies"`
-}
-
-func (r HostReport) MarshalJSON() ([]byte, error) {
-	type Alias HostReport
-	if r.Dependencies == nil {
-		r.Dependencies = []HealthCheck{}
-	}
-	return json.Marshal(Alias(r))
+	Dependencies []HealthCheck
 }
 
 type TargetReport struct {
-	Destination            string        `json:"destination"`
-	IsLocalhost            bool          `json:"isLocalhost"`
-	Connectivity           HealthCheck   `json:"connectivity"`
-	Dependencies           []HealthCheck `json:"dependencies"`
-	ProcessingDomainDriver HealthCheck   `json:"processingDomainDriver"`
-}
-
-func (r TargetReport) MarshalJSON() ([]byte, error) {
-	type Alias TargetReport
-	if r.Dependencies == nil {
-		r.Dependencies = []HealthCheck{}
-	}
-	return json.Marshal(Alias(r))
+	Destination            string
+	IsLocalhost            bool
+	Connectivity           HealthCheck
+	Dependencies           []HealthCheck
+	ProcessingDomainDriver HealthCheck
 }
 
 type CheckHostOptions struct {
