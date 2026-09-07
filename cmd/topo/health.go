@@ -15,6 +15,7 @@ import (
 const (
 	acceptNewHostFlag     = "accept-new-host-keys"
 	skipVersionChecksFlag = "skip-version-checks"
+	verboseFlag           = "verbose"
 )
 
 const skipVersionChecksEnvVar = "TOPO_SKIP_VERSION_CHECKS"
@@ -34,6 +35,10 @@ var healthCmd = &cobra.Command{
 		}
 
 		skipVersionCheck := resolveSkipVersionChecks(cmd)
+		verbose, err := cmd.Flags().GetBool(verboseFlag)
+		if err != nil {
+			panic(fmt.Sprintf("internal error: %s flag not registered: %v", verboseFlag, err))
+		}
 
 		var spinner *term.Spinner
 		if outputFormat == term.Plain {
@@ -41,7 +46,8 @@ var healthCmd = &cobra.Command{
 		}
 
 		toPrint := views.HealthReport{
-			Host: health.CheckHost(health.CheckHostOptions{SkipVersionChecks: skipVersionCheck}),
+			Host:    health.CheckHost(health.CheckHostOptions{SkipVersionChecks: skipVersionCheck}),
+			Verbose: verbose,
 		}
 
 		if targetArg, ok := lookupTarget(cmd); ok {
@@ -72,6 +78,7 @@ func init() {
 	addTimeoutFlag(healthCmd, defaultTimeout)
 	healthCmd.Flags().Bool(acceptNewHostFlag, false, "automatically trust and add new SSH host keys for the target")
 	healthCmd.Flags().Bool(skipVersionChecksFlag, false, fmt.Sprintf("skip version checks for dependencies (can also be set via %s env var)", skipVersionChecksEnvVar))
+	healthCmd.Flags().BoolP(verboseFlag, "v", false, "show all health checks, including successful checks")
 	rootCmd.AddCommand(healthCmd)
 }
 

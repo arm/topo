@@ -13,16 +13,14 @@ import (
 
 func TestHealthReport(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
-		t.Run("it renders the healthy host dependencies", func(t *testing.T) {
+		t.Run("it renders a generic result for healthy host and target sections", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				Host: health.HostReport{
-					Dependencies: []health.HealthCheck{
-						{
-							Name:   "Flux Capacitor",
-							Status: health.CheckStatusOK,
-							Value:  "flux",
-						},
-					},
+				Host: health.HostReport{Dependencies: []health.HealthCheck{
+					{Status: health.CheckStatusOK},
+				}},
+				Target: &health.TargetReport{
+					Connectivity:           health.HealthCheck{Status: health.CheckStatusOK},
+					ProcessingDomainDriver: health.HealthCheck{Status: health.CheckStatusOK},
 				},
 			}
 			var out bytes.Buffer
@@ -31,7 +29,23 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "┌─ Host ")
-			assert.Contains(t, out.String(), " ✓ Flux Capacitor (flux)")
+			assert.Contains(t, out.String(), " ✓ All checks passed")
+			assert.Contains(t, out.String(), "┌─ Target:  ")
+		})
+
+		t.Run("it renders healthy checks with ticks in verbose mode", func(t *testing.T) {
+			toPrint := views.HealthReport{
+				Host: health.HostReport{Dependencies: []health.HealthCheck{
+					{Name: "Flux Capacitor", Status: health.CheckStatusOK},
+				}},
+				Verbose: true,
+			}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), " ✓ Flux Capacitor")
 		})
 
 		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
@@ -76,7 +90,7 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), " ! Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 
-		t.Run("it renders an info icon for info checks", func(t *testing.T) {
+		t.Run("it renders remoteproc info without suppressing the success summary", func(t *testing.T) {
 			toPrint := views.HealthReport{
 				Target: &health.TargetReport{
 					Connectivity: health.HealthCheck{
@@ -95,6 +109,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
+			assert.Contains(t, out.String(), " ✓ All checks passed")
 			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 
@@ -177,6 +192,7 @@ func TestHealthReport(t *testing.T) {
 					{Name: "Deprecated", Status: health.CheckStatusWarning},
 					{Name: "Skipped", Status: health.CheckStatusInfo},
 				}},
+				Verbose: true,
 			}
 
 			out, err := toPrint.AsPlain(true)
