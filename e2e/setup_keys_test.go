@@ -42,7 +42,7 @@ func TestSetupKeysJourney(t *testing.T) {
 	assert.Contains(t, string(setupOut), "Transfer public key")
 
 	Step(t, "healthcheck is successful")
-	out = runTopo(t, topo, "health", "--target", container.SSHDestination)
+	out = runTopo(t, topo, "health", "--target", container.SSHDestination, "--verbose")
 	assert.Contains(t, out, " ✓ Connectivity")
 }
 
