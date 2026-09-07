@@ -8,6 +8,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,17 +31,15 @@ func TestTransferImagesViaPipe(t *testing.T) {
 func buildTransferTestImage(t *testing.T, host docker.Host) (string, string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
-	composeFilePath := filepath.Join(temporaryDirectory, "compose.yaml")
 	dockerFilePath := filepath.Join(temporaryDirectory, "Dockerfile")
 	imageName := testImageName(t)
-	composeFileContent := fmt.Sprintf(`
+	composeFilePath := testutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
 services:
   test:
     build: .
     image: %s
-`, imageName)
-	requireWriteFile(t, composeFilePath, composeFileContent)
-	requireWriteFile(t, dockerFilePath, "FROM alpine:latest")
+`, imageName))
+	testutil.RequireWriteFile(t, dockerFilePath, "FROM alpine:latest")
 
 	buildCommand := docker.ComposeCommand(t.Context(), host, composeFilePath, "build")
 	buildOutput, err := buildCommand.CombinedOutput()

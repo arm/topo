@@ -130,7 +130,7 @@ func (o resolveArgsOperation) Description() string {
 }
 
 func (o resolveArgsOperation) Run(_ io.Writer) error {
-	composeFile := filepath.Join(o.path, ComposeFilename)
+	composeFile := filepath.Join(o.path, compose.DefaultFileName())
 	if err := ResolveAndApplyArgs(composeFile, o.argProvider); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)

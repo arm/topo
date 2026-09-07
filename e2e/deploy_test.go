@@ -39,7 +39,7 @@ func TestDeploy(t *testing.T) {
 
 	t.Run("ps -a shows stopped containers", func(t *testing.T) {
 		projectDir := t.TempDir()
-		composeFile := testutil.WriteComposeFile(t, projectDir, `services:
+		composeFile := testutil.RequireWriteComposeFile(t, projectDir, `services:
   sleeper:
     image: busybox
     command: ["sleep", "300"]

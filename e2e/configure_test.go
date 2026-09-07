@@ -15,8 +15,7 @@ func TestConfigure(t *testing.T) {
 
 	t.Run("updates compose yaml parameters", func(t *testing.T) {
 		projectDir := t.TempDir()
-		composePath := filepath.Join(projectDir, "compose.yaml")
-		testutil.RequireWriteFile(t, composePath, configurableCompose("Original"))
+		composePath := testutil.RequireWriteComposeFile(t, projectDir, configurableCompose("Original"))
 
 		cmd := exec.Command(topo, "configure", "GREETING_NAME=World")
 		cmd.Dir = projectDir
@@ -47,10 +46,9 @@ func TestConfigure(t *testing.T) {
 
 	t.Run("respect compose file flag", func(t *testing.T) {
 		projectDir := t.TempDir()
-		composePath := filepath.Join(projectDir, "compose.yaml")
 		customComposePath := filepath.Join(projectDir, "custom-compose.yaml")
 		originalCompose := configurableCompose("Original")
-		testutil.RequireWriteFile(t, composePath, originalCompose)
+		composePath := testutil.RequireWriteComposeFile(t, projectDir, originalCompose)
 		testutil.RequireWriteFile(t, customComposePath, configurableCompose("CustomOriginal"))
 
 		cmd := exec.Command(topo, "configure", "-f", "custom-compose.yaml", "GREETING_NAME=Custom")
@@ -67,9 +65,8 @@ func TestConfigure(t *testing.T) {
 
 	t.Run("rejects undeclared parameters without changing the compose file", func(t *testing.T) {
 		projectDir := t.TempDir()
-		composePath := filepath.Join(projectDir, "compose.yaml")
 		original := configurableCompose("Original")
-		testutil.RequireWriteFile(t, composePath, original)
+		composePath := testutil.RequireWriteComposeFile(t, projectDir, original)
 
 		cmd := exec.Command(topo, "configure", "UNKNOWN=value")
 		cmd.Dir = projectDir

@@ -10,7 +10,7 @@ import (
 
 func TestEnsureNoRuntimeSet(t *testing.T) {
 	t.Run("succeeds when no service runtime is set", func(t *testing.T) {
-		composeFile := testutil.WriteComposeFile(t, t.TempDir(), `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   app:
     image: alpine
@@ -22,7 +22,7 @@ services:
 	})
 
 	t.Run("rejects a service with a runtime", func(t *testing.T) {
-		composeFile := testutil.WriteComposeFile(t, t.TempDir(), `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   firmware:
     image: alpine
@@ -35,7 +35,7 @@ services:
 	})
 
 	t.Run("lists every service with a runtime", func(t *testing.T) {
-		composeFile := testutil.WriteComposeFile(t, t.TempDir(), `
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   application:
     image: alpine

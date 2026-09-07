@@ -8,6 +8,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,16 +72,14 @@ func deploymentFixture(t *testing.T) (composeFilePath, imageName string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
 	imageName = testImageName(t)
-	composeFilePath = filepath.Join(temporaryDirectory, "compose.yaml")
-	composeFileContent := fmt.Sprintf(`
+	composeFilePath = testutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
 name: %s
 services:
   a-service:
     build: .
     image: %s
-`, testProjectName(t), imageName)
-	requireWriteFile(t, composeFilePath, composeFileContent)
-	requireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), `
+`, testProjectName(t), imageName))
+	testutil.RequireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), `
 FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)

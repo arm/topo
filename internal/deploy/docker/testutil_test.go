@@ -31,11 +31,6 @@ func requireAvailableTCPPort(t *testing.T, host string) string {
 	return gtestutil.RequireAvailableTCPPort(t, host)
 }
 
-func requireWriteFile(t *testing.T, path, content string) {
-	t.Helper()
-	gtestutil.RequireWriteFile(t, path, content)
-}
-
 func startContainer(t *testing.T, spec gtestutil.ContainerSpec) *gtestutil.Container {
 	t.Helper()
 	return gtestutil.StartContainer(t, spec)
