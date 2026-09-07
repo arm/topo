@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/parameter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -65,7 +64,7 @@ services:
       args:
         FOO: elephant
 `)
-		values := parameter.Values{"FOO": "baz"}
+		values := map[string]string{"FOO": "baz"}
 
 		err := compose.ApplyParameterValues(project, values)
 
@@ -102,7 +101,7 @@ services:
     build:
       context: .
 `)
-		values := parameter.Values{"FOO": "baz"}
+		values := map[string]string{"FOO": "baz"}
 
 		err := compose.ApplyParameterValues(project, values)
 
@@ -154,7 +153,7 @@ services:
         FOO: foo
         BAR: bar
 `)
-		values := parameter.Values{
+		values := map[string]string{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}
@@ -185,7 +184,7 @@ services:
       args:
         FOO: foo
 `)
-		values := parameter.Values{"BAR": "baz"}
+		values := map[string]string{"BAR": "baz"}
 
 		err := compose.ApplyParameterValues(project, values)
 
@@ -203,7 +202,7 @@ services:
       args:
         PLATFORM: old-value
 `)
-		values := parameter.Values{"PLATFORM": "stm32mp257"}
+		values := map[string]string{"PLATFORM": "stm32mp257"}
 
 		err := compose.ApplyParameterValues(project, values)
 
@@ -231,7 +230,7 @@ services:
       context: .
       args: ["FOO=foo", "BAR"]
 `)
-		values := parameter.Values{
+		values := map[string]string{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}

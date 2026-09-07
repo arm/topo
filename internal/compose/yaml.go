@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/parameter"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,7 +27,7 @@ func ReadNode(composeFile io.Reader) (*yaml.Node, error) {
 	return doc, nil
 }
 
-func ApplyParameterValues(root *yaml.Node, values parameter.Values) error {
+func ApplyParameterValues(root *yaml.Node, values map[string]string) error {
 	if len(values) == 0 {
 		logger.Info("no parameter values to apply")
 		return nil
@@ -88,7 +87,7 @@ func WriteNode(project *yaml.Node, target io.Writer) error {
 	return nil
 }
 
-func applyArgsMappingNode(args *yaml.Node, values parameter.Values, used map[string]bool) {
+func applyArgsMappingNode(args *yaml.Node, values map[string]string, used map[string]bool) {
 	for j := 0; j < len(args.Content); j += 2 {
 		key := args.Content[j]
 		argValue := args.Content[j+1]
@@ -101,7 +100,7 @@ func applyArgsMappingNode(args *yaml.Node, values parameter.Values, used map[str
 	}
 }
 
-func applyArgsSequenceNode(args *yaml.Node, values parameter.Values, used map[string]bool) {
+func applyArgsSequenceNode(args *yaml.Node, values map[string]string, used map[string]bool) {
 	for _, node := range args.Content {
 		name := node.Value
 
