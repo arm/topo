@@ -3,7 +3,6 @@ package podman_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -12,15 +11,27 @@ import (
 
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/stretchr/testify/assert"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestDeploy(t *testing.T) {
-	requireLocalPodman(t)
+	t.Run("rejects runtime before accessing Podman", func(t *testing.T) {
+		composeFile := testutil.WriteComposeFile(t, t.TempDir(), `
+services:
+  firmware:
+    image: alpine
+    runtime: io.containerd.remoteproc.v1
+`)
+
+		err := podman.Deploy(t.Context(), &bytes.Buffer{}, composeFile, podman.DeployOptions{})
+
+		require.ErrorContains(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments`)
+	})
 
 	t.Run("deploys to localhost", func(t *testing.T) {
+		requireLocalPodman(t)
 		composeFile, projectName := deploymentFixture(t)
 		t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
 		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
@@ -32,6 +43,7 @@ func TestDeploy(t *testing.T) {
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
+		requireLocalPodman(t)
 		podmanContainer := startPodmanInContainer(t)
 		composeFile, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
@@ -49,6 +61,7 @@ func TestDeploy(t *testing.T) {
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
+		requireLocalPodman(t)
 		registryPort := requireAvailableTCPPort(t)
 		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
 		t.Cleanup(func() { cleanupRegistryContainer(t, registryContainerName) })
@@ -85,26 +98,6 @@ func requireLocalPodman(t *testing.T) {
 	}
 	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
 		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
-	}
-}
-
-func assertContainersRunning(t *testing.T, projectName string, socket podman.Socket) {
-	t.Helper()
-	cmd := podman.Command(t.Context(), socket,
-		"ps", "--format", "json", "--all",
-		"--filter", "label=com.docker.compose.project="+projectName,
-	)
-	var diagnostics bytes.Buffer
-	cmd.Stderr = &diagnostics
-	output, err := cmd.Output()
-	require.NoError(t, err, "stdout: %s\nstderr: %s", output, diagnostics.String())
-
-	var containers []map[string]any
-	require.NoError(t, json.Unmarshal(output, &containers))
-	require.NotEmpty(t, containers, "no containers reported; stderr: %s", diagnostics.String())
-
-	for _, container := range containers {
-		assert.Equal(t, "running", container["State"], "container %s is not running: %s", container["Names"], container["State"])
 	}
 }
 

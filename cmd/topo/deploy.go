@@ -20,20 +20,12 @@ import (
 )
 
 var (
-	engine              string
 	noRegistry          bool
 	registryPort        string
 	skipRemotePortCheck bool
 	skipProjectChecks   bool
 	forceRecreate       bool
 	noRecreate          bool
-)
-
-type containerEngine string
-
-const (
-	containerEngineDocker containerEngine = "docker"
-	containerEnginePodman containerEngine = "podman"
 )
 
 var deployCmd = &cobra.Command{
@@ -52,7 +44,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		parsedEngine, err := parseContainerEngine(engine)
+		selectedEngine, err := getSelectedEngine(cmd)
 		if err != nil {
 			return err
 		}
@@ -64,7 +56,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		if parsedEngine == containerEnginePodman {
+		if selectedEngine == containerEnginePodman {
 			return deployWithPodman(cmd, targetArg)
 		}
 		return deployWithDocker(cmd, targetArg)
@@ -172,17 +164,6 @@ func executeDeployment(cmd *cobra.Command, deployment func(context.Context) erro
 	return nil
 }
 
-func parseContainerEngine(value string) (containerEngine, error) {
-	parsedEngine := containerEngine(value)
-	if parsedEngine == "" {
-		return containerEngineDocker, nil
-	}
-	if parsedEngine != containerEngineDocker && parsedEngine != containerEnginePodman {
-		return "", fmt.Errorf("invalid engine %q: must be docker or podman", value)
-	}
-	return parsedEngine, nil
-}
-
 func validatePort(port string) error {
 	portNum, err := strconv.Atoi(port)
 	if err != nil {
@@ -222,7 +203,7 @@ func init() {
 	addTargetFlag(deployCmd)
 	addComposeFileFlag(deployCmd)
 	if experimentalFeaturesEnabled() {
-		deployCmd.Flags().StringVar(&engine, "engine", string(containerEngineDocker), "container engine to use (docker or podman)")
+		addEngineFlag(deployCmd)
 	}
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", docker.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "use full-image save/load transfer instead of delta-optimised registry transfer; for environments where registry transfer or reverse SSH forwarding is unavailable")

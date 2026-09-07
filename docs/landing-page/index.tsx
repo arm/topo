@@ -1,4 +1,5 @@
 import Link from "@docusaurus/Link";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 import Layout from "@theme/Layout";
 import type { ReactElement } from "react";
 
@@ -11,6 +12,8 @@ function joinClasses(...parts: Array<string | undefined | false>): string {
 }
 
 export default function Home(): ReactElement {
+  const heroDiagramUrl = useBaseUrl("/img/topo-overview.svg");
+
   return (
     <Layout
       title={homepageContent.meta.title}
@@ -48,7 +51,7 @@ export default function Home(): ReactElement {
           <div className={styles.heroVisual}>
             <img
               className={styles.heroDiagram}
-              src="img/topo-overview.svg"
+              src={heroDiagramUrl}
               alt="Topo deployment and development loop"
             />
           </div>

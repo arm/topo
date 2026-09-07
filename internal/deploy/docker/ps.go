@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -89,9 +90,13 @@ func composePSArgs(all bool) []string {
 func ParseContainers(rawJSON string) ([]PSContainer, error) {
 	raws := []PSContainer{}
 	decoder := json.NewDecoder(strings.NewReader(rawJSON))
-	for decoder.More() {
+	for {
 		var raw PSContainer
-		if err := decoder.Decode(&raw); err != nil {
+		err := decoder.Decode(&raw)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
 			return nil, err
 		}
 		raws = append(raws, raw)

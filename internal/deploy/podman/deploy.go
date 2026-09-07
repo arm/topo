@@ -31,6 +31,9 @@ type DeployOptions struct {
 }
 
 func Deploy(ctx context.Context, output io.Writer, composeFile string, options DeployOptions) (deployErr error) {
+	if err := EnsureNoRuntimeSet(composeFile); err != nil {
+		return err
+	}
 	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
 	}
