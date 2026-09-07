@@ -214,6 +214,6 @@ func failingCheck(_ context.Context, _ runner.Runner) health.DependencyCheckResu
 	return health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 		Severity: health.SeverityError,
 		Message:  "very broken",
-		Fix:      &health.Fix{Description: "fix me please", Command: "rm -rf /"},
+		Fix:      &health.Fix{Description: "fix me please", Command: "echo fixed"},
 	}}
 }
