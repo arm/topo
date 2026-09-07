@@ -3,7 +3,6 @@ package health
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,7 +13,13 @@ import (
 )
 
 type Check interface {
-	Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error)
+	Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure
+}
+
+type CheckFailure struct {
+	Severity CheckSeverity
+	Message  string
+	Fix      *Fix
 }
 
 type Fix struct {
@@ -27,6 +32,7 @@ type CheckSeverity int
 const (
 	SeverityError CheckSeverity = iota
 	SeverityWarning
+	SeverityInfo
 )
 
 type CommandSuccessful struct {
@@ -34,9 +40,12 @@ type CommandSuccessful struct {
 	Fix *Fix
 }
 
-func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
+func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure {
 	_, _, err := r.Run(ctx, c.Cmd)
-	return c.Fix, err
+	if err != nil {
+		return &CheckFailure{Message: err.Error(), Fix: c.Fix}
+	}
+	return nil
 }
 
 type BinaryExists struct {
@@ -44,17 +53,11 @@ type BinaryExists struct {
 	Fix      *Fix
 }
 
-func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
+func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure {
 	if err := r.BinaryExists(ctx, dep.Binary); err != nil {
-		if errors.Is(err, runner.ErrTimeout) {
-			return nil, err
-		}
-		if b.Severity == SeverityWarning {
-			err = WarningError{Err: err}
-		}
-		return b.Fix, err
+		return &CheckFailure{Severity: b.Severity, Message: err.Error(), Fix: b.Fix}
 	}
-	return nil, nil
+	return nil
 }
 
 type VersionMatches struct {
@@ -63,14 +66,14 @@ type VersionMatches struct {
 	BuildFix       func() Fix
 }
 
-func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) (*Fix, error) {
+func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) *CheckFailure {
 	latest, err := v.FetchLatest(ctx)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
-		return nil, nil
+		return nil
 	}
 	if latest == v.CurrentVersion {
-		return nil, nil
+		return nil
 	}
 
 	fix := Fix{}
@@ -78,32 +81,39 @@ func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) 
 		fix = v.BuildFix()
 	}
 
-	return &fix, InfoError{Err: fmt.Errorf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest)}
+	return &CheckFailure{
+		Severity: SeverityInfo,
+		Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest),
+		Fix:      &fix,
+	}
 }
 
 type OpenSSHAvailable struct{}
 
-func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependency) (*Fix, error) {
+func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure {
 	_, stderr, err := r.Run(ctx, "ssh -V")
 	if err != nil {
-		return nil, err
+		return &CheckFailure{Message: err.Error()}
 	}
 	if !strings.Contains(stderr, "OpenSSH_") {
-		return &Fix{
-			Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
-		}, fmt.Errorf("%q does not resolve to OpenSSH: %s", dep.Binary, stderr)
+		return &CheckFailure{
+			Message: fmt.Sprintf("%q does not resolve to OpenSSH: %s", dep.Binary, stderr),
+			Fix: &Fix{
+				Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
+			},
+		}
 	}
-	return nil, nil
+	return nil
 }
 
 type DockerComposeMinVersion struct {
 	MinVersion string
 }
 
-func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner, _ Dependency) (*Fix, error) {
+func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner, _ Dependency) *CheckFailure {
 	stdout, _, err := r.Run(ctx, "docker compose version --format json")
 	if err != nil {
-		return nil, err
+		return &CheckFailure{Message: err.Error()}
 	}
 
 	var output struct {
@@ -111,16 +121,19 @@ func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner, _ Dep
 	}
 	err = json.Unmarshal([]byte(stdout), &output)
 	if err != nil {
-		return nil, err
+		return &CheckFailure{Message: err.Error()}
 	}
 
 	if !version.IsAtLeastVersion(output.Version, c.MinVersion) {
-		return &Fix{
-			Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later. See %s", c.MinVersion, containerEngineInstallURL),
-		}, fmt.Errorf("installed docker compose version %s is older than required version %s", output.Version, c.MinVersion)
+		return &CheckFailure{
+			Message: fmt.Sprintf("installed docker compose version %s is older than required version %s", output.Version, c.MinVersion),
+			Fix: &Fix{
+				Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later. See %s", c.MinVersion, containerEngineInstallURL),
+			},
+		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func RemoveVersionChecks(deps []Dependency) []Dependency {

@@ -189,21 +189,26 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	for _, ds := range statuses {
 		hc := HealthCheck{Name: ds.Dependency.Label}
-		if ds.Error == nil {
+		if ds.Failure == nil {
 			hc.Status = CheckStatusOK
 			hc.Value = ds.Dependency.Binary
 		} else {
-			if _, ok := errors.AsType[WarningError](ds.Error); ok {
-				hc.Status = CheckStatusWarning
-			} else if _, ok := errors.AsType[InfoError](ds.Error); ok {
-				hc.Status = CheckStatusInfo
-			} else {
-				hc.Status = CheckStatusError
-			}
-			hc.Value = ds.Error.Error()
-			hc.Fix = ds.Fix
+			hc.Status = checkStatusFromSeverity(ds.Failure.Severity)
+			hc.Value = ds.Failure.Message
+			hc.Fix = ds.Failure.Fix
 		}
 		res = append(res, hc)
 	}
 	return res
+}
+
+func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {
+	switch severity {
+	case SeverityWarning:
+		return CheckStatusWarning
+	case SeverityInfo:
+		return CheckStatusInfo
+	default:
+		return CheckStatusError
+	}
 }

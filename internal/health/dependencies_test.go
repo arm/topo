@@ -86,7 +86,7 @@ func TestPerformChecks(t *testing.T) {
 
 			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
 
-			wantStatus := health.DependencyStatus{Dependency: dep, Error: nil, Fix: nil}
+			wantStatus := health.DependencyStatus{Dependency: dep, Failure: nil}
 			want := []health.DependencyStatus{wantStatus}
 			assert.Equal(t, want, got)
 		})
@@ -98,8 +98,8 @@ func TestPerformChecks(t *testing.T) {
 
 			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
 
-			wantFix, wantErr := check.Run(context.Background(), &runner.Fake{}, dep)
-			wantStatus := health.DependencyStatus{Dependency: dep, Error: wantErr, Fix: wantFix}
+			wantFailure := check.Run(context.Background(), &runner.Fake{}, dep)
+			wantStatus := health.DependencyStatus{Dependency: dep, Failure: wantFailure}
 			want := []health.DependencyStatus{wantStatus}
 			assert.Equal(t, want, got)
 		})
@@ -219,12 +219,15 @@ func findDependencyByBinary(t *testing.T, deps []health.Dependency, binary strin
 
 type passingCheck struct{}
 
-func (p passingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependency) (*health.Fix, error) {
-	return nil, nil
+func (p passingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependency) *health.CheckFailure {
+	return nil
 }
 
 type failingCheck struct{}
 
-func (p failingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependency) (*health.Fix, error) {
-	return &health.Fix{Description: "fix me please", Command: "echo fixed"}, errors.New("very broken")
+func (p failingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependency) *health.CheckFailure {
+	return &health.CheckFailure{
+		Message: "very broken",
+		Fix:     &health.Fix{Description: "fix me please", Command: "rm -rf /"},
+	}
 }

@@ -10,14 +10,6 @@ import (
 	"github.com/arm/topo/internal/version"
 )
 
-type WarningError struct{ Err error }
-
-func (w WarningError) Error() string { return w.Err.Error() }
-
-type InfoError struct{ Err error }
-
-func (i InfoError) Error() string { return i.Err.Error() }
-
 type HardwareCapability int
 
 const (
@@ -194,8 +186,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 
 type DependencyStatus struct {
 	Dependency Dependency
-	Error      error
-	Fix        *Fix
+	Failure    *CheckFailure
 }
 
 func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
@@ -226,23 +217,21 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 			continue
 		}
 
-		var fix *Fix
-		var err error
+		var failure *CheckFailure
 		for _, check := range dep.Checks {
-			fix, err = check.Run(ctx, runner, dep)
-			if err != nil {
+			failure = check.Run(ctx, runner, dep)
+			if failure != nil {
 				break
 			}
 		}
 
-		if err == nil {
+		if failure == nil {
 			healthy[dep.ID] = struct{}{}
 		}
 
 		result = append(result, DependencyStatus{
 			Dependency: dep,
-			Error:      err,
-			Fix:        fix,
+			Failure:    failure,
 		})
 	}
 	return result
