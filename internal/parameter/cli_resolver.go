@@ -5,13 +5,13 @@ import (
 	"strings"
 )
 
-// CLIProvider resolves parameters from command-line key=value pairs.
+// CLIResolver resolves parameter definitions to values from command-line key=value pairs.
 // It validates that all provided keys match known parameter names.
-type CLIProvider struct {
+type CLIResolver struct {
 	input map[string]string
 }
 
-func NewCLIProvider(cliArgs []string) (*CLIProvider, error) {
+func NewCLIResolver(cliArgs []string) (*CLIResolver, error) {
 	parsed := make(map[string]string)
 	for _, arg := range cliArgs {
 		parts := strings.SplitN(arg, "=", 2)
@@ -20,25 +20,25 @@ func NewCLIProvider(cliArgs []string) (*CLIProvider, error) {
 		}
 		parsed[parts[0]] = parts[1]
 	}
-	return &CLIProvider{input: parsed}, nil
+	return &CLIResolver{input: parsed}, nil
 }
 
-func (p *CLIProvider) Provide(definitions []Definition) (Values, error) {
-	provided := Values{}
-	seen := make(map[string]bool, len(p.input))
+func (r *CLIResolver) Resolve(definitions []Definition) (Values, error) {
+	values := Values{}
+	seen := make(map[string]bool, len(r.input))
 
 	for _, definition := range definitions {
-		if value, ok := p.input[definition.Name]; ok {
-			provided[definition.Name] = value
+		if value, ok := r.input[definition.Name]; ok {
+			values[definition.Name] = value
 			seen[definition.Name] = true
 		}
 	}
 
-	for key := range p.input {
+	for key := range r.input {
 		if !seen[key] {
 			return nil, fmt.Errorf("unknown parameter: %s", key)
 		}
 	}
 
-	return provided, nil
+	return values, nil
 }

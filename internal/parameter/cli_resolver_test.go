@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCLIProvider(t *testing.T) {
+func TestCLIResolver(t *testing.T) {
 	t.Run("parses valid parameters", func(t *testing.T) {
-		provider, err := parameter.NewCLIProvider([]string{"GREETING=Hello", "PORT=8080"})
+		resolver, err := parameter.NewCLIResolver([]string{"GREETING=Hello", "PORT=8080"})
 		require.NoError(t, err)
 
 		definitions := []parameter.Definition{
@@ -18,7 +18,7 @@ func TestCLIProvider(t *testing.T) {
 			{Name: "PORT", Required: false},
 		}
 
-		got, err := provider.Provide(definitions)
+		got, err := resolver.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -29,14 +29,14 @@ func TestCLIProvider(t *testing.T) {
 	})
 
 	t.Run("allows values with equals signs", func(t *testing.T) {
-		provider, err := parameter.NewCLIProvider([]string{"CONNECTION_STRING=host=localhost;port=5432"})
+		resolver, err := parameter.NewCLIResolver([]string{"CONNECTION_STRING=host=localhost;port=5432"})
 		require.NoError(t, err)
 
 		definitions := []parameter.Definition{
 			{Name: "CONNECTION_STRING", Required: true},
 		}
 
-		got, err := provider.Provide(definitions)
+		got, err := resolver.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -46,28 +46,28 @@ func TestCLIProvider(t *testing.T) {
 	})
 
 	t.Run("errors on invalid format", func(t *testing.T) {
-		_, err := parameter.NewCLIProvider([]string{"INVALID"})
+		_, err := parameter.NewCLIResolver([]string{"INVALID"})
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid parameter format")
 	})
 
 	t.Run("errors on unknown parameter", func(t *testing.T) {
-		provider, err := parameter.NewCLIProvider([]string{"UNKNOWN=value"})
+		resolver, err := parameter.NewCLIResolver([]string{"UNKNOWN=value"})
 		require.NoError(t, err)
 
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 		}
 
-		_, err = provider.Provide(definitions)
+		_, err = resolver.Resolve(definitions)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unknown parameter: UNKNOWN")
 	})
 
 	t.Run("returns values for all known parameters", func(t *testing.T) {
-		provider, err := parameter.NewCLIProvider([]string{"PORT=8080", "GREETING=Hello", "NAME=Topo"})
+		resolver, err := parameter.NewCLIResolver([]string{"PORT=8080", "GREETING=Hello", "NAME=Topo"})
 		require.NoError(t, err)
 
 		definitions := []parameter.Definition{
@@ -76,7 +76,7 @@ func TestCLIProvider(t *testing.T) {
 			{Name: "PORT", Required: true},
 		}
 
-		got, err := provider.Provide(definitions)
+		got, err := resolver.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{

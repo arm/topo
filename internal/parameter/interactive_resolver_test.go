@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInteractiveProvider(t *testing.T) {
+func TestInteractiveResolver(t *testing.T) {
 	t.Run("prompts for parameters and reads input", func(t *testing.T) {
 		input := strings.NewReader("Hello, World\n8080\n")
 		output := &bytes.Buffer{}
-		provider := parameter.NewInteractiveProvider(input, output)
+		resolver := parameter.NewInteractiveResolver(input, output)
 
 		definitions := []parameter.Definition{
 			{
@@ -31,7 +31,7 @@ func TestInteractiveProvider(t *testing.T) {
 			},
 		}
 
-		got, err := provider.Provide(definitions)
+		got, err := resolver.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -47,9 +47,9 @@ func TestInteractiveProvider(t *testing.T) {
 	t.Run("skips empty inputs", func(t *testing.T) {
 		input := strings.NewReader("\n")
 		output := &bytes.Buffer{}
-		provider := parameter.NewInteractiveProvider(input, output)
+		resolver := parameter.NewInteractiveResolver(input, output)
 
-		got, err := provider.Provide([]parameter.Definition{{Name: "OPTIONAL"}})
+		got, err := resolver.Resolve([]parameter.Definition{{Name: "OPTIONAL"}})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -58,13 +58,13 @@ func TestInteractiveProvider(t *testing.T) {
 	t.Run("shows current values", func(t *testing.T) {
 		input := strings.NewReader("\n")
 		output := &bytes.Buffer{}
-		provider := parameter.NewInteractiveProvider(input, output)
+		resolver := parameter.NewInteractiveResolver(input, output)
 		definitions := []parameter.Definition{{
 			Name:          "GREETING",
 			CurrentValues: []string{"Hello", ""},
 		}}
 
-		got, err := provider.Provide(definitions)
+		got, err := resolver.Resolve(definitions)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)

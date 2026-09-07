@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockProvider struct {
+type mockResolver struct {
 	mock.Mock
 }
 
-func (m *mockProvider) Provide(definitions []parameter.Definition) (parameter.Values, error) {
+func (m *mockResolver) Resolve(definitions []parameter.Definition) (parameter.Values, error) {
 	call := m.Called(definitions)
 	if call.Get(0) == nil {
 		return nil, call.Error(1)
@@ -22,93 +22,93 @@ func (m *mockProvider) Provide(definitions []parameter.Definition) (parameter.Va
 	return call.Get(0).(parameter.Values), call.Error(1)
 }
 
-func TestStrictProviderChain(t *testing.T) {
-	t.Run("collects from single provider", func(t *testing.T) {
-		provider := &mockProvider{}
+func TestStrictResolverChain(t *testing.T) {
+	t.Run("collects from single resolver", func(t *testing.T) {
+		resolver := &mockResolver{}
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 		}
-		provider.On("Provide", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
-		chain := parameter.NewStrictProviderChain(provider)
+		resolver.On("Resolve", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		chain := parameter.NewStrictResolverChain(resolver)
 
-		got, err := chain.Provide(definitions)
+		got, err := chain.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{"GREETING": "Hello"}
 		assert.Equal(t, want, got)
-		provider.AssertExpectations(t)
+		resolver.AssertExpectations(t)
 	})
 
 	t.Run("errors when required parameters are missing", func(t *testing.T) {
-		provider := &mockProvider{}
+		resolver := &mockResolver{}
 		missing := parameter.Definition{Name: "GREETING", Required: true, Description: "The greeting"}
 		definitions := []parameter.Definition{
 			missing,
 			{Name: "PORT", Required: false},
 		}
-		provider.On("Provide", definitions).Return(parameter.Values{"PORT": "8080"}, nil)
-		chain := parameter.NewStrictProviderChain(provider)
+		resolver.On("Resolve", definitions).Return(parameter.Values{"PORT": "8080"}, nil)
+		chain := parameter.NewStrictResolverChain(resolver)
 
-		_, err := chain.Provide(definitions)
+		_, err := chain.Resolve(definitions)
 
 		assert.Equal(t, parameter.MissingParametersError{missing}, err)
-		provider.AssertExpectations(t)
+		resolver.AssertExpectations(t)
 	})
 
 	t.Run("allows missing optional parameters", func(t *testing.T) {
-		provider := &mockProvider{}
+		resolver := &mockResolver{}
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider.On("Provide", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
-		chain := parameter.NewStrictProviderChain(provider)
+		resolver.On("Resolve", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		chain := parameter.NewStrictResolverChain(resolver)
 
-		got, err := chain.Provide(definitions)
+		got, err := chain.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{"GREETING": "Hello"}
 		assert.Equal(t, want, got)
-		provider.AssertExpectations(t)
+		resolver.AssertExpectations(t)
 	})
 
-	t.Run("errors when provider fails", func(t *testing.T) {
-		provider := &mockProvider{}
+	t.Run("errors when resolver fails", func(t *testing.T) {
+		resolver := &mockResolver{}
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 		}
-		provider.On("Provide", mock.Anything).Return(nil, errors.New("big bang"))
-		chain := parameter.NewStrictProviderChain(provider)
+		resolver.On("Resolve", mock.Anything).Return(nil, errors.New("big bang"))
+		chain := parameter.NewStrictResolverChain(resolver)
 
-		_, err := chain.Provide(definitions)
+		_, err := chain.Resolve(definitions)
 
 		require.Error(t, err)
 		assert.EqualError(t, err, "big bang")
-		provider.AssertExpectations(t)
+		resolver.AssertExpectations(t)
 	})
 
-	t.Run("stops calling providers when all required parameters are satisfied", func(t *testing.T) {
-		provider1 := &mockProvider{}
-		provider2 := &mockProvider{}
+	t.Run("stops calling resolvers when all required parameters are satisfied", func(t *testing.T) {
+		resolver1 := &mockResolver{}
+		resolver2 := &mockResolver{}
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider1.On("Provide", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
-		chain := parameter.NewStrictProviderChain(provider1, provider2)
+		resolver1.On("Resolve", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		chain := parameter.NewStrictResolverChain(resolver1, resolver2)
 
-		got, err := chain.Provide(definitions)
+		got, err := chain.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{"GREETING": "Hello"}
 		assert.Equal(t, want, got)
-		provider1.AssertExpectations(t)
-		provider2.AssertNotCalled(t, "Provide")
+		resolver1.AssertExpectations(t)
+		resolver2.AssertNotCalled(t, "Resolve")
 	})
 
-	t.Run("calls second provider when first does not satisfy all required parameters", func(t *testing.T) {
-		provider1 := &mockProvider{}
-		provider2 := &mockProvider{}
+	t.Run("calls second resolver when first does not satisfy all required parameters", func(t *testing.T) {
+		resolver1 := &mockResolver{}
+		resolver2 := &mockResolver{}
 		all := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 			{Name: "NAME", Required: true},
@@ -118,11 +118,11 @@ func TestStrictProviderChain(t *testing.T) {
 			{Name: "NAME", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		provider1.On("Provide", all).Return(parameter.Values{"GREETING": "Hello"}, nil)
-		provider2.On("Provide", remaining).Return(parameter.Values{"NAME": "World"}, nil)
-		chain := parameter.NewStrictProviderChain(provider1, provider2)
+		resolver1.On("Resolve", all).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		resolver2.On("Resolve", remaining).Return(parameter.Values{"NAME": "World"}, nil)
+		chain := parameter.NewStrictResolverChain(resolver1, resolver2)
 
-		got, err := chain.Provide(all)
+		got, err := chain.Resolve(all)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -130,26 +130,26 @@ func TestStrictProviderChain(t *testing.T) {
 			"NAME":     "World",
 		}
 		assert.Equal(t, want, got)
-		provider1.AssertExpectations(t)
-		provider2.AssertExpectations(t)
+		resolver1.AssertExpectations(t)
+		resolver2.AssertExpectations(t)
 	})
 
-	t.Run("collects values from multiple providers", func(t *testing.T) {
-		provider1 := parameter.NewStaticProvider(parameter.Values{
+	t.Run("collects values from multiple resolvers", func(t *testing.T) {
+		resolver1 := parameter.NewStaticResolver(parameter.Values{
 			"PORT": "8080",
 			"NAME": "Topo",
 		})
-		provider2 := parameter.NewStaticProvider(parameter.Values{
+		resolver2 := parameter.NewStaticResolver(parameter.Values{
 			"GREETING": "Hello",
 		})
-		chain := parameter.NewStrictProviderChain(provider1, provider2)
+		chain := parameter.NewStrictResolverChain(resolver1, resolver2)
 		definitions := []parameter.Definition{
 			{Name: "NAME", Required: true},
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: true},
 		}
 
-		got, err := chain.Provide(definitions)
+		got, err := chain.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -161,37 +161,37 @@ func TestStrictProviderChain(t *testing.T) {
 	})
 
 	t.Run("allows required parameters with non-empty current values", func(t *testing.T) {
-		provider := parameter.NewStaticProvider(nil)
-		chain := parameter.NewStrictProviderChain(provider)
+		resolver := parameter.NewStaticResolver(nil)
+		chain := parameter.NewStrictResolverChain(resolver)
 		definitions := []parameter.Definition{{
 			Name:          "CINNAMON",
 			Required:      true,
 			CurrentValues: []string{"current", "${CINNAMON}"},
 		}}
 
-		got, err := chain.Provide(definitions)
+		got, err := chain.Resolve(definitions)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
 	})
 
 	t.Run("errors when any current value is empty", func(t *testing.T) {
-		provider := parameter.NewStaticProvider(nil)
-		chain := parameter.NewStrictProviderChain(provider)
+		resolver := parameter.NewStaticResolver(nil)
+		chain := parameter.NewStrictResolverChain(resolver)
 		definition := parameter.Definition{
 			Name:          "CINNAMON",
 			Required:      true,
 			CurrentValues: []string{"current", ""},
 		}
 
-		_, err := chain.Provide([]parameter.Definition{definition})
+		_, err := chain.Resolve([]parameter.Definition{definition})
 
 		assert.Equal(t, parameter.MissingParametersError{definition}, err)
 	})
 
-	t.Run("does not provide omitted optional parameters", func(t *testing.T) {
-		provider := parameter.NewStaticProvider(nil)
-		chain := parameter.NewStrictProviderChain(provider)
+	t.Run("does not resolve omitted optional parameters", func(t *testing.T) {
+		resolver := parameter.NewStaticResolver(nil)
+		chain := parameter.NewStrictResolverChain(resolver)
 		definitions := []parameter.Definition{
 			{
 				Name:     "CINNAMON",
@@ -199,7 +199,7 @@ func TestStrictProviderChain(t *testing.T) {
 			},
 		}
 
-		got, err := chain.Provide(definitions)
+		got, err := chain.Resolve(definitions)
 
 		require.NoError(t, err)
 		want := parameter.Values{}

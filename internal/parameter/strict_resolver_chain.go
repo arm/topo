@@ -7,43 +7,43 @@ import (
 	"strings"
 )
 
-// StrictProviderChain chains providers and ensures all required parameters have values.
+// StrictResolverChain chains resolvers and ensures all required parameters have values.
 // It stops early once all required parameters are satisfied.
-type StrictProviderChain struct {
-	providers []ValueProvider
+type StrictResolverChain struct {
+	resolvers []Resolver
 }
 
-func NewStrictProviderChain(providers ...ValueProvider) *StrictProviderChain {
-	return &StrictProviderChain{providers: providers}
+func NewStrictResolverChain(resolvers ...Resolver) *StrictResolverChain {
+	return &StrictResolverChain{resolvers: resolvers}
 }
 
-func (p *StrictProviderChain) Provide(definitions []Definition) (Values, error) {
-	provided := Values{}
+func (r *StrictResolverChain) Resolve(definitions []Definition) (Values, error) {
+	values := Values{}
 	remaining := definitions
 
-	for _, provider := range p.providers {
+	for _, resolver := range r.resolvers {
 		if len(remaining) == 0 {
 			break
 		}
 
-		values, err := provider.Provide(remaining)
+		newValues, err := resolver.Resolve(remaining)
 		if err != nil {
 			return nil, err
 		}
 
-		maps.Copy(provided, values)
-		remaining = filterProvided(remaining, provided)
+		maps.Copy(values, newValues)
+		remaining = withoutValues(remaining, values)
 
-		if allRequiredHaveValues(definitions, provided) {
+		if allRequiredHaveValues(definitions, values) {
 			break
 		}
 	}
 
-	if err := validateRequiredValues(definitions, provided); err != nil {
+	if err := validateRequiredValues(definitions, values); err != nil {
 		return nil, err
 	}
 
-	return provided, nil
+	return values, nil
 }
 
 type MissingParametersError []Definition
@@ -64,7 +64,7 @@ func (e MissingParametersError) Error() string {
 	return msg.String()
 }
 
-func filterProvided(definitions []Definition, values Values) []Definition {
+func withoutValues(definitions []Definition, values Values) []Definition {
 	var remaining []Definition
 	for _, definition := range definitions {
 		if _, exists := values[definition.Name]; !exists {

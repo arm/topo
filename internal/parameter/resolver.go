@@ -15,8 +15,8 @@ type Definition struct {
 
 type Values map[string]string
 
-type ValueProvider interface {
-	Provide(definitions []Definition) (Values, error)
+type Resolver interface {
+	Resolve(definitions []Definition) (Values, error)
 }
 
 func formatCurrentValues(values []string) string {

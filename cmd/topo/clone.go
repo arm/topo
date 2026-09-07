@@ -63,21 +63,21 @@ interactive prompts.`,
 			cliArgs = args[1:]
 		}
 
-		var providers []parameter.ValueProvider
+		var resolvers []parameter.Resolver
 		if len(cliArgs) > 0 {
-			cliProvider, err := parameter.NewCLIProvider(cliArgs)
+			cliResolver, err := parameter.NewCLIResolver(cliArgs)
 			if err != nil {
 				return err
 			}
-			providers = append(providers, cliProvider)
+			resolvers = append(resolvers, cliResolver)
 		}
 		if term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
-			providers = append(providers, parameter.NewInteractiveProvider(os.Stdin, os.Stdout))
+			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stdout))
 		}
 
-		provider := parameter.NewStrictProviderChain(providers...)
+		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.NewClone(path, projectSource, provider).Run(os.Stdout)
+		return project.NewClone(path, projectSource, resolver).Run(os.Stdout)
 	},
 }
 

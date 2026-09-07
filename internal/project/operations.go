@@ -12,11 +12,11 @@ import (
 	"github.com/arm/topo/internal/parameter"
 )
 
-func Clone(path string, src Source, provider parameter.ValueProvider) error {
-	return NewClone(path, src, provider).Run(nil)
+func Clone(path string, src Source, resolver parameter.Resolver) error {
+	return NewClone(path, src, resolver).Run(nil)
 }
 
-func NewClone(path string, src Source, provider parameter.ValueProvider) operation.Sequence {
+func NewClone(path string, src Source, resolver parameter.Resolver) operation.Sequence {
 	return operation.NewSequence(
 		copyProjectOperation{
 			path: path,
@@ -24,7 +24,7 @@ func NewClone(path string, src Source, provider parameter.ValueProvider) operati
 		},
 		configureOperation{
 			path:     path,
-			provider: provider,
+			resolver: resolver,
 		},
 		printSummary{
 			path: path,
@@ -32,8 +32,8 @@ func NewClone(path string, src Source, provider parameter.ValueProvider) operati
 	)
 }
 
-func Configure(composeFilePath string, provider parameter.ValueProvider) error {
-	values, err := collectValues(composeFilePath, provider)
+func Configure(composeFilePath string, resolver parameter.Resolver) error {
+	values, err := collectValues(composeFilePath, resolver)
 	if err != nil {
 		return fmt.Errorf("failed to collect parameter values: %w", err)
 	}
@@ -74,7 +74,7 @@ func applyParameterValues(composeFilePath string, values parameter.Values) error
 	return nil
 }
 
-func collectValues(composeFilePath string, provider parameter.ValueProvider) (parameter.Values, error) {
+func collectValues(composeFilePath string, resolver parameter.Resolver) (parameter.Values, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't read compose file: %w", err)
@@ -85,7 +85,7 @@ func collectValues(composeFilePath string, provider parameter.ValueProvider) (pa
 	if err != nil {
 		return nil, err
 	}
-	return provider.Provide(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
+	return resolver.Resolve(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
 }
 
 func toDefinitions(parameters []Parameter, currentValues map[string][]string) []parameter.Definition {
@@ -123,7 +123,7 @@ func (o copyProjectOperation) Run(_ io.Writer) error {
 
 type configureOperation struct {
 	path     string
-	provider parameter.ValueProvider
+	resolver parameter.Resolver
 }
 
 func (o configureOperation) Description() string {
@@ -132,7 +132,7 @@ func (o configureOperation) Description() string {
 
 func (o configureOperation) Run(_ io.Writer) error {
 	composeFile := filepath.Join(o.path, compose.DefaultFileName())
-	if err := Configure(composeFile, o.provider); err != nil {
+	if err := Configure(composeFile, o.resolver); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)
 		}

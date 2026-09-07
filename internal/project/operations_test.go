@@ -42,7 +42,7 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := project.NewClone(destDir, mockSource, parameter.NewStrictProviderChain()).Run(&output)
+		err := project.NewClone(destDir, mockSource, parameter.NewStrictResolverChain()).Run(&output)
 
 		require.NoError(t, err)
 		out := output.String()
@@ -61,7 +61,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(destDir, mockSource, parameter.NewStrictProviderChain())
+		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -86,9 +86,9 @@ x-topo:
       required: true
 `
 		mockSource := mockSourceWithContent(t, composeFileContents)
-		provider := parameter.NewInteractiveProvider(strings.NewReader("\n"), &bytes.Buffer{})
+		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(destDir, mockSource, parameter.NewStrictProviderChain(provider))
+		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain(resolver))
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -111,7 +111,7 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(destDir, mockSource, parameter.NewStrictProviderChain())
+		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.Error(t, err)
 		_, statErr := os.Stat(destDir)
@@ -136,9 +136,9 @@ func mockSourceWithContent(t *testing.T, content string) *mockProjectSource {
 func TestConfigure(t *testing.T) {
 	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
-		provider := parameter.NewStrictProviderChain()
+		resolver := parameter.NewStrictResolverChain()
 
-		err := project.Configure(invalidPath, provider)
+		err := project.Configure(invalidPath, resolver)
 
 		require.ErrorContains(t, err, "can't read compose file")
 	})
@@ -161,10 +161,10 @@ x-topo:
       example: bar
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		static := parameter.NewStaticProvider(parameter.Values{"FOO": "baz"})
-		provider := parameter.NewStrictProviderChain(static)
+		static := parameter.NewStaticResolver(parameter.Values{"FOO": "baz"})
+		resolver := parameter.NewStrictResolverChain(static)
 
-		err := project.Configure(composeFilePath, provider)
+		err := project.Configure(composeFilePath, resolver)
 		require.NoError(t, err)
 
 		want := `
@@ -205,9 +205,9 @@ x-topo:
       default: default
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
 
-		err := project.Configure(composeFilePath, provider)
+		err := project.Configure(composeFilePath, resolver)
 
 		require.ErrorContains(t, err, "missing value(s) for required parameters")
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
@@ -225,9 +225,9 @@ x-topo:
       default: default
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		provider := parameter.NewStrictProviderChain(parameter.NewStaticProvider(nil))
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
 
-		err := project.Configure(composeFilePath, provider)
+		err := project.Configure(composeFilePath, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
