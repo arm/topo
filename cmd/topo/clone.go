@@ -63,7 +63,7 @@ interactive prompts.`,
 			cliArgs = args[1:]
 		}
 
-		var providers []parameter.Provider
+		var providers []parameter.ValueProvider
 		if len(cliArgs) > 0 {
 			cliProvider, err := parameter.NewCLIProvider(cliArgs)
 			if err != nil {

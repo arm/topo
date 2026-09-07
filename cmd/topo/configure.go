@@ -32,7 +32,7 @@ interactive prompts.`,
 			return err
 		}
 
-		var providers []parameter.Provider
+		var providers []parameter.ValueProvider
 		if len(args) > 0 {
 			cliProvider, err := parameter.NewCLIProvider(args)
 			if err != nil {

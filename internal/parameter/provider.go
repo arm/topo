@@ -15,7 +15,7 @@ type Definition struct {
 
 type Values map[string]string
 
-type Provider interface {
+type ValueProvider interface {
 	Provide(definitions []Definition) (Values, error)
 }
 

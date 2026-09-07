@@ -10,10 +10,10 @@ import (
 // StrictProviderChain chains providers and ensures all required parameters have values.
 // It stops early once all required parameters are satisfied.
 type StrictProviderChain struct {
-	providers []Provider
+	providers []ValueProvider
 }
 
-func NewStrictProviderChain(providers ...Provider) *StrictProviderChain {
+func NewStrictProviderChain(providers ...ValueProvider) *StrictProviderChain {
 	return &StrictProviderChain{providers: providers}
 }
 

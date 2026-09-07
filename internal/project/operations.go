@@ -12,11 +12,11 @@ import (
 	"github.com/arm/topo/internal/parameter"
 )
 
-func Clone(path string, src Source, provider parameter.Provider) error {
+func Clone(path string, src Source, provider parameter.ValueProvider) error {
 	return NewClone(path, src, provider).Run(nil)
 }
 
-func NewClone(path string, src Source, provider parameter.Provider) operation.Sequence {
+func NewClone(path string, src Source, provider parameter.ValueProvider) operation.Sequence {
 	return operation.NewSequence(
 		copyProjectOperation{
 			path: path,
@@ -32,7 +32,7 @@ func NewClone(path string, src Source, provider parameter.Provider) operation.Se
 	)
 }
 
-func Configure(composeFilePath string, provider parameter.Provider) error {
+func Configure(composeFilePath string, provider parameter.ValueProvider) error {
 	values, err := collectValues(composeFilePath, provider)
 	if err != nil {
 		return fmt.Errorf("failed to collect parameter values: %w", err)
@@ -74,7 +74,7 @@ func applyParameterValues(composeFilePath string, values parameter.Values) error
 	return nil
 }
 
-func collectValues(composeFilePath string, provider parameter.Provider) (parameter.Values, error) {
+func collectValues(composeFilePath string, provider parameter.ValueProvider) (parameter.Values, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't read compose file: %w", err)
@@ -123,7 +123,7 @@ func (o copyProjectOperation) Run(_ io.Writer) error {
 
 type configureOperation struct {
 	path     string
-	provider parameter.Provider
+	provider parameter.ValueProvider
 }
 
 func (o configureOperation) Description() string {
