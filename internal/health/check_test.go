@@ -3,80 +3,34 @@ package health_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/version"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckBinaryExists(t *testing.T) {
-	t.Run("returns a warning result when severity is warning", func(t *testing.T) {
-		binary := "nonexistent"
-		runner := &runner.Fake{}
-
-		got := health.CheckBinaryExists(context.Background(), runner, binary, health.SeverityWarning, nil)
-
-		want := &health.CheckFailure{
-			Severity: health.SeverityWarning,
-			Message:  runner.BinaryExists(context.Background(), binary).Error(),
-		}
-		assert.Equal(t, want, got)
-	})
-}
-
 func TestCheckCommandSuccessful(t *testing.T) {
-	t.Run("returns a failure when the command fails", func(t *testing.T) {
+	t.Run("returns an error when the command fails", func(t *testing.T) {
 		err := errors.New("command failed")
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{"command": {Err: err}}}
-		fix := &health.Fix{Description: "fix it"}
 
-		got := health.CheckCommandSuccessful(context.Background(), r, "command", fix)
+		got := health.CheckCommandSuccessful(context.Background(), r, "command")
 
-		assert.Equal(t, &health.CheckFailure{Message: err.Error(), Fix: fix}, got)
+		assert.Equal(t, err, got)
 	})
 }
 
-func TestRemoveVersionChecks(t *testing.T) {
-	t.Run("removes checks of type VersionMatches", func(t *testing.T) {
-		dep := health.Dependency{Binary: "mixed", Label: "Mixed", Checks: []health.Check{health.BinaryExists{}, health.VersionMatches{}}}
+func TestCheckTopoIsUpToDate(t *testing.T) {
+	t.Run("passes for development builds", func(t *testing.T) {
+		originalVersion := version.Version
+		version.Version = version.Dev
+		t.Cleanup(func() { version.Version = originalVersion })
 
-		got := health.RemoveVersionChecks([]health.Dependency{dep})
+		got := health.CheckTopoIsUpToDate(context.Background())
 
-		want := []health.Check{health.BinaryExists{}}
-
-		assert.Len(t, got, 1)
-		assert.Equal(t, want, got[0].Checks)
-	})
-}
-
-func TestCheckVersionMatches(t *testing.T) {
-	ctx := context.Background()
-
-	t.Run("returns an info result when version is outdated", func(t *testing.T) {
-		got := health.CheckVersionMatches(ctx, "1.0.0", func(context.Context) (string, error) { return "2.0.0", nil }, nil)
-		want := &health.CheckFailure{
-			Severity: health.SeverityInfo,
-			Message:  "out of date - current: 1.0.0, latest version: 2.0.0",
-			Fix:      &health.Fix{},
-		}
-
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("passes when version matches latest", func(t *testing.T) {
-		got := health.CheckVersionMatches(ctx, "2.0.0", func(context.Context) (string, error) { return "2.0.0", nil }, nil)
-		var want *health.CheckFailure
-
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("passes when fetching the latest version fails", func(t *testing.T) {
-		got := health.CheckVersionMatches(ctx, "", func(context.Context) (string, error) { return "", fmt.Errorf("connection refused") }, nil)
-		var want *health.CheckFailure
-
-		assert.Equal(t, want, got)
+		assert.Nil(t, got)
 	})
 }
 

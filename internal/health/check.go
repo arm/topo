@@ -4,17 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/upgrade"
 	"github.com/arm/topo/internal/version"
 )
-
-type Check interface {
-	Run(ctx context.Context, r runner.Runner) *CheckFailure
-}
 
 type CheckFailure struct {
 	Severity CheckSeverity
@@ -35,78 +31,42 @@ const (
 	SeverityInfo
 )
 
-type CommandSuccessful struct {
-	Cmd string
-	Fix *Fix
-}
-
-func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner) *CheckFailure {
-	return CheckCommandSuccessful(ctx, r, c.Cmd, c.Fix)
-}
-
-func CheckCommandSuccessful(ctx context.Context, r runner.Runner, command string, fix *Fix) *CheckFailure {
+func CheckCommandSuccessful(ctx context.Context, r runner.Runner, command string) error {
 	_, _, err := r.Run(ctx, command)
-	if err != nil {
-		return &CheckFailure{Message: err.Error(), Fix: fix}
+	return err
+}
+
+func CheckTopoIsUpToDate(ctx context.Context) *CheckFailure {
+	if version.Version == version.Dev {
+		return nil
 	}
-	return nil
-}
 
-type BinaryExists struct {
-	Binary   string
-	Severity CheckSeverity
-	Fix      *Fix
-}
+	binPath, binPathErr := upgrade.CurrentBinaryPath()
 
-func (b BinaryExists) Run(ctx context.Context, r runner.Runner) *CheckFailure {
-	return CheckBinaryExists(ctx, r, b.Binary, b.Severity, b.Fix)
-}
-
-func CheckBinaryExists(ctx context.Context, r runner.Runner, binary string, severity CheckSeverity, fix *Fix) *CheckFailure {
-	if err := r.BinaryExists(ctx, binary); err != nil {
-		return &CheckFailure{Severity: severity, Message: err.Error(), Fix: fix}
+	var latest string
+	var err error
+	if binPathErr == nil && upgrade.IsBinaryManagedByHomebrew(binPath) {
+		latest, err = version.FetchLatestHomebrew(ctx, version.HomebrewFormulaURL)
+	} else {
+		latest, err = version.FetchLatestArtifactory(ctx, version.ArtifactoryBaseURL)
 	}
-	return nil
-}
-
-type VersionMatches struct {
-	CurrentVersion string
-	FetchLatest    func(ctx context.Context) (string, error)
-	BuildFix       func() Fix
-}
-
-func (v VersionMatches) Run(ctx context.Context, _ runner.Runner) *CheckFailure {
-	return CheckVersionMatches(ctx, v.CurrentVersion, v.FetchLatest, v.BuildFix)
-}
-
-func CheckVersionMatches(ctx context.Context, currentVersion string, fetchLatest func(context.Context) (string, error), buildFix func() Fix) *CheckFailure {
-	latest, err := fetchLatest(ctx)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
 		return nil
 	}
-	if latest == currentVersion {
+	if latest == version.Version {
 		return nil
 	}
 
-	fix := Fix{}
-	if buildFix != nil {
-		fix = buildFix()
+	fix := Fix{Description: "Upgrade Topo"}
+	if binPathErr == nil {
+		_, fix.Command = upgrade.GetUpgradeCommand(binPath)
 	}
-
 	return &CheckFailure{
 		Severity: SeverityInfo,
-		Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", currentVersion, latest),
+		Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", version.Version, latest),
 		Fix:      &fix,
 	}
-}
-
-type OpenSSHAvailable struct {
-	SSHBinary string
-}
-
-func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner) *CheckFailure {
-	return CheckOpenSSHAvailable(ctx, r, o.SSHBinary)
 }
 
 func CheckOpenSSHAvailable(ctx context.Context, r runner.Runner, sshBinary string) *CheckFailure {
@@ -123,14 +83,6 @@ func CheckOpenSSHAvailable(ctx context.Context, r runner.Runner, sshBinary strin
 		}
 	}
 	return nil
-}
-
-type DockerComposeMinVersion struct {
-	MinVersion string
-}
-
-func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner) *CheckFailure {
-	return CheckDockerComposeMinVersion(ctx, r, c.MinVersion)
 }
 
 func CheckDockerComposeMinVersion(ctx context.Context, r runner.Runner, minVersion string) *CheckFailure {
@@ -157,15 +109,4 @@ func CheckDockerComposeMinVersion(ctx context.Context, r runner.Runner, minVersi
 	}
 
 	return nil
-}
-
-func RemoveVersionChecks(deps []Dependency) []Dependency {
-	deps = slices.Clone(deps)
-	for i, dep := range deps {
-		deps[i].Checks = slices.DeleteFunc(dep.Checks, func(c Check) bool {
-			_, ok := c.(VersionMatches)
-			return ok
-		})
-	}
-	return deps
 }

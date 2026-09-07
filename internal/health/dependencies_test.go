@@ -16,7 +16,7 @@ import (
 
 func TestDependencies(t *testing.T) {
 	t.Run("ids are unique across all dependencies", func(t *testing.T) {
-		hostDeps := health.HostRequiredDependencies()
+		hostDeps := health.HostRequiredDependencies(false)
 		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"))
 
 		ids := make([]health.DependencyID, 0, len(hostDeps)+len(targetDeps))
@@ -28,7 +28,7 @@ func TestDependencies(t *testing.T) {
 	})
 
 	t.Run("binary names are of the correct format", func(t *testing.T) {
-		hostDeps := health.HostRequiredDependencies()
+		hostDeps := health.HostRequiredDependencies(false)
 		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"))
 
 		for _, dep := range slices.Concat(hostDeps, targetDeps) {
@@ -38,7 +38,7 @@ func TestDependencies(t *testing.T) {
 
 	t.Run("host dependencies", func(t *testing.T) {
 		t.Run("prerequisites are fulfillable", func(t *testing.T) {
-			deps := health.HostRequiredDependencies()
+			deps := health.HostRequiredDependencies(false)
 			ids := make([]health.DependencyID, 0, len(deps))
 			for _, dep := range deps {
 				ids = append(ids, dep.ID)
@@ -66,15 +66,16 @@ func TestDependencies(t *testing.T) {
 
 			dep, err := findDependencyByBinary(t, deps, "remoteproc-runtime")
 			assert.NoError(t, err)
-			wantBinaryExistsCheck := health.BinaryExists{
-				Binary:   "remoteproc-runtime",
+			failure := dep.Check(context.Background(), &runner.Fake{})
+
+			assert.Equal(t, &health.CheckFailure{
 				Severity: health.SeverityWarning,
+				Message:  `"remoteproc-runtime" not found in $PATH`,
 				Fix: &health.Fix{
 					Description: "Install the Remoteproc Runtime",
 					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
 				},
-			}
-			assert.Contains(t, dep.Checks, wantBinaryExistsCheck)
+			}, failure)
 		})
 	})
 }
@@ -82,39 +83,39 @@ func TestDependencies(t *testing.T) {
 func TestPerformChecks(t *testing.T) {
 	t.Run("dependency status reflects the result of running the check", func(t *testing.T) {
 		t.Run("when check passes", func(t *testing.T) {
-			dep := health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{passingCheck{}}}
+			dep := health.Dependency{Binary: "foo", Label: "bar", Check: passingCheck}
 			deps := []health.Dependency{dep}
 
 			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
 
-			wantStatus := health.DependencyStatus{Dependency: dep, Failure: nil}
-			want := []health.DependencyStatus{wantStatus}
-			assert.Equal(t, want, got)
+			require.Len(t, got, 1)
+			assert.Equal(t, dep.ID, got[0].Dependency.ID)
+			assert.Nil(t, got[0].Failure)
 		})
 
 		t.Run("when a check fails", func(t *testing.T) {
-			check := failingCheck{}
-			dep := health.Dependency{Binary: "foo", Label: "bar", Checks: []health.Check{check}}
+			check := health.DependencyCheck(failingCheck)
+			dep := health.Dependency{Binary: "foo", Label: "bar", Check: check}
 			deps := []health.Dependency{dep}
 
 			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
 
-			wantFailure := check.Run(context.Background(), &runner.Fake{})
-			wantStatus := health.DependencyStatus{Dependency: dep, Failure: wantFailure}
-			want := []health.DependencyStatus{wantStatus}
-			assert.Equal(t, want, got)
+			wantFailure := check(context.Background(), &runner.Fake{})
+			require.Len(t, got, 1)
+			assert.Equal(t, dep.ID, got[0].Dependency.ID)
+			assert.Equal(t, wantFailure, got[0].Failure)
 		})
 	})
 
 	t.Run("prerequisites", func(t *testing.T) {
 		t.Run("omits dependency when any of its software prerequisites are not installed", func(t *testing.T) {
 			pineapple := health.Dependency{
-				ID:     health.DependencyID("pineapple"),
-				Checks: []health.Check{passingCheck{}},
+				ID:    health.DependencyID("pineapple"),
+				Check: passingCheck,
 			}
 			cheese := health.Dependency{
-				ID:     health.DependencyID("cheese"),
-				Checks: []health.Check{failingCheck{}},
+				ID:    health.DependencyID("cheese"),
+				Check: failingCheck,
 			}
 			pizzaWhichShouldBeOmitted := health.Dependency{
 				ID:                    "pizza",
@@ -136,7 +137,7 @@ func TestPerformChecks(t *testing.T) {
 			vader := health.Dependency{
 				ID:     health.DependencyID("vader"),
 				Binary: "vader",
-				Checks: []health.Check{passingCheck{}},
+				Check:  passingCheck,
 			}
 			luke := health.Dependency{
 				ID:                    "luke",
@@ -146,11 +147,9 @@ func TestPerformChecks(t *testing.T) {
 
 			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
 
-			want := []health.DependencyStatus{
-				{Dependency: vader},
-				{Dependency: luke},
-			}
-			assert.Equal(t, want, got)
+			require.Len(t, got, 2)
+			assert.Equal(t, vader.ID, got[0].Dependency.ID)
+			assert.Equal(t, luke.ID, got[1].Dependency.ID)
 		})
 	})
 }
@@ -218,15 +217,11 @@ func findDependencyByBinary(t *testing.T, deps []health.Dependency, binary strin
 	return health.Dependency{}, errors.New("dependency not found")
 }
 
-type passingCheck struct{}
-
-func (p passingCheck) Run(_ context.Context, _ runner.Runner) *health.CheckFailure {
+func passingCheck(_ context.Context, _ runner.Runner) *health.CheckFailure {
 	return nil
 }
 
-type failingCheck struct{}
-
-func (p failingCheck) Run(_ context.Context, _ runner.Runner) *health.CheckFailure {
+func failingCheck(_ context.Context, _ runner.Runner) *health.CheckFailure {
 	return &health.CheckFailure{
 		Message: "very broken",
 		Fix:     &health.Fix{Description: "fix me please", Command: "rm -rf /"},
