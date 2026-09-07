@@ -102,4 +102,12 @@ func TestPrintHeader(t *testing.T) {
 		expected := "\n┌─ " + description + " \n"
 		assert.Equal(t, expected, buf.String())
 	})
+
+	t.Run("dims borders for terminal output", func(t *testing.T) {
+		header := term.Header("Hello", true)
+
+		assert.Contains(t, header, term.Color(term.Dim, "┌─ "))
+		barWidth := 60 - len("┌─ ") - len("Hello") - len(" ")
+		assert.Contains(t, header, term.Color(term.Dim, " "+strings.Repeat("─", barWidth)))
+	})
 }
