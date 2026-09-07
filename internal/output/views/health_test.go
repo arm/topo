@@ -31,7 +31,6 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "┌─ Host ")
-			assert.Contains(t, out.String(), "Flux Capacitor")
 			assert.Contains(t, out.String(), " ✓ Flux Capacitor (flux)")
 		})
 
@@ -52,7 +51,6 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "Container Engine")
 			assert.Contains(t, out.String(), " ✗ Container Engine (docker not found on path)")
 		})
 
