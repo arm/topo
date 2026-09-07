@@ -23,12 +23,12 @@ type CheckResult struct {
 	Failure      *CheckFailure
 }
 
-type DependencyCheck func(ctx context.Context, r runner.Runner) CheckResult
+type DependencyCheckFn func(ctx context.Context, r runner.Runner) CheckResult
 
 type Dependency struct {
 	ID                    DependencyID
 	Label                 string
-	Check                 DependencyCheck
+	Check                 DependencyCheckFn
 	SoftwarePrerequisites []DependencyID
 	HardwarePrerequisites []HardwareCapability
 }
