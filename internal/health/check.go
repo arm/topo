@@ -13,7 +13,7 @@ import (
 )
 
 type Check interface {
-	Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure
+	Run(ctx context.Context, r runner.Runner) *CheckFailure
 }
 
 type CheckFailure struct {
@@ -40,7 +40,7 @@ type CommandSuccessful struct {
 	Fix *Fix
 }
 
-func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure {
+func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner) *CheckFailure {
 	_, _, err := r.Run(ctx, c.Cmd)
 	if err != nil {
 		return &CheckFailure{Message: err.Error(), Fix: c.Fix}
@@ -49,12 +49,13 @@ func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner, dep Depende
 }
 
 type BinaryExists struct {
+	Binary   string
 	Severity CheckSeverity
 	Fix      *Fix
 }
 
-func (b BinaryExists) Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure {
-	if err := r.BinaryExists(ctx, dep.Binary); err != nil {
+func (b BinaryExists) Run(ctx context.Context, r runner.Runner) *CheckFailure {
+	if err := r.BinaryExists(ctx, b.Binary); err != nil {
 		return &CheckFailure{Severity: b.Severity, Message: err.Error(), Fix: b.Fix}
 	}
 	return nil
@@ -66,7 +67,7 @@ type VersionMatches struct {
 	BuildFix       func() Fix
 }
 
-func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) *CheckFailure {
+func (v VersionMatches) Run(ctx context.Context, _ runner.Runner) *CheckFailure {
 	latest, err := v.FetchLatest(ctx)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
@@ -88,16 +89,18 @@ func (v VersionMatches) Run(ctx context.Context, _ runner.Runner, _ Dependency) 
 	}
 }
 
-type OpenSSHAvailable struct{}
+type OpenSSHAvailable struct {
+	SSHBinary string
+}
 
-func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner, dep Dependency) *CheckFailure {
-	_, stderr, err := r.Run(ctx, "ssh -V")
+func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner) *CheckFailure {
+	_, stderr, err := r.Run(ctx, o.SSHBinary+" -V")
 	if err != nil {
 		return &CheckFailure{Message: err.Error()}
 	}
 	if !strings.Contains(stderr, "OpenSSH_") {
 		return &CheckFailure{
-			Message: fmt.Sprintf("%q does not resolve to OpenSSH: %s", dep.Binary, stderr),
+			Message: fmt.Sprintf("%q does not resolve to OpenSSH: %s", o.SSHBinary, stderr),
 			Fix: &Fix{
 				Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
 			},
@@ -110,7 +113,7 @@ type DockerComposeMinVersion struct {
 	MinVersion string
 }
 
-func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner, _ Dependency) *CheckFailure {
+func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner) *CheckFailure {
 	stdout, _, err := r.Run(ctx, "docker compose version --format json")
 	if err != nil {
 		return &CheckFailure{Message: err.Error()}

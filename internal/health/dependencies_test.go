@@ -67,6 +67,7 @@ func TestDependencies(t *testing.T) {
 			dep, err := findDependencyByBinary(t, deps, "remoteproc-runtime")
 			assert.NoError(t, err)
 			wantBinaryExistsCheck := health.BinaryExists{
+				Binary:   "remoteproc-runtime",
 				Severity: health.SeverityWarning,
 				Fix: &health.Fix{
 					Description: "Install the Remoteproc Runtime",
@@ -98,7 +99,7 @@ func TestPerformChecks(t *testing.T) {
 
 			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
 
-			wantFailure := check.Run(context.Background(), &runner.Fake{}, dep)
+			wantFailure := check.Run(context.Background(), &runner.Fake{})
 			wantStatus := health.DependencyStatus{Dependency: dep, Failure: wantFailure}
 			want := []health.DependencyStatus{wantStatus}
 			assert.Equal(t, want, got)
@@ -219,13 +220,13 @@ func findDependencyByBinary(t *testing.T, deps []health.Dependency, binary strin
 
 type passingCheck struct{}
 
-func (p passingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependency) *health.CheckFailure {
+func (p passingCheck) Run(_ context.Context, _ runner.Runner) *health.CheckFailure {
 	return nil
 }
 
 type failingCheck struct{}
 
-func (p failingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependency) *health.CheckFailure {
+func (p failingCheck) Run(_ context.Context, _ runner.Runner) *health.CheckFailure {
 	return &health.CheckFailure{
 		Message: "very broken",
 		Fix:     &health.Fix{Description: "fix me please", Command: "rm -rf /"},

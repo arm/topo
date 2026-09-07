@@ -68,7 +68,10 @@ func HostRequiredDependencies() []Dependency {
 		ID:     DependencyID("ssh"),
 		Binary: "ssh",
 		Label:  "OpenSSH",
-		Checks: []Check{BinaryExists{}, OpenSSHAvailable{}},
+		Checks: []Check{
+			BinaryExists{Binary: "ssh"},
+			OpenSSHAvailable{SSHBinary: "ssh"},
+		},
 	}
 
 	docker := Dependency{
@@ -77,6 +80,7 @@ func HostRequiredDependencies() []Dependency {
 		Label:  "Container Engine",
 		Checks: []Check{
 			BinaryExists{
+				Binary: "docker",
 				Fix: &Fix{
 					Description: "Install a supported container engine. See " + containerEngineInstallURL,
 				},
@@ -123,6 +127,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 		Label:  "Container Engine",
 		Checks: []Check{
 			BinaryExists{
+				Binary: "docker",
 				Fix: &Fix{
 					Description: "Install a supported container engine. See " + containerEngineInstallURL,
 				},
@@ -144,6 +149,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 		HardwarePrerequisites: []HardwareCapability{Remoteproc},
 		Checks: []Check{
 			BinaryExists{
+				Binary:   "remoteproc-runtime",
 				Severity: SeverityWarning,
 				Fix: &Fix{
 					Description: "Install the Remoteproc Runtime",
@@ -160,6 +166,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 		HardwarePrerequisites: []HardwareCapability{Remoteproc},
 		Checks: []Check{
 			BinaryExists{
+				Binary:   "containerd-shim-remoteproc-v1",
 				Severity: SeverityWarning,
 				Fix: &Fix{
 					Description: "Install the Remoteproc Runtime",
@@ -173,7 +180,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 		ID:     DependencyID("lscpu"),
 		Binary: "lscpu",
 		Label:  "Hardware Info",
-		Checks: []Check{BinaryExists{}},
+		Checks: []Check{BinaryExists{Binary: "lscpu"}},
 	}
 
 	return []Dependency{
@@ -219,7 +226,7 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 
 		var failure *CheckFailure
 		for _, check := range dep.Checks {
-			failure = check.Run(ctx, runner, dep)
+			failure = check.Run(ctx, runner)
 			if failure != nil {
 				break
 			}
