@@ -35,7 +35,7 @@ func TestClone(t *testing.T) {
 	t.Run("prints summary with next steps", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
-		mockSource := mockSourceWithContent(t, `
+		mockSource := mockSourceWithComposeFile(t, `
 services:
   app:
     image: nginx:alpine
@@ -55,7 +55,7 @@ services:
 	t.Run("clones source into destination directory", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
-		mockSource := mockSourceWithContent(t, `
+		mockSource := mockSourceWithComposeFile(t, `
 services:
   app:
     image: nginx:alpine
@@ -85,7 +85,7 @@ x-topo:
     GREETING:
       required: true
 `
-		mockSource := mockSourceWithContent(t, composeFileContents)
+		mockSource := mockSourceWithComposeFile(t, composeFileContents)
 		provider := arguments.NewInteractiveProvider(strings.NewReader("\n"), &bytes.Buffer{})
 
 		err := project.Clone(destDir, mockSource, arguments.NewStrictProviderChain(provider))
@@ -98,7 +98,7 @@ x-topo:
 	t.Run("removes destination directory when parameter resolution fails", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
-		mockSource := mockSourceWithContent(t, `
+		mockSource := mockSourceWithComposeFile(t, `
 services:
   app:
     build:
@@ -117,20 +117,55 @@ x-topo:
 		_, statErr := os.Stat(destDir)
 		assert.True(t, os.IsNotExist(statErr))
 	})
+
+	t.Run("can configure compose.yml projects", func(t *testing.T) {
+		dir := t.TempDir()
+		destDir := filepath.Join(dir, "demo")
+		mockSource := mockSourceWithContent(t, map[string]string{
+			"compose.yml": `
+services:
+  app:
+    build:
+      args:
+        GREETING: ""
+x-topo:
+  parameters:
+    GREETING:
+      description: "Greeting"
+      required: true
+`,
+		})
+
+		err := project.Clone(destDir, mockSource, arguments.NewStaticProvider(arguments.ResolvedArg{
+			Name:  "GREETING",
+			Value: "a-value",
+		}))
+
+		require.NoError(t, err)
+	})
 }
 
-func mockSourceWithContent(t *testing.T, content string) *mockProjectSource {
+func mockSourceWithContent(t *testing.T, files map[string]string) *mockProjectSource {
 	t.Helper()
 	mockSource := &mockProjectSource{}
 	mockSource.On("CopyTo", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		destDir := args.String(0)
 		testutil.RequireMkdirAll(t, destDir)
-		testutil.RequireWriteComposeFile(t, destDir, content)
+		for filename, content := range files {
+			testutil.RequireWriteFile(t, filepath.Join(destDir, filename), content)
+		}
 	})
 	t.Cleanup(func() {
 		mockSource.AssertExpectations(t)
 	})
 	return mockSource
+}
+
+func mockSourceWithComposeFile(t *testing.T, content string) *mockProjectSource {
+	t.Helper()
+	return mockSourceWithContent(t, map[string]string{
+		compose.DefaultFileName(): content,
+	})
 }
 
 func TestResolveAndApplyArgs(t *testing.T) {

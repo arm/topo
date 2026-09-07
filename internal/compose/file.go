@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
@@ -34,7 +35,7 @@ func RequireFile(composeFile string) (string, error) {
 }
 
 // FindDefaultFile returns the first existing default compose file.
-func FindDefaultFile() (string, error) {
+func FindDefaultFile(dir string) (string, error) {
 	type defaultFileCandidate struct {
 		name string
 		info os.FileInfo
@@ -42,16 +43,17 @@ func FindDefaultFile() (string, error) {
 	candidates := []defaultFileCandidate{}
 
 	for _, fileName := range defaultFileNames {
-		info, err := os.Stat(fileName)
+		path := filepath.Join(dir, fileName)
+		info, err := os.Stat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
 			}
-			return "", fmt.Errorf("failed to access compose file %s: %w", fileName, err)
+			return "", fmt.Errorf("failed to access compose file %s: %w", path, err)
 		}
 
 		candidates = append(candidates, defaultFileCandidate{
-			name: fileName,
+			name: path,
 			info: info,
 		})
 	}

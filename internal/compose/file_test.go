@@ -50,46 +50,46 @@ func TestRequireFile(t *testing.T) {
 
 func TestFindDefaultFile(t *testing.T) {
 	t.Run("returns compose.yaml when it exists", func(t *testing.T) {
-		t.Chdir(t.TempDir())
-		testutil.RequireWriteFile(t, "compose.yaml", "")
+		dir := t.TempDir()
+		testutil.RequireWriteFile(t, filepath.Join(dir, "compose.yaml"), "")
 
-		got, err := compose.FindDefaultFile()
+		got, err := compose.FindDefaultFile(dir)
 
 		require.NoError(t, err)
-		assert.Equal(t, "compose.yaml", got)
+		assert.Regexp(t, "compose.yaml$", got)
 	})
 
 	t.Run("falls back to compose.yml", func(t *testing.T) {
-		t.Chdir(t.TempDir())
-		testutil.RequireWriteFile(t, "compose.yml", "")
+		dir := t.TempDir()
+		testutil.RequireWriteFile(t, filepath.Join(dir, "compose.yml"), "")
 
-		got, err := compose.FindDefaultFile()
+		got, err := compose.FindDefaultFile(dir)
 
 		require.NoError(t, err)
-		assert.Equal(t, "compose.yml", got)
+		assert.Regexp(t, "compose.yml$", got)
 	})
 
 	t.Run("warns when multiple default compose files exist", func(t *testing.T) {
-		t.Chdir(t.TempDir())
-		testutil.RequireWriteFile(t, "compose.yaml", "")
-		testutil.RequireWriteFile(t, "compose.yml", "")
+		dir := t.TempDir()
+		testutil.RequireWriteFile(t, filepath.Join(dir, "compose.yaml"), "")
+		testutil.RequireWriteFile(t, filepath.Join(dir, "compose.yml"), "")
 		var logOutput bytes.Buffer
 		logger.SetOptions(logger.Options{Output: &logOutput, Format: term.Plain})
 		t.Cleanup(func() {
 			logger.SetOptions(logger.Options{})
 		})
 
-		got, err := compose.FindDefaultFile()
+		got, err := compose.FindDefaultFile(dir)
 
 		require.NoError(t, err)
-		assert.Equal(t, "compose.yaml", got)
-		assert.Contains(t, logOutput.String(), "found multiple compose files: compose.yaml, compose.yml; using compose.yaml")
+		assert.Regexp(t, "compose.yaml$", got)
+		assert.Contains(t, logOutput.String(), "found multiple compose files")
 	})
 
 	t.Run("returns error when no default compose file exists", func(t *testing.T) {
-		t.Chdir(t.TempDir())
+		dir := t.TempDir()
 
-		got, err := compose.FindDefaultFile()
+		got, err := compose.FindDefaultFile(dir)
 
 		require.Error(t, err)
 		assert.Empty(t, got)
