@@ -14,7 +14,7 @@ const targetDestinationPlaceholder = "TARGET_DESTINATION"
 
 func replaceNonDeterministicDestination(t *testing.T, out string) string {
 	t.Helper()
-	var obj map[string]map[string]interface{}
+	var obj map[string]map[string]any
 	err := json.Unmarshal([]byte(out), &obj)
 	require.NoError(t, err)
 

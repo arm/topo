@@ -70,10 +70,7 @@ type CheckHostOptions struct {
 
 func CheckHost(opts CheckHostOptions) HostReport {
 	r := runner.NewLocal()
-	deps := HostRequiredDependencies()
-	if opts.SkipVersionChecks {
-		deps = RemoveVersionChecks(deps)
-	}
+	deps := HostRequiredDependencies(opts.SkipVersionChecks)
 	dependencyStatuses := PerformChecks(context.Background(), deps, r)
 	return GenerateHostReport(dependencyStatuses)
 }
@@ -189,21 +186,26 @@ func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	for _, ds := range statuses {
 		hc := HealthCheck{Name: ds.Dependency.Label}
-		if ds.Error == nil {
+		if ds.Result.Failure == nil {
 			hc.Status = CheckStatusOK
-			hc.Value = ds.Dependency.Binary
+			hc.Value = ds.Result.SuccessValue
 		} else {
-			if _, ok := errors.AsType[WarningError](ds.Error); ok {
-				hc.Status = CheckStatusWarning
-			} else if _, ok := errors.AsType[InfoError](ds.Error); ok {
-				hc.Status = CheckStatusInfo
-			} else {
-				hc.Status = CheckStatusError
-			}
-			hc.Value = ds.Error.Error()
-			hc.Fix = ds.Fix
+			hc.Status = checkStatusFromSeverity(ds.Result.Failure.Severity)
+			hc.Value = ds.Result.Failure.Message
+			hc.Fix = ds.Result.Failure.Fix
 		}
 		res = append(res, hc)
 	}
 	return res
+}
+
+func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {
+	switch severity {
+	case SeverityWarning:
+		return CheckStatusWarning
+	case SeverityInfo:
+		return CheckStatusInfo
+	default:
+		return CheckStatusError
+	}
 }

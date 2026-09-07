@@ -3,181 +3,90 @@ package health_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/version"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestBinaryExists(t *testing.T) {
-	t.Run("wraps error as WarningError when severity is warning", func(t *testing.T) {
-		check := health.BinaryExists{
-			Severity: health.SeverityWarning,
-		}
-		dependency := health.Dependency{Binary: "nonexistent"}
-		runner := &runner.Fake{}
-		ctx := context.Background()
+func TestCheckTopoIsUpToDate(t *testing.T) {
+	t.Run("passes for development builds", func(t *testing.T) {
+		originalVersion := version.Version
+		version.Version = version.Dev
+		t.Cleanup(func() { version.Version = originalVersion })
 
-		_, err := check.Run(ctx, runner, dependency)
+		got := health.CheckTopoIsUpToDate(context.Background())
 
-		wantErr := health.WarningError{Err: runner.BinaryExists(ctx, dependency.Binary)}
-		assert.Equal(t, wantErr, err)
+		assert.Nil(t, got)
 	})
 }
 
-func TestRemoveVersionChecks(t *testing.T) {
-	t.Run("removes checks of type VersionMatches", func(t *testing.T) {
-		dep := health.Dependency{
-			Binary: "mixed",
-			Label:  "Mixed",
-			Checks: []health.Check{health.BinaryExists{}, health.VersionMatches{}},
-		}
-
-		got := health.RemoveVersionChecks([]health.Dependency{dep})
-
-		assert.Len(t, got, 1)
-		assert.Equal(t, got[0].Checks, []health.Check{health.BinaryExists{}})
-	})
-}
-
-func TestVersionMatches(t *testing.T) {
+func TestCheckOpenSSHAvailable(t *testing.T) {
 	ctx := context.Background()
-	dep := health.Dependency{}
-	r := &runner.Fake{}
-
-	t.Run("returns error when version is outdated", func(t *testing.T) {
-		check := health.VersionMatches{
-			FetchLatest: func(ctx context.Context) (string, error) {
-				return "2.0.0", nil
-			},
-			CurrentVersion: "1.0.0",
-		}
-
-		_, err := check.Run(ctx, r, dep)
-
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "1.0.0")
-		assert.Contains(t, err.Error(), "2.0.0")
-	})
-
-	t.Run("returns nil when version matches latest", func(t *testing.T) {
-		check := health.VersionMatches{
-			FetchLatest: func(ctx context.Context) (string, error) {
-				return "2.0.0", nil
-			},
-			CurrentVersion: "2.0.0",
-		}
-
-		fix, err := check.Run(ctx, r, dep)
-
-		assert.NoError(t, err)
-		assert.Empty(t, fix)
-	})
-
-	t.Run("degrades gracefully on fetch error", func(t *testing.T) {
-		check := health.VersionMatches{
-			FetchLatest: func(ctx context.Context) (string, error) {
-				return "", fmt.Errorf("connection refused")
-			},
-		}
-
-		fix, err := check.Run(ctx, r, dep)
-
-		assert.NoError(t, err)
-		assert.Empty(t, fix)
-	})
-}
-
-func TestOpenSSHAvailable(t *testing.T) {
-	ctx := context.Background()
-	dependency := health.Dependency{Binary: "ssh", Label: "OpenSSH"}
-
 	t.Run("accepts OpenSSH", func(t *testing.T) {
-		check := health.OpenSSHAvailable{}
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"ssh -V": {Stderr: "OpenSSH_9.9p1, OpenSSL 3.4.0"},
-		}}
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{"ssh -V": {Stderr: "OpenSSH_9.9p1, OpenSSL 3.4.0"}}}
 
-		fix, err := check.Run(ctx, r, dependency)
+		got := health.CheckOpenSSHAvailable(ctx, r, "ssh")
+		var want *health.DependencyCheckFailure
 
-		assert.NoError(t, err)
-		assert.Nil(t, fix)
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("rejects another SSH implementation", func(t *testing.T) {
-		check := health.OpenSSHAvailable{}
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"ssh -V": {Stderr: "Dropbear v2025.88"},
-		}}
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{"ssh -V": {Stderr: "Dropbear v2025.88"}}}
 
-		fix, err := check.Run(ctx, r, dependency)
+		got := health.CheckOpenSSHAvailable(ctx, r, "ssh")
+		want := &health.DependencyCheckFailure{
+			Message: `"ssh" does not resolve to OpenSSH: Dropbear v2025.88`,
+			Fix:     &health.Fix{Description: "Install OpenSSH and ensure its ssh executable is first on PATH"},
+		}
 
-		assert.EqualError(t, err, `"ssh" does not resolve to OpenSSH: Dropbear v2025.88`)
-		assert.Equal(t, &health.Fix{
-			Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
-		}, fix)
+		assert.Equal(t, want, got)
 	})
 
-	t.Run("returns an error when the version cannot be checked", func(t *testing.T) {
-		check := health.OpenSSHAvailable{}
+	t.Run("fails when the version cannot be checked", func(t *testing.T) {
 		versionErr := errors.New("version check failed")
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"ssh -V": {Err: versionErr},
-		}}
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{"ssh -V": {Err: versionErr}}}
 
-		fix, err := check.Run(ctx, r, dependency)
+		got := health.CheckOpenSSHAvailable(ctx, r, "ssh")
+		want := &health.DependencyCheckFailure{Message: versionErr.Error()}
 
-		assert.ErrorIs(t, err, versionErr)
-		assert.Nil(t, fix)
+		assert.Equal(t, want, got)
 	})
 }
 
-func TestDockerComposeCompatible(t *testing.T) {
+func TestCheckDockerComposeMinVersion(t *testing.T) {
 	ctx := context.Background()
-	dep := health.Dependency{}
 
 	t.Run("accepts Docker Compose at the minimum version", func(t *testing.T) {
-		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
-		runner := &runner.Fake{
-			Commands: map[string]runner.FakeResult{
-				"docker compose version --format json": {Output: `{"version": "2.0.0"}`},
-			},
-		}
+		runner := &runner.Fake{Commands: map[string]runner.FakeResult{"docker compose version --format json": {Output: `{"version": "2.0.0"}`}}}
 
-		fix, err := check.Run(ctx, runner, dep)
+		got := health.CheckDockerComposeMinVersion(ctx, runner, "2.0.0")
+		var want *health.DependencyCheckFailure
 
-		assert.NoError(t, err)
-		assert.Nil(t, fix)
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("accepts Docker Compose newer than the minimum version", func(t *testing.T) {
-		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
-		runner := &runner.Fake{
-			Commands: map[string]runner.FakeResult{
-				"docker compose version --format json": {Output: `{"version": "5.2.0"}`},
-			},
-		}
+		runner := &runner.Fake{Commands: map[string]runner.FakeResult{"docker compose version --format json": {Output: `{"version": "5.2.0"}`}}}
 
-		fix, err := check.Run(ctx, runner, dep)
+		got := health.CheckDockerComposeMinVersion(ctx, runner, "2.0.0")
+		var want *health.DependencyCheckFailure
 
-		assert.NoError(t, err)
-		assert.Nil(t, fix)
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {
-		check := health.DockerComposeMinVersion{MinVersion: "2.0.0"}
-		runner := &runner.Fake{
-			Commands: map[string]runner.FakeResult{
-				"docker compose version --format json": {Output: `{"version": "v1.9.0"}`},
-			},
+		runner := &runner.Fake{Commands: map[string]runner.FakeResult{"docker compose version --format json": {Output: `{"version": "v1.9.0"}`}}}
+
+		got := health.CheckDockerComposeMinVersion(ctx, runner, "2.0.0")
+		want := &health.DependencyCheckFailure{
+			Message: "installed docker compose version v1.9.0 is older than required version 2.0.0",
+			Fix:     &health.Fix{Description: "Upgrade Docker Compose to version 2.0.0 or later. See https://github.com/arm/topo#install-a-container-engine"},
 		}
 
-		fix, err := check.Run(ctx, runner, dep)
-
-		assert.EqualError(t, err, "installed docker compose version v1.9.0 is older than required version 2.0.0")
-		assert.Contains(t, fix.Description, "Upgrade Docker Compose")
+		assert.Equal(t, want, got)
 	})
 }
