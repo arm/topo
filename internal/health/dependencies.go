@@ -107,7 +107,7 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 		ID:    DependencyID("docker-compose"),
 		Label: "Docker Compose",
 		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
-			if _, _, err := r.Run(ctx, "docker compose"); err != nil {
+			if _, _, err := r.Run(ctx, "docker-compose"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
@@ -117,7 +117,7 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 			if failure := CheckDockerComposeMinVersion(ctx, r, "2.21.0"); failure != nil {
 				return DependencyCheckResult{Failure: failure}
 			}
-			return DependencyCheckResult{SuccessValue: "docker compose"}
+			return DependencyCheckResult{SuccessValue: "docker-compose"}
 		},
 		SoftwarePrerequisites: []DependencyID{docker.ID},
 	}
