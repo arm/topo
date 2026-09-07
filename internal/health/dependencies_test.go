@@ -226,5 +226,5 @@ func (p passingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependenc
 type failingCheck struct{}
 
 func (p failingCheck) Run(_ context.Context, _ runner.Runner, _ health.Dependency) (*health.Fix, error) {
-	return &health.Fix{Description: "fix me please", Command: "rm -rf /"}, errors.New("very broken")
+	return &health.Fix{Description: "fix me please", Command: "echo fixed"}, errors.New("very broken")
 }
