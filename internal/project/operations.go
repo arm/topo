@@ -33,19 +33,19 @@ func NewClone(path string, src Source, provider parameter.Provider) operation.Se
 }
 
 func Configure(composeFilePath string, provider parameter.Provider) error {
-	provided, err := collectValues(composeFilePath, provider)
+	values, err := collectValues(composeFilePath, provider)
 	if err != nil {
 		return fmt.Errorf("failed to collect parameter values: %w", err)
 	}
 
-	if len(provided) == 0 {
+	if len(values) == 0 {
 		return nil
 	}
 
-	return applyParameters(composeFilePath, provided)
+	return applyParameterValues(composeFilePath, values)
 }
 
-func applyParameters(composeFilePath string, provided parameter.Values) error {
+func applyParameterValues(composeFilePath string, values parameter.Values) error {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return err
@@ -57,9 +57,9 @@ func applyParameters(composeFilePath string, provided parameter.Values) error {
 		return err
 	}
 
-	err = compose.ApplyParameters(yamlNodes, provided)
+	err = compose.ApplyParameterValues(yamlNodes, values)
 	if err != nil {
-		return fmt.Errorf("error applying parameters to project file: %w", err)
+		return fmt.Errorf("error applying parameter values to project file: %w", err)
 	}
 
 	outFile, err := os.Create(composeFilePath)
@@ -69,7 +69,7 @@ func applyParameters(composeFilePath string, provided parameter.Values) error {
 	defer func() { _ = outFile.Close() }()
 
 	if err := compose.WriteNode(yamlNodes, outFile); err != nil {
-		return fmt.Errorf("failed to write compose file after applying parameters: %w", err)
+		return fmt.Errorf("failed to write compose file after applying parameter values: %w", err)
 	}
 	return nil
 }
@@ -85,11 +85,7 @@ func collectValues(composeFilePath string, provider parameter.Provider) (paramet
 	if err != nil {
 		return nil, err
 	}
-	provided, err := provider.Provide(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
-	if err != nil {
-		return nil, err
-	}
-	return provided, nil
+	return provider.Provide(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
 }
 
 func toDefinitions(parameters []Parameter, currentValues map[string][]string) []parameter.Definition {

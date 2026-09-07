@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/parameter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -49,7 +50,7 @@ services:
 	})
 }
 
-func TestApplyParameters(t *testing.T) {
+func TestApplyParameterValues(t *testing.T) {
 	t.Run("updates all matching services when a parameter matches", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
@@ -64,9 +65,9 @@ services:
       args:
         FOO: elephant
 `)
-		parameters := map[string]string{"FOO": "baz"}
+		values := parameter.Values{"FOO": "baz"}
 
-		err := compose.ApplyParameters(project, parameters)
+		err := compose.ApplyParameterValues(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -101,9 +102,9 @@ services:
     build:
       context: .
 `)
-		parameters := map[string]string{"FOO": "baz"}
+		values := parameter.Values{"FOO": "baz"}
 
-		err := compose.ApplyParameters(project, parameters)
+		err := compose.ApplyParameterValues(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -135,7 +136,7 @@ services:
 `
 		project := yamlToNode(t, yamlContents)
 
-		err := compose.ApplyParameters(project, nil)
+		err := compose.ApplyParameterValues(project, nil)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -153,12 +154,12 @@ services:
         FOO: foo
         BAR: bar
 `)
-		parameters := map[string]string{
+		values := parameter.Values{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyParameters(project, parameters)
+		err := compose.ApplyParameterValues(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -184,9 +185,9 @@ services:
       args:
         FOO: foo
 `)
-		parameters := map[string]string{"BAR": "baz"}
+		values := parameter.Values{"BAR": "baz"}
 
-		err := compose.ApplyParameters(project, parameters)
+		err := compose.ApplyParameterValues(project, values)
 
 		require.NoError(t, err)
 	})
@@ -202,9 +203,9 @@ services:
       args:
         PLATFORM: old-value
 `)
-		parameters := map[string]string{"PLATFORM": "stm32mp257"}
+		values := parameter.Values{"PLATFORM": "stm32mp257"}
 
-		err := compose.ApplyParameters(project, parameters)
+		err := compose.ApplyParameterValues(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -230,12 +231,12 @@ services:
       context: .
       args: ["FOO=foo", "BAR"]
 `)
-		parameters := map[string]string{
+		values := parameter.Values{
 			"FOO": "new-foo",
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyParameters(project, parameters)
+		err := compose.ApplyParameterValues(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)

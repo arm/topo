@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/parameter"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,19 +28,19 @@ func ReadNode(composeFile io.Reader) (*yaml.Node, error) {
 	return doc, nil
 }
 
-func ApplyParameters(root *yaml.Node, parameters map[string]string) error {
-	if len(parameters) == 0 {
-		logger.Info("no parameters to apply")
+func ApplyParameterValues(root *yaml.Node, values parameter.Values) error {
+	if len(values) == 0 {
+		logger.Info("no parameter values to apply")
 		return nil
 	}
 
 	services := find(root, "services")
 	if services == nil {
-		logger.Info("no services to apply parameters to")
+		logger.Info("no services to apply parameter values to")
 		return nil
 	}
 
-	used := make(map[string]bool, len(parameters))
+	used := make(map[string]bool, len(values))
 
 	for i := 0; i < len(services.Content); i += 2 {
 		svc := services.Content[i+1]
@@ -57,15 +58,15 @@ func ApplyParameters(root *yaml.Node, parameters map[string]string) error {
 
 		switch args.Kind {
 		case yaml.MappingNode:
-			applyArgsMappingNode(args, parameters, used)
+			applyArgsMappingNode(args, values, used)
 		case yaml.SequenceNode:
-			applyArgsSequenceNode(args, parameters, used)
+			applyArgsSequenceNode(args, values, used)
 		default:
 			return fmt.Errorf("unsupported YAML node kind for build.args: %v", args.Kind)
 		}
 	}
 
-	for name := range parameters {
+	for name := range values {
 		if !used[name] {
 			logger.Warn(fmt.Sprintf("parameter %q was provided but not found in any service build args", name))
 		}
@@ -87,20 +88,20 @@ func WriteNode(project *yaml.Node, target io.Writer) error {
 	return nil
 }
 
-func applyArgsMappingNode(args *yaml.Node, parameters map[string]string, used map[string]bool) {
+func applyArgsMappingNode(args *yaml.Node, values parameter.Values, used map[string]bool) {
 	for j := 0; j < len(args.Content); j += 2 {
 		key := args.Content[j]
-		value := args.Content[j+1]
-		for param, provided := range parameters {
+		argValue := args.Content[j+1]
+		for param, value := range values {
 			if key.Value == param {
-				value.Value = provided
+				argValue.Value = value
 				used[param] = true
 			}
 		}
 	}
 }
 
-func applyArgsSequenceNode(args *yaml.Node, parameters map[string]string, used map[string]bool) {
+func applyArgsSequenceNode(args *yaml.Node, values parameter.Values, used map[string]bool) {
 	for _, node := range args.Content {
 		name := node.Value
 
@@ -109,9 +110,9 @@ func applyArgsSequenceNode(args *yaml.Node, parameters map[string]string, used m
 		if eq != -1 {
 			name = name[:eq]
 		}
-		for param, provided := range parameters {
+		for param, value := range values {
 			if name == param {
-				node.Value = fmt.Sprintf("%s=%s", param, provided)
+				node.Value = fmt.Sprintf("%s=%s", param, value)
 				used[param] = true
 			}
 		}
