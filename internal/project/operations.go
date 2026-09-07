@@ -7,24 +7,24 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/arm/topo/internal/arguments"
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/operation"
+	"github.com/arm/topo/internal/parameter"
 )
 
-func Clone(path string, src Source, argProvider arguments.Provider) error {
-	return NewClone(path, src, argProvider).Run(nil)
+func Clone(path string, src Source, resolver parameter.Resolver) error {
+	return NewClone(path, src, resolver).Run(nil)
 }
 
-func NewClone(path string, src Source, argProvider arguments.Provider) operation.Sequence {
+func NewClone(path string, src Source, resolver parameter.Resolver) operation.Sequence {
 	return operation.NewSequence(
 		copyProjectOperation{
 			path: path,
 			src:  src,
 		},
-		resolveArgsOperation{
-			path:        path,
-			argProvider: argProvider,
+		configureOperation{
+			path:     path,
+			resolver: resolver,
 		},
 		printSummary{
 			path: path,
@@ -32,20 +32,20 @@ func NewClone(path string, src Source, argProvider arguments.Provider) operation
 	)
 }
 
-func ResolveAndApplyArgs(composeFilePath string, argProvider arguments.Provider) error {
-	resolvedArgs, err := resolveArgs(composeFilePath, argProvider)
+func Configure(composeFilePath string, resolver parameter.Resolver) error {
+	values, err := collectValues(composeFilePath, resolver)
 	if err != nil {
-		return fmt.Errorf("failed to resolve parameters: %w", err)
+		return fmt.Errorf("failed to collect parameter values: %w", err)
 	}
 
-	if len(resolvedArgs) == 0 {
+	if len(values) == 0 {
 		return nil
 	}
 
-	return applyArgs(composeFilePath, resolvedArgs)
+	return applyParameterValues(composeFilePath, values)
 }
 
-func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
+func applyParameterValues(composeFilePath string, values parameter.Values) error {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return err
@@ -57,9 +57,9 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 		return err
 	}
 
-	err = compose.ApplyArgs(yamlNodes, argsToMap(args))
+	err = compose.ApplyParameterValues(yamlNodes, values)
 	if err != nil {
-		return fmt.Errorf("error applying parameters to project file: %w", err)
+		return fmt.Errorf("error applying parameter values to project file: %w", err)
 	}
 
 	outFile, err := os.Create(composeFilePath)
@@ -69,36 +69,37 @@ func applyArgs(composeFilePath string, args []arguments.ResolvedArg) error {
 	defer func() { _ = outFile.Close() }()
 
 	if err := compose.WriteNode(yamlNodes, outFile); err != nil {
-		return fmt.Errorf("failed to write compose file after applying parameters: %w", err)
+		return fmt.Errorf("failed to write compose file after applying parameter values: %w", err)
 	}
 	return nil
 }
 
-func resolveArgs(composeFilePath string, argProvider arguments.Provider) ([]arguments.ResolvedArg, error) {
+func collectValues(composeFilePath string, resolver parameter.Resolver) (parameter.Values, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't read compose file: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
-	p, err := FromContent(f)
+	project, err := FromContent(f)
 	if err != nil {
 		return nil, err
 	}
-	resolvedParameters, err := Resolve(p, argProvider)
-	if err != nil {
-		return nil, err
-	}
-
-	return resolvedParameters, nil
+	return resolver.Resolve(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
 }
 
-func argsToMap(args []arguments.ResolvedArg) map[string]string {
-	result := map[string]string{}
-	for _, arg := range args {
-		result[arg.Name] = arg.Value
+func toDefinitions(parameters []Parameter, currentValues map[string][]string) []parameter.Definition {
+	definitions := make([]parameter.Definition, len(parameters))
+	for i, definition := range parameters {
+		definitions[i] = parameter.Definition{
+			Name:          definition.Name,
+			Description:   definition.Description,
+			Required:      definition.Required,
+			Example:       definition.Example,
+			CurrentValues: currentValues[definition.Name],
+		}
 	}
-	return result
+	return definitions
 }
 
 type copyProjectOperation struct {
@@ -120,18 +121,18 @@ func (o copyProjectOperation) Run(_ io.Writer) error {
 	return nil
 }
 
-type resolveArgsOperation struct {
-	path        string
-	argProvider arguments.Provider
+type configureOperation struct {
+	path     string
+	resolver parameter.Resolver
 }
 
-func (o resolveArgsOperation) Description() string {
+func (o configureOperation) Description() string {
 	return "Configure project"
 }
 
-func (o resolveArgsOperation) Run(_ io.Writer) error {
+func (o configureOperation) Run(_ io.Writer) error {
 	composeFile := filepath.Join(o.path, compose.DefaultFileName())
-	if err := ResolveAndApplyArgs(composeFile, o.argProvider); err != nil {
+	if err := Configure(composeFile, o.resolver); err != nil {
 		if rmErr := os.RemoveAll(o.path); rmErr != nil {
 			return errors.Join(err, rmErr)
 		}
