@@ -41,9 +41,13 @@ type CommandSuccessful struct {
 }
 
 func (c CommandSuccessful) Run(ctx context.Context, r runner.Runner) *CheckFailure {
-	_, _, err := r.Run(ctx, c.Cmd)
+	return CheckCommandSuccessful(ctx, r, c.Cmd, c.Fix)
+}
+
+func CheckCommandSuccessful(ctx context.Context, r runner.Runner, command string, fix *Fix) *CheckFailure {
+	_, _, err := r.Run(ctx, command)
 	if err != nil {
-		return &CheckFailure{Message: err.Error(), Fix: c.Fix}
+		return &CheckFailure{Message: err.Error(), Fix: fix}
 	}
 	return nil
 }
@@ -55,8 +59,12 @@ type BinaryExists struct {
 }
 
 func (b BinaryExists) Run(ctx context.Context, r runner.Runner) *CheckFailure {
-	if err := r.BinaryExists(ctx, b.Binary); err != nil {
-		return &CheckFailure{Severity: b.Severity, Message: err.Error(), Fix: b.Fix}
+	return CheckBinaryExists(ctx, r, b.Binary, b.Severity, b.Fix)
+}
+
+func CheckBinaryExists(ctx context.Context, r runner.Runner, binary string, severity CheckSeverity, fix *Fix) *CheckFailure {
+	if err := r.BinaryExists(ctx, binary); err != nil {
+		return &CheckFailure{Severity: severity, Message: err.Error(), Fix: fix}
 	}
 	return nil
 }
@@ -68,23 +76,27 @@ type VersionMatches struct {
 }
 
 func (v VersionMatches) Run(ctx context.Context, _ runner.Runner) *CheckFailure {
-	latest, err := v.FetchLatest(ctx)
+	return CheckVersionMatches(ctx, v.CurrentVersion, v.FetchLatest, v.BuildFix)
+}
+
+func CheckVersionMatches(ctx context.Context, currentVersion string, fetchLatest func(context.Context) (string, error), buildFix func() Fix) *CheckFailure {
+	latest, err := fetchLatest(ctx)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
 		return nil
 	}
-	if latest == v.CurrentVersion {
+	if latest == currentVersion {
 		return nil
 	}
 
 	fix := Fix{}
-	if v.BuildFix != nil {
-		fix = v.BuildFix()
+	if buildFix != nil {
+		fix = buildFix()
 	}
 
 	return &CheckFailure{
 		Severity: SeverityInfo,
-		Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", v.CurrentVersion, latest),
+		Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", currentVersion, latest),
 		Fix:      &fix,
 	}
 }
@@ -94,13 +106,17 @@ type OpenSSHAvailable struct {
 }
 
 func (o OpenSSHAvailable) Run(ctx context.Context, r runner.Runner) *CheckFailure {
-	_, stderr, err := r.Run(ctx, o.SSHBinary+" -V")
+	return CheckOpenSSHAvailable(ctx, r, o.SSHBinary)
+}
+
+func CheckOpenSSHAvailable(ctx context.Context, r runner.Runner, sshBinary string) *CheckFailure {
+	_, stderr, err := r.Run(ctx, sshBinary+" -V")
 	if err != nil {
 		return &CheckFailure{Message: err.Error()}
 	}
 	if !strings.Contains(stderr, "OpenSSH_") {
 		return &CheckFailure{
-			Message: fmt.Sprintf("%q does not resolve to OpenSSH: %s", o.SSHBinary, stderr),
+			Message: fmt.Sprintf("%q does not resolve to OpenSSH: %s", sshBinary, stderr),
 			Fix: &Fix{
 				Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
 			},
@@ -114,6 +130,10 @@ type DockerComposeMinVersion struct {
 }
 
 func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner) *CheckFailure {
+	return CheckDockerComposeMinVersion(ctx, r, c.MinVersion)
+}
+
+func CheckDockerComposeMinVersion(ctx context.Context, r runner.Runner, minVersion string) *CheckFailure {
 	stdout, _, err := r.Run(ctx, "docker compose version --format json")
 	if err != nil {
 		return &CheckFailure{Message: err.Error()}
@@ -127,11 +147,11 @@ func (c DockerComposeMinVersion) Run(ctx context.Context, r runner.Runner) *Chec
 		return &CheckFailure{Message: err.Error()}
 	}
 
-	if !version.IsAtLeastVersion(output.Version, c.MinVersion) {
+	if !version.IsAtLeastVersion(output.Version, minVersion) {
 		return &CheckFailure{
-			Message: fmt.Sprintf("installed docker compose version %s is older than required version %s", output.Version, c.MinVersion),
+			Message: fmt.Sprintf("installed docker compose version %s is older than required version %s", output.Version, minVersion),
 			Fix: &Fix{
-				Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later. See %s", c.MinVersion, containerEngineInstallURL),
+				Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later. See %s", minVersion, containerEngineInstallURL),
 			},
 		}
 	}
