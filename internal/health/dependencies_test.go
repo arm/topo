@@ -84,7 +84,7 @@ func TestPerformChecks(t *testing.T) {
 		})
 
 		t.Run("when a check fails", func(t *testing.T) {
-			check := health.CheckFn(failingCheck)
+			check := health.DependencyCheckFn(failingCheck)
 			dep := health.Dependency{Label: "bar", Check: check}
 			deps := []health.Dependency{dep}
 

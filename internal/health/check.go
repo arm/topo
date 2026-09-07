@@ -31,11 +31,6 @@ const (
 	SeverityInfo
 )
 
-func CheckCommandSuccessful(ctx context.Context, r runner.Runner, command string) error {
-	_, _, err := r.Run(ctx, command)
-	return err
-}
-
 func CheckTopoIsUpToDate(ctx context.Context) *CheckFailure {
 	if version.Version == version.Dev {
 		return nil

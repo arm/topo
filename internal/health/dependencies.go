@@ -73,7 +73,7 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
 				}}
 			}
-			if err := CheckCommandSuccessful(ctx, r, "docker info"); err != nil {
+			if _, _, err := r.Run(ctx, "docker info"); err != nil {
 				return CheckResult{Failure: &CheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
@@ -88,7 +88,7 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 		ID:    DependencyID("docker-compose"),
 		Label: "Docker Compose",
 		Check: func(ctx context.Context, r runner.Runner) CheckResult {
-			if err := CheckCommandSuccessful(ctx, r, "docker compose"); err != nil {
+			if _, _, err := r.Run(ctx, "docker compose"); err != nil {
 				return CheckResult{Failure: &CheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
@@ -118,7 +118,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
 				}}
 			}
-			if err := CheckCommandSuccessful(ctx, r, "docker info"); err != nil {
+			if _, _, err := r.Run(ctx, "docker info"); err != nil {
 				return CheckResult{Failure: &CheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),

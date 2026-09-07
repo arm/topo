@@ -11,17 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckCommandSuccessful(t *testing.T) {
-	t.Run("returns an error when the command fails", func(t *testing.T) {
-		err := errors.New("command failed")
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{"command": {Err: err}}}
-
-		got := health.CheckCommandSuccessful(context.Background(), r, "command")
-
-		assert.Equal(t, err, got)
-	})
-}
-
 func TestCheckTopoIsUpToDate(t *testing.T) {
 	t.Run("passes for development builds", func(t *testing.T) {
 		originalVersion := version.Version
