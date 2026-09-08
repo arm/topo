@@ -32,7 +32,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           cache: false
 
       - name: Install svu
@@ -70,7 +70,7 @@ jobs:
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
-          version: '~> v2'
+          version: "~> v2"
           args: release --clean --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -192,33 +192,12 @@ jobs:
 
   publish-docs:
     needs: release
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/publish-release-docs.yaml
+    with:
+      source-ref: ${{ needs.release.outputs.release_tag }}
     permissions:
       contents: read
       id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-tags: true
-
-      - name: Generate docs config
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./docs/scripts/generate-docs-config.sh
-
-      - name: AWS GitHub OIDC Login
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
-        with:
-          role-to-assume: arn:aws:iam::930800959236:role/Proj-GHA-topo-s3-upload
-          aws-region: eu-west-1
-
-      - name: Publish docs site
-        uses: ARM-software/docs-action/publish@v0.4.0
-        with:
-          docs-root: docs
-          site-id: topo
-          environment: production
 
   cleanup:
     needs: release
