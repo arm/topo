@@ -1,0 +1,60 @@
+name: Publish Released Docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable release tag to publish, for example v12.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-released-docs
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Checkout released source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Verify stable release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a stable SemVer tag, such as v12.0.0" >&2
+            exit 1
+          fi
+
+          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease \
+            --jq 'if .isDraft or .isPrerelease then error("tag is not a published stable release") else empty end'
+
+      - name: Generate docs config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./docs/scripts/generate-docs-config.sh
+
+      - name: AWS GitHub OIDC Login
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::930800959236:role/Proj-GHA-topo-s3-upload
+          aws-region: eu-west-1
+
+      - name: Publish docs site
+        uses: ARM-software/docs-action/publish@v0.4.0
+        with:
+          docs-root: docs
+          site-id: topo
+          environment: production
