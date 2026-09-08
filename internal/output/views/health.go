@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"text/template"
 
 	"github.com/arm/topo/internal/health"
@@ -14,23 +15,33 @@ type HealthReport struct {
 	Host       health.HostReport    `json:"host"`
 	Target     *health.TargetReport `json:"target,omitempty"`
 	TargetHint string               `json:"-"`
-	Verbose    bool                 `json:"-"`
 }
 
-type healthCheckSection struct {
-	ShowPassedSummary bool
-	Checks            []health.HealthCheck
+func PrintHealthReport(report HealthReport, w io.Writer, format term.Format, verbose bool) error {
+	if format == term.JSON {
+		return Print(report, w, format)
+	}
+
+	out, err := renderHealthReport(report, term.IsTTY(w), verbose)
+	if err != nil {
+		return fmt.Errorf("render view as plain text: %w", err)
+	}
+	if _, err := fmt.Fprint(w, out); err != nil {
+		return fmt.Errorf("write view output: %w", err)
+	}
+	return nil
 }
 
-type healthTargetSection struct {
-	Destination string
-	Section     healthCheckSection
+func (r HealthReport) AsPlain(isTTY bool) (string, error) {
+	return renderHealthReport(r, isTTY, false)
 }
 
-type plainHealthReport struct {
-	Host       healthCheckSection
-	Target     *healthTargetSection
-	TargetHint string
+func (r HealthReport) AsJSON() (string, error) {
+	b, err := json.MarshalIndent(r, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("encode report as json: %w", err)
+	}
+	return string(b), nil
 }
 
 const healthReportTemplate = `
@@ -46,18 +57,19 @@ const healthReportTemplate = `
 {{- end -}}
 {{- end -}}
 {{ sectionHeading "Host" }}
-{{- if .Host.ShowPassedSummary }}
+{{- if showPassedSummary .Host.Dependencies }}
 {{ successStatus }}All checks passed
 {{- end }}
-{{- range $hostCheckRow := .Host.Checks }}
+{{- range $hostCheckRow := visibleChecks .Host.Dependencies }}
 {{ template "checkRow" $hostCheckRow }}
 {{- end }}
 
 {{ if .Target }}{{ targetHeading .Target.Destination -}}
-  {{- if .Target.Section.ShowPassedSummary }}
+  {{- $targetChecks := targetChecks .Target }}
+  {{- if showPassedSummary $targetChecks }}
 {{ successStatus }}All checks passed
   {{- end }}
-  {{- range $targetCheckRow := .Target.Section.Checks }}
+  {{- range $targetCheckRow := visibleChecks $targetChecks }}
 {{ template "checkRow" $targetCheckRow }}
   {{- end }}
 {{- else -}}
@@ -67,7 +79,7 @@ const healthReportTemplate = `
 
 `
 
-func (r HealthReport) AsPlain(isTTY bool) (string, error) {
+func renderHealthReport(report HealthReport, isTTY, verbose bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
 	funcMap["successStatus"] = func() string {
@@ -79,6 +91,13 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	funcMap["targetHeading"] = func(destination string) string {
 		return targetHeading(destination, isTTY)
 	}
+	funcMap["visibleChecks"] = func(checks []health.HealthCheck) []health.HealthCheck {
+		return visibleHealthChecks(checks, verbose)
+	}
+	funcMap["showPassedSummary"] = func(checks []health.HealthCheck) bool {
+		return !verbose && allHealthChecksPassed(checks)
+	}
+	funcMap["targetChecks"] = targetHealthChecks
 	tmpl, err := template.
 		New("healthcheck").
 		Funcs(funcMap).
@@ -87,19 +106,11 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, r.asPlainReport()); err != nil {
+	if err := tmpl.Execute(&buf, report); err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
-}
-
-func (r HealthReport) AsJSON() (string, error) {
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode report as json: %w", err)
-	}
-	return string(b), nil
 }
 
 func sectionHeading(heading string, isTTY bool) string {
@@ -128,46 +139,40 @@ func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
 	}
 }
 
-func newHealthCheckSection(checks []health.HealthCheck, verbose bool) healthCheckSection {
-	section := healthCheckSection{
-		Checks: make([]health.HealthCheck, 0, len(checks)),
+func visibleHealthChecks(checks []health.HealthCheck, verbose bool) []health.HealthCheck {
+	if verbose {
+		return checks
 	}
-	allPassed := len(checks) > 0
 
+	visible := make([]health.HealthCheck, 0, len(checks))
 	for _, check := range checks {
-		if verbose || check.Status != health.CheckStatusOK {
-			section.Checks = append(section.Checks, check)
-		}
-		if check.Status != health.CheckStatusOK && check.Status != health.CheckStatusInfo {
-			allPassed = false
+		if check.Status != health.CheckStatusOK {
+			visible = append(visible, check)
 		}
 	}
-	section.ShowPassedSummary = !verbose && allPassed
-
-	return section
+	return visible
 }
 
-func (r HealthReport) asPlainReport() plainHealthReport {
-	report := plainHealthReport{
-		Host:       newHealthCheckSection(r.Host.Dependencies, r.Verbose),
-		TargetHint: r.TargetHint,
+func allHealthChecksPassed(checks []health.HealthCheck) bool {
+	if len(checks) == 0 {
+		return false
 	}
-	if r.Target == nil {
-		return report
+	for _, check := range checks {
+		if check.Status != health.CheckStatusOK && check.Status != health.CheckStatusInfo {
+			return false
+		}
 	}
+	return true
+}
 
-	targetChecks := make([]health.HealthCheck, 0, len(r.Target.Dependencies)+2)
-	if !r.Target.IsLocalhost {
-		targetChecks = append(targetChecks, r.Target.Connectivity)
+func targetHealthChecks(target *health.TargetReport) []health.HealthCheck {
+	checks := make([]health.HealthCheck, 0, len(target.Dependencies)+2)
+	if !target.IsLocalhost {
+		checks = append(checks, target.Connectivity)
 	}
-	if r.Target.IsLocalhost || r.Target.Connectivity.Status == health.CheckStatusOK {
-		targetChecks = append(targetChecks, r.Target.Dependencies...)
-		targetChecks = append(targetChecks, r.Target.ProcessingDomainDriver)
+	if target.IsLocalhost || target.Connectivity.Status == health.CheckStatusOK {
+		checks = append(checks, target.Dependencies...)
+		checks = append(checks, target.ProcessingDomainDriver)
 	}
-
-	report.Target = &healthTargetSection{
-		Destination: r.Target.Destination,
-		Section:     newHealthCheckSection(targetChecks, r.Verbose),
-	}
-	return report
+	return checks
 }

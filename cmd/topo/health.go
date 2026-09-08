@@ -46,8 +46,7 @@ var healthCmd = &cobra.Command{
 		}
 
 		toPrint := views.HealthReport{
-			Host:    health.CheckHost(health.CheckHostOptions{SkipVersionChecks: skipVersionCheck}),
-			Verbose: verbose,
+			Host: health.CheckHost(health.CheckHostOptions{SkipVersionChecks: skipVersionCheck}),
 		}
 
 		if targetArg, ok := lookupTarget(cmd); ok {
@@ -69,7 +68,7 @@ var healthCmd = &cobra.Command{
 			spinner.Stop()
 		}
 
-		return views.Print(toPrint, os.Stdout, outputFormat)
+		return views.PrintHealthReport(toPrint, os.Stdout, outputFormat, verbose)
 	},
 }
 
