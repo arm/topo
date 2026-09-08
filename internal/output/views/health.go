@@ -3,6 +3,7 @@ package views
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"text/template"
 
 	"github.com/arm/topo/internal/health"
@@ -13,7 +14,6 @@ type HealthReport struct {
 	Host       hostReport    `json:"host"`
 	Target     *targetReport `json:"target,omitempty"`
 	TargetHint string        `json:"-"`
-	Verbose    bool          `json:"-"`
 }
 
 func NewHealthReport(host health.HostReport, target *health.TargetReport, targetHint string) HealthReport {
@@ -78,7 +78,25 @@ const healthReportTemplate = `
 
 `
 
+func PrintHealthReport(report HealthReport, w io.Writer, format term.Format, verbose bool) error {
+	if format == term.JSON {
+		return Print(report, w, format)
+	}
+	out, err := renderHealthReport(report, term.IsTTY(w), verbose)
+	if err != nil {
+		return fmt.Errorf("render view as plain text: %w", err)
+	}
+	if _, err := fmt.Fprint(w, out); err != nil {
+		return fmt.Errorf("write view output: %w", err)
+	}
+	return nil
+}
+
 func (r HealthReport) AsPlain(isTTY bool) (string, error) {
+	return renderHealthReport(r, isTTY, false)
+}
+
+func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
 	funcMap["successStatus"] = func() string {
@@ -98,7 +116,7 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, r.asPlainReport()); err != nil {
+	if err := tmpl.Execute(&buf, r.asPlainReport(verbose)); err != nil {
 		return "", err
 	}
 
@@ -217,9 +235,9 @@ func newHealthCheckSection(checks []healthCheck, verbose bool) healthCheckSectio
 	return section
 }
 
-func (r HealthReport) asPlainReport() plainHealthReport {
+func (r HealthReport) asPlainReport(verbose bool) plainHealthReport {
 	report := plainHealthReport{
-		Host:       newHealthCheckSection(r.Host.Dependencies, r.Verbose),
+		Host:       newHealthCheckSection(r.Host.Dependencies, verbose),
 		TargetHint: r.TargetHint,
 	}
 	if r.Target == nil {
@@ -237,7 +255,7 @@ func (r HealthReport) asPlainReport() plainHealthReport {
 
 	report.Target = &healthTargetSection{
 		Destination: r.Target.Destination,
-		Section:     newHealthCheckSection(targetChecks, r.Verbose),
+		Section:     newHealthCheckSection(targetChecks, verbose),
 	}
 	return report
 }

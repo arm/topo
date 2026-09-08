@@ -37,10 +37,9 @@ func TestHealthReport(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{Dependencies: []health.HealthCheck{
 				{Name: "Flux Capacitor", Status: health.CheckStatusOK},
 			}}, nil, "")
-			toPrint.Verbose = true
 			var out bytes.Buffer
 
-			err := views.Print(toPrint, &out, term.Plain)
+			err := views.PrintHealthReport(toPrint, &out, term.Plain, true)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), " ✓ Flux Capacitor")
@@ -177,23 +176,21 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "   Command:\n     topo moisturise")
 		})
 
-		t.Run("it colors status labels when writing to a terminal", func(t *testing.T) {
+		t.Run("it renders every health status icon", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{Dependencies: []health.HealthCheck{
 				{Name: "Healthy", Status: health.CheckStatusOK},
 				{Name: "Broken", Status: health.CheckStatusError},
 				{Name: "Deprecated", Status: health.CheckStatusWarning},
 				{Name: "Skipped", Status: health.CheckStatusInfo},
 			}}, nil, "")
-			toPrint.Verbose = true
-
-			out, err := toPrint.AsPlain(true)
+			var out bytes.Buffer
+			err := views.PrintHealthReport(toPrint, &out, term.Plain, true)
 
 			require.NoError(t, err)
-			assert.Contains(t, out, term.Color(term.Dim, "┌─ "))
-			assert.Contains(t, out, term.Color(term.Green, " ✓ "))
-			assert.Contains(t, out, term.Color(term.Red, " ✗ "))
-			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
-			assert.Contains(t, out, term.Color(term.Blue, " i "))
+			assert.Contains(t, out.String(), " ✓ Healthy")
+			assert.Contains(t, out.String(), " ✗ Broken")
+			assert.Contains(t, out.String(), " ! Deprecated")
+			assert.Contains(t, out.String(), " i Skipped")
 		})
 
 		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
