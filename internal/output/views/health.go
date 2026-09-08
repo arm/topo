@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"text/template"
 
 	"github.com/arm/topo/internal/health"
@@ -14,6 +15,33 @@ type HealthReport struct {
 	Host       health.HostReport    `json:"host"`
 	Target     *health.TargetReport `json:"target,omitempty"`
 	TargetHint string               `json:"-"`
+}
+
+func PrintHealthReport(report HealthReport, w io.Writer, format term.Format, verbose bool) error {
+	if format == term.JSON {
+		return Print(report, w, format)
+	}
+
+	out, err := renderHealthReport(report, term.IsTTY(w), verbose)
+	if err != nil {
+		return fmt.Errorf("render view as plain text: %w", err)
+	}
+	if _, err := fmt.Fprint(w, out); err != nil {
+		return fmt.Errorf("write view output: %w", err)
+	}
+	return nil
+}
+
+func (r HealthReport) AsPlain(isTTY bool) (string, error) {
+	return renderHealthReport(r, isTTY, false)
+}
+
+func (r HealthReport) AsJSON() (string, error) {
+	b, err := json.MarshalIndent(r, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("encode report as json: %w", err)
+	}
+	return string(b), nil
 }
 
 const healthReportTemplate = `
@@ -29,19 +57,20 @@ const healthReportTemplate = `
 {{- end -}}
 {{- end -}}
 {{ sectionHeading "Host" }}
-{{- range $hostCheckRow := .Host.Dependencies }}
+{{- if showPassedSummary .Host.Dependencies }}
+{{ successStatus }}All checks passed
+{{- end }}
+{{- range $hostCheckRow := visibleChecks .Host.Dependencies }}
 {{ template "checkRow" $hostCheckRow }}
 {{- end }}
 
 {{ if .Target }}{{ targetHeading .Target.Destination -}}
-  {{- if not .Target.IsLocalhost }}
-{{ template "checkRow" .Target.Connectivity }}
+  {{- $targetChecks := targetChecks .Target }}
+  {{- if showPassedSummary $targetChecks }}
+{{ successStatus }}All checks passed
   {{- end }}
-  {{- if or .Target.IsLocalhost (isOK .Target.Connectivity.Status) }}
-    {{- range $targetCheckRow := .Target.Dependencies }}
+  {{- range $targetCheckRow := visibleChecks $targetChecks }}
 {{ template "checkRow" $targetCheckRow }}
-    {{- end }}
-{{ template "checkRow" .Target.ProcessingDomainDriver }}
   {{- end }}
 {{- else -}}
 {{ sectionHeading "Target" }}
@@ -50,18 +79,25 @@ const healthReportTemplate = `
 
 `
 
-func (r HealthReport) AsPlain(isTTY bool) (string, error) {
+func renderHealthReport(report HealthReport, isTTY, verbose bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
+	funcMap["successStatus"] = func() string {
+		return healthStatusFormatter(isTTY)(health.CheckStatusOK)
+	}
 	funcMap["sectionHeading"] = func(heading string) string {
 		return sectionHeading(heading, isTTY)
 	}
 	funcMap["targetHeading"] = func(destination string) string {
 		return targetHeading(destination, isTTY)
 	}
-	funcMap["isOK"] = func(s health.CheckStatus) bool {
-		return s == health.CheckStatusOK
+	funcMap["visibleChecks"] = func(checks []health.HealthCheck) []health.HealthCheck {
+		return visibleHealthChecks(checks, verbose)
 	}
+	funcMap["showPassedSummary"] = func(checks []health.HealthCheck) bool {
+		return !verbose && allHealthChecksPassed(checks)
+	}
+	funcMap["targetChecks"] = targetHealthChecks
 	tmpl, err := template.
 		New("healthcheck").
 		Funcs(funcMap).
@@ -70,7 +106,7 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, r); err != nil {
+	if err := tmpl.Execute(&buf, report); err != nil {
 		return "", err
 	}
 
@@ -103,10 +139,40 @@ func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
 	}
 }
 
-func (r HealthReport) AsJSON() (string, error) {
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode report as json: %w", err)
+func visibleHealthChecks(checks []health.HealthCheck, verbose bool) []health.HealthCheck {
+	if verbose {
+		return checks
 	}
-	return string(b), nil
+
+	visible := make([]health.HealthCheck, 0, len(checks))
+	for _, check := range checks {
+		if check.Status != health.CheckStatusOK {
+			visible = append(visible, check)
+		}
+	}
+	return visible
+}
+
+func allHealthChecksPassed(checks []health.HealthCheck) bool {
+	if len(checks) == 0 {
+		return false
+	}
+	for _, check := range checks {
+		if check.Status != health.CheckStatusOK && check.Status != health.CheckStatusInfo {
+			return false
+		}
+	}
+	return true
+}
+
+func targetHealthChecks(target *health.TargetReport) []health.HealthCheck {
+	checks := make([]health.HealthCheck, 0, len(target.Dependencies)+2)
+	if !target.IsLocalhost {
+		checks = append(checks, target.Connectivity)
+	}
+	if target.IsLocalhost || target.Connectivity.Status == health.CheckStatusOK {
+		checks = append(checks, target.Dependencies...)
+		checks = append(checks, target.ProcessingDomainDriver)
+	}
+	return checks
 }
