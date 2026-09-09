@@ -11,10 +11,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: publish-released-docs
-  cancel-in-progress: true
-
 jobs:
   validate-release:
     runs-on: ubuntu-latest

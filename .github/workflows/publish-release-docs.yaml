@@ -11,6 +11,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    concurrency:
+      group: publish-release-docs
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
