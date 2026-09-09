@@ -1,0 +1,40 @@
+name: Republish Release Docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Republish this stable release's docs with the current docs publishing engine, for example v12.0.0.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Verify stable release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a stable SemVer tag, such as v12.0.0" >&2
+            exit 1
+          fi
+
+          gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$RELEASE_TAG" > /dev/null
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease \
+            --jq 'if .isDraft or .isPrerelease then error("tag is not a published stable release") else empty end'
+
+  publish:
+    needs: validate-release
+    uses: ./.github/workflows/publish-release-docs.yaml
+    with:
+      source-ref: ${{ inputs.tag }}
+    permissions:
+      contents: read
+      id-token: write

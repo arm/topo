@@ -1,0 +1,43 @@
+name: Publish Release Docs
+
+on:
+  workflow_call:
+    inputs:
+      source-ref:
+        description: Git ref containing the documentation to publish.
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: publish-release-docs
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout docs source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source-ref }}
+          fetch-tags: true
+
+      - name: Generate docs config
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./docs/scripts/generate-docs-config.sh
+
+      - name: AWS GitHub OIDC Login
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::930800959236:role/Proj-GHA-topo-s3-upload
+          aws-region: eu-west-1
+
+      - name: Publish docs site
+        uses: ARM-software/docs-action/publish@v0.4.0
+        with:
+          docs-root: docs
+          site-id: topo
+          environment: production
