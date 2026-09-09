@@ -31,7 +31,7 @@ jobs:
           fi
 
           gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$RELEASE_TAG" > /dev/null
-          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease \
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease \
             --jq 'if .isDraft or .isPrerelease then error("tag is not a published stable release") else empty end'
 
   publish:
