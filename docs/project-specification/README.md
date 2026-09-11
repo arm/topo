@@ -1,8 +1,11 @@
 ---
 sidebar_position: 0
+slug: /project-specification
 ---
 
-# Overview
+# Project Specification
+
+## Overview
 
 A [Topo Project](../introduction/glossary.md#topo-project) is a containerized sample project for Arm-based Linux systems. At minimum, it is a directory containing a `compose.yaml`, Dockerfiles, and source code, with an [`x-topo`](../introduction/glossary.md#x-topo) metadata block that describes what the Project does, what hardware [features](../introduction/glossary.md#feature) it requires, and what parameters a user can configure.
 

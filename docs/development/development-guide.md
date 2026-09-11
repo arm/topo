@@ -1,3 +1,8 @@
+---
+sidebar_position: 1
+slug: /development/guide
+---
+
 # Development guide
 
 This guide covers the development workflow, tools, and conventions for contributing to `topo`.
