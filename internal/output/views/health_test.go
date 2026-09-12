@@ -188,9 +188,9 @@ func TestHealthReport(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{
 				Dependencies: []health.HealthCheck{
 					{
-						Name:   "Flux Capacitor",
+						Name:   "Time Circuit",
 						Status: health.CheckStatusOK,
-						Fix:    &health.Fix{Description: "Recharge the flux"},
+						Fix:    &health.Fix{Description: "Set destination time to 1985"},
 					},
 				},
 			}, &health.TargetReport{
@@ -211,7 +211,7 @@ func TestHealthReport(t *testing.T) {
 			want := `{
 				"host": {
 					"dependencies": [
-						{"name":"Flux Capacitor","status":"ok","value":"","fix":{"description":"Recharge the flux"}}
+						{"name":"Time Circuit","status":"ok","value":"","fix":{"description":"Set destination time to 1985"}}
 					]
 				},
 				"target": {
