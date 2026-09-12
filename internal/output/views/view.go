@@ -1,6 +1,7 @@
 package views
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -32,4 +33,12 @@ func Print(p View, w io.Writer, f term.Format) error {
 		return fmt.Errorf("write view output: %w", err)
 	}
 	return nil
+}
+
+func asJSON(value any) (string, error) {
+	bytes, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("encode view as JSON: %w", err)
+	}
+	return string(bytes), nil
 }

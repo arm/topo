@@ -2,7 +2,6 @@ package views
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"text/template"
 
@@ -90,11 +89,7 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 }
 
 func (r HealthReport) AsJSON() (string, error) {
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode report as json: %w", err)
-	}
-	return string(b), nil
+	return asJSON(r)
 }
 
 func sectionHeading(heading string, isTTY bool) string {
