@@ -17,11 +17,11 @@ type HealthReport struct {
 
 func NewHealthReport(host health.HostReport, target *health.TargetReport, targetHint string) HealthReport {
 	report := HealthReport{
-		Host:       hostReportFromHealth(host),
+		Host:       toViewHostReport(host),
 		TargetHint: targetHint,
 	}
 	if target != nil {
-		viewTarget := targetReportFromHealth(*target)
+		viewTarget := toViewTargetReport(*target)
 		report.Target = &viewTarget
 	}
 	return report
@@ -142,29 +142,29 @@ type fix struct {
 	Command     string `json:"command,omitempty"`
 }
 
-func hostReportFromHealth(report health.HostReport) hostReport {
-	return hostReport{Dependencies: healthChecksFromHealth(report.Dependencies)}
+func toViewHostReport(report health.HostReport) hostReport {
+	return hostReport{Dependencies: toViewHealthCheckList(report.Dependencies)}
 }
 
-func targetReportFromHealth(report health.TargetReport) targetReport {
+func toViewTargetReport(report health.TargetReport) targetReport {
 	return targetReport{
 		Destination:            report.Destination,
 		IsLocalhost:            report.IsLocalhost,
-		Connectivity:           healthCheckFromHealth(report.Connectivity),
-		Dependencies:           healthChecksFromHealth(report.Dependencies),
-		ProcessingDomainDriver: healthCheckFromHealth(report.ProcessingDomainDriver),
+		Connectivity:           toViewHealthCheck(report.Connectivity),
+		Dependencies:           toViewHealthCheckList(report.Dependencies),
+		ProcessingDomainDriver: toViewHealthCheck(report.ProcessingDomainDriver),
 	}
 }
 
-func healthChecksFromHealth(checks []health.HealthCheck) []healthCheck {
+func toViewHealthCheckList(checks []health.HealthCheck) []healthCheck {
 	viewChecks := make([]healthCheck, len(checks))
 	for index, check := range checks {
-		viewChecks[index] = healthCheckFromHealth(check)
+		viewChecks[index] = toViewHealthCheck(check)
 	}
 	return viewChecks
 }
 
-func healthCheckFromHealth(check health.HealthCheck) healthCheck {
+func toViewHealthCheck(check health.HealthCheck) healthCheck {
 	viewCheck := healthCheck{Name: check.Name, Status: check.Status, Value: check.Value}
 	if check.Fix != nil {
 		viewCheck.Fix = &fix{Description: check.Fix.Description, Command: check.Fix.Command}
