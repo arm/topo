@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -143,54 +144,54 @@ func TestPerformChecks(t *testing.T) {
 	})
 }
 
-func TestFilterByHardware(t *testing.T) {
-	t.Run("includes dependencies with no hardware requirement", func(t *testing.T) {
-		deps := []health.Dependency{
-			{Label: "Container Engine"},
-		}
-		hardware := map[health.HardwareCapability]struct{}{}
-
-		got := health.FilterByHardware(deps, hardware)
-
-		assert.Equal(t, deps, got)
-	})
-
-	t.Run("includes dependencies when hardware is present", func(t *testing.T) {
-		deps := []health.Dependency{
-			{Label: "Runtime", HardwarePrerequisites: []health.HardwareCapability{health.Remoteproc}},
-		}
-		hardware := map[health.HardwareCapability]struct{}{health.Remoteproc: {}}
-
-		got := health.FilterByHardware(deps, hardware)
-
-		assert.Equal(t, deps, got)
-	})
-
-	t.Run("excludes dependencies when hardware is absent", func(t *testing.T) {
-		deps := []health.Dependency{
-			{Label: "Runtime", HardwarePrerequisites: []health.HardwareCapability{health.Remoteproc}},
-		}
-		hardware := map[health.HardwareCapability]struct{}{}
-
-		got := health.FilterByHardware(deps, hardware)
-
-		assert.Empty(t, got)
-	})
-
-	t.Run("filters mixed dependencies correctly", func(t *testing.T) {
-		deps := []health.Dependency{
-			{Label: "Food"},
-			{Label: "Runtime", HardwarePrerequisites: []health.HardwareCapability{health.Remoteproc}},
-			{Label: "Food"},
+func TestRemoteprocDependency(t *testing.T) {
+	t.Run("Check", func(t *testing.T) {
+		buildRunnerWithRemoteProcs := func(names []string) runner.Runner {
+			return &runner.Fake{Commands: map[string]runner.FakeResult{
+				"cat /sys/class/remoteproc/*/name": {Output: strings.Join(names, "\n")},
+			}}
 		}
 
-		got := health.FilterByHardware(deps, nil)
+		t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
+			d := health.NewRemoteprocDependency()
+			r := buildRunnerWithRemoteProcs(nil)
 
-		want := []health.Dependency{
-			{Label: "Food"},
-			{Label: "Food"},
-		}
-		assert.Equal(t, want, got)
+			got := d.Check(context.Background(), r)
+
+			want := health.DependencyCheckResult{
+				Failure: &health.DependencyCheckFailure{
+					Severity: health.SeverityInfo,
+					Message:  "no remoteproc devices found",
+				},
+			}
+			assert.Equal(t, want, got)
+		})
+
+		t.Run("fails when remoteproc probe fails", func(t *testing.T) {
+			d := health.NewRemoteprocDependency()
+			r := &runner.Fake{Commands: map[string]runner.FakeResult{
+				"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
+			}}
+
+			got := d.Check(context.Background(), r)
+
+			want := health.DependencyCheckResult{
+				Failure: &health.DependencyCheckFailure{
+					Severity: health.SeverityError,
+					Message:  "timed out",
+				},
+			}
+			assert.Equal(t, want, got)
+		})
+
+		t.Run("reports remoteproc device names", func(t *testing.T) {
+			d := health.NewRemoteprocDependency()
+			r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
+
+			got := d.Check(context.Background(), r)
+
+			assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
+		})
 	})
 }
 

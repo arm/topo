@@ -3,7 +3,9 @@ package health
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 )
@@ -23,7 +25,6 @@ type Dependency struct {
 	Label                 string
 	Check                 DependencyCheckFn
 	SoftwarePrerequisites []DependencyID
-	HardwarePrerequisites []HardwareCapability
 }
 
 type DependencyCheckFn func(ctx context.Context, r runner.Runner) DependencyCheckResult
@@ -148,11 +149,12 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 		},
 	}
 
+	remoteproc := NewRemoteprocDependency()
+
 	remoteprocRuntime := Dependency{
 		ID:                    DependencyID("remoteproc-runtime"),
 		Label:                 "Remoteproc Runtime",
-		SoftwarePrerequisites: []DependencyID{docker.ID},
-		HardwarePrerequisites: []HardwareCapability{Remoteproc},
+		SoftwarePrerequisites: []DependencyID{docker.ID, remoteproc.ID},
 		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -171,8 +173,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 	remoteprocRuntimeShim := Dependency{
 		ID:                    DependencyID("containerd-shim-remoteproc-v1"),
 		Label:                 "Remoteproc Shim",
-		SoftwarePrerequisites: []DependencyID{docker.ID},
-		HardwarePrerequisites: []HardwareCapability{Remoteproc},
+		SoftwarePrerequisites: []DependencyID{docker.ID, remoteproc.ID},
 		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -199,31 +200,45 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 		},
 	}
 
-	return []Dependency{docker, remoteprocRuntime, remoteprocRuntimeShim, lscpu}
+	return []Dependency{docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu}
+}
+
+func NewRemoteprocDependency() Dependency {
+	return Dependency{
+		ID:    DependencyID("remoteproc"),
+		Label: "Processing Domain Driver (remoteproc)",
+		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
+			remoteProcessors, err := probe.Remoteproc(ctx, r)
+			if err != nil {
+				return DependencyCheckResult{
+					Failure: &DependencyCheckFailure{
+						Severity: SeverityError,
+						Message:  err.Error(),
+					},
+				}
+			}
+			if len(remoteProcessors) > 0 {
+				names := make([]string, len(remoteProcessors))
+				for i, remoteProc := range remoteProcessors {
+					names[i] = remoteProc.Name
+				}
+				return DependencyCheckResult{
+					SuccessValue: strings.Join(names, ", "),
+				}
+			}
+			return DependencyCheckResult{
+				Failure: &DependencyCheckFailure{
+					Severity: SeverityInfo,
+					Message:  "no remoteproc devices found",
+				},
+			}
+		},
+	}
 }
 
 type DependencyStatus struct {
 	Dependency Dependency
 	Result     DependencyCheckResult
-}
-
-func FilterByHardware(deps []Dependency, hardware map[HardwareCapability]struct{}) []Dependency {
-	result := make([]Dependency, 0, len(deps))
-	for _, dep := range deps {
-		if len(dep.HardwarePrerequisites) == 0 || hardwareCapabilityMatches(dep.HardwarePrerequisites, hardware) {
-			result = append(result, dep)
-		}
-	}
-	return result
-}
-
-func hardwareCapabilityMatches(required []HardwareCapability, available map[HardwareCapability]struct{}) bool {
-	for _, capability := range required {
-		if _, exists := available[capability]; exists {
-			return true
-		}
-	}
-	return false
 }
 
 func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner.Runner) []DependencyStatus {

@@ -52,7 +52,6 @@ const healthReportTemplate = `
     {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
     {{- end }}
-{{ template "checkRow" .Target.ProcessingDomainDriver }}
   {{- end }}
 {{- else -}}
 {{ sectionHeading "Target" }}
@@ -123,11 +122,10 @@ type hostReport struct {
 }
 
 type targetReport struct {
-	Destination            string        `json:"destination"`
-	IsLocalhost            bool          `json:"isLocalhost"`
-	Connectivity           healthCheck   `json:"connectivity"`
-	Dependencies           []healthCheck `json:"dependencies"`
-	ProcessingDomainDriver healthCheck   `json:"processingDomainDriver"`
+	Destination  string        `json:"destination"`
+	IsLocalhost  bool          `json:"isLocalhost"`
+	Connectivity healthCheck   `json:"connectivity"`
+	Dependencies []healthCheck `json:"dependencies"`
 }
 
 type healthCheck struct {
@@ -148,11 +146,10 @@ func toViewHostReport(report health.HostReport) hostReport {
 
 func toViewTargetReport(report health.TargetReport) targetReport {
 	return targetReport{
-		Destination:            report.Destination,
-		IsLocalhost:            report.IsLocalhost,
-		Connectivity:           toViewHealthCheck(report.Connectivity),
-		Dependencies:           toViewHealthCheckList(report.Dependencies),
-		ProcessingDomainDriver: toViewHealthCheck(report.ProcessingDomainDriver),
+		Destination:  report.Destination,
+		IsLocalhost:  report.IsLocalhost,
+		Connectivity: toViewHealthCheck(report.Connectivity),
+		Dependencies: toViewHealthCheckList(report.Dependencies),
 	}
 }
 
