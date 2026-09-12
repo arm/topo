@@ -21,10 +21,10 @@ const containerEngineInstallURL = "https://github.com/arm/topo#install-a-contain
 type DependencyID string
 
 type Dependency struct {
-	ID                    DependencyID
-	Label                 string
-	Check                 DependencyCheckFn
-	SoftwarePrerequisites []DependencyID
+	ID            DependencyID
+	Label         string
+	Check         DependencyCheckFn
+	Prerequisites []DependencyID
 }
 
 type DependencyCheckFn func(ctx context.Context, r runner.Runner) DependencyCheckResult
@@ -120,7 +120,7 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 			}
 			return DependencyCheckResult{SuccessValue: "docker-compose"}
 		},
-		SoftwarePrerequisites: []DependencyID{docker.ID},
+		Prerequisites: []DependencyID{docker.ID},
 	}
 
 	return []Dependency{topo, ssh, docker, dockerCompose}
@@ -152,9 +152,9 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 	remoteproc := NewRemoteprocDependency()
 
 	remoteprocRuntime := Dependency{
-		ID:                    DependencyID("remoteproc-runtime"),
-		Label:                 "Remoteproc Runtime",
-		SoftwarePrerequisites: []DependencyID{docker.ID, remoteproc.ID},
+		ID:            DependencyID("remoteproc-runtime"),
+		Label:         "Remoteproc Runtime",
+		Prerequisites: []DependencyID{docker.ID, remoteproc.ID},
 		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -171,9 +171,9 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 	}
 
 	remoteprocRuntimeShim := Dependency{
-		ID:                    DependencyID("containerd-shim-remoteproc-v1"),
-		Label:                 "Remoteproc Shim",
-		SoftwarePrerequisites: []DependencyID{docker.ID, remoteproc.ID},
+		ID:            DependencyID("containerd-shim-remoteproc-v1"),
+		Label:         "Remoteproc Shim",
+		Prerequisites: []DependencyID{docker.ID, remoteproc.ID},
 		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -246,7 +246,7 @@ func PerformChecks(ctx context.Context, dependencies []Dependency, runner runner
 	result := make([]DependencyStatus, 0, len(dependencies))
 
 	for _, dep := range dependencies {
-		if !allPrerequisitesFulfilled(dep.SoftwarePrerequisites, healthy) {
+		if !allPrerequisitesFulfilled(dep.Prerequisites, healthy) {
 			continue
 		}
 
