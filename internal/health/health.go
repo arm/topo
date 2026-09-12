@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/probe"
@@ -40,11 +39,10 @@ type HostReport struct {
 }
 
 type TargetReport struct {
-	Destination            string
-	IsLocalhost            bool
-	Connectivity           HealthCheck
-	Dependencies           []HealthCheck
-	ProcessingDomainDriver HealthCheck
+	Destination  string
+	IsLocalhost  bool
+	Connectivity HealthCheck
+	Dependencies []HealthCheck
 }
 
 type CheckHostOptions struct {
@@ -105,25 +103,6 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	report := TargetReport{}
 	report.IsLocalhost = targetStatus.Connection.IsPlainLocalhost()
 	report.Connectivity = connectivityCheck(targetStatus.Connection)
-
-	report.ProcessingDomainDriver.Name = "Processing Domain Driver (remoteproc)"
-	remoteProcessors := targetStatus.Hardware.RemoteProcessors
-	switch {
-	case targetStatus.Hardware.Err != nil:
-		report.ProcessingDomainDriver.Status = CheckStatusError
-		report.ProcessingDomainDriver.Value = targetStatus.Hardware.Err.Error()
-	case len(remoteProcessors) > 0:
-		names := make([]string, len(remoteProcessors))
-		for i, remoteProc := range remoteProcessors {
-			names[i] = remoteProc.Name
-		}
-		report.ProcessingDomainDriver.Status = CheckStatusOK
-		report.ProcessingDomainDriver.Value = strings.Join(names, ", ")
-	default:
-		report.ProcessingDomainDriver.Status = CheckStatusInfo
-		report.ProcessingDomainDriver.Value = "no remoteproc devices found"
-	}
-
 	report.Dependencies = generateDependencyReport(targetStatus.Dependencies)
 	report.Destination = targetStatus.Connection.Destination.String()
 

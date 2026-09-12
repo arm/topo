@@ -1,7 +1,6 @@
 package health_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -19,41 +18,6 @@ func TestGenerateHostReport(t *testing.T) {
 func TestGenerateTargetReport(t *testing.T) {
 	testDependencyReporting(t, func(statuses []health.DependencyStatus) []health.HealthCheck {
 		return health.GenerateTargetReport(health.Status{Dependencies: statuses}).Dependencies
-	})
-
-	t.Run("when no remoteproc devices are found, ProcessingDomainDriver health check an info message", func(t *testing.T) {
-		ts := health.Status{}
-
-		got := health.GenerateTargetReport(ts)
-
-		assert.Equal(t, health.CheckStatusInfo, got.ProcessingDomainDriver.Status)
-		assert.Equal(t, "no remoteproc devices found", got.ProcessingDomainDriver.Value)
-	})
-
-	t.Run("when remoteproc probe fails, ProcessingDomainDriver reports the error", func(t *testing.T) {
-		ts := health.Status{
-			Hardware: health.HardwareProfile{
-				Err: fmt.Errorf("timed out"),
-			},
-		}
-
-		got := health.GenerateTargetReport(ts)
-
-		assert.Equal(t, health.CheckStatusError, got.ProcessingDomainDriver.Status)
-		assert.Equal(t, "timed out", got.ProcessingDomainDriver.Value)
-	})
-
-	t.Run("when remoteproc devices are found, ProcessingDomainDriver status is ok and includes device names", func(t *testing.T) {
-		ts := health.Status{
-			Hardware: health.HardwareProfile{
-				RemoteProcessors: []probe.RemoteProcessor{{Name: "m4_0"}, {Name: "m4_1"}},
-			},
-		}
-
-		got := health.GenerateTargetReport(ts)
-
-		assert.Equal(t, health.CheckStatusOK, got.ProcessingDomainDriver.Status)
-		assert.Equal(t, "m4_0, m4_1", got.ProcessingDomainDriver.Value)
 	})
 
 	t.Run("when the target has a connection error, Connectivity status reports error", func(t *testing.T) {

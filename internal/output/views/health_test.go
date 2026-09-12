@@ -53,13 +53,8 @@ func TestHealthReport(t *testing.T) {
 		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
 				Connectivity: health.HealthCheck{
-					Name:   "Connected",
-					Status: health.CheckStatusOK,
-				},
-				ProcessingDomainDriver: health.HealthCheck{
-					Name:   "Processing Domain Driver (remoteproc)",
+					Name:   "Pineapple on pizza",
 					Status: health.CheckStatusWarning,
-					Value:  "no remoteproc devices found",
 				},
 			}, "")
 			var out bytes.Buffer
@@ -67,19 +62,14 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ! Processing Domain Driver (remoteproc) (no remoteproc devices found)")
+			assert.Contains(t, out.String(), " ! Pineapple on pizza")
 		})
 
 		t.Run("it renders an info icon for info checks", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
 				Connectivity: health.HealthCheck{
-					Name:   "Connected",
-					Status: health.CheckStatusOK,
-				},
-				ProcessingDomainDriver: health.HealthCheck{
-					Name:   "Processing Domain Driver (remoteproc)",
+					Name:   "Has potatoes",
 					Status: health.CheckStatusInfo,
-					Value:  "no remoteproc devices found",
 				},
 			}, "")
 			var out bytes.Buffer
@@ -87,7 +77,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
+			assert.Contains(t, out.String(), " i Has potatoes")
 		})
 
 		t.Run("it renders connection failures", func(t *testing.T) {
@@ -199,9 +189,6 @@ func TestHealthReport(t *testing.T) {
 					Name:   "Connected",
 					Status: health.CheckStatusOK,
 				},
-				ProcessingDomainDriver: health.HealthCheck{
-					Status: health.CheckStatusWarning,
-				},
 			}, "")
 			var out bytes.Buffer
 
@@ -218,8 +205,7 @@ func TestHealthReport(t *testing.T) {
 					"destination": "ssh://user@my-target",
 					"isLocalhost": false,
 					"connectivity": {"name":"Connected","status":"ok","value":""},
-					"dependencies": [],
-					"processingDomainDriver": {"name":"","status":"warning","value":""}
+					"dependencies": []
 				}
 			}`
 			assert.JSONEq(t, want, out.String())
