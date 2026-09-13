@@ -36,17 +36,17 @@
         "value": "docker"
       },
       {
+        "name": "Processing Domain Driver (remoteproc)",
+        "status": "info",
+        "value": "no remoteproc devices found"
+      },
+      {
         "name": "Hardware Info",
         "status": "ok",
         "value": "lscpu"
       }
     ],
     "destination": "TARGET_DESTINATION",
-    "isLocalhost": false,
-    "processingDomainDriver": {
-      "name": "Processing Domain Driver (remoteproc)",
-      "status": "info",
-      "value": "no remoteproc devices found"
-    }
+    "isLocalhost": false
   }
 }
