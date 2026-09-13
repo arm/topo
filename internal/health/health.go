@@ -28,6 +28,7 @@ const (
 )
 
 type HealthCheck struct {
+	ID     DependencyID
 	Name   string
 	Status CheckStatus
 	Value  string
@@ -147,7 +148,7 @@ func connectivityCheck(status ConnectionStatus) HealthCheck {
 func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
 	res := []HealthCheck{}
 	for _, ds := range statuses {
-		hc := HealthCheck{Name: ds.Dependency.Label}
+		hc := HealthCheck{ID: ds.Dependency.ID, Name: ds.Dependency.Label}
 		if ds.Result.Failure == nil {
 			hc.Status = CheckStatusOK
 			hc.Value = ds.Result.SuccessValue

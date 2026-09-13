@@ -20,6 +20,8 @@ const containerEngineInstallURL = "https://github.com/arm/topo#install-a-contain
 
 type DependencyID string
 
+const DependencyIDRemoteproc DependencyID = "remoteproc"
+
 type Dependency struct {
 	ID            DependencyID
 	Label         string
@@ -205,7 +207,7 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 
 func NewRemoteprocDependency() Dependency {
 	return Dependency{
-		ID:    DependencyID("remoteproc"),
+		ID:    DependencyIDRemoteproc,
 		Label: "Processing Domain Driver (remoteproc)",
 		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
 			remoteProcessors, err := probe.Remoteproc(ctx, r)

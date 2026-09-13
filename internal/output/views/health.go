@@ -52,6 +52,7 @@ const healthReportTemplate = `
     {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
     {{- end }}
+{{ template "checkRow" .Target.ProcessingDomainDriver }}
   {{- end }}
 {{- else -}}
 {{ sectionHeading "Target" }}
@@ -122,10 +123,11 @@ type hostReport struct {
 }
 
 type targetReport struct {
-	Destination  string        `json:"destination"`
-	IsLocalhost  bool          `json:"isLocalhost"`
-	Connectivity healthCheck   `json:"connectivity"`
-	Dependencies []healthCheck `json:"dependencies"`
+	Destination            string        `json:"destination"`
+	IsLocalhost            bool          `json:"isLocalhost"`
+	Connectivity           healthCheck   `json:"connectivity"`
+	Dependencies           []healthCheck `json:"dependencies"`
+	ProcessingDomainDriver healthCheck   `json:"processingDomainDriver"`
 }
 
 type healthCheck struct {
@@ -145,12 +147,22 @@ func toViewHostReport(report health.HostReport) hostReport {
 }
 
 func toViewTargetReport(report health.TargetReport) targetReport {
-	return targetReport{
-		Destination:  report.Destination,
-		IsLocalhost:  report.IsLocalhost,
-		Connectivity: toViewHealthCheck(report.Connectivity),
-		Dependencies: toViewHealthCheckList(report.Dependencies),
+	target := targetReport{
+		Destination:            report.Destination,
+		IsLocalhost:            report.IsLocalhost,
+		Connectivity:           toViewHealthCheck(report.Connectivity),
+		Dependencies:           make([]healthCheck, 0, len(report.Dependencies)),
+		ProcessingDomainDriver: healthCheck{Name: "Processing Domain Driver (remoteproc)"},
 	}
+	for _, check := range report.Dependencies {
+		viewCheck := toViewHealthCheck(check)
+		if check.ID == health.DependencyIDRemoteproc {
+			target.ProcessingDomainDriver = viewCheck
+			continue
+		}
+		target.Dependencies = append(target.Dependencies, viewCheck)
+	}
+	return target
 }
 
 func toViewHealthCheckList(checks []health.HealthCheck) []healthCheck {
