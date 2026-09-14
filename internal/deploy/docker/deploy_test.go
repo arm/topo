@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
@@ -16,30 +17,30 @@ func TestDeployment(t *testing.T) {
 	requireDocker(t)
 
 	t.Run("deploys to localhost", func(t *testing.T) {
-		composeFilePath, imageName := deploymentFixture(t)
-		t.Cleanup(func() { forceComposeDown(t, composeFilePath) })
+		scope, imageName := deploymentFixture(t)
+		t.Cleanup(func() { forceComposeDown(t, scope) })
 		requireImageDoesNotExist(t, docker.LocalHost, imageName)
 		deployOptions := docker.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-		err := docker.Deploy(t.Context(), t.Output(), composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
 		require.NoError(t, err)
 		requireImageExists(t, docker.LocalHost, imageName)
-		assertContainersRunning(t, ssh.PlainLocalhost, composeFilePath)
+		assertContainersRunning(t, ssh.PlainLocalhost, scope)
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
 		container := startContainer(t, dinDContainer)
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
-		composeFilePath, imageName := deploymentFixture(t)
+		scope, imageName := deploymentFixture(t)
 		requireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
 		deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
 
-		err := docker.Deploy(t.Context(), t.Output(), composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
 		require.NoError(t, err)
 		requireImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
-		assertContainersRunning(t, remoteDockerHost, composeFilePath)
+		assertContainersRunning(t, remoteDockerHost, scope)
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
@@ -49,7 +50,7 @@ func TestDeployment(t *testing.T) {
 		container := startContainer(t, dinDContainer)
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 		remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
-		composeFilePath, imageName := deploymentFixture(t)
+		scope, imageName := deploymentFixture(t)
 		requireImageDoesNotExist(t, remoteCommandHost, imageName)
 		deployOptions := docker.DeployOptions{
 			TargetHost: remoteDockerHost,
@@ -60,19 +61,19 @@ func TestDeployment(t *testing.T) {
 			},
 		}
 
-		err := docker.Deploy(t.Context(), t.Output(), composeFilePath, deployOptions)
+		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
 		require.NoError(t, err)
 		requireImageExists(t, remoteCommandHost, imageName)
-		assertContainersRunning(t, remoteDockerHost, composeFilePath)
+		assertContainersRunning(t, remoteDockerHost, scope)
 	})
 }
 
-func deploymentFixture(t *testing.T) (composeFilePath, imageName string) {
+func deploymentFixture(t *testing.T) (project.Scope, string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
-	imageName = testImageName(t)
-	composeFilePath = testutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
+	imageName := testImageName(t)
+	composeFilePath := testutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
 name: %s
 services:
   a-service:
@@ -89,7 +90,7 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	return composeFilePath, imageName
+	return project.Scope{ComposeFile: composeFilePath}, imageName
 }
 
 func cleanupRegistryContainer(t *testing.T, containerName string) {

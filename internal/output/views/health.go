@@ -11,26 +11,18 @@ import (
 )
 
 type HealthReport struct {
-	Host       hostReport    `json:"host"`
-	Target     *targetReport `json:"target,omitempty"`
-	TargetHint string        `json:"-"`
+	Host       health.HostReport
+	Target     *health.TargetReport
+	TargetHint string
 }
 
 func NewHealthReport(host health.HostReport, target *health.TargetReport, targetHint string) HealthReport {
-	report := HealthReport{
-		Host:       toViewHostReport(host),
-		TargetHint: targetHint,
-	}
-	if target != nil {
-		viewTarget := toViewTargetReport(*target)
-		report.Target = &viewTarget
-	}
-	return report
+	return HealthReport{Host: host, Target: target, TargetHint: targetHint}
 }
 
 type healthCheckSection struct {
 	ShowPassedSummary bool
-	Checks            []healthCheck
+	Checks            []health.HealthCheck
 }
 
 const healthReportTemplate = `
@@ -55,7 +47,7 @@ const healthReportTemplate = `
 {{- end -}}
 {{ sectionHeading "Host" }}{{ template "checkSection" (section .Host.Dependencies) }}
 
-{{ if .Target }}{{ targetHeading .Target.Destination }}{{ template "checkSection" (section .Target.Checks) }}
+{{ if .Target }}{{ sectionHeading (printf "Target: %s" .Target.Destination) }}{{ template "checkSection" (section .Target.Dependencies) }}
 {{- else -}}
 {{ sectionHeading "Target" }}
 {{ .TargetHint }}
@@ -90,10 +82,7 @@ func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 	funcMap["sectionHeading"] = func(heading string) string {
 		return sectionHeading(heading, isTTY)
 	}
-	funcMap["targetHeading"] = func(destination string) string {
-		return targetHeading(destination, isTTY)
-	}
-	funcMap["section"] = func(checks []healthCheck) healthCheckSection {
+	funcMap["section"] = func(checks []health.HealthCheck) healthCheckSection {
 		return newHealthCheckSection(checks, verbose)
 	}
 	tmpl, err := template.
@@ -112,15 +101,11 @@ func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 }
 
 func (r HealthReport) AsJSON() (string, error) {
-	return asJSON(r)
+	return asJSON(toJSONHealthReport(r))
 }
 
 func sectionHeading(heading string, isTTY bool) string {
 	return term.Header(heading, isTTY)
-}
-
-func targetHeading(destination string, isTTY bool) string {
-	return sectionHeading(fmt.Sprintf("Target: %s", destination), isTTY)
 }
 
 func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
@@ -141,84 +126,86 @@ func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
 	}
 }
 
-type hostReport struct {
-	Dependencies []healthCheck `json:"dependencies"`
+type jsonHealthReport struct {
+	Host   jsonHostReport    `json:"host"`
+	Target *jsonTargetReport `json:"target,omitempty"`
 }
 
-type targetReport struct {
-	Destination            string        `json:"destination"`
-	IsLocalhost            bool          `json:"isLocalhost"`
-	Connectivity           healthCheck   `json:"connectivity"`
-	Dependencies           []healthCheck `json:"dependencies"`
-	ProcessingDomainDriver healthCheck   `json:"processingDomainDriver"`
+type jsonHostReport struct {
+	Dependencies []jsonHealthCheck `json:"dependencies"`
 }
 
-func (r targetReport) Checks() []healthCheck {
-	var checks []healthCheck
-	if !r.IsLocalhost {
-		checks = append(checks, r.Connectivity)
-	}
-	if r.IsLocalhost || r.Connectivity.Status == health.CheckStatusOK {
-		checks = append(checks, r.Dependencies...)
-		checks = append(checks, r.ProcessingDomainDriver)
-	}
-	return checks
+type jsonTargetReport struct {
+	Destination            string            `json:"destination"`
+	IsLocalhost            bool              `json:"isLocalhost"`
+	Connectivity           jsonHealthCheck   `json:"connectivity"`
+	Dependencies           []jsonHealthCheck `json:"dependencies"`
+	ProcessingDomainDriver jsonHealthCheck   `json:"processingDomainDriver"`
 }
 
-type healthCheck struct {
+type jsonHealthCheck struct {
 	Name   string             `json:"name"`
 	Status health.CheckStatus `json:"status"`
 	Value  string             `json:"value"`
-	Fix    *fix               `json:"fix,omitempty"`
+	Fix    *jsonFix           `json:"fix,omitempty"`
 }
 
-type fix struct {
+type jsonFix struct {
 	Description string `json:"description"`
 	Command     string `json:"command,omitempty"`
 }
 
-func toViewHostReport(report health.HostReport) hostReport {
-	return hostReport{Dependencies: toViewHealthCheckList(report.Dependencies)}
+func toJSONHealthReport(report HealthReport) jsonHealthReport {
+	jsonReport := jsonHealthReport{
+		Host: jsonHostReport{Dependencies: toJSONHealthChecks(report.Host.Dependencies)},
+	}
+	if report.Target != nil {
+		jsonTarget := toJSONTargetReport(*report.Target)
+		jsonReport.Target = &jsonTarget
+	}
+	return jsonReport
 }
 
-func toViewTargetReport(report health.TargetReport) targetReport {
-	target := targetReport{
+func toJSONTargetReport(report health.TargetReport) jsonTargetReport {
+	jsonTarget := jsonTargetReport{
 		Destination:            report.Destination,
 		IsLocalhost:            report.IsLocalhost,
-		Connectivity:           toViewHealthCheck(report.Connectivity),
-		Dependencies:           make([]healthCheck, 0, len(report.Dependencies)),
-		ProcessingDomainDriver: healthCheck{Name: "Processing Domain Driver (remoteproc)"},
+		Dependencies:           make([]jsonHealthCheck, 0, len(report.Dependencies)),
+		ProcessingDomainDriver: jsonHealthCheck{Name: "Processing Domain Driver (remoteproc)"},
 	}
 	for _, check := range report.Dependencies {
-		viewCheck := toViewHealthCheck(check)
-		if check.ID == health.DependencyIDRemoteproc {
-			target.ProcessingDomainDriver = viewCheck
-			continue
+		jsonCheck := toJSONHealthCheck(check)
+		switch check.ID {
+		case health.DependencyIDConnectivity:
+			jsonTarget.Connectivity = jsonCheck
+		case health.DependencyIDRemoteproc:
+			jsonTarget.ProcessingDomainDriver = jsonCheck
+		default:
+			jsonTarget.Dependencies = append(jsonTarget.Dependencies, jsonCheck)
 		}
-		target.Dependencies = append(target.Dependencies, viewCheck)
 	}
-	return target
+	return jsonTarget
 }
 
-func toViewHealthCheckList(checks []health.HealthCheck) []healthCheck {
-	viewChecks := make([]healthCheck, len(checks))
+func toJSONHealthChecks(checks []health.HealthCheck) []jsonHealthCheck {
+	jsonChecks := make([]jsonHealthCheck, len(checks))
 	for index, check := range checks {
-		viewChecks[index] = toViewHealthCheck(check)
+		jsonChecks[index] = toJSONHealthCheck(check)
 	}
-	return viewChecks
+	return jsonChecks
 }
 
-func toViewHealthCheck(check health.HealthCheck) healthCheck {
-	viewCheck := healthCheck{Name: check.Name, Status: check.Status, Value: check.Value}
+func toJSONHealthCheck(check health.HealthCheck) jsonHealthCheck {
+	jsonCheck := jsonHealthCheck{Name: check.Name, Status: check.Status, Value: check.Value}
 	if check.Fix != nil {
-		viewCheck.Fix = &fix{Description: check.Fix.Description, Command: check.Fix.Command}
+		jsonCheck.Fix = &jsonFix{Description: check.Fix.Description, Command: check.Fix.Command}
 	}
-	return viewCheck
+	return jsonCheck
 }
 
-func newHealthCheckSection(checks []healthCheck, verbose bool) healthCheckSection {
+func newHealthCheckSection(checks []health.HealthCheck, verbose bool) healthCheckSection {
 	section := healthCheckSection{
-		Checks: make([]healthCheck, 0, len(checks)),
+		Checks: make([]health.HealthCheck, 0, len(checks)),
 	}
 	allPassed := len(checks) > 0
 

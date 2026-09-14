@@ -6,10 +6,11 @@ import (
 	"io"
 
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 )
 
-func Stop(ctx context.Context, output io.Writer, composeFile string, target ssh.Destination) (stopErr error) {
+func Stop(ctx context.Context, output io.Writer, scope project.Scope, target ssh.Destination) (stopErr error) {
 	socket := LocalSocket
 	if !target.IsPlainLocalhost() {
 		if err := term.PrintHeader(output, "Open Podman socket SSH tunnel"); err != nil {
@@ -30,5 +31,5 @@ func Stop(ctx context.Context, output io.Writer, composeFile string, target ssh.
 	if err := term.PrintHeader(output, "Stop services"); err != nil {
 		return err
 	}
-	return RunComposeCommand(ctx, output, socket, composeFile, "stop")
+	return RunComposeCommand(ctx, output, socket, scope, "stop")
 }

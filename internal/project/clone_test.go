@@ -17,20 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockProjectSource struct {
-	mock.Mock
-}
-
-func (m *mockProjectSource) CopyTo(destDir string) error {
-	args := m.Called(destDir)
-	return args.Error(0)
-}
-
-func (m *mockProjectSource) GetName() (string, error) {
-	args := m.Called()
-	return args.String(0), args.Error(1)
-}
-
 func TestClone(t *testing.T) {
 	t.Run("prints summary with next steps", func(t *testing.T) {
 		dir := t.TempDir()
@@ -42,7 +28,7 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := project.NewClone(destDir, mockSource, parameter.NewStrictResolverChain()).Run(&output)
+		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
 		out := output.String()
@@ -61,7 +47,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -88,7 +74,7 @@ x-topo:
 		mockSource := mockSourceWithComposeFile(t, composeFileContents)
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain(resolver))
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver))
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -111,7 +97,7 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.Error(t, err)
 		_, statErr := os.Stat(destDir)
@@ -136,12 +122,26 @@ x-topo:
 `,
 		})
 
-		err := project.Clone(destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
 			"GREETING": "a-value",
 		}))
 
 		require.NoError(t, err)
 	})
+}
+
+type mockProjectSource struct {
+	mock.Mock
+}
+
+func (m *mockProjectSource) CopyTo(destDir string) error {
+	args := m.Called(destDir)
+	return args.Error(0)
+}
+
+func (m *mockProjectSource) GetName() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
 }
 
 func mockSourceWithComposeFile(t *testing.T, content string) *mockProjectSource {
@@ -165,105 +165,4 @@ func mockSourceWithContent(t *testing.T, files map[string]string) *mockProjectSo
 		mockSource.AssertExpectations(t)
 	})
 	return mockSource
-}
-
-func TestConfigure(t *testing.T) {
-	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
-		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
-		resolver := parameter.NewStrictResolverChain()
-
-		err := project.Configure(invalidPath, resolver)
-
-		require.ErrorContains(t, err, "can't read compose file")
-	})
-
-	t.Run("updates the compose file with provided parameters", func(t *testing.T) {
-		composeFileContents := `
-services:
-  app:
-    build:
-      context: .
-      args:
-        FOO: bar
-
-x-topo:
-  name: My Project
-  parameters:
-    FOO:
-      description: a dummy parameter
-      required: true
-      example: bar
-`
-		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		static := parameter.NewStaticResolver(parameter.Values{"FOO": "baz"})
-		resolver := parameter.NewStrictResolverChain(static)
-
-		err := project.Configure(composeFilePath, resolver)
-		require.NoError(t, err)
-
-		want := `
-services:
-  app:
-    build:
-      context: .
-      args:
-        FOO: baz
-
-x-topo:
-  name: My Project
-  parameters:
-    FOO:
-      description: a dummy parameter
-      required: true
-      example: bar
-`
-		got := testutil.RequireReadFile(t, composeFilePath)
-
-		assert.YAMLEq(t, want, got)
-	})
-
-	t.Run("rejects empty input for required parameters when any current value is empty", func(t *testing.T) {
-		composeFileContents := `services:
-  configured:
-    build:
-      args:
-        FOO: current
-  empty:
-    build:
-      args:
-        FOO: ""
-x-topo:
-  parameters:
-    FOO:
-      required: true
-      default: default
-`
-		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
-
-		err := project.Configure(composeFilePath, resolver)
-
-		require.ErrorContains(t, err, "missing value(s) for required parameters")
-		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
-	})
-
-	t.Run("recognizes current values in sequence build args", func(t *testing.T) {
-		composeFileContents := `services:
-  app:
-    build:
-      args: ["FOO=current"]
-x-topo:
-  parameters:
-    FOO:
-      required: true
-      default: default
-`
-		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
-
-		err := project.Configure(composeFilePath, resolver)
-
-		require.NoError(t, err)
-		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
-	})
 }

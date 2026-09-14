@@ -1,4 +1,4 @@
-package compose
+package project
 
 import (
 	"context"
@@ -9,30 +9,30 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ImageNames(composeFilePath string) ([]string, error) {
-	project, err := ReadProject(composeFilePath)
+func ImageNames(scope Scope) ([]string, error) {
+	composeProject, err := Read(scope)
 	if err != nil {
 		return nil, err
 	}
 	var names []string
-	for name, svc := range project.Services {
+	for name, svc := range composeProject.Services {
 		if svc.Image != "" {
 			names = append(names, svc.Image)
 		} else {
-			names = append(names, fmt.Sprintf("%s-%s", project.Name, name))
+			names = append(names, fmt.Sprintf("%s-%s", composeProject.Name, name))
 		}
 	}
 	sort.Strings(names)
 	return names, nil
 }
 
-func PullableServices(composeFilePath string) ([]string, error) {
-	project, err := ReadProject(composeFilePath)
+func PullableServices(scope Scope) ([]string, error) {
+	composeProject, err := Read(scope)
 	if err != nil {
 		return nil, err
 	}
 	var names []string
-	for name, svc := range project.Services {
+	for name, svc := range composeProject.Services {
 		if svc.Build == nil {
 			names = append(names, name)
 		}
@@ -41,13 +41,14 @@ func PullableServices(composeFilePath string) ([]string, error) {
 	return names, nil
 }
 
-func ReadProject(targetProjectFile string) (*types.Project, error) {
+func Read(scope Scope) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
-		[]string{targetProjectFile},
+		[]string{scope.ComposeFile},
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 		cli.WithEnvFiles(),
+		cli.WithEnv(scope.Env),
 	)
 	if err != nil {
 		return nil, err
@@ -60,9 +61,9 @@ func ReadProject(targetProjectFile string) (*types.Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	project, err := options.LoadProject(ctx)
+	composeProject, err := options.LoadProject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return project, nil
+	return composeProject, nil
 }

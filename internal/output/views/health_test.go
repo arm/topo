@@ -2,7 +2,6 @@ package views_test
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -37,9 +36,9 @@ func TestHealthReport(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{Dependencies: []health.HealthCheck{
 				{Name: "OpenSSH", Status: health.CheckStatusOK},
 			}}, &health.TargetReport{
-				Destination:  "ssh://user@my-target",
-				Connectivity: health.HealthCheck{Name: "Connectivity", Status: health.CheckStatusOK},
+				Destination: "ssh://user@my-target",
 				Dependencies: []health.HealthCheck{
+					{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
 					{Name: "Container Engine", Status: health.CheckStatusOK},
 					{ID: health.DependencyIDRemoteproc, Name: "Processing Domain Driver", Status: health.CheckStatusOK},
 				},
@@ -74,10 +73,11 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Pineapple on pizza",
 					Status: health.CheckStatusWarning,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -89,10 +89,11 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders an info icon for info checks", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Has potatoes",
 					Status: health.CheckStatusInfo,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -105,10 +106,11 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders connection failures", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Connected",
 					Status: health.CheckStatusError,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -120,8 +122,8 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders the processing domain and target's dependencies", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{Status: health.CheckStatusOK},
 				Dependencies: []health.HealthCheck{
+					{ID: health.DependencyIDConnectivity, Status: health.CheckStatusOK},
 					{ID: health.DependencyIDRemoteproc, Name: "Processing Domain Driver (remoteproc)", Status: health.CheckStatusOK},
 					{Name: "Hardware Info", Status: health.CheckStatusOK},
 				},
@@ -131,28 +133,32 @@ func TestHealthReport(t *testing.T) {
 			err := views.PrintHealthReport(toPrint, &out, term.Plain, true)
 
 			require.NoError(t, err)
-			assert.Less(t,
-				strings.Index(out.String(), "Hardware Info"),
-				strings.Index(out.String(), "Processing Domain Driver (remoteproc)"),
-			)
+			assert.Contains(t, out.String(), " ✓ Processing Domain Driver (remoteproc)\n ✓ Hardware Info")
 		})
 
-		t.Run("it renders the target destination", func(t *testing.T) {
-			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{Destination: "ssh://user@my-target"}, "")
+		t.Run("it renders the target destination when a dependency fails", func(t *testing.T) {
+			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
+				Destination: "ssh://user@my-target",
+				Dependencies: []health.HealthCheck{
+					{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK, Value: "ssh://user@my-target"},
+					{Name: "Container Engine", Status: health.CheckStatusError},
+				},
+			}, "")
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "┌─ Target: ssh://user@my-target ")
+			assert.Contains(t, out.String(), term.Header("Target: ssh://user@my-target", false)+"\n ✗ Container Engine\n\n")
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Connected",
 					Status: health.CheckStatusError,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -192,8 +198,8 @@ func TestHealthReport(t *testing.T) {
 				{Name: "Deprecated", Status: health.CheckStatusWarning},
 				{Name: "Skipped", Status: health.CheckStatusInfo},
 			}}, &health.TargetReport{
-				Connectivity: health.HealthCheck{Status: health.CheckStatusOK},
 				Dependencies: []health.HealthCheck{
+					{ID: health.DependencyIDConnectivity, Status: health.CheckStatusOK},
 					{ID: health.DependencyIDRemoteproc, Status: health.CheckStatusOK},
 				},
 			}, "")
@@ -216,7 +222,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "\n"+hint)
+			assert.Contains(t, out.String(), hint)
 		})
 	})
 
@@ -232,11 +238,13 @@ func TestHealthReport(t *testing.T) {
 				},
 			}, &health.TargetReport{
 				Destination: "ssh://user@my-target",
-				Connectivity: health.HealthCheck{
-					Name:   "Connected",
-					Status: health.CheckStatusOK,
-				},
 				Dependencies: []health.HealthCheck{
+					{
+						ID:     health.DependencyIDConnectivity,
+						Name:   "Connected",
+						Status: health.CheckStatusOK,
+						Value:  "ssh://user@my-target",
+					},
 					{
 						ID:     health.DependencyIDRemoteproc,
 						Name:   "Processing Domain Driver (remoteproc)",
@@ -260,7 +268,7 @@ func TestHealthReport(t *testing.T) {
 				"target": {
 					"destination": "ssh://user@my-target",
 					"isLocalhost": false,
-					"connectivity": {"name":"Connected","status":"ok","value":""},
+					"connectivity": {"name":"Connected","status":"ok","value":"ssh://user@my-target"},
 					"dependencies": [
 						{"name":"Container Engine","status":"ok","value":"docker"}
 					],

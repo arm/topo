@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/project"
 )
 
-func EnsureNoRuntimeSet(composePath string) error {
-	runtimes, err := listCustomServiceRuntimes(composePath)
+func EnsureNoRuntimeSet(scope project.Scope) error {
+	runtimes, err := listCustomServiceRuntimes(scope)
 	if err != nil {
 		return err
 	}
@@ -26,15 +26,15 @@ type serviceRuntime struct {
 	runtime     string
 }
 
-func listCustomServiceRuntimes(composePath string) ([]serviceRuntime, error) {
-	project, err := compose.ReadProject(composePath)
+func listCustomServiceRuntimes(scope project.Scope) ([]serviceRuntime, error) {
+	composeProject, err := project.Read(scope)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load compose project: %w", err)
 	}
 
 	var collected []serviceRuntime
-	for _, serviceName := range project.ServiceNames() {
-		runtime := strings.TrimSpace(project.Services[serviceName].Runtime)
+	for _, serviceName := range composeProject.ServiceNames() {
+		runtime := strings.TrimSpace(composeProject.Services[serviceName].Runtime)
 		if runtime != "" {
 			collected = append(collected, serviceRuntime{
 				serviceName: serviceName,
