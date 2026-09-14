@@ -27,62 +27,45 @@ type HostReport struct {
 	Dependencies []DependencyReport
 }
 
+type CheckHostOptions struct {
+	SkipVersionChecks bool
+}
+
 type TargetReport struct {
 	Destination  string
 	IsLocalhost  bool
 	Dependencies []DependencyReport
 }
 
-type CheckHostOptions struct {
-	SkipVersionChecks bool
-}
-
 func CheckHost(opts CheckHostOptions) HostReport {
 	deps := HostRequiredDependencies(opts.SkipVersionChecks)
 	dependencyStatuses := PerformChecks(context.Background(), deps)
-	return GenerateHostReport(dependencyStatuses)
-}
-
-type Status struct {
-	Destination  ssh.Destination
-	Dependencies []DependencyStatus
+	return HostReport{
+		Dependencies: toDependencyReports(dependencyStatuses),
+	}
 }
 
 func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) TargetReport {
 	targetDependencyStatuses := PerformChecks(ctx, TargetRequiredDependencies(dest, acceptNewHostKeys))
-	return GenerateTargetReport(Status{Destination: dest, Dependencies: targetDependencyStatuses})
-}
-
-func GenerateHostReport(statuses []DependencyStatus) HostReport {
-	report := HostReport{}
-	report.Dependencies = generateDependencyReport(statuses)
-
-	return report
-}
-
-func GenerateTargetReport(targetStatus Status) TargetReport {
 	return TargetReport{
-		Destination:  targetStatus.Destination.String(),
-		IsLocalhost:  targetStatus.Destination.IsPlainLocalhost(),
-		Dependencies: generateDependencyReport(targetStatus.Dependencies),
+		Destination:  dest.String(),
+		IsLocalhost:  dest.IsPlainLocalhost(),
+		Dependencies: toDependencyReports(targetDependencyStatuses),
 	}
 }
 
-func generateDependencyReport(statuses []DependencyStatus) []DependencyReport {
-	reports := []DependencyReport{}
-	for _, status := range statuses {
-		report := DependencyReport{ID: status.Dependency.ID, Name: status.Dependency.Label}
-		if status.Result.Failure == nil {
-			report.Status = CheckStatusOK
-			report.Value = status.Result.SuccessValue
-		} else {
-			report.Status = checkStatusFromSeverity(status.Result.Failure.Severity)
-			report.Value = status.Result.Failure.Message
-			report.Fix = status.Result.Failure.Fix
-		}
-		reports = append(reports, report)
+func ToDependencyReport(status DependencyStatus) DependencyReport {
+	report := DependencyReport{ID: status.Dependency.ID, Name: status.Dependency.Label}
+	if status.Result.Failure == nil {
+		report.Status = CheckStatusOK
+		report.Value = status.Result.SuccessValue
+		return report
 	}
-	return reports
+
+	report.Status = checkStatusFromSeverity(status.Result.Failure.Severity)
+	report.Value = status.Result.Failure.Message
+	report.Fix = status.Result.Failure.Fix
+	return report
 }
 
 func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {
@@ -94,4 +77,12 @@ func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {
 	default:
 		return CheckStatusError
 	}
+}
+
+func toDependencyReports(statuses []DependencyStatus) []DependencyReport {
+	reports := make([]DependencyReport, len(statuses))
+	for i, status := range statuses {
+		reports[i] = ToDependencyReport(status)
+	}
+	return reports
 }
