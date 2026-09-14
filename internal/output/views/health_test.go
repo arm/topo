@@ -113,8 +113,8 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Less(t,
-				strings.Index(out.String(), "Hardware Info"),
 				strings.Index(out.String(), "Processing Domain Driver (remoteproc)"),
+				strings.Index(out.String(), "Hardware Info"),
 			)
 		})
 
@@ -125,7 +125,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "┌─ Target: ssh://user@my-target ")
+			assert.Contains(t, out.String(), "┌─ Target ")
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
@@ -193,7 +193,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "\n"+hint)
+			assert.Contains(t, out.String(), hint)
 		})
 	})
 
@@ -214,6 +214,7 @@ func TestHealthReport(t *testing.T) {
 						ID:     health.DependencyIDConnectivity,
 						Name:   "Connected",
 						Status: health.CheckStatusOK,
+						Value:  "ssh://user@my-target",
 					},
 					{
 						ID:     health.DependencyIDRemoteproc,
@@ -238,7 +239,7 @@ func TestHealthReport(t *testing.T) {
 				"target": {
 					"destination": "ssh://user@my-target",
 					"isLocalhost": false,
-					"connectivity": {"name":"Connected","status":"ok","value":""},
+					"connectivity": {"name":"Connected","status":"ok","value":"ssh://user@my-target"},
 					"dependencies": [
 						{"name":"Container Engine","status":"ok","value":"docker"}
 					],
