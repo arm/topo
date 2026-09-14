@@ -95,13 +95,12 @@ func TestPerformChecks(t *testing.T) {
 		})
 
 		t.Run("when a check fails", func(t *testing.T) {
-			check := health.DependencyCheckFn(failingCheck)
-			dep := health.Dependency{Label: "bar", Check: check}
+			dep := health.Dependency{Label: "bar", Check: failingCheck}
 			deps := []health.Dependency{dep}
 
 			got := health.PerformChecks(context.Background(), deps)
 
-			wantResult := check(context.Background())
+			wantResult := failingCheck(context.Background())
 			require.Len(t, got, 1)
 			assert.Equal(t, dep.ID, got[0].Dependency.ID)
 			assert.Equal(t, wantResult, got[0].Result)
