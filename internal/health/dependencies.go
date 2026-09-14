@@ -130,12 +130,7 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 }
 
 func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) []Dependency {
-	var r runner.Runner
-	if target.IsPlainLocalhost() {
-		r = runner.NewLocal()
-	} else {
-		r = runner.NewSSH(target)
-	}
+	r := runner.For(target)
 
 	remoteTargetPrerequisites := []DependencyID(nil)
 	dependencies := []Dependency(nil)
