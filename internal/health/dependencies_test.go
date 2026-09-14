@@ -146,7 +146,7 @@ func TestRemoteprocDependency(t *testing.T) {
 
 		t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
 			r := buildRunnerWithRemoteProcs(nil)
-			d := health.NewRemoteprocDependency(r)
+			d := health.NewDependencyOnRemoteproc(r)
 
 			got := d.Check(context.Background())
 
@@ -163,7 +163,7 @@ func TestRemoteprocDependency(t *testing.T) {
 			r := &runner.Fake{Commands: map[string]runner.FakeResult{
 				"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
 			}}
-			d := health.NewRemoteprocDependency(r)
+			d := health.NewDependencyOnRemoteproc(r)
 
 			got := d.Check(context.Background())
 
@@ -178,7 +178,7 @@ func TestRemoteprocDependency(t *testing.T) {
 
 		t.Run("reports remoteproc device names", func(t *testing.T) {
 			r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
-			d := health.NewRemoteprocDependency(r)
+			d := health.NewDependencyOnRemoteproc(r)
 
 			got := d.Check(context.Background())
 
@@ -190,7 +190,7 @@ func TestRemoteprocDependency(t *testing.T) {
 func TestRemoteprocRuntimeDependency(t *testing.T) {
 	t.Run("Check", func(t *testing.T) {
 		t.Run("includes an install fix with the target", func(t *testing.T) {
-			dep := health.NewRemoteprocRuntimeDependency(ssh.NewDestination("user@my-target"), &runner.Fake{})
+			dep := health.NewDependencyOnRemoteprocRuntime(ssh.NewDestination("user@my-target"), &runner.Fake{})
 
 			result := dep.Check(context.Background())
 
