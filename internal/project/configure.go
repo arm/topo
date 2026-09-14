@@ -1,35 +1,12 @@
 package project
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/operation"
 	"github.com/arm/topo/internal/parameter"
 )
-
-func Clone(path string, src Source, resolver parameter.Resolver) error {
-	return NewClone(path, src, resolver).Run(nil)
-}
-
-func NewClone(path string, src Source, resolver parameter.Resolver) operation.Sequence {
-	return operation.NewSequence(
-		copyProjectOperation{
-			path: path,
-			src:  src,
-		},
-		configureOperation{
-			path:     path,
-			resolver: resolver,
-		},
-		printSummary{
-			path: path,
-		},
-	)
-}
 
 func Configure(composeFilePath string, resolver parameter.Resolver) error {
 	values, err := collectValues(composeFilePath, resolver)
@@ -99,71 +76,4 @@ func toDefinitions(parameters []Parameter, currentValues map[string][]string) []
 		}
 	}
 	return definitions
-}
-
-type copyProjectOperation struct {
-	path string
-	src  Source
-}
-
-func (o copyProjectOperation) Description() string {
-	return "Copy files"
-}
-
-func (o copyProjectOperation) Run(_ io.Writer) error {
-	if err := o.src.CopyTo(o.path); err != nil {
-		if errDestDirExists, ok := errors.AsType[DestDirExistsError](err); ok {
-			return fmt.Errorf("%w: please choose a different project directory or remove the existing directory", errDestDirExists)
-		}
-		return fmt.Errorf("failed to copy project: %w", err)
-	}
-	return nil
-}
-
-type configureOperation struct {
-	path     string
-	resolver parameter.Resolver
-}
-
-func (o configureOperation) Description() string {
-	return "Configure project"
-}
-
-func (o configureOperation) Run(_ io.Writer) error {
-	composeFile, err := compose.FindDefaultFile(o.path)
-	if err != nil {
-		return err
-	}
-
-	if err := Configure(composeFile, o.resolver); err != nil {
-		if rmErr := os.RemoveAll(o.path); rmErr != nil {
-			return errors.Join(err, rmErr)
-		}
-		return fmt.Errorf("init failed: %w", err)
-	}
-	return nil
-}
-
-type printSummary struct {
-	path string
-}
-
-func (o printSummary) Description() string {
-	return "Project ready"
-}
-
-func (o printSummary) Run(w io.Writer) error {
-	if w == nil {
-		return nil
-	}
-	toPrint := fmt.Sprintf(`Created in '%s'
-
-Now run:
-  cd %s
-  topo deploy
-
-A deployment target is required. Provide --target or set TOPO_TARGET.`, o.path, o.path)
-
-	_, err := fmt.Fprintln(w, toPrint)
-	return err
 }

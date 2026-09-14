@@ -77,7 +77,7 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.NewClone(path, projectSource, resolver).Run(os.Stdout)
+		return project.Clone(os.Stdout, path, projectSource, resolver)
 	},
 }
 
