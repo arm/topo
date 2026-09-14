@@ -33,17 +33,6 @@ type healthCheckSection struct {
 	Checks            []healthCheck
 }
 
-type healthTargetSection struct {
-	Destination string
-	Section     healthCheckSection
-}
-
-type plainHealthReport struct {
-	Host       healthCheckSection
-	Target     *healthTargetSection
-	TargetHint string
-}
-
 const healthReportTemplate = `
 {{- define "checkRow" -}}
 {{ status .Status }}{{ .Name }}{{- if .Value }} ({{ .Value }}){{- end }}
@@ -56,21 +45,17 @@ const healthReportTemplate = `
   {{- end }}
 {{- end -}}
 {{- end -}}
-{{ sectionHeading "Host" }}
-{{- if .Host.ShowPassedSummary }}
+{{- define "checkSection" -}}
+{{- if .ShowPassedSummary }}
 {{ successStatus }}All checks passed
 {{- end }}
-{{- range $hostCheckRow := .Host.Checks }}
-{{ template "checkRow" $hostCheckRow }}
-{{- end }}
+{{- range .Checks }}
+{{ template "checkRow" . }}
+{{- end -}}
+{{- end -}}
+{{ sectionHeading "Host" }}{{ template "checkSection" (section .Host.Dependencies) }}
 
-{{ if .Target }}{{ targetHeading .Target.Destination -}}
-  {{- if .Target.Section.ShowPassedSummary }}
-{{ successStatus }}All checks passed
-  {{- end }}
-  {{- range $targetCheckRow := .Target.Section.Checks }}
-{{ template "checkRow" $targetCheckRow }}
-  {{- end }}
+{{ if .Target }}{{ targetHeading .Target.Destination }}{{ template "checkSection" (section .Target.Checks) }}
 {{- else -}}
 {{ sectionHeading "Target" }}
 {{ .TargetHint }}
@@ -108,6 +93,9 @@ func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 	funcMap["targetHeading"] = func(destination string) string {
 		return targetHeading(destination, isTTY)
 	}
+	funcMap["section"] = func(checks []healthCheck) healthCheckSection {
+		return newHealthCheckSection(checks, verbose)
+	}
 	tmpl, err := template.
 		New("healthcheck").
 		Funcs(funcMap).
@@ -116,7 +104,7 @@ func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 		return "", err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, r.asPlainReport(verbose)); err != nil {
+	if err := tmpl.Execute(&buf, r); err != nil {
 		return "", err
 	}
 
@@ -163,6 +151,18 @@ type targetReport struct {
 	Connectivity           healthCheck   `json:"connectivity"`
 	Dependencies           []healthCheck `json:"dependencies"`
 	ProcessingDomainDriver healthCheck   `json:"processingDomainDriver"`
+}
+
+func (r targetReport) Checks() []healthCheck {
+	checks := make([]healthCheck, 0, len(r.Dependencies)+2)
+	if !r.IsLocalhost {
+		checks = append(checks, r.Connectivity)
+	}
+	if r.IsLocalhost || r.Connectivity.Status == health.CheckStatusOK {
+		checks = append(checks, r.Dependencies...)
+		checks = append(checks, r.ProcessingDomainDriver)
+	}
+	return checks
 }
 
 type healthCheck struct {
@@ -233,29 +233,4 @@ func newHealthCheckSection(checks []healthCheck, verbose bool) healthCheckSectio
 	section.ShowPassedSummary = !verbose && allPassed
 
 	return section
-}
-
-func (r HealthReport) asPlainReport(verbose bool) plainHealthReport {
-	report := plainHealthReport{
-		Host:       newHealthCheckSection(r.Host.Dependencies, verbose),
-		TargetHint: r.TargetHint,
-	}
-	if r.Target == nil {
-		return report
-	}
-
-	targetChecks := make([]healthCheck, 0, len(r.Target.Dependencies)+2)
-	if !r.Target.IsLocalhost {
-		targetChecks = append(targetChecks, r.Target.Connectivity)
-	}
-	if r.Target.IsLocalhost || r.Target.Connectivity.Status == health.CheckStatusOK {
-		targetChecks = append(targetChecks, r.Target.Dependencies...)
-		targetChecks = append(targetChecks, r.Target.ProcessingDomainDriver)
-	}
-
-	report.Target = &healthTargetSection{
-		Destination: r.Target.Destination,
-		Section:     newHealthCheckSection(targetChecks, verbose),
-	}
-	return report
 }
