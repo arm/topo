@@ -154,7 +154,7 @@ type targetReport struct {
 }
 
 func (r targetReport) Checks() []healthCheck {
-	checks := make([]healthCheck, 0, len(r.Dependencies)+2)
+	var checks []healthCheck
 	if !r.IsLocalhost {
 		checks = append(checks, r.Connectivity)
 	}
