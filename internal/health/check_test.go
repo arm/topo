@@ -7,21 +7,8 @@ import (
 
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/version"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestCheckTopoIsUpToDate(t *testing.T) {
-	t.Run("passes for development builds", func(t *testing.T) {
-		originalVersion := version.Version
-		version.Version = version.Dev
-		t.Cleanup(func() { version.Version = originalVersion })
-
-		got := health.CheckTopoIsUpToDate(context.Background())
-
-		assert.Nil(t, got)
-	})
-}
 
 func TestCheckOpenSSHAvailable(t *testing.T) {
 	ctx := context.Background()

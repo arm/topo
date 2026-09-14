@@ -6,44 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/upgrade"
 	"github.com/arm/topo/internal/version"
 )
-
-func CheckTopoIsUpToDate(ctx context.Context) *DependencyCheckFailure {
-	if version.Version == version.Dev {
-		return nil
-	}
-
-	binPath, binPathErr := upgrade.CurrentBinaryPath()
-
-	var latest string
-	var err error
-	if binPathErr == nil && upgrade.IsBinaryManagedByHomebrew(binPath) {
-		latest, err = version.FetchLatestHomebrew(ctx, version.HomebrewFormulaURL)
-	} else {
-		latest, err = version.FetchLatestArtifactory(ctx, version.ArtifactoryBaseURL)
-	}
-	if err != nil {
-		logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
-		return nil
-	}
-	if latest == version.Version {
-		return nil
-	}
-
-	fix := Fix{Description: "Upgrade Topo"}
-	if binPathErr == nil {
-		_, fix.Command = upgrade.GetUpgradeCommand(binPath)
-	}
-	return &DependencyCheckFailure{
-		Severity: SeverityInfo,
-		Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", version.Version, latest),
-		Fix:      &fix,
-	}
-}
 
 func CheckOpenSSHAvailable(ctx context.Context, r runner.Runner, sshBinary string) *DependencyCheckFailure {
 	_, stderr, err := r.Run(ctx, sshBinary+" -V")

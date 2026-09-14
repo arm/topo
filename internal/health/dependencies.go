@@ -7,9 +7,12 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/upgrade"
+	"github.com/arm/topo/internal/version"
 )
 
 const containerEngineInstallURL = "https://github.com/arm/topo#install-a-container-engine"
@@ -112,13 +115,35 @@ func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 		ID:    DependencyID("topo"),
 		Label: "Topo",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if skipVersionChecks {
+			if skipVersionChecks || version.Version == version.Dev {
 				return DependencyCheckResult{SuccessValue: "topo"}
 			}
-			if failure := CheckTopoIsUpToDate(ctx); failure != nil {
-				return DependencyCheckResult{Failure: failure}
+			binPath, binPathErr := upgrade.CurrentBinaryPath()
+
+			var latest string
+			var err error
+			if binPathErr == nil && upgrade.IsBinaryManagedByHomebrew(binPath) {
+				latest, err = version.FetchLatestHomebrew(ctx, version.HomebrewFormulaURL)
+			} else {
+				latest, err = version.FetchLatestArtifactory(ctx, version.ArtifactoryBaseURL)
 			}
-			return DependencyCheckResult{SuccessValue: "topo"}
+			if err != nil {
+				logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
+				return DependencyCheckResult{SuccessValue: "topo"}
+			}
+			if latest == version.Version {
+				return DependencyCheckResult{SuccessValue: "topo"}
+			}
+
+			fix := Fix{Description: "Upgrade Topo"}
+			if binPathErr == nil {
+				_, fix.Command = upgrade.GetUpgradeCommand(binPath)
+			}
+			return DependencyCheckResult{Failure: &DependencyCheckFailure{
+				Severity: SeverityInfo,
+				Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", version.Version, latest),
+				Fix:      &fix,
+			}}
 		},
 	}
 }

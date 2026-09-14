@@ -9,6 +9,7 @@ import (
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,6 +62,18 @@ func TestDependencies(t *testing.T) {
 				}
 			}
 		})
+	})
+}
+
+func TestNewDependencyOnTopoCheck(t *testing.T) {
+	t.Run("passes for development builds", func(t *testing.T) {
+		originalVersion := version.Version
+		version.Version = version.Dev
+		t.Cleanup(func() { version.Version = originalVersion })
+
+		dependency := health.NewDependencyOnTopo(false)
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "topo"}, dependency.Check(context.Background()))
 	})
 }
 
