@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -185,9 +186,27 @@ func NewDependencyOnDockerCompose(r runner.Runner, prerequisites ...DependencyID
 					Fix:      &Fix{Description: "Ensure Docker Compose is installed as a plugin for Docker. See " + containerEngineInstallURL},
 				}}
 			}
-			if failure := CheckDockerComposeMinVersion(ctx, r, "2.21.0"); failure != nil {
-				return DependencyCheckResult{Failure: failure}
+
+			stdout, _, err := r.Run(ctx, "docker compose version --format json")
+			if err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
 			}
+
+			var output struct {
+				Version string `json:"version"`
+			}
+			if err := json.Unmarshal([]byte(stdout), &output); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
+			}
+			if !version.IsAtLeastVersion(output.Version, "2.21.0") {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Message: fmt.Sprintf("installed docker compose version %s is older than required version %s", output.Version, "2.21.0"),
+					Fix: &Fix{
+						Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later. See %s", "2.21.0", containerEngineInstallURL),
+					},
+				}}
+			}
+
 			return DependencyCheckResult{SuccessValue: "docker-compose"}
 		},
 		Prerequisites: prerequisites,

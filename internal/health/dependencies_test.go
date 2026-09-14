@@ -77,6 +77,43 @@ func TestNewDependencyOnTopoCheck(t *testing.T) {
 	})
 }
 
+func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
+	buildRunner := func(version string) runner.Runner {
+		return &runner.Fake{Commands: map[string]runner.FakeResult{
+			"docker-compose":                       {},
+			"docker compose version --format json": {Output: `{"version": "` + version + `"}`},
+		}}
+	}
+
+	t.Run("accepts Docker Compose at the minimum version", func(t *testing.T) {
+		dependency := health.NewDependencyOnDockerCompose(buildRunner("2.21.0"))
+
+		got := dependency.Check(context.Background())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
+	})
+
+	t.Run("accepts Docker Compose newer than the minimum version", func(t *testing.T) {
+		dependency := health.NewDependencyOnDockerCompose(buildRunner("5.2.0"))
+
+		got := dependency.Check(context.Background())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
+	})
+
+	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {
+		dependency := health.NewDependencyOnDockerCompose(buildRunner("v1.9.0"))
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Message: "installed docker compose version v1.9.0 is older than required version 2.21.0",
+			Fix:     &health.Fix{Description: "Upgrade Docker Compose to version 2.21.0 or later. See https://github.com/arm/topo#install-a-container-engine"},
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
 func TestPerformChecks(t *testing.T) {
 	t.Run("dependency status reflects the result of running the check", func(t *testing.T) {
 		t.Run("when check passes", func(t *testing.T) {
