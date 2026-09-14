@@ -13,6 +13,6 @@ type HealthStatus struct {
 
 func ProbeHealthStatus(ctx context.Context, r runner.Runner, target ssh.Destination, acceptNewHostKeys bool) HealthStatus {
 	return HealthStatus{
-		Dependencies: PerformChecks(ctx, TargetRequiredDependencies(target, acceptNewHostKeys), r),
+		Dependencies: PerformChecks(ctx, TargetRequiredDependencies(target, acceptNewHostKeys, r)),
 	}
 }
