@@ -27,7 +27,7 @@
     "connectivity": {
       "name": "Connectivity",
       "status": "ok",
-      "value": ""
+      "value": "TARGET_DESTINATION"
     },
     "dependencies": [
       {
