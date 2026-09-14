@@ -3,7 +3,6 @@ package health
 import (
 	"context"
 
-	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -50,14 +49,7 @@ type Status struct {
 }
 
 func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) (TargetReport, error) {
-	var r runner.Runner
-	if dest.IsPlainLocalhost() {
-		r = runner.NewLocal()
-	} else {
-		r = runner.NewSSH(dest)
-	}
-
-	status := ProbeHealthStatus(ctx, r, dest, acceptNewHostKeys)
+	status := ProbeHealthStatus(ctx, dest, acceptNewHostKeys)
 	return GenerateTargetReport(Status{Destination: dest, Dependencies: status.Dependencies}), nil
 }
 

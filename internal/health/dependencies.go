@@ -129,7 +129,14 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 	return []Dependency{topo, ssh, docker, dockerCompose}
 }
 
-func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool, r runner.Runner) []Dependency {
+func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) []Dependency {
+	var r runner.Runner
+	if target.IsPlainLocalhost() {
+		r = runner.NewLocal()
+	} else {
+		r = runner.NewSSH(target)
+	}
+
 	remoteTargetPrerequisites := []DependencyID(nil)
 	dependencies := []Dependency(nil)
 	if !target.IsPlainLocalhost() {
@@ -163,24 +170,7 @@ func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool, 
 
 	remoteproc := NewRemoteprocDependency(r)
 
-	remoteprocRuntime := Dependency{
-		ID:            DependencyID("remoteproc-runtime"),
-		Label:         "Remoteproc Runtime",
-		Prerequisites: []DependencyID{docker.ID, remoteproc.ID},
-		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityWarning,
-					Message:  err.Error(),
-					Fix: &Fix{
-						Description: "Install the Remoteproc Runtime",
-						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
-					},
-				}}
-			}
-			return DependencyCheckResult{SuccessValue: "remoteproc-runtime"}
-		},
-	}
+	remoteprocRuntime := NewRemoteprocRuntimeDependency(target, r, docker.ID, remoteproc.ID)
 
 	remoteprocRuntimeShim := Dependency{
 		ID:            DependencyID("containerd-shim-remoteproc-v1"),
@@ -213,6 +203,27 @@ func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool, 
 	}
 
 	return append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
+}
+
+func NewRemoteprocRuntimeDependency(target ssh.Destination, r runner.Runner, prerequisites ...DependencyID) Dependency {
+	return Dependency{
+		ID:            DependencyID("remoteproc-runtime"),
+		Label:         "Remoteproc Runtime",
+		Prerequisites: prerequisites,
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityWarning,
+					Message:  err.Error(),
+					Fix: &Fix{
+						Description: "Install the Remoteproc Runtime",
+						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
+					},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "remoteproc-runtime"}
+		},
+	}
 }
 
 func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) Dependency {

@@ -17,7 +17,7 @@ import (
 func TestDependencies(t *testing.T) {
 	t.Run("ids are unique across all dependencies", func(t *testing.T) {
 		hostDeps := health.HostRequiredDependencies(false)
-		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"), false, &runner.Fake{})
+		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"), false)
 
 		ids := make([]health.DependencyID, 0, len(hostDeps)+len(targetDeps))
 		for _, dep := range slices.Concat(hostDeps, targetDeps) {
@@ -42,14 +42,14 @@ func TestDependencies(t *testing.T) {
 
 	t.Run("target dependencies", func(t *testing.T) {
 		t.Run("remote target dependencies require connectivity", func(t *testing.T) {
-			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"), false, &runner.Fake{})
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"), false)
 
 			assert.Equal(t, health.DependencyIDConnectivity, deps[0].ID)
 			assert.Equal(t, []health.DependencyID{health.DependencyIDConnectivity}, deps[1].Prerequisites)
 		})
 
 		t.Run("prerequisites are fulfillable", func(t *testing.T) {
-			deps := health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test"), false, &runner.Fake{})
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test"), false)
 			ids := make([]health.DependencyID, 0, len(deps))
 			for _, dep := range deps {
 				ids = append(ids, dep.ID)
@@ -59,11 +59,14 @@ func TestDependencies(t *testing.T) {
 			}
 		})
 
-		t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
-			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"), false, &runner.Fake{})
+	})
+}
 
-			dep, err := findDependencyByID(t, deps, "remoteproc-runtime")
-			assert.NoError(t, err)
+func TestRemoteprocRuntimeDependency(t *testing.T) {
+	t.Run("Check", func(t *testing.T) {
+		t.Run("includes an install fix with the target", func(t *testing.T) {
+			dep := health.NewRemoteprocRuntimeDependency(ssh.NewDestination("user@my-target"), &runner.Fake{})
+
 			result := dep.Check(context.Background())
 
 			assert.Equal(t, &health.DependencyCheckFailure{
@@ -200,18 +203,6 @@ func TestRemoteprocDependency(t *testing.T) {
 			assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
 		})
 	})
-}
-
-func findDependencyByID(t *testing.T, deps []health.Dependency, id string) (health.Dependency, error) {
-	t.Helper()
-
-	for _, dep := range deps {
-		if dep.ID == health.DependencyID(id) {
-			return dep, nil
-		}
-	}
-
-	return health.Dependency{}, errors.New("dependency not found")
 }
 
 func passingCheck(_ context.Context) health.DependencyCheckResult {
