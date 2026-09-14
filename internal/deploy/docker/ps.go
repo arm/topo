@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/arm/topo/internal/project"
 )
 
 const (
@@ -46,8 +48,8 @@ type InspectedHostConfig struct {
 	Annotations map[string]string `json:"Annotations"`
 }
 
-func ListContainers(composeFile string, h Host, hostname string, all bool) ([]Container, error) {
-	rawJSON, err := getContainers(composeFile, h, all)
+func ListContainers(scope project.Scope, h Host, hostname string, all bool) ([]Container, error) {
+	rawJSON, err := getContainers(scope, h, all)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +70,9 @@ func ListContainers(composeFile string, h Host, hostname string, all bool) ([]Co
 	return containers, nil
 }
 
-func getContainers(composeFile string, h Host, all bool) (string, error) {
+func getContainers(scope project.Scope, h Host, all bool) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := ComposeCommand(context.Background(), h, composeFile, composePSArgs(all)...)
+	cmd := ComposeCommand(context.Background(), h, scope, composePSArgs(all)...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

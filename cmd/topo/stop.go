@@ -5,7 +5,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/podman"
-	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 
 	"github.com/spf13/cobra"
@@ -31,21 +31,20 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		err = env.SetTargetEnv(targetArg)
+		composeFile, err := getComposeFileName(cmd)
 		if err != nil {
 			return err
 		}
-
-		composeFile, err := getComposeFileName(cmd)
+		scope, err := project.LoadScope(composeFile, targetArg)
 		if err != nil {
 			return err
 		}
 
 		dest := ssh.NewDestination(targetArg)
 		if selectedEngine == containerEnginePodman {
-			return podman.Stop(cmd.Context(), os.Stdout, composeFile, dest)
+			return podman.Stop(cmd.Context(), os.Stdout, scope, dest)
 		}
-		return docker.Stop(cmd.Context(), os.Stdout, composeFile, dest)
+		return docker.Stop(cmd.Context(), os.Stdout, scope, dest)
 	},
 }
 

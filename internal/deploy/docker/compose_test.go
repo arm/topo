@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +25,7 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := docker.PullImages(context.Background(), &output, docker.LocalHost, composeFilePath)
+		err := docker.PullImages(context.Background(), &output, docker.LocalHost, project.Scope{ComposeFile: composeFilePath})
 
 		require.NoError(t, err)
 	})

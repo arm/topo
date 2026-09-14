@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/project"
 	"golang.org/x/sync/errgroup"
 )
 
-func TransferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Host, composeFile string) error {
-	images, err := compose.ImageNames(composeFile)
+func TransferImagesViaPipe(ctx context.Context, output io.Writer, source, destination Host, scope project.Scope) error {
+	images, err := project.ImageNames(scope)
 	if err != nil {
 		return err
 	}

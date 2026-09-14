@@ -14,6 +14,7 @@ import (
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 
 	"github.com/spf13/cobra"
@@ -52,27 +53,28 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		err = env.SetTargetEnv(targetArg)
+		composeFile, err := getComposeFileName(cmd)
 		if err != nil {
 			return err
 		}
-		if selectedEngine == containerEnginePodman {
-			return deployWithPodman(cmd, targetArg)
+		scope, err := project.LoadScope(composeFile, targetArg)
+		if err != nil {
+			return err
 		}
-		return deployWithDocker(cmd, targetArg)
+
+		if selectedEngine == containerEnginePodman {
+			return deployWithPodman(cmd, scope, targetArg)
+		}
+		return deployWithDocker(cmd, scope, targetArg)
 	},
 }
 
-func deployWithPodman(cmd *cobra.Command, targetArg string) error {
+func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg string) error {
 	if cmd.Flags().Changed("registry-port") && noRegistry {
 		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 	}
 
-	composeFile, err := getComposeFileName(cmd)
-	if err != nil {
-		return err
-	}
-	if err := ensureProjectIsReady(composeFile); err != nil {
+	if err := ensureProjectIsReady(scope); err != nil {
 		return err
 	}
 
@@ -100,20 +102,16 @@ func deployWithPodman(cmd *cobra.Command, targetArg string) error {
 	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
-		return podman.Deploy(ctx, os.Stdout, composeFile, options)
+		return podman.Deploy(ctx, os.Stdout, scope, options)
 	})
 }
 
-func deployWithDocker(cmd *cobra.Command, targetArg string) error {
+func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg string) error {
 	if cmd.Flags().Changed("registry-port") && noRegistry {
 		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 	}
 
-	composeFile, err := getComposeFileName(cmd)
-	if err != nil {
-		return err
-	}
-	if err := ensureProjectIsReady(composeFile); err != nil {
+	if err := ensureProjectIsReady(scope); err != nil {
 		return err
 	}
 
@@ -140,15 +138,15 @@ func deployWithDocker(cmd *cobra.Command, targetArg string) error {
 	}
 
 	return executeDeployment(cmd, func(ctx context.Context) error {
-		return docker.Deploy(ctx, os.Stdout, composeFile, deployOpts)
+		return docker.Deploy(ctx, os.Stdout, scope, deployOpts)
 	})
 }
 
-func ensureProjectIsReady(composeFile string) error {
+func ensureProjectIsReady(scope project.Scope) error {
 	if skipProjectChecks {
 		return nil
 	}
-	return checks.EnsureProjectIsLinuxArm64Ready(composeFile)
+	return checks.EnsureProjectIsLinuxArm64Ready(scope)
 }
 
 func executeDeployment(cmd *cobra.Command, deployment func(context.Context) error) error {

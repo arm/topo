@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/project"
 )
 
 const composeProvider = "docker-compose"
@@ -28,10 +29,11 @@ func RunCommand(ctx context.Context, output io.Writer, socket Socket, args ...st
 	return nil
 }
 
-func ComposeCommand(ctx context.Context, socket Socket, composeFile string, args ...string) (*exec.Cmd, error) {
-	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
+func ComposeCommand(ctx context.Context, socket Socket, scope project.Scope, args ...string) (*exec.Cmd, error) {
+	composeArgs := append([]string{"compose", "-f", scope.ComposeFile}, args...)
 	cmd := exec.CommandContext(ctx, "podman", composeArgs...)
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(os.Environ(), scope.Env...)
+	cmd.Env = append(cmd.Env,
 		"PODMAN_COMPOSE_PROVIDER="+composeProvider,
 		"PODMAN_COMPOSE_WARNING_LOGS=false",
 	)
@@ -43,8 +45,8 @@ func ComposeCommand(ctx context.Context, socket Socket, composeFile string, args
 	return cmd, nil
 }
 
-func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, composeFile string, args ...string) error {
-	cmd, err := ComposeCommand(ctx, socket, composeFile, args...)
+func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, scope project.Scope, args ...string) error {
+	cmd, err := ComposeCommand(ctx, socket, scope, args...)
 	if err != nil {
 		return err
 	}

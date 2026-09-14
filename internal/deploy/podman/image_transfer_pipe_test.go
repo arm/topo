@@ -13,7 +13,7 @@ import (
 
 func TestTransferImagesViaPipe(t *testing.T) {
 	requireLocalPodman(t)
-	composeFile, imageName := imageTransferFixture(t)
+	scope, imageName := imageTransferFixture(t)
 	target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
 	targetDestination := ssh.NewDestination(target.SSHDestination)
 	tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
@@ -22,10 +22,10 @@ func TestTransferImagesViaPipe(t *testing.T) {
 		require.NoError(t, tunnel.Close())
 	})
 	remoteSocket := podman.NewSocket(tunnel.SocketURL())
-	err = podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, composeFile)
+	err = podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, scope)
 	require.NoError(t, err)
 
-	err = podman.TransferImagesViaPipe(t.Context(), t.Output(), podman.LocalSocket, remoteSocket, composeFile)
+	err = podman.TransferImagesViaPipe(t.Context(), t.Output(), podman.LocalSocket, remoteSocket, scope)
 
 	require.NoError(t, err)
 	assertImageExists(t, remoteSocket, imageName)

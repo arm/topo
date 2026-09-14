@@ -10,6 +10,7 @@ import (
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -30,20 +31,20 @@ type DeployOptions struct {
 	Registry     *RegistryConfig
 }
 
-func Deploy(ctx context.Context, output io.Writer, composeFile string, options DeployOptions) (deployErr error) {
-	if err := EnsureNoRuntimeSet(composeFile); err != nil {
+func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options DeployOptions) (deployErr error) {
+	if err := EnsureNoRuntimeSet(scope); err != nil {
 		return err
 	}
 	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
 	}
-	if err := BuildImages(ctx, output, LocalSocket, composeFile); err != nil {
+	if err := BuildImages(ctx, output, LocalSocket, scope); err != nil {
 		return err
 	}
 	if err := term.PrintHeader(output, "Pull images"); err != nil {
 		return err
 	}
-	if err := PullImages(ctx, output, LocalSocket, composeFile); err != nil {
+	if err := PullImages(ctx, output, LocalSocket, scope); err != nil {
 		return err
 	}
 
@@ -67,10 +68,10 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 
 		targetSocket = NewSocket(tunnel.SocketURL())
 		if options.Registry == nil {
-			if err := transferImagesViaPipe(ctx, output, LocalSocket, targetSocket, composeFile); err != nil {
+			if err := transferImagesViaPipe(ctx, output, LocalSocket, targetSocket, scope); err != nil {
 				return err
 			}
-		} else if err := transferImagesViaRegistry(ctx, output, LocalSocket, options.TargetHost, targetSocket, composeFile, *options.Registry); err != nil {
+		} else if err := transferImagesViaRegistry(ctx, output, LocalSocket, options.TargetHost, targetSocket, scope, *options.Registry); err != nil {
 			return err
 		}
 	}
@@ -78,7 +79,7 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	if err := term.PrintHeader(output, "Start services"); err != nil {
 		return err
 	}
-	if err := StartServices(ctx, output, targetSocket, composeFile, options.RecreateMode); err != nil {
+	if err := StartServices(ctx, output, targetSocket, scope, options.RecreateMode); err != nil {
 		return err
 	}
 
@@ -92,17 +93,17 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, options D
 	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
 		return err
 	}
-	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
+	return post_deploy.PrintDeploySuccess(output, scope, post_deploy.DefaultMessage(scope.ComposeFile))
 }
 
-func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, composeFile string) error {
+func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, scope project.Scope) error {
 	if err := term.PrintHeader(output, "Transfer images"); err != nil {
 		return err
 	}
-	return TransferImagesViaPipe(ctx, output, sourceSocket, targetSocket, composeFile)
+	return TransferImagesViaPipe(ctx, output, sourceSocket, targetSocket, scope)
 }
 
-func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSocket Socket, targetDestination ssh.Destination, targetSocket Socket, composeFile string, options RegistryConfig) (transferErr error) {
+func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSocket Socket, targetDestination ssh.Destination, targetSocket Socket, scope project.Scope, options RegistryConfig) (transferErr error) {
 	if err := term.PrintHeader(output, "Run registry"); err != nil {
 		return err
 	}
@@ -137,7 +138,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSock
 	if err := term.PrintHeader(output, "Transfer via registry"); err != nil {
 		return err
 	}
-	return TransferImagesViaRegistry(ctx, output, sourceSocket, targetSocket, composeFile, options.Port)
+	return TransferImagesViaRegistry(ctx, output, sourceSocket, targetSocket, scope, options.Port)
 }
 
 func closeRegistryTunnel(output io.Writer, tunnel *ssh.Tunnel) error {
