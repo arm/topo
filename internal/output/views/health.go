@@ -150,17 +150,19 @@ func toViewTargetReport(report health.TargetReport) targetReport {
 	target := targetReport{
 		Destination:            report.Destination,
 		IsLocalhost:            report.IsLocalhost,
-		Connectivity:           toViewHealthCheck(report.Connectivity),
 		Dependencies:           make([]healthCheck, 0, len(report.Dependencies)),
 		ProcessingDomainDriver: healthCheck{Name: "Processing Domain Driver (remoteproc)"},
 	}
 	for _, check := range report.Dependencies {
 		viewCheck := toViewHealthCheck(check)
-		if check.ID == health.DependencyIDRemoteproc {
+		switch check.ID {
+		case health.DependencyIDConnectivity:
+			target.Connectivity = viewCheck
+		case health.DependencyIDRemoteproc:
 			target.ProcessingDomainDriver = viewCheck
-			continue
+		default:
+			target.Dependencies = append(target.Dependencies, viewCheck)
 		}
-		target.Dependencies = append(target.Dependencies, viewCheck)
 	}
 	return target
 }

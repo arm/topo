@@ -47,13 +47,7 @@ var healthCmd = &cobra.Command{
 		if targetArg, ok := lookupTarget(cmd); ok {
 			ctx, cancel := contextWithTimeout(cmd)
 			defer cancel()
-			targetHealthReport, err := health.CheckTarget(ctx, ssh.NewDestination(targetArg), acceptNewHostKeys)
-			if err != nil {
-				if spinner != nil {
-					spinner.Stop()
-				}
-				return err
-			}
+			targetHealthReport := health.CheckTarget(ctx, ssh.NewDestination(targetArg), acceptNewHostKeys)
 			targetReport = &targetHealthReport
 		} else {
 			targetHint = "provide --target or set TOPO_TARGET to check target health"
