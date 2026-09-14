@@ -8,18 +8,18 @@ import (
 )
 
 func TestGenerateHostReport(t *testing.T) {
-	testDependencyReporting(t, func(statuses []health.DependencyStatus) []health.HealthCheck {
+	testDependencyReporting(t, func(statuses []health.DependencyStatus) []health.DependencyReport {
 		return health.GenerateHostReport(statuses).Dependencies
 	})
 }
 
 func TestGenerateTargetReport(t *testing.T) {
-	testDependencyReporting(t, func(statuses []health.DependencyStatus) []health.HealthCheck {
+	testDependencyReporting(t, func(statuses []health.DependencyStatus) []health.DependencyReport {
 		return health.GenerateTargetReport(health.Status{Dependencies: statuses}).Dependencies
 	})
 }
 
-func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatus) []health.HealthCheck) {
+func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatus) []health.DependencyReport) {
 	t.Helper()
 
 	t.Run("when a dependency has a successful result, health check reports its value", func(t *testing.T) {
@@ -30,7 +30,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 
 		got := extract(statuses)
 
-		assert.Equal(t, []health.HealthCheck{{Name: "Container Engine", Status: health.CheckStatusOK, Value: "docker"}}, got)
+		assert.Equal(t, []health.DependencyReport{{Name: "Container Engine", Status: health.CheckStatusOK, Value: "docker"}}, got)
 	})
 
 	t.Run("when a dependency has an error result, health check reports error", func(t *testing.T) {
@@ -46,7 +46,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 
 		got := extract(statuses)
 
-		assert.Equal(t, []health.HealthCheck{
+		assert.Equal(t, []health.DependencyReport{
 			{Name: "Rube Goldberg", Status: health.CheckStatusError, Value: "whatever not found on path"},
 		}, got)
 	})
@@ -64,12 +64,12 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 
 		got := extract(statuses)
 
-		assert.Equal(t, []health.HealthCheck{
+		assert.Equal(t, []health.DependencyReport{
 			{Name: "Remoteproc Runtime", Status: health.CheckStatusWarning, Value: "remoteproc-runtime not found on path"},
 		}, got)
 	})
 
-	t.Run("propagates Fix from CheckFailure to HealthCheck", func(t *testing.T) {
+	t.Run("propagates Fix from CheckFailure to DependencyReport", func(t *testing.T) {
 		statuses := []health.DependencyStatus{
 			{
 				Dependency: health.Dependency{Label: "Food"},
@@ -86,7 +86,7 @@ func testDependencyReporting(t *testing.T, extract func([]health.DependencyStatu
 
 		got := extract(statuses)
 
-		want := []health.HealthCheck{
+		want := []health.DependencyReport{
 			{
 				Name:   "Food",
 				Status: health.CheckStatusWarning,

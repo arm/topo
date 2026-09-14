@@ -15,7 +15,7 @@ const (
 	CheckStatusInfo    CheckStatus = "info"
 )
 
-type HealthCheck struct {
+type DependencyReport struct {
 	ID     DependencyID
 	Name   string
 	Status CheckStatus
@@ -24,13 +24,13 @@ type HealthCheck struct {
 }
 
 type HostReport struct {
-	Dependencies []HealthCheck
+	Dependencies []DependencyReport
 }
 
 type TargetReport struct {
 	Destination  string
 	IsLocalhost  bool
-	Dependencies []HealthCheck
+	Dependencies []DependencyReport
 }
 
 type CheckHostOptions struct {
@@ -68,21 +68,21 @@ func GenerateTargetReport(targetStatus Status) TargetReport {
 	}
 }
 
-func generateDependencyReport(statuses []DependencyStatus) []HealthCheck {
-	res := []HealthCheck{}
-	for _, ds := range statuses {
-		hc := HealthCheck{ID: ds.Dependency.ID, Name: ds.Dependency.Label}
-		if ds.Result.Failure == nil {
-			hc.Status = CheckStatusOK
-			hc.Value = ds.Result.SuccessValue
+func generateDependencyReport(statuses []DependencyStatus) []DependencyReport {
+	reports := []DependencyReport{}
+	for _, status := range statuses {
+		report := DependencyReport{ID: status.Dependency.ID, Name: status.Dependency.Label}
+		if status.Result.Failure == nil {
+			report.Status = CheckStatusOK
+			report.Value = status.Result.SuccessValue
 		} else {
-			hc.Status = checkStatusFromSeverity(ds.Result.Failure.Severity)
-			hc.Value = ds.Result.Failure.Message
-			hc.Fix = ds.Result.Failure.Fix
+			report.Status = checkStatusFromSeverity(status.Result.Failure.Severity)
+			report.Value = status.Result.Failure.Message
+			report.Fix = status.Result.Failure.Fix
 		}
-		res = append(res, hc)
+		reports = append(reports, report)
 	}
-	return res
+	return reports
 }
 
 func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {
