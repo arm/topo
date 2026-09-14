@@ -134,7 +134,6 @@ func TestSectionPrinterWrite(t *testing.T) {
 		assert.Equal(t, term.Header("Build images", false)+"\nBuilt image\n\n"+
 			term.Header("Pull images", false)+"\nPulled image\n", buf.String())
 	})
-
 }
 
 func TestHeader(t *testing.T) {
