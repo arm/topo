@@ -106,7 +106,7 @@ func TestPerformChecks(t *testing.T) {
 	})
 
 	t.Run("prerequisites", func(t *testing.T) {
-		t.Run("omits dependency when any of its software prerequisites are not installed", func(t *testing.T) {
+		t.Run("omits dependency when any of its prerequisites is failing", func(t *testing.T) {
 			pineapple := health.Dependency{
 				ID:    health.DependencyID("pineapple"),
 				Check: passingCheck,
@@ -131,7 +131,7 @@ func TestPerformChecks(t *testing.T) {
 			assert.NotContains(t, got, health.DependencyStatus{Dependency: pizzaWhichShouldBeOmitted})
 		})
 
-		t.Run("checks dependency when all of its software prerequisites are installed", func(t *testing.T) {
+		t.Run("checks dependency when all of its prerequisites are passing", func(t *testing.T) {
 			vader := health.Dependency{
 				ID:    health.DependencyID("vader"),
 				Check: passingCheck,
