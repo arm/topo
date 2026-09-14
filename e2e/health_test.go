@@ -3,7 +3,6 @@ package e2e
 import (
 	"encoding/json"
 	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/testutil"
@@ -30,13 +29,11 @@ func TestHealthCheck(t *testing.T) {
 	container := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
-	t.Run("shows successful host and target health status", func(t *testing.T) {
+	t.Run("shows a summary by default", func(t *testing.T) {
 		out, err := runCheckHealth(topo, container)
 		require.NoError(t, err)
 
-		assert.Contains(t, out, "┌─ Host ")
-		assert.Contains(t, out, "┌─ Target: "+container.SSHDestination+" ")
-		assert.Equal(t, 2, strings.Count(out, " ✓ All checks passed"))
+		assert.Contains(t, out, " ✓ All checks passed")
 	})
 
 	t.Run("shows successful checks with ticks in verbose mode", func(t *testing.T) {
