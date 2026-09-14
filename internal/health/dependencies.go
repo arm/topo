@@ -213,7 +213,7 @@ func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) D
 		Check: func(ctx context.Context) DependencyCheckResult {
 			err := probe.SSHAuthentication(ctx, sshRunner, acceptNewHostKeys)
 			if err == nil {
-				return DependencyCheckResult{}
+				return DependencyCheckResult{SuccessValue: target.String()}
 			}
 
 			failure := DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}

@@ -19,6 +19,9 @@ func replaceNonDeterministicDestination(t *testing.T, out string) string {
 	require.NoError(t, err)
 
 	obj["target"]["destination"] = targetDestinationPlaceholder
+	connectivity, ok := obj["target"]["connectivity"].(map[string]any)
+	require.True(t, ok)
+	connectivity["value"] = targetDestinationPlaceholder
 
 	normalizedOut, err := json.MarshalIndent(obj, "", "  ")
 	require.NoError(t, err)
