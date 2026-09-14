@@ -168,14 +168,18 @@ func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) 
 		},
 	}
 
-	remoteproc := NewRemoteprocDependency(r)
+	remoteproc := NewRemoteprocDependency(r, remoteTargetPrerequisites...)
 
-	remoteprocRuntime := NewRemoteprocRuntimeDependency(target, r, docker.ID, remoteproc.ID)
+	remoteprocRuntime := NewRemoteprocRuntimeDependency(
+		target,
+		r,
+		append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...)...,
+	)
 
 	remoteprocRuntimeShim := Dependency{
 		ID:            DependencyID("containerd-shim-remoteproc-v1"),
 		Label:         "Remoteproc Shim",
-		Prerequisites: []DependencyID{docker.ID, remoteproc.ID},
+		Prerequisites: append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...),
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -192,8 +196,9 @@ func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) 
 	}
 
 	lscpu := Dependency{
-		ID:    DependencyID("lscpu"),
-		Label: "Hardware Info",
+		ID:            DependencyID("lscpu"),
+		Label:         "Hardware Info",
+		Prerequisites: remoteTargetPrerequisites,
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "lscpu"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
@@ -244,10 +249,11 @@ func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) D
 	}
 }
 
-func NewRemoteprocDependency(r runner.Runner) Dependency {
+func NewRemoteprocDependency(r runner.Runner, prerequisites ...DependencyID) Dependency {
 	return Dependency{
-		ID:    DependencyIDRemoteproc,
-		Label: "Processing Domain Driver (remoteproc)",
+		ID:            DependencyIDRemoteproc,
+		Label:         "Processing Domain Driver (remoteproc)",
+		Prerequisites: prerequisites,
 		Check: func(ctx context.Context) DependencyCheckResult {
 			remoteProcessors, err := probe.Remoteproc(ctx, r)
 			if err != nil {

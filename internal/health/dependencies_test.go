@@ -43,8 +43,12 @@ func TestDependencies(t *testing.T) {
 		t.Run("remote target dependencies require connectivity", func(t *testing.T) {
 			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"), false)
 
-			assert.Equal(t, health.DependencyIDConnectivity, deps[0].ID)
-			assert.Equal(t, []health.DependencyID{health.DependencyIDConnectivity}, deps[1].Prerequisites)
+			for _, dep := range deps {
+				if dep.ID == health.DependencyIDConnectivity {
+					continue
+				}
+				assert.Contains(t, dep.Prerequisites, health.DependencyIDConnectivity, dep.ID)
+			}
 		})
 
 		t.Run("prerequisites are fulfillable", func(t *testing.T) {
