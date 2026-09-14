@@ -39,7 +39,7 @@ func TestSetupKeysJourney(t *testing.T) {
 	setupOut, err := cmd.CombinedOutput()
 	require.NoError(t, err, "topo failed: %s", setupOut)
 	assert.Contains(t, string(setupOut), "Generate SSH key pair")
-	assert.Contains(t, string(setupOut), "Transfer public key")
+	assert.NotContains(t, string(setupOut), "Transfer public key")
 
 	Step(t, "healthcheck is successful")
 	out = runTopo(t, topo, "health", "--target", container.SSHDestination)
