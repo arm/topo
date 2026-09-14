@@ -2,25 +2,24 @@ package health
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-)
-
-type HardwareCapability int
-
-const (
-	Remoteproc HardwareCapability = iota
 )
 
 const containerEngineInstallURL = "https://github.com/arm/topo#install-a-container-engine"
 
 type DependencyID string
 
-const DependencyIDRemoteproc DependencyID = "remoteproc"
+const (
+	DependencyIDConnectivity DependencyID = "target-connectivity"
+	DependencyIDRemoteproc   DependencyID = "remoteproc"
+)
 
 type Dependency struct {
 	ID            DependencyID
@@ -128,10 +127,19 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 	return []Dependency{topo, ssh, docker, dockerCompose}
 }
 
-func TargetRequiredDependencies(target ssh.Destination) []Dependency {
+func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) []Dependency {
+	remoteTargetPrerequisites := []DependencyID(nil)
+	dependencies := []Dependency(nil)
+	if !target.IsPlainLocalhost() {
+		connectivity := NewConnectivityDependency(target, acceptNewHostKeys)
+		dependencies = append(dependencies, connectivity)
+		remoteTargetPrerequisites = []DependencyID{connectivity.ID}
+	}
+
 	docker := Dependency{
-		ID:    DependencyID("target-docker"),
-		Label: "Container Engine",
+		ID:            DependencyID("target-docker"),
+		Label:         "Container Engine",
+		Prerequisites: remoteTargetPrerequisites,
 		Check: func(ctx context.Context, r runner.Runner) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "docker"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -202,7 +210,45 @@ func TargetRequiredDependencies(target ssh.Destination) []Dependency {
 		},
 	}
 
-	return []Dependency{docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu}
+	return append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
+}
+
+func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) Dependency {
+	return Dependency{
+		ID:    DependencyIDConnectivity,
+		Label: "Connectivity",
+		Check: func(ctx context.Context, _ runner.Runner) DependencyCheckResult {
+			err := probe.SSHAuthentication(ctx, runner.NewSSH(target), acceptNewHostKeys)
+			if err == nil {
+				return DependencyCheckResult{}
+			}
+
+			failure := DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}
+			switch {
+			case errors.Is(err, probe.ErrAuthFailed), errors.Is(err, probe.ErrTooManyAuthFails):
+				failure.Fix = &Fix{
+					Description: "Configure SSH keys on remote target",
+					Command:     fmt.Sprintf("topo setup-keys --target %s", target),
+				}
+			case errors.Is(err, probe.ErrHostKeyUnknown):
+				failure.Fix = &Fix{
+					Description: "Trust the target's SSH host key",
+					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", target),
+				}
+			case errors.Is(err, probe.ErrHostKeyChanged):
+				sshConfig, configErr := ssh.LoadConfig(target)
+				fixCommand := ""
+				if configErr == nil {
+					fixCommand = fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(sshConfig.AsKnownHostsEntry()))
+				}
+				failure.Fix = &Fix{
+					Description: "Remove the old SSH host key from known_hosts, then retry",
+					Command:     fixCommand,
+				}
+			}
+			return DependencyCheckResult{Failure: &failure}
+		},
+	}
 }
 
 func NewRemoteprocDependency() Dependency {

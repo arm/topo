@@ -17,7 +17,7 @@ import (
 func TestDependencies(t *testing.T) {
 	t.Run("ids are unique across all dependencies", func(t *testing.T) {
 		hostDeps := health.HostRequiredDependencies(false)
-		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"))
+		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"), false)
 
 		ids := make([]health.DependencyID, 0, len(hostDeps)+len(targetDeps))
 		for _, dep := range slices.Concat(hostDeps, targetDeps) {
@@ -41,8 +41,15 @@ func TestDependencies(t *testing.T) {
 	})
 
 	t.Run("target dependencies", func(t *testing.T) {
+		t.Run("remote target dependencies require connectivity", func(t *testing.T) {
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"), false)
+
+			assert.Equal(t, health.DependencyIDConnectivity, deps[0].ID)
+			assert.Equal(t, []health.DependencyID{health.DependencyIDConnectivity}, deps[1].Prerequisites)
+		})
+
 		t.Run("prerequisites are fulfillable", func(t *testing.T) {
-			deps := health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test"))
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test"), false)
 			ids := make([]health.DependencyID, 0, len(deps))
 			for _, dep := range deps {
 				ids = append(ids, dep.ID)
@@ -53,7 +60,7 @@ func TestDependencies(t *testing.T) {
 		})
 
 		t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
-			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"))
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"), false)
 
 			dep, err := findDependencyByID(t, deps, "remoteproc-runtime")
 			assert.NoError(t, err)
