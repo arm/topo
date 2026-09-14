@@ -19,7 +19,7 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 		registryContainerName = "topo-test-registry"
 		registryPort          = "12738"
 	)
-	composeFilePath, imageName := buildTransferTestImage(t, host)
+	scope, imageName := buildTransferTestImage(t, host)
 
 	removeRegistry := docker.Command(t.Context(), host, "rm", "-f", registryContainerName)
 	removeOutput, removeErr := removeRegistry.CombinedOutput()
@@ -45,7 +45,7 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 		assert.NoError(t, tunnel.Close(context.Background(), os.Stdout))
 	})
 
-	err = docker.TransferImagesViaRegistry(t.Context(), os.Stdout, host, destinationHost, composeFilePath, registryPort)
+	err = docker.TransferImagesViaRegistry(t.Context(), os.Stdout, host, destinationHost, scope, registryPort)
 
 	require.NoError(t, err)
 	requireImageExists(t, destinationHost, imageName)

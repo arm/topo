@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/project"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,15 +29,17 @@ func TestCommand(t *testing.T) {
 }
 
 func TestComposeCommand(t *testing.T) {
-	t.Run("sets args", func(t *testing.T) {
-		command, err := podman.ComposeCommand(context.Background(), podman.NewSocket("tcp://127.0.0.1:12345"), "compose.yaml", "up", "-d")
+	t.Run("sets args and env", func(t *testing.T) {
+		scope := project.Scope{ComposeFile: "compose.yaml", Env: []string{"FOO=BAR"}}
+		command, err := podman.ComposeCommand(context.Background(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"podman", "compose", "-f", "compose.yaml", "up", "-d"}, command.Args)
+		assert.Contains(t, command.Env, "FOO=BAR")
 	})
 
 	t.Run("configures compose provider", func(t *testing.T) {
-		command, err := podman.ComposeCommand(context.Background(), podman.NewSocket("tcp://127.0.0.1:12345"), "compose.yaml", "ps")
+		command, err := podman.ComposeCommand(context.Background(), podman.NewSocket("tcp://127.0.0.1:12345"), project.Scope{ComposeFile: "compose.yaml"}, "ps")
 
 		require.NoError(t, err)
 		assert.Contains(t, command.Env, "PODMAN_COMPOSE_PROVIDER=docker-compose")
@@ -46,7 +49,7 @@ func TestComposeCommand(t *testing.T) {
 		t.Setenv("DOCKER_HOST", "unix:///stale-docker.sock")
 		socket := podman.NewSocket("tcp://127.0.0.1:12345")
 
-		command, err := podman.ComposeCommand(context.Background(), socket, "compose.yaml", "ps")
+		command, err := podman.ComposeCommand(context.Background(), socket, project.Scope{ComposeFile: "compose.yaml"}, "ps")
 
 		require.NoError(t, err)
 		assert.Contains(t, command.Env, "DOCKER_HOST=tcp://127.0.0.1:12345")

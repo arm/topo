@@ -8,13 +8,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/project"
 )
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
 
-func TransferImagesViaRegistry(ctx context.Context, output io.Writer, source, destination Host, composeFile, port string) error {
-	images, err := compose.ImageNames(composeFile)
+func TransferImagesViaRegistry(ctx context.Context, output io.Writer, source, destination Host, scope project.Scope, port string) error {
+	images, err := project.ImageNames(scope)
 	if err != nil {
 		return err
 	}

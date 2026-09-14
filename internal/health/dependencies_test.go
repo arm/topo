@@ -2,7 +2,6 @@ package health_test
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -17,7 +16,7 @@ import (
 func TestDependencies(t *testing.T) {
 	t.Run("ids are unique across all dependencies", func(t *testing.T) {
 		hostDeps := health.HostRequiredDependencies(false)
-		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"))
+		targetDeps := health.TargetRequiredDependencies(ssh.NewDestination("whatever"), false)
 
 		ids := make([]health.DependencyID, 0, len(hostDeps)+len(targetDeps))
 		for _, dep := range slices.Concat(hostDeps, targetDeps) {
@@ -41,8 +40,19 @@ func TestDependencies(t *testing.T) {
 	})
 
 	t.Run("target dependencies", func(t *testing.T) {
+		t.Run("remote target dependencies require connectivity", func(t *testing.T) {
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"), false)
+
+			for _, dep := range deps {
+				if dep.ID == health.DependencyIDConnectivity {
+					continue
+				}
+				assert.Contains(t, dep.Prerequisites, health.DependencyIDConnectivity, dep.ID)
+			}
+		})
+
 		t.Run("prerequisites are fulfillable", func(t *testing.T) {
-			deps := health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test"))
+			deps := health.TargetRequiredDependencies(ssh.NewDestination("does-not-matter-for-this-test"), false)
 			ids := make([]health.DependencyID, 0, len(deps))
 			for _, dep := range deps {
 				ids = append(ids, dep.ID)
@@ -50,23 +60,6 @@ func TestDependencies(t *testing.T) {
 					require.Contains(t, ids, prereq)
 				}
 			}
-		})
-
-		t.Run("remoteproc install fix command includes the target", func(t *testing.T) {
-			deps := health.TargetRequiredDependencies(ssh.NewDestination("user@my-target"))
-
-			dep, err := findDependencyByID(t, deps, "remoteproc-runtime")
-			assert.NoError(t, err)
-			result := dep.Check(context.Background(), &runner.Fake{})
-
-			assert.Equal(t, &health.DependencyCheckFailure{
-				Severity: health.SeverityWarning,
-				Message:  `"remoteproc-runtime" not found in $PATH`,
-				Fix: &health.Fix{
-					Description: "Install the Remoteproc Runtime",
-					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
-				},
-			}, result.Failure)
 		})
 	})
 }
@@ -77,7 +70,7 @@ func TestPerformChecks(t *testing.T) {
 			dep := health.Dependency{Label: "bar", Check: passingCheck}
 			deps := []health.Dependency{dep}
 
-			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
+			got := health.PerformChecks(context.Background(), deps)
 
 			require.Len(t, got, 1)
 			assert.Equal(t, dep.ID, got[0].Dependency.ID)
@@ -85,13 +78,12 @@ func TestPerformChecks(t *testing.T) {
 		})
 
 		t.Run("when a check fails", func(t *testing.T) {
-			check := health.DependencyCheckFn(failingCheck)
-			dep := health.Dependency{Label: "bar", Check: check}
+			dep := health.Dependency{Label: "bar", Check: failingCheck}
 			deps := []health.Dependency{dep}
 
-			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
+			got := health.PerformChecks(context.Background(), deps)
 
-			wantResult := check(context.Background(), &runner.Fake{})
+			wantResult := failingCheck(context.Background())
 			require.Len(t, got, 1)
 			assert.Equal(t, dep.ID, got[0].Dependency.ID)
 			assert.Equal(t, wantResult, got[0].Result)
@@ -99,7 +91,7 @@ func TestPerformChecks(t *testing.T) {
 	})
 
 	t.Run("prerequisites", func(t *testing.T) {
-		t.Run("omits dependency when any of its software prerequisites are not installed", func(t *testing.T) {
+		t.Run("omits dependency when any of its prerequisites is failing", func(t *testing.T) {
 			pineapple := health.Dependency{
 				ID:    health.DependencyID("pineapple"),
 				Check: passingCheck,
@@ -118,13 +110,13 @@ func TestPerformChecks(t *testing.T) {
 				pizzaWhichShouldBeOmitted,
 			}
 
-			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
+			got := health.PerformChecks(context.Background(), deps)
 
 			assert.Len(t, got, 2)
 			assert.NotContains(t, got, health.DependencyStatus{Dependency: pizzaWhichShouldBeOmitted})
 		})
 
-		t.Run("checks dependency when all of its software prerequisites are installed", func(t *testing.T) {
+		t.Run("checks dependency when all of its prerequisites are passing", func(t *testing.T) {
 			vader := health.Dependency{
 				ID:    health.DependencyID("vader"),
 				Check: passingCheck,
@@ -135,7 +127,7 @@ func TestPerformChecks(t *testing.T) {
 			}
 			deps := []health.Dependency{vader, luke}
 
-			got := health.PerformChecks(context.Background(), deps, &runner.Fake{})
+			got := health.PerformChecks(context.Background(), deps)
 
 			require.Len(t, got, 2)
 			assert.Equal(t, vader.ID, got[0].Dependency.ID)
@@ -153,10 +145,10 @@ func TestRemoteprocDependency(t *testing.T) {
 		}
 
 		t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
-			d := health.NewRemoteprocDependency()
 			r := buildRunnerWithRemoteProcs(nil)
+			d := health.NewRemoteprocDependency(r)
 
-			got := d.Check(context.Background(), r)
+			got := d.Check(context.Background())
 
 			want := health.DependencyCheckResult{
 				Failure: &health.DependencyCheckFailure{
@@ -168,12 +160,12 @@ func TestRemoteprocDependency(t *testing.T) {
 		})
 
 		t.Run("fails when remoteproc probe fails", func(t *testing.T) {
-			d := health.NewRemoteprocDependency()
 			r := &runner.Fake{Commands: map[string]runner.FakeResult{
 				"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
 			}}
+			d := health.NewRemoteprocDependency(r)
 
-			got := d.Check(context.Background(), r)
+			got := d.Check(context.Background())
 
 			want := health.DependencyCheckResult{
 				Failure: &health.DependencyCheckFailure{
@@ -185,33 +177,40 @@ func TestRemoteprocDependency(t *testing.T) {
 		})
 
 		t.Run("reports remoteproc device names", func(t *testing.T) {
-			d := health.NewRemoteprocDependency()
 			r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
+			d := health.NewRemoteprocDependency(r)
 
-			got := d.Check(context.Background(), r)
+			got := d.Check(context.Background())
 
 			assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
 		})
 	})
 }
 
-func findDependencyByID(t *testing.T, deps []health.Dependency, id string) (health.Dependency, error) {
-	t.Helper()
+func TestRemoteprocRuntimeDependency(t *testing.T) {
+	t.Run("Check", func(t *testing.T) {
+		t.Run("includes an install fix with the target", func(t *testing.T) {
+			dep := health.NewRemoteprocRuntimeDependency(ssh.NewDestination("user@my-target"), &runner.Fake{})
 
-	for _, dep := range deps {
-		if dep.ID == health.DependencyID(id) {
-			return dep, nil
-		}
-	}
+			result := dep.Check(context.Background())
 
-	return health.Dependency{}, errors.New("dependency not found")
+			assert.Equal(t, &health.DependencyCheckFailure{
+				Severity: health.SeverityWarning,
+				Message:  `"remoteproc-runtime" not found in $PATH`,
+				Fix: &health.Fix{
+					Description: "Install the Remoteproc Runtime",
+					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+				},
+			}, result.Failure)
+		})
+	})
 }
 
-func passingCheck(_ context.Context, _ runner.Runner) health.DependencyCheckResult {
+func passingCheck(_ context.Context) health.DependencyCheckResult {
 	return health.DependencyCheckResult{SuccessValue: "passed"}
 }
 
-func failingCheck(_ context.Context, _ runner.Runner) health.DependencyCheckResult {
+func failingCheck(_ context.Context) health.DependencyCheckResult {
 	return health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 		Severity: health.SeverityError,
 		Message:  "very broken",

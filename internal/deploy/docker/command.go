@@ -3,9 +3,11 @@ package docker
 import (
 	"context"
 	"io"
+	"os"
 	"os/exec"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/project"
 )
 
 func Command(ctx context.Context, host Host, args ...string) *exec.Cmd {
@@ -17,14 +19,16 @@ func RunCommand(ctx context.Context, output io.Writer, host Host, args ...string
 	return run(Command(ctx, host, args...), output)
 }
 
-func ComposeCommand(ctx context.Context, host Host, composeFile string, args ...string) *exec.Cmd {
-	composeArgs := append([]string{"compose", "-f", composeFile}, args...)
+func ComposeCommand(ctx context.Context, host Host, scope project.Scope, args ...string) *exec.Cmd {
+	composeArgs := append([]string{"compose", "-f", scope.ComposeFile}, args...)
 	cmdArgs := append(hostToArgs(host), composeArgs...)
-	return exec.CommandContext(ctx, "docker", cmdArgs...)
+	cmd := exec.CommandContext(ctx, "docker", cmdArgs...)
+	cmd.Env = append(os.Environ(), scope.Env...)
+	return cmd
 }
 
-func RunComposeCommand(ctx context.Context, output io.Writer, host Host, composeFile string, args ...string) error {
-	return run(ComposeCommand(ctx, host, composeFile, args...), output)
+func RunComposeCommand(ctx context.Context, output io.Writer, host Host, scope project.Scope, args ...string) error {
+	return run(ComposeCommand(ctx, host, scope, args...), output)
 }
 
 func run(cmd *exec.Cmd, output io.Writer) error {

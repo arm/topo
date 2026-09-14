@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/project"
 )
 
 const linuxArm64Platform = "linux/arm64"
@@ -18,17 +18,17 @@ func isPlatformMismatch(platform string) bool {
 	return !strings.HasPrefix(platform, linuxArm64Platform)
 }
 
-func EnsureProjectIsLinuxArm64Ready(composePath string) error {
-	project, err := compose.ReadProject(composePath)
+func EnsureProjectIsLinuxArm64Ready(scope project.Scope) error {
+	composeProject, err := project.Read(scope)
 	if err != nil {
-		return fmt.Errorf("failed to load compose project: %w", err)
+		return fmt.Errorf("failed to load project: %w", err)
 	}
 
-	serviceNames := project.ServiceNames()
+	serviceNames := composeProject.ServiceNames()
 	builder := strings.Builder{}
 
 	for _, svcName := range serviceNames {
-		svc := project.Services[svcName]
+		svc := composeProject.Services[svcName]
 
 		runtime := strings.ToLower(strings.TrimSpace(svc.Runtime))
 		if runtime != "" && strings.Contains(runtime, "remoteproc") {

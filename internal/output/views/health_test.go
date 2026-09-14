@@ -53,10 +53,11 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Pineapple on pizza",
 					Status: health.CheckStatusWarning,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -68,10 +69,11 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders an info icon for info checks", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Has potatoes",
 					Status: health.CheckStatusInfo,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -83,10 +85,11 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders connection failures", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Connected",
 					Status: health.CheckStatusError,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -98,8 +101,8 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("it renders the processing domain and target's dependencies", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{Status: health.CheckStatusOK},
 				Dependencies: []health.HealthCheck{
+					{ID: health.DependencyIDConnectivity, Status: health.CheckStatusOK},
 					{ID: health.DependencyIDRemoteproc, Name: "Processing Domain Driver (remoteproc)", Status: health.CheckStatusOK},
 					{Name: "Hardware Info", Status: health.CheckStatusOK},
 				},
@@ -127,10 +130,11 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{
-				Connectivity: health.HealthCheck{
+				Dependencies: []health.HealthCheck{{
+					ID:     health.DependencyIDConnectivity,
 					Name:   "Connected",
 					Status: health.CheckStatusError,
-				},
+				}},
 			}, "")
 			var out bytes.Buffer
 
@@ -205,11 +209,12 @@ func TestHealthReport(t *testing.T) {
 				},
 			}, &health.TargetReport{
 				Destination: "ssh://user@my-target",
-				Connectivity: health.HealthCheck{
-					Name:   "Connected",
-					Status: health.CheckStatusOK,
-				},
 				Dependencies: []health.HealthCheck{
+					{
+						ID:     health.DependencyIDConnectivity,
+						Name:   "Connected",
+						Status: health.CheckStatusOK,
+					},
 					{
 						ID:     health.DependencyIDRemoteproc,
 						Name:   "Processing Domain Driver (remoteproc)",
