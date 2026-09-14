@@ -48,9 +48,9 @@ type Status struct {
 	Dependencies []DependencyStatus
 }
 
-func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) (TargetReport, error) {
-	status := ProbeHealthStatus(ctx, dest, acceptNewHostKeys)
-	return GenerateTargetReport(Status{Destination: dest, Dependencies: status.Dependencies}), nil
+func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) TargetReport {
+	targetDependencyStatuses := PerformChecks(ctx, TargetRequiredDependencies(dest, acceptNewHostKeys))
+	return GenerateTargetReport(Status{Destination: dest, Dependencies: targetDependencyStatuses})
 }
 
 func GenerateHostReport(statuses []DependencyStatus) HostReport {
