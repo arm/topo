@@ -25,11 +25,11 @@ func TestComposeCommand(t *testing.T) {
 	t.Run("builds docker compose command for remote host", func(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFile: "/path/to/compose.yaml", Env: []string{"FOO=NOTBAR"}}
+		scope := project.Scope{ComposeFile: "/path/to/compose.yaml", Env: []string{"FOO=NOTBAR"}, EnvFiles: []string{".foobar.env", ".env"}}
 
 		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
 
-		want := []string{"docker", "-H", "ssh://user@remote", "compose", "-f", "/path/to/compose.yaml", "up", "-d"}
+		want := []string{"docker", "-H", "ssh://user@remote", "compose", "-f", "/path/to/compose.yaml", "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}
 		assert.Equal(t, want, cmd.Args)
 		assert.Contains(t, cmd.Env, "FOO=NOTBAR")
 	})

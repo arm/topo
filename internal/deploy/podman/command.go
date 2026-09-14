@@ -30,7 +30,11 @@ func RunCommand(ctx context.Context, output io.Writer, socket Socket, args ...st
 }
 
 func ComposeCommand(ctx context.Context, socket Socket, scope project.Scope, args ...string) (*exec.Cmd, error) {
-	composeArgs := append([]string{"compose", "-f", scope.ComposeFile}, args...)
+	composeArgs := []string{"compose", "-f", scope.ComposeFile}
+	for _, envFile := range scope.EnvFiles {
+		composeArgs = append(composeArgs, "--env-file", envFile)
+	}
+	composeArgs = append(composeArgs, args...)
 	cmd := exec.CommandContext(ctx, "podman", composeArgs...)
 	cmd.Env = append(os.Environ(), scope.Env...)
 	cmd.Env = append(cmd.Env,

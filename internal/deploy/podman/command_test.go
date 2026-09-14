@@ -30,11 +30,11 @@ func TestCommand(t *testing.T) {
 
 func TestComposeCommand(t *testing.T) {
 	t.Run("sets args and env", func(t *testing.T) {
-		scope := project.Scope{ComposeFile: "compose.yaml", Env: []string{"FOO=BAR"}}
+		scope := project.Scope{ComposeFile: "compose.yaml", Env: []string{"FOO=BAR"}, EnvFiles: []string{".foobar.env", ".env"}}
 		command, err := podman.ComposeCommand(context.Background(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
 		require.NoError(t, err)
-		assert.Equal(t, []string{"podman", "compose", "-f", "compose.yaml", "up", "-d"}, command.Args)
+		assert.Equal(t, []string{"podman", "compose", "-f", "compose.yaml", "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}, command.Args)
 		assert.Contains(t, command.Env, "FOO=BAR")
 	})
 

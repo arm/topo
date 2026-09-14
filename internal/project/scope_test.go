@@ -13,12 +13,21 @@ func TestLoadScope(t *testing.T) {
 	t.Run("sets target env vars", func(t *testing.T) {
 		target := "ssh://user@hostname:8080"
 
-		scope, err := project.LoadScope("compose.yaml", target)
+		scope, err := project.LoadScope("compose.yaml", target, nil)
 
 		require.NoError(t, err)
 		require.ElementsMatch(t, scope.Env, []string{
 			fmt.Sprintf("%s=%s", env.TargetHostnameVariable, "hostname"),
 			fmt.Sprintf("%s=%s", env.TargetVariable, target),
 		})
+	})
+
+	t.Run("accepts arbitrary env files", func(t *testing.T) {
+		envFiles := []string{"custom.env"}
+
+		scope, err := project.LoadScope("compose.yaml", "ssh://user@hostname:8080", envFiles)
+
+		require.NoError(t, err)
+		require.ElementsMatch(t, scope.EnvFiles, envFiles)
 	})
 }

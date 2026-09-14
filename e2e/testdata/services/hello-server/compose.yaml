@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
       args:
         NAME: "World"
+    environment:
+      STATE: ${STATE:-Michigan}
     ports:
       - "8080:8080"
 
