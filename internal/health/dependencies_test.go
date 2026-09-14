@@ -2,6 +2,7 @@ package health_test
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -74,6 +75,44 @@ func TestNewDependencyOnTopoCheck(t *testing.T) {
 		dependency := health.NewDependencyOnTopo(false)
 
 		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "topo"}, dependency.Check(context.Background()))
+	})
+}
+
+func TestNewDependencyOnSSHCheck(t *testing.T) {
+	buildRunner := func(result runner.FakeResult) runner.Runner {
+		return &runner.Fake{
+			Binaries: []string{"ssh"},
+			Commands: map[string]runner.FakeResult{"ssh -V": result},
+		}
+	}
+
+	t.Run("accepts OpenSSH", func(t *testing.T) {
+		dependency := health.NewDependencyOnSSH(buildRunner(runner.FakeResult{Stderr: "OpenSSH_9.9p1, OpenSSL 3.4.0"}))
+
+		got := dependency.Check(context.Background())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "ssh"}, got)
+	})
+
+	t.Run("rejects another SSH implementation", func(t *testing.T) {
+		dependency := health.NewDependencyOnSSH(buildRunner(runner.FakeResult{Stderr: "Dropbear v2025.88"}))
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Message: `"ssh" does not resolve to OpenSSH: Dropbear v2025.88`,
+			Fix:     &health.Fix{Description: "Install OpenSSH and ensure its ssh executable is first on PATH"},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("fails when the version cannot be checked", func(t *testing.T) {
+		versionErr := errors.New("version check failed")
+		dependency := health.NewDependencyOnSSH(buildRunner(runner.FakeResult{Err: versionErr}))
+
+		got := dependency.Check(context.Background())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{Message: versionErr.Error()}}, got)
 	})
 }
 

@@ -103,8 +103,17 @@ func NewDependencyOnSSH(r runner.Runner) Dependency {
 			if err := r.BinaryExists(ctx, "ssh"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
 			}
-			if failure := CheckOpenSSHAvailable(ctx, r, "ssh"); failure != nil {
-				return DependencyCheckResult{Failure: failure}
+			_, stderr, err := r.Run(ctx, "ssh -V")
+			if err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
+			}
+			if !strings.Contains(stderr, "OpenSSH_") {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Message: fmt.Sprintf("%q does not resolve to OpenSSH: %s", "ssh", stderr),
+					Fix: &Fix{
+						Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
+					},
+				}}
 			}
 			return DependencyCheckResult{SuccessValue: "ssh"}
 		},
