@@ -2,7 +2,6 @@ package views
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"text/template"
 
@@ -11,9 +10,21 @@ import (
 )
 
 type HealthReport struct {
-	Host       health.HostReport    `json:"host"`
-	Target     *health.TargetReport `json:"target,omitempty"`
-	TargetHint string               `json:"-"`
+	Host       hostReport    `json:"host"`
+	Target     *targetReport `json:"target,omitempty"`
+	TargetHint string        `json:"-"`
+}
+
+func NewHealthReport(host health.HostReport, target *health.TargetReport, targetHint string) HealthReport {
+	report := HealthReport{
+		Host:       toViewHostReport(host),
+		TargetHint: targetHint,
+	}
+	if target != nil {
+		viewTarget := toViewTargetReport(*target)
+		report.Target = &viewTarget
+	}
+	return report
 }
 
 const healthReportTemplate = `
@@ -77,6 +88,10 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	return buf.String(), nil
 }
 
+func (r HealthReport) AsJSON() (string, error) {
+	return asJSON(r)
+}
+
 func sectionHeading(heading string, isTTY bool) string {
 	return term.Header(heading, isTTY)
 }
@@ -103,10 +118,67 @@ func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
 	}
 }
 
-func (r HealthReport) AsJSON() (string, error) {
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode report as json: %w", err)
+type hostReport struct {
+	Dependencies []healthCheck `json:"dependencies"`
+}
+
+type targetReport struct {
+	Destination            string        `json:"destination"`
+	IsLocalhost            bool          `json:"isLocalhost"`
+	Connectivity           healthCheck   `json:"connectivity"`
+	Dependencies           []healthCheck `json:"dependencies"`
+	ProcessingDomainDriver healthCheck   `json:"processingDomainDriver"`
+}
+
+type healthCheck struct {
+	Name   string             `json:"name"`
+	Status health.CheckStatus `json:"status"`
+	Value  string             `json:"value"`
+	Fix    *fix               `json:"fix,omitempty"`
+}
+
+type fix struct {
+	Description string `json:"description"`
+	Command     string `json:"command,omitempty"`
+}
+
+func toViewHostReport(report health.HostReport) hostReport {
+	return hostReport{Dependencies: toViewHealthCheckList(report.Dependencies)}
+}
+
+func toViewTargetReport(report health.TargetReport) targetReport {
+	target := targetReport{
+		Destination:            report.Destination,
+		IsLocalhost:            report.IsLocalhost,
+		Dependencies:           make([]healthCheck, 0, len(report.Dependencies)),
+		ProcessingDomainDriver: healthCheck{Name: "Processing Domain Driver (remoteproc)"},
 	}
-	return string(b), nil
+	for _, check := range report.Dependencies {
+		viewCheck := toViewHealthCheck(check)
+		switch check.ID {
+		case health.DependencyIDConnectivity:
+			target.Connectivity = viewCheck
+		case health.DependencyIDRemoteproc:
+			target.ProcessingDomainDriver = viewCheck
+		default:
+			target.Dependencies = append(target.Dependencies, viewCheck)
+		}
+	}
+	return target
+}
+
+func toViewHealthCheckList(checks []health.HealthCheck) []healthCheck {
+	viewChecks := make([]healthCheck, len(checks))
+	for index, check := range checks {
+		viewChecks[index] = toViewHealthCheck(check)
+	}
+	return viewChecks
+}
+
+func toViewHealthCheck(check health.HealthCheck) healthCheck {
+	viewCheck := healthCheck{Name: check.Name, Status: check.Status, Value: check.Value}
+	if check.Fix != nil {
+		viewCheck.Fix = &fix{Description: check.Fix.Description, Command: check.Fix.Command}
+	}
+	return viewCheck
 }

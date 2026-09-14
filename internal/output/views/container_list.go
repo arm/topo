@@ -2,8 +2,6 @@ package views
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
 	"text/tabwriter"
 	"text/template"
 )
@@ -49,9 +47,5 @@ func (r ContainerList) AsPlain(isTTY bool) (string, error) {
 }
 
 func (r ContainerList) AsJSON() (string, error) {
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("encode report as json: %w", err)
-	}
-	return string(b), nil
+	return asJSON(r)
 }

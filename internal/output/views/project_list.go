@@ -2,7 +2,6 @@ package views
 
 import (
 	"bytes"
-	"encoding/json"
 	"text/template"
 
 	"github.com/arm/topo/internal/catalog"
@@ -35,11 +34,7 @@ const projectListTemplate = `
 {{- end }}`
 
 func (r ProjectList) AsJSON() (string, error) {
-	b, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
+	return asJSON(r)
 }
 
 func (r ProjectList) AsPlain(isTTY bool) (string, error) {
