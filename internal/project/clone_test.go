@@ -3,7 +3,6 @@ package project_test
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,7 +47,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(io.Discard, destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -75,7 +74,7 @@ x-topo:
 		mockSource := mockSourceWithComposeFile(t, composeFileContents)
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(io.Discard, destDir, mockSource, parameter.NewStrictResolverChain(resolver))
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver))
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -98,7 +97,7 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(io.Discard, destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.Error(t, err)
 		_, statErr := os.Stat(destDir)
@@ -123,7 +122,7 @@ x-topo:
 `,
 		})
 
-		err := project.Clone(io.Discard, destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
 			"GREETING": "a-value",
 		}))
 
