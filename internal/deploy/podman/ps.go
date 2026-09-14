@@ -9,6 +9,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -33,7 +34,7 @@ type Container struct {
 	Address          string `json:"address"`
 }
 
-func ListContainers(composeFile string, target ssh.Destination, hostname string, all bool) (containers []Container, err error) {
+func ListContainers(scope project.Scope, target ssh.Destination, hostname string, all bool) (containers []Container, err error) {
 	socket := LocalSocket
 	var tunnel *ssh.TCPToUnixSocketTunnel
 	if !target.IsPlainLocalhost() {
@@ -47,7 +48,7 @@ func ListContainers(composeFile string, target ssh.Destination, hostname string,
 		socket = NewSocket(tunnel.SocketURL())
 	}
 
-	rawJSON, err := getContainers(composeFile, socket, all)
+	rawJSON, err := getContainers(scope, socket, all)
 	if err != nil {
 		return nil, err
 	}
@@ -58,9 +59,9 @@ func ListContainers(composeFile string, target ssh.Destination, hostname string,
 	return RemapAddresses(raws, hostname), nil
 }
 
-func getContainers(composeFile string, socket Socket, all bool) (string, error) {
+func getContainers(scope project.Scope, socket Socket, all bool) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd, err := ComposeCommand(context.Background(), socket, composeFile, composePSArgs(all)...)
+	cmd, err := ComposeCommand(context.Background(), socket, scope, composePSArgs(all)...)
 	if err != nil {
 		return "", err
 	}

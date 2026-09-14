@@ -1,7 +1,7 @@
 package env_test
 
 import (
-	"os"
+	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/env"
@@ -9,27 +9,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetTargetEnv(t *testing.T) {
+func TestResolveTargetEnv(t *testing.T) {
 	t.Run("sets plain localhost without querying SSH config", func(t *testing.T) {
 		t.Setenv("PATH", "")
-		t.Setenv(env.TargetVariable, "ssh://stale.example")
-		t.Setenv(env.TargetHostnameVariable, "stale.example")
 
-		err := env.SetTargetEnv("localhost")
+		vars, err := env.ResolveTargetEnv("localhost")
 
 		require.NoError(t, err)
-		assert.Equal(t, "ssh://localhost", os.Getenv(env.TargetVariable))
-		assert.Equal(t, "localhost", os.Getenv(env.TargetHostnameVariable))
+		assert.ElementsMatch(t, vars, []string{
+			fmt.Sprintf("%s=%s", env.TargetVariable, "ssh://localhost"),
+			fmt.Sprintf("%s=%s", env.TargetHostnameVariable, "localhost"),
+		})
 	})
 
 	t.Run("sets the resolved target environment", func(t *testing.T) {
-		t.Setenv(env.TargetVariable, "ssh://stale.example")
-		t.Setenv(env.TargetHostnameVariable, "stale.example")
-
-		err := env.SetTargetEnv("user@target.example")
+		vars, err := env.ResolveTargetEnv("user@target.example")
 
 		require.NoError(t, err)
-		assert.Equal(t, "ssh://user@target.example", os.Getenv(env.TargetVariable))
-		assert.Equal(t, "target.example", os.Getenv(env.TargetHostnameVariable))
+		assert.ElementsMatch(t, vars, []string{
+			fmt.Sprintf("%s=%s", env.TargetVariable, "ssh://user@target.example"),
+			fmt.Sprintf("%s=%s", env.TargetHostnameVariable, "target.example"),
+		})
 	})
 }

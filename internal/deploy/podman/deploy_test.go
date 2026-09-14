@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
@@ -25,18 +26,18 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		err := podman.Deploy(t.Context(), &bytes.Buffer{}, composeFile, podman.DeployOptions{})
+		err := podman.Deploy(t.Context(), &bytes.Buffer{}, project.Scope{ComposeFile: composeFile}, podman.DeployOptions{})
 
 		require.ErrorContains(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments`)
 	})
 
 	t.Run("deploys to localhost", func(t *testing.T) {
 		requireLocalPodman(t)
-		composeFile, projectName := deploymentFixture(t)
-		t.Cleanup(func() { cleanupComposeProject(t, composeFile) })
+		scope, projectName := deploymentFixture(t)
+		t.Cleanup(func() { cleanupComposeProject(t, scope) })
 		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+		err := podman.Deploy(t.Context(), t.Output(), scope, options)
 
 		require.NoError(t, err)
 		assertContainersRunning(t, projectName, podman.LocalSocket)
@@ -45,11 +46,11 @@ services:
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
 		requireLocalPodman(t)
 		podmanContainer := startPodmanInContainer(t)
-		composeFile, projectName := deploymentFixture(t)
+		scope, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 		options := podman.DeployOptions{TargetHost: targetDestination}
 
-		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+		err := podman.Deploy(t.Context(), t.Output(), scope, options)
 
 		require.NoError(t, err)
 		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
@@ -66,7 +67,7 @@ services:
 		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
 		t.Cleanup(func() { cleanupRegistryContainer(t, registryContainerName) })
 		podmanContainer := startPodmanInContainer(t)
-		composeFile, projectName := deploymentFixture(t)
+		scope, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 		options := podman.DeployOptions{
 			TargetHost: targetDestination,
@@ -76,7 +77,7 @@ services:
 			},
 		}
 
-		err := podman.Deploy(t.Context(), t.Output(), composeFile, options)
+		err := podman.Deploy(t.Context(), t.Output(), scope, options)
 
 		require.NoError(t, err)
 		tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
@@ -101,7 +102,7 @@ func requireLocalPodman(t *testing.T) {
 	}
 }
 
-func deploymentFixture(t *testing.T) (string, string) {
+func deploymentFixture(t *testing.T) (project.Scope, string) {
 	t.Helper()
 	tempDir := t.TempDir()
 	testName := sanitiseTestName(t)
@@ -132,7 +133,7 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	return composeFile, "test-project-" + testName
+	return project.Scope{ComposeFile: composeFile}, "test-project-" + testName
 }
 
 // fixPodmanInDockerQuirk avoids a Docker Desktop nested-container restriction.
@@ -175,12 +176,12 @@ func cleanupRegistryContainer(t *testing.T, containerName string) {
 	}
 }
 
-func cleanupComposeProject(t *testing.T, composeFile string) {
+func cleanupComposeProject(t *testing.T, scope project.Scope) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, composeFile, "down", "-v", "--remove-orphans", "--rmi", "local")
+	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, scope, "down", "-v", "--remove-orphans", "--rmi", "local")
 	if err != nil {
 		t.Logf("failed to configure Podman Compose: %v", err)
 		return

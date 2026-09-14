@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/project"
 	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,7 +59,7 @@ func assertContainersInState(t *testing.T, projectName string, socket podman.Soc
 	}
 }
 
-func imageTransferFixture(t *testing.T) (string, string) {
+func imageTransferFixture(t *testing.T) (project.Scope, string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
 	imageName := "test-image-" + sanitiseTestName(t)
@@ -74,5 +75,5 @@ services:
 		defer cancel()
 		_ = podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).Run()
 	})
-	return composeFile, imageName
+	return project.Scope{ComposeFile: composeFile}, imageName
 }
