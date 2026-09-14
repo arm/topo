@@ -38,6 +38,19 @@ func (p *SectionPrinter) Write(data []byte) (int, error) {
 	return p.output.Write(data)
 }
 
+func (p *SectionPrinter) SubprocessOutput() (io.Writer, error) {
+	if !IsTTY(p.output) {
+		return p, nil
+	}
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if err := p.printHeader(p.pending); err != nil {
+		return nil, err
+	}
+	p.pending = ""
+	return p.output, nil
+}
+
 func (p *CommandOutput) Finish() error {
 	_, err := fmt.Fprintln(p.output)
 	return err

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 )
 
@@ -32,6 +33,13 @@ func RunComposeCommand(ctx context.Context, output io.Writer, host Host, scope p
 }
 
 func run(cmd *exec.Cmd, output io.Writer) error {
+	if section, ok := output.(*term.SectionPrinter); ok {
+		var err error
+		output, err = section.SubprocessOutput()
+		if err != nil {
+			return err
+		}
+	}
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Run(); err != nil {

@@ -95,10 +95,13 @@ func TestSectionPrinterWrite(t *testing.T) {
 		var buf bytes.Buffer
 		sections := term.NewSectionPrinter(term.NewCommandOutput(&buf), "Build images")
 
+		output, outputError := sections.SubprocessOutput()
 		_, emptyWriteError := sections.Write(nil)
 		beforeLog := buf.String()
 		_, writeError := sections.Write([]byte("Built image\n"))
 
+		require.NoError(t, outputError)
+		assert.Same(t, sections, output)
 		require.NoError(t, emptyWriteError)
 		require.NoError(t, writeError)
 		assert.Empty(t, beforeLog)
