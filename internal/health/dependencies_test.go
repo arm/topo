@@ -61,25 +61,6 @@ func TestDependencies(t *testing.T) {
 	})
 }
 
-func TestRemoteprocRuntimeDependency(t *testing.T) {
-	t.Run("Check", func(t *testing.T) {
-		t.Run("includes an install fix with the target", func(t *testing.T) {
-			dep := health.NewRemoteprocRuntimeDependency(ssh.NewDestination("user@my-target"), &runner.Fake{})
-
-			result := dep.Check(context.Background())
-
-			assert.Equal(t, &health.DependencyCheckFailure{
-				Severity: health.SeverityWarning,
-				Message:  `"remoteproc-runtime" not found in $PATH`,
-				Fix: &health.Fix{
-					Description: "Install the Remoteproc Runtime",
-					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
-				},
-			}, result.Failure)
-		})
-	})
-}
-
 func TestPerformChecks(t *testing.T) {
 	t.Run("dependency status reflects the result of running the check", func(t *testing.T) {
 		t.Run("when check passes", func(t *testing.T) {
@@ -199,6 +180,25 @@ func TestRemoteprocDependency(t *testing.T) {
 			got := d.Check(context.Background())
 
 			assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
+		})
+	})
+}
+
+func TestRemoteprocRuntimeDependency(t *testing.T) {
+	t.Run("Check", func(t *testing.T) {
+		t.Run("includes an install fix with the target", func(t *testing.T) {
+			dep := health.NewRemoteprocRuntimeDependency(ssh.NewDestination("user@my-target"), &runner.Fake{})
+
+			result := dep.Check(context.Background())
+
+			assert.Equal(t, &health.DependencyCheckFailure{
+				Severity: health.SeverityWarning,
+				Message:  `"remoteproc-runtime" not found in $PATH`,
+				Fix: &health.Fix{
+					Description: "Install the Remoteproc Runtime",
+					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+				},
+			}, result.Failure)
 		})
 	})
 }
