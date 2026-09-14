@@ -25,7 +25,7 @@ services:
 		err := post_deploy.PrintDeploySuccess(&buf, project.Scope{ComposeFile: composeFile}, "Run `topo ps` to see deployed containers")
 
 		require.NoError(t, err)
-		assert.Equal(t, "Deployment complete!\n", buf.String())
+		assert.Equal(t, "Deployment complete!", buf.String())
 	})
 
 	t.Run("writes default message when deployment_success_message is absent", func(t *testing.T) {
@@ -39,7 +39,7 @@ services:
 		err := post_deploy.PrintDeploySuccess(&buf, project.Scope{ComposeFile: composeFile}, "default message")
 
 		require.NoError(t, err)
-		assert.Equal(t, "default message\n", buf.String())
+		assert.Equal(t, "default message", buf.String())
 	})
 
 	t.Run("interpolates env vars in deployment_success_message", func(t *testing.T) {
@@ -57,7 +57,7 @@ services:
 		err := post_deploy.PrintDeploySuccess(&buf, project.Scope{ComposeFile: composeFile}, "default message")
 
 		require.NoError(t, err)
-		assert.Equal(t, "test-project deployed - cool!\n", buf.String())
+		assert.Equal(t, "test-project deployed - cool!", buf.String())
 	})
 
 	t.Run("returns error when compose file does not exist", func(t *testing.T) {

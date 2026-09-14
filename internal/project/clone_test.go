@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
@@ -28,10 +29,13 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(term.NewCommandOutput(&output), destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
 		out := output.String()
+		assert.True(t, strings.HasPrefix(out, "┌─ Project ready"), "first header must not have a leading newline")
+		assert.NotContains(t, out, "Copy files")
+		assert.NotContains(t, out, "Configure project")
 		assert.Contains(t, out, "Project ready")
 		assert.Contains(t, out, fmt.Sprintf("Created in '%s'", destDir))
 		assert.Contains(t, out, "cd "+destDir)
@@ -47,7 +51,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(term.NewCommandOutput(t.Output()), destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -74,7 +78,7 @@ x-topo:
 		mockSource := mockSourceWithComposeFile(t, composeFileContents)
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver))
+		err := project.Clone(term.NewCommandOutput(t.Output()), destDir, mockSource, parameter.NewStrictResolverChain(resolver))
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -97,7 +101,7 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(term.NewCommandOutput(t.Output()), destDir, mockSource, parameter.NewStrictResolverChain())
 
 		require.Error(t, err)
 		_, statErr := os.Stat(destDir)
@@ -122,7 +126,7 @@ x-topo:
 `,
 		})
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
+		err := project.Clone(term.NewCommandOutput(t.Output()), destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
 			"GREETING": "a-value",
 		}))
 

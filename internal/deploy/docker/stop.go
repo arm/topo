@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/arm/topo/internal/output/term"
@@ -10,8 +11,8 @@ import (
 )
 
 func Stop(ctx context.Context, output io.Writer, scope project.Scope, destination ssh.Destination) error {
-	if err := term.PrintHeader(output, "Stop services"); err != nil {
-		return err
-	}
-	return StopServices(ctx, output, NewHostFromDestination(destination), scope)
+	commandOutput := term.NewCommandOutput(output)
+	section := term.NewSectionPrinter(commandOutput, "Stop services")
+	stopErr := StopServices(ctx, section, NewHostFromDestination(destination), scope)
+	return errors.Join(stopErr, commandOutput.Finish())
 }

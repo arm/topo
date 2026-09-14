@@ -11,13 +11,11 @@ import (
 )
 
 func Stop(ctx context.Context, output io.Writer, scope project.Scope, target ssh.Destination) (stopErr error) {
+	commandOutput := term.NewCommandOutput(output)
 	socket := LocalSocket
 	if !target.IsPlainLocalhost() {
-		if err := term.PrintHeader(output, "Open Podman socket SSH tunnel"); err != nil {
-			return err
-		}
-
-		tunnel, err := TunnelRemoteSocketPath(ctx, output, target)
+		section := term.NewSectionPrinter(commandOutput, "Open Podman socket SSH tunnel")
+		tunnel, err := TunnelRemoteSocketPath(ctx, section, target)
 		if err != nil {
 			return err
 		}
@@ -28,8 +26,7 @@ func Stop(ctx context.Context, output io.Writer, scope project.Scope, target ssh
 		socket = NewSocket(tunnel.SocketURL())
 	}
 
-	if err := term.PrintHeader(output, "Stop services"); err != nil {
-		return err
-	}
-	return RunComposeCommand(ctx, output, socket, scope, "stop")
+	section := term.NewSectionPrinter(commandOutput, "Stop services")
+	stopErr = RunComposeCommand(ctx, section, socket, scope, "stop")
+	return errors.Join(stopErr, commandOutput.Finish())
 }

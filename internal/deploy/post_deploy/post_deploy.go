@@ -42,6 +42,6 @@ func PrintDeploySuccess(output io.Writer, scope project.Scope, defaultMessage st
 		successMessage = defaultMessage
 	}
 
-	_, err = fmt.Fprintln(output, successMessage)
+	_, err = fmt.Fprint(output, successMessage)
 	return err
 }

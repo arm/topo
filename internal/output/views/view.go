@@ -29,7 +29,10 @@ func Print(p View, w io.Writer, f term.Format) error {
 		}
 	}
 
-	if _, err := fmt.Fprint(w, out); err != nil {
+	if out == "" {
+		return nil
+	}
+	if _, err := fmt.Fprintln(w, out); err != nil {
 		return fmt.Errorf("write view output: %w", err)
 	}
 	return nil

@@ -55,7 +55,7 @@ name-of-other-project
   blah blah blah
 
 `
-		assert.Equal(t, want, outBuf.String())
+		assert.Equal(t, want+"\n", outBuf.String())
 	})
 
 	t.Run("ignores features when none present", func(t *testing.T) {
@@ -86,7 +86,7 @@ name-of-other-project
   blah blah blah
 
 `
-		assert.Equal(t, want, outBuf.String())
+		assert.Equal(t, want+"\n", outBuf.String())
 	})
 
 	t.Run("includes features when present", func(t *testing.T) {
@@ -121,7 +121,7 @@ name-of-other-project
   blah blah blah
 
 `
-		assert.Equal(t, want, outBuf.String())
+		assert.Equal(t, want+"\n", outBuf.String())
 	})
 
 	t.Run("correctly wraps long descriptions", func(t *testing.T) {
@@ -157,7 +157,7 @@ name-of-other-project
   when the content is long enough to span multiple lines.
 
 `
-		assert.Equal(t, want, outBuf.String())
+		assert.Equal(t, want+"\n", outBuf.String())
 	})
 
 	t.Run("correctly splits paragraphs in the description", func(t *testing.T) {
@@ -194,7 +194,7 @@ name-of-other-project
   blah blah blah
 
 `
-		assert.Equal(t, want, outBuf.String())
+		assert.Equal(t, want+"\n", outBuf.String())
 	})
 
 	t.Run("omits ref from clone command when ref is empty", func(t *testing.T) {
@@ -221,7 +221,7 @@ name-of-other-project
     topo clone url.git
 
 `
-		assert.Equal(t, want, outBuf.String())
+		assert.Equal(t, want+"\n", outBuf.String())
 	})
 
 	t.Run("correctly prints json", func(t *testing.T) {
@@ -278,7 +278,7 @@ name-of-other-project
 		err := views.Print(views.ProjectList(projects), &outBuf, term.Plain)
 		require.NoError(t, err)
 
-		assert.Equal(t, "✅ name-of-project\n  Clone:\n    topo clone url.git#main\n\n", outBuf.String())
+		assert.Equal(t, "✅ name-of-project\n  Clone:\n    topo clone url.git#main\n\n\n", outBuf.String())
 	})
 
 	t.Run("prints compatibility marker if project is compatible and vice versa", func(t *testing.T) {

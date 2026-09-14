@@ -69,7 +69,7 @@ func TestContainerList(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Equal(t, "Container ID   Names   Image   Status   Processing Domain   Address", out.String())
+			assert.Equal(t, "Container ID   Names   Image   Status   Processing Domain   Address\n", out.String())
 		})
 	})
 

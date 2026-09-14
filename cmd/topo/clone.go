@@ -63,6 +63,7 @@ interactive prompts.`,
 			cliArgs = args[1:]
 		}
 
+		commandOutput := term.NewCommandOutput(os.Stdout)
 		var resolvers []parameter.Resolver
 		if len(cliArgs) > 0 {
 			cliResolver, err := parameter.NewCLIResolver(cliArgs)
@@ -72,12 +73,13 @@ interactive prompts.`,
 			resolvers = append(resolvers, cliResolver)
 		}
 		if term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stdout))
+			section := term.NewSectionPrinter(commandOutput, "Configure project")
+			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, section))
 		}
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.Clone(os.Stdout, path, projectSource, resolver)
+		return project.Clone(commandOutput, path, projectSource, resolver)
 	},
 }
 

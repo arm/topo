@@ -11,25 +11,20 @@ import (
 	"github.com/arm/topo/internal/parameter"
 )
 
-func Clone(output io.Writer, path string, src Source, resolver parameter.Resolver) error {
-	if err := term.PrintHeader(output, "Copy files"); err != nil {
-		return err
-	}
+func Clone(commandOutput *term.CommandOutput, path string, src Source, resolver parameter.Resolver) error {
 	if err := copyProject(src, path); err != nil {
 		return err
 	}
 
-	if err := term.PrintHeader(output, "Configure project"); err != nil {
-		return err
-	}
 	if err := configure(path, resolver); err != nil {
 		return err
 	}
 
-	if err := term.PrintHeader(output, "Project ready"); err != nil {
+	section := term.NewSectionPrinter(commandOutput, "Project ready")
+	if err := printSummary(section, path); err != nil {
 		return err
 	}
-	return printSummary(output, path)
+	return commandOutput.Finish()
 }
 
 func copyProject(src Source, path string) error {
@@ -65,6 +60,6 @@ Now run:
 
 A deployment target is required. Provide --target or set TOPO_TARGET.`, path, path)
 
-	_, err := fmt.Fprintln(output, toPrint)
+	_, err := fmt.Fprint(output, toPrint)
 	return err
 }

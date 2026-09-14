@@ -71,7 +71,7 @@ func TestInstallResults(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, "No binaries installed", out.String())
+			assert.Equal(t, "No binaries installed\n", out.String())
 		})
 
 		t.Run("returns success message for single binary on PATH", func(t *testing.T) {
