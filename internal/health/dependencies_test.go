@@ -2,7 +2,6 @@ package health_test
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"strings"
 	"testing"
