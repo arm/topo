@@ -27,35 +27,34 @@ type HostReport struct {
 	Dependencies []DependencyReport
 }
 
-type CheckHostOptions struct {
-	SkipVersionChecks bool
-}
-
 type TargetReport struct {
 	Destination  string
 	IsLocalhost  bool
 	Dependencies []DependencyReport
 }
 
+type CheckHostOptions struct {
+	SkipVersionChecks bool
+}
+
 func CheckHost(opts CheckHostOptions) HostReport {
-	deps := HostRequiredDependencies(opts.SkipVersionChecks)
-	dependencyStatuses := PerformChecks(context.Background(), deps)
-	return HostReport{
-		Dependencies: toDependencyReports(dependencyStatuses),
-	}
+	graph := NewDependencyGraph(DependencyGraphOptions{SkipVersionChecks: opts.SkipVersionChecks})
+	evaluatedGraph := graph.Evaluate(context.Background())
+	return HostReport{Dependencies: toDependencyReports(evaluatedGraph.Host)}
 }
 
 func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) TargetReport {
-	targetDependencyStatuses := PerformChecks(ctx, TargetRequiredDependencies(dest, acceptNewHostKeys))
+	graph := NewDependencyGraph(DependencyGraphOptions{Target: &dest, AcceptHostKeys: acceptNewHostKeys})
+	evaluatedGraph := graph.Evaluate(ctx)
 	return TargetReport{
 		Destination:  dest.String(),
 		IsLocalhost:  dest.IsPlainLocalhost(),
-		Dependencies: toDependencyReports(targetDependencyStatuses),
+		Dependencies: toDependencyReports(evaluatedGraph.Target),
 	}
 }
 
 func ToDependencyReport(status DependencyStatus) DependencyReport {
-	report := DependencyReport{ID: status.Dependency.ID, Name: status.Dependency.Label}
+	report := DependencyReport{ID: status.ID, Name: status.Label}
 	if status.Result.Failure == nil {
 		report.Status = CheckStatusOK
 		report.Value = status.Result.SuccessValue
