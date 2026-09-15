@@ -11,9 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	migrateToEnv bool
-)
+var migrateToEnv bool
 
 var configureCmd = &cobra.Command{
 	Use:   "configure [PARAMETER=VALUE ...]",
