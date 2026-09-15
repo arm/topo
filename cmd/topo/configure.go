@@ -1,12 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/spf13/cobra"
+)
+
+var (
+	migrateToEnv bool
 )
 
 var configureCmd = &cobra.Command{
@@ -32,6 +38,10 @@ interactive prompts.`,
 			return err
 		}
 
+		if migrateToEnv {
+			return project.MigrateToEnv(composeFile)
+		}
+
 		var resolvers []parameter.Resolver
 		if len(args) > 0 {
 			cliResolver, err := parameter.NewCLIResolver(args)
@@ -52,5 +62,8 @@ interactive prompts.`,
 
 func init() {
 	addComposeFileFlag(configureCmd)
+	if experimentalFeaturesEnabled() {
+		configureCmd.Flags().BoolVar(&migrateToEnv, "migrate-to-env", false, fmt.Sprintf("move parameter values from the compose file to %q, updating the compose file accordingly", env.DefaultFilename))
+	}
 	rootCmd.AddCommand(configureCmd)
 }
