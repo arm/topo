@@ -1,6 +1,8 @@
 package testutil
 
 import (
+	"context"
+	"crypto/rand"
 	"fmt"
 	"net"
 	"net/url"
@@ -23,7 +25,7 @@ type ContainerSpec struct {
 	image   string
 	runArgs []string
 	setup   func(c *Container) error
-	cleanup func(c *Container)
+	cleanup func(c *Container) error
 }
 
 var PasswordedSSHContainer = ContainerSpec{
@@ -41,9 +43,7 @@ var DinDContainer = ContainerSpec{
 		}
 		return waitForDockerDaemon(c)
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
+	cleanup: removeHostKey,
 }
 
 var PasswordlessSSHContainer = ContainerSpec{
@@ -55,9 +55,7 @@ var PasswordlessSSHContainer = ContainerSpec{
 		}
 		return nil
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
+	cleanup: removeHostKey,
 }
 
 var PodmanContainer = ContainerSpec{
@@ -70,9 +68,7 @@ var PodmanContainer = ContainerSpec{
 		}
 		return waitForPodmanService(c)
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
+	cleanup: removeHostKey,
 }
 
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
@@ -116,7 +112,9 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	}
 	if spec.cleanup != nil {
 		t.Cleanup(func() {
-			spec.cleanup(c)
+			if err := spec.cleanup(c); err != nil {
+				t.Errorf("container cleanup failed: %v", err)
+			}
 		})
 	}
 
@@ -158,7 +156,7 @@ func buildImage(spec ContainerSpec) error {
 }
 
 func generateContainerName(t *testing.T) string {
-	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
+	return fmt.Sprintf("topo-test-%s-%s", SanitiseTestName(t), strings.ToLower(rand.Text()))
 }
 
 func runContainer(containerName string, spec ContainerSpec) error {
@@ -183,7 +181,15 @@ func deleteContainer(containerName string) {
 	_ = cmd.Run()
 }
 
+var knownHostsLockPath = filepath.Join(os.TempDir(), "topo-e2e-known_hosts.lock")
+
 func acceptHostKey(c *Container) error {
+	flock, err := AcquireFlock(knownHostsLockPath)
+	if err != nil {
+		return err
+	}
+	defer flock.Release()
+
 	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("ssh", c.SSHDestination, "-o", "StrictHostKeyChecking=accept-new", "true")
 	output, err := cmd.CombinedOutput()
@@ -193,14 +199,36 @@ func acceptHostKey(c *Container) error {
 	return nil
 }
 
-func removeHostKey(c *Container) {
+func removeHostKey(c *Container) error {
 	u, err := url.Parse(c.SSHDestination)
 	if err != nil {
-		return
+		return err
 	}
 	host := fmt.Sprintf("[%s]:%s", u.Hostname(), u.Port())
-	// #nosec G204 -- ignore as its a test helper
-	_ = exec.Command("ssh-keygen", "-R", host).Run()
+	flock, err := AcquireFlock(knownHostsLockPath)
+	if err != nil {
+		return err
+	}
+	defer flock.Release()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	for {
+		// #nosec G204 -- ignore as its a test helper
+		output, err := exec.CommandContext(ctx, "ssh-keygen", "-R", host).CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		removeErr := fmt.Errorf("remove host key: %w output: %s", err, strings.TrimSpace(string(output)))
+		if runtime.GOOS != "windows" || !strings.Contains(string(output), "rename") || !strings.Contains(string(output), "Permission denied") {
+			return removeErr
+		}
+		select {
+		case <-ctx.Done():
+			return removeErr
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
 }
 
 func waitForPort(host string, port string, timeout time.Duration) error {
