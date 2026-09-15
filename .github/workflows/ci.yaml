@@ -96,8 +96,6 @@ jobs:
           wsl --exec dbus-launch true
           #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
           ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          ssh-keygen -F "[localhost]:2222" -f "$env:USERPROFILE/.ssh/topo-test-known-hosts/2222"
 
       - name: Install Podman and Docker Compose provider (Linux)
         if: runner.os == 'Linux'
@@ -217,4 +215,4 @@ jobs:
         env:
           DOCKER_HOST: ${{ matrix.docker_host }}
         run: |
-          go test ./... -count=1 -v -covermode=atomic -coverprofile=coverage.out
+          go test ./... -v -covermode=atomic -coverprofile=coverage.out

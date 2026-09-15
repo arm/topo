@@ -1,13 +1,11 @@
 package project_test
 
 import (
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 
 	"github.com/arm/topo/internal/project"
@@ -280,9 +278,10 @@ func TestDirSource(t *testing.T) {
 			testutil.RequireWriteFile(t, targetFile, "target content")
 			symlinkPath := filepath.Join(srcDir, "link.txt")
 			if err := os.Symlink("target.txt", symlinkPath); err != nil {
-				const errorPrivilegeNotHeld = syscall.Errno(1314)
-				if runtime.GOOS == "windows" && errors.Is(err, errorPrivilegeNotHeld) {
-					t.Skip("skipping symlink test on Windows without admin privileges")
+				if linkError, ok := err.(*os.LinkError); ok {
+					if testutil.IsPrivilegeError(t, linkError.Err) {
+						t.Skip("skipping symlink test on Windows without admin privileges")
+					}
 				}
 				require.NoError(t, err)
 			}
