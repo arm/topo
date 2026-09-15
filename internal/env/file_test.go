@@ -1,6 +1,7 @@
 package env_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -38,15 +39,14 @@ func TestResolveFiles(t *testing.T) {
 
 		paths, err := env.ResolveFiles(root, []string{".env", "missing"}, false)
 
-		assert.EqualError(t, err, "env file \""+filepath.Join(root, "missing")+"\" does not exist")
+		assert.EqualError(t, err, fmt.Sprintf("env file %q does not exist", filepath.Join(root, "missing")))
 		assert.Nil(t, paths)
 	})
 
-	t.Run("does not suppress other filesystem errors for optional files", func(t *testing.T) {
+	t.Run("rejects invalid paths even when missing files are allowed", func(t *testing.T) {
 		root := t.TempDir()
-		testutil.RequireWriteFile(t, filepath.Join(root, "not-a-directory"), "")
 
-		paths, err := env.ResolveFiles(root, []string{"not-a-directory/file.env"}, true)
+		paths, err := env.ResolveFiles(root, []string{"invalid\x00.env"}, true)
 
 		require.ErrorContains(t, err, "failed to check env file")
 		assert.Nil(t, paths)

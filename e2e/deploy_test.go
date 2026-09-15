@@ -65,13 +65,12 @@ func TestDeploy(t *testing.T) {
 		composeFile := testutil.RequireWriteComposeFile(t, projectDir, `services:
   sleeper:
     image: busybox
-    platform: linux/arm64
     command: ["sleep", "300"]
     environment:
       RESULT: "${TOPO_CUSTOM_ENV_FILE_VAR:-omitted},${TOPO_DEFAULT_ENV_FILE_VAR:-omitted}"
 `)
 		t.Cleanup(func() { composeDown(t, composeFile, container.SSHDestination) })
-		cmd := exec.Command(topo, "deploy", "--target", container.SSHDestination, "-f", composeFile, "--env-file", ".env.custom")
+		cmd := exec.Command(topo, "deploy", "--target", container.SSHDestination, "--skip-project-checks", "-f", composeFile, "--env-file", ".env.custom")
 		cmd.Dir = workingDir
 
 		out, err := cmd.CombinedOutput()
