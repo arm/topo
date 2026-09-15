@@ -30,7 +30,7 @@ func Header(description string, isTTY bool) string {
 	}
 
 	const totalWidth = 60
-	prefix := "┌─ "
+	prefix := "── "
 	suffix := " "
 
 	descriptionWidth := len(description)

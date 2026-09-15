@@ -101,7 +101,7 @@ func TestPrintHeader(t *testing.T) {
 		require.NoError(t, term.PrintNthHeader(&buf, "Hello"))
 
 		const totalWidth = 60
-		prefix := "┌─ "
+		prefix := "── "
 		suffix := " "
 		barWidth := totalWidth - len(prefix) - len("Hello") - len(suffix)
 		expected := "\n" + prefix + "Hello" + suffix + strings.Repeat("─", barWidth) + "\n"
@@ -115,15 +115,15 @@ func TestPrintHeader(t *testing.T) {
 
 		require.NoError(t, term.PrintNthHeader(&buf, description))
 
-		expected := "\n┌─ " + description + " \n"
+		expected := "\n── " + description + " \n"
 		assert.Equal(t, expected, buf.String())
 	})
 
 	t.Run("dims borders for terminal output", func(t *testing.T) {
 		header := term.Header("Hello", true)
 
-		assert.Contains(t, header, term.Color(term.Dim, "┌─ "))
-		barWidth := 60 - len("┌─ ") - len("Hello") - len(" ")
+		assert.Contains(t, header, term.Color(term.Dim, "── "))
+		barWidth := 60 - len("── ") - len("Hello") - len(" ")
 		assert.Contains(t, header, term.Color(term.Dim, " "+strings.Repeat("─", barWidth)))
 	})
 }
