@@ -2,7 +2,6 @@ package project_test
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/env"
@@ -14,7 +13,9 @@ import (
 )
 
 func TestMigrateToEnv(t *testing.T) {
-	const contents = `services:
+	t.Run("moves current values to env and replaces only declared parameters", func(t *testing.T) {
+		root := t.TempDir()
+		contents := `services:
   app:
     build:
       args:
@@ -24,11 +25,17 @@ x-topo:
   parameters:
     FOO: {}
 `
-
-	t.Run("moves current values to env and replaces only declared parameters", func(t *testing.T) {
-		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, contents)
-		want := strings.Replace(contents, "FOO: current", "FOO: ${FOO?configured via topo}", 1)
+		want := `services:
+  app:
+    build:
+      args:
+        FOO: ${FOO?configured via topo}
+        OTHER: unchanged
+x-topo:
+  parameters:
+    FOO: {}
+`
 
 		err := project.MigrateToEnv(path)
 
@@ -39,8 +46,66 @@ x-topo:
 		assert.YAMLEq(t, want, testutil.RequireReadFile(t, path))
 	})
 
+	t.Run("preserves build arg interpolation in the env file", func(t *testing.T) {
+		root := t.TempDir()
+		contents := `services:
+  app:
+    build:
+      args:
+        FOO: ${FOO}
+x-topo:
+  parameters:
+    FOO: {}
+`
+		path := testutil.RequireWriteComposeFile(t, root, contents)
+		want := `services:
+  app:
+    build:
+      args:
+        FOO: ${FOO?configured via topo}
+x-topo:
+  parameters:
+    FOO: {}
+`
+
+		err := project.MigrateToEnv(path)
+
+		require.NoError(t, err)
+		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename)), "\nFOO=\"${FOO}\"\n")
+		assert.YAMLEq(t, want, testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("preserves files when there are no parameter values to migrate", func(t *testing.T) {
+		root := t.TempDir()
+		contents := `services:
+  app:
+    build:
+      args:
+        FOO: current
+x-topo:
+  parameters:
+    MISSING: {}
+`
+		path := testutil.RequireWriteComposeFile(t, root, contents)
+
+		err := project.MigrateToEnv(path)
+
+		require.EqualError(t, err, "no parameter values to migrate")
+		assert.NoFileExists(t, filepath.Join(root, env.DefaultFilename))
+		assert.Equal(t, contents, testutil.RequireReadFile(t, path))
+	})
+
 	t.Run("preserves both files when env already exists", func(t *testing.T) {
 		root := t.TempDir()
+		contents := `services:
+  app:
+    build:
+      args:
+        FOO: current
+x-topo:
+  parameters:
+    FOO: {}
+`
 		path := testutil.RequireWriteComposeFile(t, root, contents)
 		envPath := filepath.Join(root, env.DefaultFilename)
 		testutil.RequireWriteFile(t, envPath, "FOO=existing\n")

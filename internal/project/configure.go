@@ -50,6 +50,10 @@ func MigrateToEnv(composeFilePath string) error {
 		values[param.Name] = project.currentParameterValues[param.Name][0]
 	}
 
+	if len(values) == 0 {
+		return fmt.Errorf("no parameter values to migrate")
+	}
+
 	err = env.SaveFile(envFile, values)
 	if err != nil {
 		return fmt.Errorf("failed to save env file: %w", err)
