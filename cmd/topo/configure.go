@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
@@ -37,7 +38,12 @@ interactive prompts.`,
 		}
 
 		if migrateToEnv {
-			return project.MigrateToEnv(composeFile)
+			err := project.MigrateToEnv(composeFile)
+			if err != nil {
+				return err
+			}
+			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", composeFile, env.DefaultFilename))
+			return nil
 		}
 
 		var resolvers []parameter.Resolver
