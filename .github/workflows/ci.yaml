@@ -43,6 +43,23 @@ jobs:
             docker_host: ssh://test@localhost:2222
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Isolate test SSH host keys
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.ssh/topo-test-known-hosts"
+          touch "$HOME/.ssh/config"
+          cat > "$HOME/.ssh/config.topo-tests" <<'EOF'
+          Host localhost
+              UserKnownHostsFile ~/.ssh/topo-test-known-hosts/%p
+
+          Host *
+          EOF
+          cat "$HOME/.ssh/config" >> "$HOME/.ssh/config.topo-tests"
+          mv "$HOME/.ssh/config.topo-tests" "$HOME/.ssh/config"
+
       - name: Install WSL (Windows)
         if: runner.os == 'Windows'
         uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7
@@ -79,6 +96,8 @@ jobs:
           wsl --exec dbus-launch true
           #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
           ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ssh-keygen -F "[localhost]:2222" -f "$env:USERPROFILE/.ssh/topo-test-known-hosts/2222"
 
       - name: Install Podman and Docker Compose provider (Linux)
         if: runner.os == 'Linux'
@@ -181,9 +200,6 @@ jobs:
           podman info
           docker-compose version
           podman compose version
-
-      - name: Checkout repository
-        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7

@@ -1,11 +1,9 @@
 package testutil
 
 import (
-	"context"
 	"crypto/rand"
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,7 +23,6 @@ type ContainerSpec struct {
 	image   string
 	runArgs []string
 	setup   func(c *Container) error
-	cleanup func(c *Container) error
 }
 
 var PasswordedSSHContainer = ContainerSpec{
@@ -43,7 +40,6 @@ var DinDContainer = ContainerSpec{
 		}
 		return waitForDockerDaemon(c)
 	},
-	cleanup: removeHostKey,
 }
 
 var PasswordlessSSHContainer = ContainerSpec{
@@ -55,7 +51,6 @@ var PasswordlessSSHContainer = ContainerSpec{
 		}
 		return nil
 	},
-	cleanup: removeHostKey,
 }
 
 var PodmanContainer = ContainerSpec{
@@ -68,7 +63,6 @@ var PodmanContainer = ContainerSpec{
 		}
 		return waitForPodmanService(c)
 	},
-	cleanup: removeHostKey,
 }
 
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
@@ -77,12 +71,12 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Skip("skipping test that requires a container in short mode")
 	}
 	RequireLinuxDockerEngine(t)
+	containerName := generateContainerName(t)
 
 	if err := buildImage(spec); err != nil {
 		t.Fatalf("failed to build image: %v", err)
 	}
 
-	containerName := generateContainerName(t)
 	t.Cleanup(func() {
 		deleteContainer(containerName)
 	})
@@ -95,6 +89,9 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	if err != nil {
 		t.Fatalf("failed to get container port: %v", err)
 	}
+
+	// Delete the host key before stopping the container, while it still owns the port.
+	t.Cleanup(func() { removeHostKey(t, port) })
 
 	if err := waitForPort("localhost", port, 10*time.Second); err != nil {
 		t.Fatalf("container port not ready: %v", err)
@@ -110,14 +107,6 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 			t.Fatalf("container setup failed: %v", err)
 		}
 	}
-	if spec.cleanup != nil {
-		t.Cleanup(func() {
-			if err := spec.cleanup(c); err != nil {
-				t.Errorf("container cleanup failed: %v", err)
-			}
-		})
-	}
-
 	return c
 }
 
@@ -181,15 +170,7 @@ func deleteContainer(containerName string) {
 	_ = cmd.Run()
 }
 
-var knownHostsLockPath = filepath.Join(os.TempDir(), "topo-e2e-known_hosts.lock")
-
 func acceptHostKey(c *Container) error {
-	flock, err := AcquireFlock(knownHostsLockPath)
-	if err != nil {
-		return err
-	}
-	defer flock.Release()
-
 	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("ssh", c.SSHDestination, "-o", "StrictHostKeyChecking=accept-new", "true")
 	output, err := cmd.CombinedOutput()
@@ -199,35 +180,16 @@ func acceptHostKey(c *Container) error {
 	return nil
 }
 
-func removeHostKey(c *Container) error {
-	u, err := url.Parse(c.SSHDestination)
+func removeHostKey(t *testing.T, port string) {
+	t.Helper()
+	home, err := os.UserHomeDir()
 	if err != nil {
-		return err
+		t.Errorf("failed to locate SSH directory: %v", err)
+		return
 	}
-	host := fmt.Sprintf("[%s]:%s", u.Hostname(), u.Port())
-	flock, err := AcquireFlock(knownHostsLockPath)
-	if err != nil {
-		return err
-	}
-	defer flock.Release()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	for {
-		// #nosec G204 -- ignore as its a test helper
-		output, err := exec.CommandContext(ctx, "ssh-keygen", "-R", host).CombinedOutput()
-		if err == nil {
-			return nil
-		}
-		removeErr := fmt.Errorf("remove host key: %w output: %s", err, strings.TrimSpace(string(output)))
-		if runtime.GOOS != "windows" || !strings.Contains(string(output), "rename") || !strings.Contains(string(output), "Permission denied") {
-			return removeErr
-		}
-		select {
-		case <-ctx.Done():
-			return removeErr
-		case <-time.After(100 * time.Millisecond):
-		}
+	path := filepath.Join(home, ".ssh", "topo-test-known-hosts", port)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		t.Errorf("failed to remove test known-hosts file: %v", err)
 	}
 }
 
