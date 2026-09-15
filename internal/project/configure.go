@@ -1,10 +1,13 @@
 package project
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/parameter"
 )
 
@@ -18,10 +21,53 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return nil
 	}
 
-	return applyParameterValues(composeFilePath, values)
+	return applyParameterValuesToComposeFile(composeFilePath, values)
 }
 
-func applyParameterValues(composeFilePath string, values parameter.Values) error {
+func MigrateToEnv(composeFilePath string) error {
+	projectDir := filepath.Dir(composeFilePath)
+	envFile := filepath.Join(projectDir, env.DefaultFilename)
+
+	_, err := os.Stat(envFile)
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("env file already exists: %s", envFile)
+	}
+
+	project, err := loadProject(composeFilePath)
+	if err != nil {
+		return err
+	}
+
+	values := map[string]string{}
+	for _, param := range project.Metadata.Parameters {
+		if len(project.currentParameterValues[param.Name]) == 0 {
+			continue
+		}
+		if len(project.currentParameterValues[param.Name]) != 1 {
+			return fmt.Errorf("parameter %s has more than one current value", param.Name)
+		}
+
+		values[param.Name] = project.currentParameterValues[param.Name][0]
+	}
+
+	err = env.SaveFile(envFile, values)
+	if err != nil {
+		return fmt.Errorf("failed to save env file: %w", err)
+	}
+
+	references := map[string]string{}
+	for k := range values {
+		references[k] = fmt.Sprintf("${%s?configured via topo}", k)
+	}
+	err = applyParameterValuesToComposeFile(composeFilePath, references)
+	if err != nil {
+		deleteErr := os.Remove(envFile)
+		return errors.Join(fmt.Errorf("failed to apply parameter values to compose file: %w", err), deleteErr)
+	}
+	return nil
+}
+
+func applyParameterValuesToComposeFile(composeFilePath string, values parameter.Values) error {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
 		return err
@@ -50,17 +96,26 @@ func applyParameterValues(composeFilePath string, values parameter.Values) error
 	return nil
 }
 
-func collectValues(composeFilePath string, resolver parameter.Resolver) (parameter.Values, error) {
+func loadProject(composeFilePath string) (Project, error) {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("can't read compose file: %w", err)
+		return Project{}, fmt.Errorf("can't read compose file: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
 	project, err := FromContent(f)
 	if err != nil {
+		return Project{}, err
+	}
+	return project, nil
+}
+
+func collectValues(composeFilePath string, resolver parameter.Resolver) (parameter.Values, error) {
+	project, err := loadProject(composeFilePath)
+	if err != nil {
 		return nil, err
 	}
+
 	return resolver.Resolve(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
 }
 
