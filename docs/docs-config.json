@@ -4,17 +4,20 @@
   "navbarItems": [
     {
       "label": "Getting Started",
-      "to": "/introduction/",
+      "to": "/introduction/what-is-topo",
+      "activeBaseRegex": "(^|/)introduction(?:/|$)",
       "position": "left"
     },
     {
       "label": "Project Specification",
-      "to": "/project-specification",
+      "to": "/project-specification/overview",
+      "activeBaseRegex": "(^|/)project-specification(?:/|$)",
       "position": "left"
     },
     {
       "label": "Contributing",
-      "to": "/development/contributing",
+      "to": "/development/guide",
+      "activeBaseRegex": "(^|/)development(?:/|$)",
       "position": "left"
     }
   ],

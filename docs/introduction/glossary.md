@@ -1,3 +1,9 @@
+---
+sidebar_position: 4
+title: Glossary
+description: Find definitions for the core terms used throughout Topo documentation and command output.
+---
+
 # Glossary
 
 This glossary defines the core terms used in Topo documentation and command output.

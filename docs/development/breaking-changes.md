@@ -1,3 +1,9 @@
+---
+sidebar_position: 1
+title: Breaking change policy
+description: Understand Topo's compatibility contract and how changes are classified before release.
+---
+
 # Breaking change policy
 
 This policy defines which changes to the Topo are breaking changes. It helps reviewers classify changes consistently before a release.

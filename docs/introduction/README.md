@@ -1,6 +1,8 @@
 ---
 sidebar_position: 0
-slug: /introduction
+slug: /introduction/what-is-topo
+title: What is Topo?
+description: Learn where Topo runs, what it deploys, and how to use it with Arm-based Linux devices.
 ---
 
 # What is Topo?

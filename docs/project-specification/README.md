@@ -1,11 +1,11 @@
 ---
 sidebar_position: 0
-slug: /project-specification
+slug: /project-specification/overview
+title: Specification overview
+description: Learn how Topo Projects use Compose and metadata for discovery, configuration, and deployment.
 ---
 
-# Project Specification
-
-## Overview
+# Specification overview
 
 A [Topo Project](../introduction/glossary.md#topo-project) is a containerized sample project for Arm-based Linux systems. At minimum, it is a directory containing a `compose.yaml`, Dockerfiles, and source code, with an [`x-topo`](../introduction/glossary.md#x-topo) metadata block that describes what the Project does, what hardware [features](../introduction/glossary.md#feature) it requires, and what parameters a user can configure.
 

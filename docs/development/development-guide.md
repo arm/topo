@@ -1,6 +1,8 @@
 ---
-sidebar_position: 1
+sidebar_position: 0
 slug: /development/guide
+title: Development guide
+description: Set up the repository, build and test the CLI, and preview documentation changes.
 ---
 
 # Development guide

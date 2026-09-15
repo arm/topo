@@ -1,3 +1,9 @@
+---
+sidebar_position: 3
+title: Schema compliance
+description: Check a Topo Project against the Compose specification and metadata requirements.
+---
+
 # Schema Compliance
 
 The [machine-readable schema](schema/topo-project-specification.json) can be used to check a [Topo Project](../introduction/glossary.md#topo-project) against the Compose specification and the [`x-topo`](../introduction/glossary.md#x-topo) metadata requirements. It uses [JSON Schema](https://json-schema.org/) and is compatible with any supported tooling.

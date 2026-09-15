@@ -1,3 +1,9 @@
+---
+sidebar_position: 4
+title: Speeding up image builds
+description: Reduce project build and deployment times with effective container caching strategies.
+---
+
 # Speeding up image builds
 
 Any image build with a slow, heavy step such as cloning large repos, installing hundreds of packages, compiling big dependency trees, downloading SDKs, fetching ML models etc., benefits from the same general set of caching strategies.

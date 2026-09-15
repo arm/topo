@@ -257,14 +257,18 @@
   line-height: 1.45;
 }
 
+.exampleCard :global(.theme-code-block) {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--arm-grey-30);
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .exampleCode {
   margin: 0;
   background: var(--arm-grey-05) !important;
-  border: 0;
-  border-top: 1px solid var(--arm-grey-30);
-  border-bottom: 1px solid var(--arm-grey-30);
   border-radius: 0;
-  box-shadow: none;
 }
 
 .exampleCode code {
@@ -275,9 +279,12 @@
   white-space: pre;
 }
 
+:global(html[data-theme="dark"]) .exampleCard :global(.theme-code-block) {
+  border-color: var(--arm-code-border);
+}
+
 :global(html[data-theme="dark"]) .exampleCode {
   background: var(--arm-code-background);
-  border-color: var(--arm-code-border);
 }
 
 :global(html[data-theme="dark"]) .exampleCode code {
