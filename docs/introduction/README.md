@@ -5,6 +5,9 @@ title: What is Topo?
 description: Learn where Topo runs, what it deploys, and how to use it with Arm-based Linux devices.
 ---
 
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ThemedImage from "@theme/ThemedImage";
+
 # What is Topo?
 
 Topo helps you discover, configure, and deploy containerized software to Arm-based Linux devices over SSH. It uses Compose projects, container images, and standard container tools.
@@ -15,7 +18,13 @@ You run Topo on a [host](glossary.md#host) and deploy to a [target](glossary.md#
 
 This diagram shows where Topo runs, what it deploys, and how you iterate on a project.
 
-![Topo host-to-target deployment and development loop](/img/topo-overview.svg)
+<ThemedImage
+  alt="Topo deployment and development loop"
+  sources={{
+    light: useBaseUrl("/img/topo-overview.svg"),
+    dark: useBaseUrl("/img/topo-overview-dark.svg"),
+  }}
+/>
 
 ## Use cases
 
