@@ -52,7 +52,7 @@ jobs:
           mkdir -p "$HOME/.ssh/topo-test-known-hosts"
           touch "$HOME/.ssh/config"
           cat > "$HOME/.ssh/config.topo-tests" <<'EOF'
-          Host localhost
+          Match host localhost
               UserKnownHostsFile ~/.ssh/topo-test-known-hosts/%p
 
           Host *

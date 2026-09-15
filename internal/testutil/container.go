@@ -90,7 +90,6 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
-	// Delete the host key before stopping the container, while it still owns the port.
 	t.Cleanup(func() { removeHostKey(t, port) })
 
 	if err := waitForPort("localhost", port, 10*time.Second); err != nil {
