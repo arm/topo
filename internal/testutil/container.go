@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"crypto/rand"
 	"fmt"
 	"net"
 	"net/url"
@@ -164,7 +165,7 @@ func buildImage(spec ContainerSpec) error {
 }
 
 func generateContainerName(t *testing.T) string {
-	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
+	return fmt.Sprintf("topo-test-%s-%s", SanitiseTestName(t), strings.ToLower(rand.Text()))
 }
 
 func runContainer(containerName string, spec ContainerSpec) error {
