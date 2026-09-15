@@ -216,7 +216,7 @@ services:
 		assert.YAMLEq(t, composeFileContents, string(got))
 	})
 
-	t.Run("inherits environment variables from .env file", func(t *testing.T) {
+	t.Run("inherits environment variables from custom dotenv file", func(t *testing.T) {
 		dir := t.TempDir()
 		serviceName := "test-service"
 		composeFileContents := fmt.Sprintf(`
