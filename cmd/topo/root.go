@@ -197,16 +197,16 @@ func getEnvFiles(cmd *cobra.Command, composeFilePath string) ([]string, error) {
 	}
 
 	root := filepath.Dir(composeFilePath)
-	allowMissing := true
+	skipMissing := true
 	if cmd.Flag(envFileFlag).Changed {
-		allowMissing = false
+		skipMissing = false
 		root, err = os.Getwd()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get current working directory: %w", err)
 		}
 	}
 
-	return env.ResolveFiles(root, envFiles, allowMissing)
+	return env.ResolveFiles(root, envFiles, skipMissing)
 }
 
 func experimentalFeaturesEnabled() bool {
