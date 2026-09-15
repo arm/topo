@@ -10,7 +10,7 @@ type Scope struct {
 	EnvFiles    []string
 }
 
-func LoadScope(composeFile string, target string, envFiles []string) (Scope, error) {
+func BuildScope(composeFile string, target string, envFiles []string) (Scope, error) {
 	targetEnv, err := env.ResolveTargetEnv(target)
 	if err != nil {
 		return Scope{}, err

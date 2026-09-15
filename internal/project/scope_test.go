@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadScope(t *testing.T) {
+func TestBuildScope(t *testing.T) {
 	t.Run("sets target env vars", func(t *testing.T) {
 		target := "ssh://user@hostname:8080"
 
-		scope, err := project.LoadScope("compose.yaml", target, nil)
+		scope, err := project.BuildScope("compose.yaml", target, nil)
 
 		require.NoError(t, err)
 		require.ElementsMatch(t, scope.Env, []string{
@@ -25,7 +25,7 @@ func TestLoadScope(t *testing.T) {
 	t.Run("accepts arbitrary env files", func(t *testing.T) {
 		envFiles := []string{"custom.env"}
 
-		scope, err := project.LoadScope("compose.yaml", "ssh://user@hostname:8080", envFiles)
+		scope, err := project.BuildScope("compose.yaml", "ssh://user@hostname:8080", envFiles)
 
 		require.NoError(t, err)
 		require.ElementsMatch(t, scope.EnvFiles, envFiles)
