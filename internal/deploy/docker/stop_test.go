@@ -38,14 +38,10 @@ services:
 	scope := project.Scope{ComposeFile: composeFilePath}
 	t.Cleanup(func() { forceComposeDown(t, scope) })
 	deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
-	finishPhase := testutil.MeasureTestPhase(t, "deployment")
 	require.NoError(t, docker.Deploy(t.Context(), io.Discard, scope, deployOptions))
-	finishPhase()
 	assertContainersRunning(t, remoteDockerHost, scope)
 
-	finishPhase = testutil.MeasureTestPhase(t, "stop")
 	err := docker.Stop(t.Context(), io.Discard, scope, remoteDockerHost)
-	finishPhase()
 
 	require.NoError(t, err)
 	assertContainersStopped(t, remoteDockerHost, scope)

@@ -1,8 +1,6 @@
 package testutil
 
 import (
-	"context"
-	"crypto/rand"
 	"fmt"
 	"net"
 	"net/url"
@@ -25,7 +23,7 @@ type ContainerSpec struct {
 	image   string
 	runArgs []string
 	setup   func(c *Container) error
-	cleanup func(c *Container) error
+	cleanup func(c *Container)
 }
 
 var PasswordedSSHContainer = ContainerSpec{
@@ -43,7 +41,9 @@ var DinDContainer = ContainerSpec{
 		}
 		return waitForDockerDaemon(c)
 	},
-	cleanup: removeHostKey,
+	cleanup: func(c *Container) {
+		removeHostKey(c)
+	},
 }
 
 var PasswordlessSSHContainer = ContainerSpec{
@@ -55,7 +55,9 @@ var PasswordlessSSHContainer = ContainerSpec{
 		}
 		return nil
 	},
-	cleanup: removeHostKey,
+	cleanup: func(c *Container) {
+		removeHostKey(c)
+	},
 }
 
 var PodmanContainer = ContainerSpec{
@@ -68,7 +70,9 @@ var PodmanContainer = ContainerSpec{
 		}
 		return waitForPodmanService(c)
 	},
-	cleanup: removeHostKey,
+	cleanup: func(c *Container) {
+		removeHostKey(c)
+	},
 }
 
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
@@ -76,23 +80,17 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	if testing.Short() {
 		t.Skip("skipping test that requires a container in short mode")
 	}
-	finishPhase := MeasureTestPhase(t, "fixture: docker info")
 	RequireLinuxDockerEngine(t)
-	finishPhase()
 
-	finishPhase = MeasureTestPhase(t, "fixture: build image "+spec.image)
 	if err := buildImage(spec); err != nil {
 		t.Fatalf("failed to build image: %v", err)
 	}
 
-	finishPhase()
 	containerName := generateContainerName(t)
 	t.Cleanup(func() {
-		defer MeasureTestPhase(t, "cleanup: delete fixture container")()
 		deleteContainer(containerName)
 	})
 
-	finishPhase = MeasureTestPhase(t, "fixture: start container and wait for port")
 	if err := runContainer(containerName, spec); err != nil {
 		t.Fatalf("failed to start container: %v", err)
 	}
@@ -106,25 +104,19 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Fatalf("container port not ready: %v", err)
 	}
 
-	finishPhase()
 	c := &Container{
 		SSHDestination: fmt.Sprintf("ssh://root@localhost:%s", port),
 		Name:           containerName,
 	}
 
 	if spec.setup != nil {
-		finishPhase = MeasureTestPhase(t, "fixture: host key and daemon readiness")
 		if err := spec.setup(c); err != nil {
 			t.Fatalf("container setup failed: %v", err)
 		}
-		finishPhase()
 	}
 	if spec.cleanup != nil {
 		t.Cleanup(func() {
-			defer MeasureTestPhase(t, "cleanup: fixture host key")()
-			if err := spec.cleanup(c); err != nil {
-				t.Errorf("container cleanup failed: %v", err)
-			}
+			spec.cleanup(c)
 		})
 	}
 
@@ -166,7 +158,7 @@ func buildImage(spec ContainerSpec) error {
 }
 
 func generateContainerName(t *testing.T) string {
-	return fmt.Sprintf("topo-test-%s-%s", SanitiseTestName(t), strings.ToLower(rand.Text()))
+	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
 }
 
 func runContainer(containerName string, spec ContainerSpec) error {
@@ -191,15 +183,7 @@ func deleteContainer(containerName string) {
 	_ = cmd.Run()
 }
 
-var knownHostsLockPath = filepath.Join(os.TempDir(), "topo-e2e-known_hosts.lock")
-
 func acceptHostKey(c *Container) error {
-	flock, err := AcquireFlock(knownHostsLockPath)
-	if err != nil {
-		return err
-	}
-	defer flock.Release()
-
 	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("ssh", c.SSHDestination, "-o", "StrictHostKeyChecking=accept-new", "true")
 	output, err := cmd.CombinedOutput()
@@ -209,36 +193,14 @@ func acceptHostKey(c *Container) error {
 	return nil
 }
 
-func removeHostKey(c *Container) error {
+func removeHostKey(c *Container) {
 	u, err := url.Parse(c.SSHDestination)
 	if err != nil {
-		return err
+		return
 	}
 	host := fmt.Sprintf("[%s]:%s", u.Hostname(), u.Port())
-	flock, err := AcquireFlock(knownHostsLockPath)
-	if err != nil {
-		return err
-	}
-	defer flock.Release()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	for {
-		// #nosec G204 -- ignore as its a test helper
-		output, err := exec.CommandContext(ctx, "ssh-keygen", "-R", host).CombinedOutput()
-		if err == nil {
-			return nil
-		}
-		removeErr := fmt.Errorf("remove host key: %w output: %s", err, strings.TrimSpace(string(output)))
-		if runtime.GOOS != "windows" || !strings.Contains(string(output), "rename") || !strings.Contains(string(output), "Permission denied") {
-			return removeErr
-		}
-		select {
-		case <-ctx.Done():
-			return removeErr
-		case <-time.After(100 * time.Millisecond):
-		}
-	}
+	// #nosec G204 -- ignore as its a test helper
+	_ = exec.Command("ssh-keygen", "-R", host).Run()
 }
 
 func waitForPort(host string, port string, timeout time.Duration) error {

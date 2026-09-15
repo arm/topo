@@ -22,9 +22,7 @@ func TestDeployment(t *testing.T) {
 		requireImageDoesNotExist(t, docker.LocalHost, imageName)
 		deployOptions := docker.DeployOptions{TargetHost: ssh.PlainLocalhost}
 
-		finishPhase := testutil.MeasureTestPhase(t, "deployment")
 		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
-		finishPhase()
 
 		require.NoError(t, err)
 		requireImageExists(t, docker.LocalHost, imageName)
@@ -38,9 +36,7 @@ func TestDeployment(t *testing.T) {
 		requireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
 		deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
 
-		finishPhase := testutil.MeasureTestPhase(t, "deployment")
 		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
-		finishPhase()
 
 		require.NoError(t, err)
 		requireImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
@@ -65,9 +61,7 @@ func TestDeployment(t *testing.T) {
 			},
 		}
 
-		finishPhase := testutil.MeasureTestPhase(t, "deployment")
 		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
-		finishPhase()
 
 		require.NoError(t, err)
 		requireImageExists(t, remoteCommandHost, imageName)
@@ -92,7 +86,6 @@ FROM alpine:latest
 CMD ["tail", "-f", "/dev/null"]
 `)
 	t.Cleanup(func() {
-		defer testutil.MeasureTestPhase(t, "cleanup: local image")()
 		removeOutput, err := docker.Command(context.Background(), docker.LocalHost, "image", "rm", "-f", imageName).CombinedOutput()
 		if err != nil {
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))

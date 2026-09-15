@@ -1,8 +1,6 @@
 package e2e
 
 import (
-	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -76,25 +74,15 @@ func requireClone(t *testing.T, topo string, projectDir string, cloneDir string,
 }
 
 func requireDeploy(t *testing.T, topo, projectDir, sshDestination string, extraArgs ...string) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
-	defer cancel()
 	args := []string{"deploy", "--target", sshDestination, "--skip-project-checks"}
 	args = append(args, extraArgs...)
 
-	deployCmd := exec.CommandContext(ctx, topo, args...)
+	deployCmd := exec.Command(topo, args...)
 	deployCmd.Dir = projectDir
-	// SSH or Docker descendants can keep output pipes open after Topo is killed.
-	deployCmd.WaitDelay = 5 * time.Second
-	var out bytes.Buffer
-	output := io.MultiWriter(t.Output(), &out)
-	deployCmd.Stdout = output
-	deployCmd.Stderr = output
 
-	err := deployCmd.Run()
+	out, err := deployCmd.CombinedOutput()
 
-	require.NoErrorf(t, ctx.Err(), "deploy interrupted: %s", out.String())
-	require.NoErrorf(t, err, "deploy failed: %s", out.String())
+	require.NoErrorf(t, err, "deploy failed: %s", out)
 }
 
 func requirePS(t *testing.T, topo, projectDir, sshDestination string, extraArgs []string, expectedOutputs ...string) string {
@@ -146,10 +134,7 @@ func assertResponseBody(t *testing.T, url, wantBody string) {
 
 func composeDown(t *testing.T, composeFile, sshDestination string) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "docker", "-H", sshDestination, "compose", "-f", composeFile, "down", "-v")
-	cmd.WaitDelay = 5 * time.Second
+	cmd := exec.Command("docker", "-H", sshDestination, "compose", "-f", composeFile, "down", "-v")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Logf("compose down failed: %v, output: %s", err, out)
 	}

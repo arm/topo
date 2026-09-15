@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"slices"
-	"time"
 
 	"github.com/arm/topo/internal/command"
 )
@@ -19,7 +18,6 @@ func RunCommand(ctx context.Context, dest Destination, cmdStr string, stdin []by
 	args := slices.Concat(sshArgs, []string{"--", dest.String(), wrapper.Wrap(cmdStr)})
 	// #nosec G204 -- command should be validated by callers
 	cmd := exec.CommandContext(ctx, "ssh", args...)
-	cmd.WaitDelay = 5 * time.Second
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
@@ -29,7 +27,7 @@ func RunCommand(ctx context.Context, dest Destination, cmdStr string, stdin []by
 
 	err := cmd.Run()
 	if err != nil && ctx.Err() != nil {
-		return wrapper.Unwrap(stdoutBuf.String()), stderrBuf.String(), fmt.Errorf("ssh command to %s interrupted: %w | stderr: %s", dest, ctx.Err(), stderrBuf.String())
+		return "", "", ctx.Err()
 	}
 
 	stdout := wrapper.Unwrap(stdoutBuf.String())
