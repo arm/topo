@@ -6,13 +6,21 @@ import (
 	"strings"
 )
 
-func PrintHeader(w io.Writer, description string) error {
+func PrintFirstHeader(w io.Writer, description string) error {
+	return printHeader(w, description, "")
+}
+
+func PrintNthHeader(w io.Writer, description string) error {
+	return printHeader(w, description, "\n")
+}
+
+func printHeader(w io.Writer, description string, prefix string) error {
 	header := Header(description, IsTTY(w))
 	if header == "" {
 		return nil
 	}
 
-	_, err := fmt.Fprintf(w, "\n%s\n", header)
+	_, err := fmt.Fprintf(w, "%s%s\n", prefix, header)
 	return err
 }
 

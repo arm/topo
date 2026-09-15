@@ -79,10 +79,26 @@ func TestWrapText(t *testing.T) {
 }
 
 func TestPrintHeader(t *testing.T) {
+	t.Run("first header has no leading newline", func(t *testing.T) {
+		var buf bytes.Buffer
+
+		require.NoError(t, term.PrintFirstHeader(&buf, "Hello"))
+
+		assert.False(t, strings.HasPrefix(buf.String(), "\n"))
+	})
+
+	t.Run("nth header has a leading newline", func(t *testing.T) {
+		var buf bytes.Buffer
+
+		require.NoError(t, term.PrintNthHeader(&buf, "Hello"))
+
+		assert.True(t, strings.HasPrefix(buf.String(), "\n"))
+	})
+
 	t.Run("renders header with padding", func(t *testing.T) {
 		var buf bytes.Buffer
 
-		require.NoError(t, term.PrintHeader(&buf, "Hello"))
+		require.NoError(t, term.PrintNthHeader(&buf, "Hello"))
 
 		const totalWidth = 60
 		prefix := "┌─ "
@@ -97,7 +113,7 @@ func TestPrintHeader(t *testing.T) {
 		var buf bytes.Buffer
 		description := strings.Repeat("x", 80)
 
-		require.NoError(t, term.PrintHeader(&buf, description))
+		require.NoError(t, term.PrintNthHeader(&buf, description))
 
 		expected := "\n┌─ " + description + " \n"
 		assert.Equal(t, expected, buf.String())
