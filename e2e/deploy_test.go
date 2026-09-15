@@ -43,6 +43,7 @@ func TestDeploy(t *testing.T) {
   sleeper:
     image: busybox
     command: ["sleep", "300"]
+    stop_grace_period: 1s
 `)
 		t.Cleanup(func() {
 			composeDown(t, composeFile, container.SSHDestination)

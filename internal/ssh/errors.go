@@ -2,18 +2,29 @@ package ssh
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
+type sshError struct {
+	message string
+}
+
+func (err sshError) Error() string {
+	return err.message
+}
+
+func (err sshError) Is(target error) bool {
+	return target == ErrSSH
+}
+
 var (
 	ErrSSH               = errors.New("ssh failed")
-	ErrAuthFailed        = fmt.Errorf("%w: authentication failed", ErrSSH)
-	ErrTooManyAuthFails  = fmt.Errorf("%w: too many authentication failures", ErrSSH)
-	ErrConnectionFailed  = fmt.Errorf("%w: connection failed", ErrSSH)
-	ErrConnectionTimeout = fmt.Errorf("%w: connection timed out", ErrSSH)
-	ErrHostKeyUnknown    = fmt.Errorf("%w: host key is not known", ErrSSH)
-	ErrHostKeyChanged    = fmt.Errorf("%w: host key has changed", ErrSSH)
+	ErrAuthFailed        = sshError{message: "authentication failed"}
+	ErrTooManyAuthFails  = sshError{message: "too many authentication failures"}
+	ErrConnectionFailed  = sshError{message: "connection failed"}
+	ErrConnectionTimeout = sshError{message: "connection timed out"}
+	ErrHostKeyUnknown    = sshError{message: "host key is not known"}
+	ErrHostKeyChanged    = sshError{message: "host key has changed"}
 )
 
 // ClassifyStderr inspects SSH stderr output and returns a typed error when a

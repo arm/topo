@@ -30,8 +30,10 @@ services:
   busybox:
     image: busybox
     command: ["tail", "-f", "/dev/null"]
+    stop_grace_period: 1s
   a-service:
     build: .
+    stop_grace_period: 1s
 `, testProjectName(t)))
 	scope := project.Scope{ComposeFile: composeFilePath}
 	t.Cleanup(func() { forceComposeDown(t, scope) })
