@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
@@ -29,16 +30,19 @@ services:
   busybox:
     image: busybox
     command: ["tail", "-f", "/dev/null"]
+    stop_grace_period: 1s
   a-service:
     build: .
+    stop_grace_period: 1s
 `, testProjectName(t)))
-	t.Cleanup(func() { forceComposeDown(t, composeFilePath) })
+	scope := project.Scope{ComposeFile: composeFilePath}
+	t.Cleanup(func() { forceComposeDown(t, scope) })
 	deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
-	require.NoError(t, docker.Deploy(t.Context(), io.Discard, composeFilePath, deployOptions))
-	assertContainersRunning(t, remoteDockerHost, composeFilePath)
+	require.NoError(t, docker.Deploy(t.Context(), io.Discard, scope, deployOptions))
+	assertContainersRunning(t, remoteDockerHost, scope)
 
-	err := docker.Stop(t.Context(), io.Discard, composeFilePath, remoteDockerHost)
+	err := docker.Stop(t.Context(), io.Discard, scope, remoteDockerHost)
 
 	require.NoError(t, err)
-	assertContainersStopped(t, remoteDockerHost, composeFilePath)
+	assertContainersStopped(t, remoteDockerHost, scope)
 }

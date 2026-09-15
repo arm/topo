@@ -6,6 +6,7 @@ import (
 
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/project"
 )
 
 func DefaultMessage(composeFile string) string {
@@ -16,8 +17,8 @@ func DefaultMessage(composeFile string) string {
 	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", cmdtext.QuoteArg(composeFile))
 }
 
-func getSuccessMessage(composeFile string) (string, error) {
-	composeProject, err := compose.ReadProject(composeFile)
+func getSuccessMessage(scope project.Scope) (string, error) {
+	composeProject, err := project.Read(scope)
 	if err != nil {
 		return "", err
 	}
@@ -32,8 +33,8 @@ func getSuccessMessage(composeFile string) (string, error) {
 	return metadata.DeploymentSuccessMessage, nil
 }
 
-func PrintDeploySuccess(output io.Writer, composeFile, defaultMessage string) error {
-	successMessage, err := getSuccessMessage(composeFile)
+func PrintDeploySuccess(output io.Writer, scope project.Scope, defaultMessage string) error {
+	successMessage, err := getSuccessMessage(scope)
 	if err != nil {
 		return err
 	}

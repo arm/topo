@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,7 @@ services:
     image: alpine
 `)
 
-		err := podman.EnsureNoRuntimeSet(composeFile)
+		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFile: composeFile})
 
 		require.NoError(t, err)
 	})
@@ -29,7 +30,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		err := podman.EnsureNoRuntimeSet(composeFile)
+		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFile: composeFile})
 
 		require.EqualError(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments: "firmware" service uses "io.containerd.remoteproc.v1"`)
 	})
@@ -45,7 +46,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		err := podman.EnsureNoRuntimeSet(composeFile)
+		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFile: composeFile})
 
 		require.EqualError(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments: "application" service uses "kata", "firmware" service uses "io.containerd.remoteproc.v1"`)
 	})

@@ -2,7 +2,6 @@ package env
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/arm/topo/internal/ssh"
 )
@@ -12,20 +11,15 @@ const (
 	TargetHostnameVariable = "TOPO_TARGET_HOSTNAME"
 )
 
-func SetTargetEnv(target string) error {
+func ResolveTargetEnv(target string) ([]string, error) {
 	destination := ssh.NewDestination(target)
 	hostname, err := ssh.ResolveHostname(destination)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	vars := map[string]string{
-		TargetVariable:         destination.String(),
-		TargetHostnameVariable: hostname,
-	}
-	for name, value := range vars {
-		if err := os.Setenv(name, value); err != nil {
-			return fmt.Errorf("failed to set %s: %w", name, err)
-		}
-	}
-	return nil
+
+	return []string{
+		fmt.Sprintf("%s=%s", TargetVariable, destination.String()),
+		fmt.Sprintf("%s=%s", TargetHostnameVariable, hostname),
+	}, nil
 }

@@ -8,11 +8,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/project"
 )
 
-func TransferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, composeFile, port string) error {
-	images, err := compose.ImageNames(composeFile)
+func TransferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, scope project.Scope, port string) error {
+	images, err := project.ImageNames(scope)
 	if err != nil {
 		return err
 	}

@@ -2,12 +2,14 @@ package docker_test
 
 import (
 	"bytes"
-	"os/exec"
+	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/arm/topo/internal/deploy/docker"
 	deploytestutil "github.com/arm/topo/internal/deploy/testutil"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -63,18 +65,20 @@ func requireImageDoesNotExist(t *testing.T, host docker.Host, imageName string) 
 	require.Empty(t, strings.TrimSpace(string(output)), "image %s unexpectedly exists", imageName)
 }
 
-func forceComposeDown(t *testing.T, composeFilePath string) {
+func forceComposeDown(t *testing.T, scope project.Scope) {
 	t.Helper()
-	// #nosec G204 -- ignore as its a test helper
-	err := exec.Command("docker", "compose", "-f", composeFilePath, "down", "-v").Run()
-	if err != nil {
-		t.Logf("docker compose down failed: %v (compose file: %s)", err, composeFilePath)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := docker.ComposeCommand(ctx, docker.LocalHost, scope, "down", "-v")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Logf("docker compose down failed: %v (compose file: %s): %s", err, scope.ComposeFile, output)
 	}
 }
 
-func assertContainersRunning(t *testing.T, destination ssh.Destination, composeFilePath string) {
+func assertContainersRunning(t *testing.T, destination ssh.Destination, scope project.Scope) {
 	t.Helper()
-	dockerCommand := docker.ComposeCommand(t.Context(), docker.NewHostFromDestination(destination), composeFilePath, "ps", "--format", "json")
+	dockerCommand := docker.ComposeCommand(t.Context(), docker.NewHostFromDestination(destination), scope, "ps", "--format", "json")
 	output, err := dockerCommand.CombinedOutput()
 	require.NoError(t, err, string(output))
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers running")
@@ -87,9 +91,9 @@ func assertContainersRunning(t *testing.T, destination ssh.Destination, composeF
 	}
 }
 
-func assertContainersStopped(t *testing.T, destination ssh.Destination, composeFilePath string) {
+func assertContainersStopped(t *testing.T, destination ssh.Destination, scope project.Scope) {
 	t.Helper()
-	dockerCommand := docker.ComposeCommand(t.Context(), docker.NewHostFromDestination(destination), composeFilePath, "ps", "--format", "json", "--all")
+	dockerCommand := docker.ComposeCommand(t.Context(), docker.NewHostFromDestination(destination), scope, "ps", "--format", "json", "--all")
 	output, err := dockerCommand.CombinedOutput()
 	require.NoError(t, err, string(output))
 	require.NotEmpty(t, bytes.TrimSpace(output), "no containers reported")

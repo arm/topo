@@ -10,6 +10,7 @@ import (
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -31,31 +32,31 @@ type DeployOptions struct {
 	Registry     *RegistryConfig
 }
 
-func Deploy(ctx context.Context, output io.Writer, composeFile string, opts DeployOptions) error {
+func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts DeployOptions) error {
 	sourceHost := LocalHost
 
 	if err := term.PrintHeader(output, "Build images"); err != nil {
 		return err
 	}
-	if err := BuildImages(ctx, output, sourceHost, composeFile); err != nil {
+	if err := BuildImages(ctx, output, sourceHost, scope); err != nil {
 		return err
 	}
 
 	if err := term.PrintHeader(output, "Pull images"); err != nil {
 		return err
 	}
-	if err := PullImages(ctx, output, sourceHost, composeFile); err != nil {
+	if err := PullImages(ctx, output, sourceHost, scope); err != nil {
 		return err
 	}
 
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry == nil {
 			targetHost := NewHostFromDestination(opts.TargetHost)
-			if err := transferImagesViaPipe(ctx, output, sourceHost, targetHost, composeFile); err != nil {
+			if err := transferImagesViaPipe(ctx, output, sourceHost, targetHost, scope); err != nil {
 				return err
 			}
 		} else {
-			if err := transferImagesViaRegistry(ctx, output, sourceHost, opts.TargetHost, composeFile, *opts.Registry); err != nil {
+			if err := transferImagesViaRegistry(ctx, output, sourceHost, opts.TargetHost, scope, *opts.Registry); err != nil {
 				return err
 			}
 		}
@@ -64,24 +65,24 @@ func Deploy(ctx context.Context, output io.Writer, composeFile string, opts Depl
 	if err := term.PrintHeader(output, "Start services"); err != nil {
 		return err
 	}
-	if err := StartServices(ctx, output, NewHostFromDestination(opts.TargetHost), composeFile, opts.RecreateMode); err != nil {
+	if err := StartServices(ctx, output, NewHostFromDestination(opts.TargetHost), scope, opts.RecreateMode); err != nil {
 		return err
 	}
 
 	if err := term.PrintHeader(output, "Deployment Success"); err != nil {
 		return err
 	}
-	return post_deploy.PrintDeploySuccess(output, composeFile, post_deploy.DefaultMessage(composeFile))
+	return post_deploy.PrintDeploySuccess(output, scope, post_deploy.DefaultMessage(scope.ComposeFile))
 }
 
-func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceHost, targetHost Host, composeFile string) error {
+func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceHost, targetHost Host, scope project.Scope) error {
 	if err := term.PrintHeader(output, "Transfer images"); err != nil {
 		return err
 	}
-	return TransferImagesViaPipe(ctx, output, sourceHost, targetHost, composeFile)
+	return TransferImagesViaPipe(ctx, output, sourceHost, targetHost, scope)
 }
 
-func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost Host, targetHost ssh.Destination, composeFile string, opts RegistryConfig) (transferErr error) {
+func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost Host, targetHost ssh.Destination, scope project.Scope, opts RegistryConfig) (transferErr error) {
 	if err := term.PrintHeader(output, "Run registry"); err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost
 	if err := term.PrintHeader(output, "Transfer via registry"); err != nil {
 		return err
 	}
-	if err := TransferImagesViaRegistry(ctx, output, sourceHost, NewHostFromDestination(targetHost), composeFile, opts.Port); err != nil {
+	if err := TransferImagesViaRegistry(ctx, output, sourceHost, NewHostFromDestination(targetHost), scope, opts.Port); err != nil {
 		return err
 	}
 
