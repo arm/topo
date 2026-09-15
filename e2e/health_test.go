@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,10 @@ func TestHealthCheck(t *testing.T) {
 		out, err := runCheckHealth(topo, container)
 		require.NoError(t, err)
 
-		assert.Contains(t, out, " ✓ All checks passed")
+		assert.Contains(t, out, term.Header("Target: "+container.SSHDestination, false)+"\n ✓ All checks passed")
+		assert.NotContains(t, out, " ✓ OpenSSH")
+		assert.NotContains(t, out, " ✓ Connectivity")
+		assert.NotContains(t, out, " ✓ Container Engine")
 	})
 
 	t.Run("shows successful checks with ticks in verbose mode", func(t *testing.T) {
@@ -46,6 +50,7 @@ func TestHealthCheck(t *testing.T) {
 		assert.Contains(t, out, " ✓ OpenSSH (ssh)")
 		assert.Contains(t, out, " ✓ Container Engine (docker)")
 		assert.Contains(t, out, " ✓ Connectivity")
+		assert.NotContains(t, out, "All checks passed")
 	})
 
 	t.Run("fails to connect to an invalid target", func(t *testing.T) {
