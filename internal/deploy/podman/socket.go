@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
@@ -105,7 +106,10 @@ func ResolveLocalComposeSocket(ctx context.Context) (string, error) {
 // ResolveRemoteSocketPath returns the absolute Unix socket path reported by Podman
 // on target.
 func ResolveRemoteSocketPath(ctx context.Context, target ssh.Destination) (string, error) {
-	output, _, err := ssh.RunCommand(ctx, target, "podman info --format '{{.Host.RemoteSocket.Path}}'", nil)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	output, _, err := ssh.RunCommand(ctx, target, "podman info --format '{{.Host.RemoteSocket.Path}}'", nil,
+		"-v", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10")
 	if err != nil {
 		return "", fmt.Errorf("failed to get remote Podman socket path: %w", err)
 	}

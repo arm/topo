@@ -14,5 +14,5 @@ func IsPrivilegeError(t *testing.T, err error) bool {
 }
 
 func lockFile(file *os.File) error {
-	return syscall.Flock(int(file.Fd()), syscall.LOCK_EX)
+	return syscall.Flock(int(file.Fd()), syscall.LOCK_EX) // #nosec G115 -- POSIX file descriptors fit in int.
 }

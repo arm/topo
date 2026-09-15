@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"net"
@@ -220,12 +221,24 @@ func removeHostKey(c *Container) error {
 	}
 	defer flock.Release()
 
-	// #nosec G204 -- ignore as its a test helper
-	output, err := exec.Command("ssh-keygen", "-R", host).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("remove host key: %w output: %s", err, strings.TrimSpace(string(output)))
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	for {
+		// #nosec G204 -- ignore as its a test helper
+		output, err := exec.CommandContext(ctx, "ssh-keygen", "-R", host).CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		removeErr := fmt.Errorf("remove host key: %w output: %s", err, strings.TrimSpace(string(output)))
+		if runtime.GOOS != "windows" || !strings.Contains(string(output), "rename") || !strings.Contains(string(output), "Permission denied") {
+			return removeErr
+		}
+		select {
+		case <-ctx.Done():
+			return removeErr
+		case <-time.After(100 * time.Millisecond):
+		}
 	}
-	return nil
 }
 
 func waitForPort(host string, port string, timeout time.Duration) error {

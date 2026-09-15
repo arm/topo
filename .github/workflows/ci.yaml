@@ -240,7 +240,10 @@ jobs:
             $events | Where-Object { $_.Output -match '\[DEBUG-perf\]' } | ForEach-Object {
               "$($_.Package) $($_.Test): $($_.Output.Trim())"
             } | Tee-Object -FilePath "windows-test-profile/$pass-phases.txt" | Write-Host
-            if ($exitCode -ne 0) { Get-Content $log -Tail 100 | Write-Host }
+            if ($exitCode -ne 0) {
+              Get-Content $log -Tail 100 | Write-Host
+              break
+            }
           }
           if ($failed) { throw 'Windows tests failed; see profiling artifacts.' }
 
