@@ -113,9 +113,11 @@ services:
   built:
     build: .
     image: %s
+    stop_grace_period: 1s
   pulled:
     image: docker.io/library/alpine:latest
     command: ["tail", "-f", "/dev/null"]
+    stop_grace_period: 1s
 `, "test-project-"+testName, imageName)
 	composeFileContent, err := fixPodmanInDockerQuirk(composeFileContent)
 	require.NoError(t, err)

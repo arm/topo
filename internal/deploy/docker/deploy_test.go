@@ -79,6 +79,7 @@ services:
   a-service:
     build: .
     image: %s
+    stop_grace_period: 1s
 `, testProjectName(t), imageName))
 	testutil.RequireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), `
 FROM alpine:latest
