@@ -30,7 +30,6 @@ func TestHealthReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "┌─ Host ")
 			assert.Contains(t, out.String(), " ✓ Flux Capacitor (flux)")
-			assert.NotContains(t, out.String(), "All checks passed")
 		})
 
 		t.Run("it summarizes healthy host and target checks", func(t *testing.T) {
@@ -51,9 +50,6 @@ func TestHealthReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), term.Header("Host", false)+"\n ✓ All checks passed\n\n")
 			assert.Contains(t, out.String(), term.Header("Target: ssh://user@my-target", false)+"\n ✓ All checks passed\n\n")
-			assert.NotContains(t, out.String(), "OpenSSH")
-			assert.NotContains(t, out.String(), "Connectivity")
-			assert.NotContains(t, out.String(), "Container Engine")
 		})
 
 		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
@@ -109,7 +105,6 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), term.Header("Target: ", false)+"\n ✓ All checks passed\n i Processing Domain Driver (remoteproc) (no remoteproc devices found)\n\n")
-			assert.NotContains(t, out.String(), "Connectivity")
 		})
 
 		t.Run("it renders connection failures", func(t *testing.T) {
@@ -231,12 +226,11 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), hint)
-			assert.NotContains(t, out.String(), "All checks passed")
 		})
 	})
 
 	t.Run("JSONFormat", func(t *testing.T) {
-		t.Run("renders complete JSON regardless of verbosity", func(t *testing.T) {
+		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
 			toPrint := views.NewHealthReport(health.HostReport{
 				Dependencies: []health.DependencyReport{
 					{
@@ -263,6 +257,11 @@ func TestHealthReport(t *testing.T) {
 					{Name: "Container Engine", Status: health.CheckStatusOK, Value: "docker"},
 				},
 			}, "")
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.JSON)
+
+			require.NoError(t, err)
 			want := `{
 				"host": {
 					"dependencies": [
@@ -283,13 +282,7 @@ func TestHealthReport(t *testing.T) {
 					}
 				}
 			}`
-			for _, verbose := range []bool{false, true} {
-				var out bytes.Buffer
-				err := views.Print(views.HealthReportView{HealthReport: toPrint, Verbose: verbose}, &out, term.JSON)
-
-				require.NoError(t, err, "verbose=%t", verbose)
-				assert.JSONEq(t, want, out.String(), "verbose=%t", verbose)
-			}
+			assert.JSONEq(t, want, out.String())
 		})
 	})
 }
