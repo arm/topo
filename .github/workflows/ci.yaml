@@ -34,11 +34,15 @@ jobs:
           version: v2.10.1
 
   build-and-test:
+    name: Test (${{ matrix.os }}, ${{ matrix.packages }})
     strategy:
       fail-fast: false
-      matrix: 
+      matrix:
         os: [ ubuntu-latest, ubuntu-24.04-arm, windows-latest ]
+        packages: [ './e2e/...', './...' ]
         include:
+          - packages: ./...
+            exclude: '^github.com/arm/topo/e2e(/|$)'
           - os: windows-latest
             docker_host: ssh://test@localhost:2222
     runs-on: ${{ matrix.os }}
@@ -198,7 +202,12 @@ jobs:
           go build -v ./cmd/topo
 
       - name: Run tests with coverage
+        shell: bash
         env:
           DOCKER_HOST: ${{ matrix.docker_host }}
+          PACKAGES: ${{ matrix.packages }}
+          EXCLUDE: ${{ matrix.exclude || '^$' }}
         run: |
-          go test ./... -p 1 -count=1 -v -covermode=atomic -coverprofile=coverage.out
+          packages=$(go list "$PACKAGES" | grep -Ev "$EXCLUDE")
+          # shellcheck disable=SC2086
+          go test $packages -p 1 -count=1 -v -covermode=atomic -coverprofile=coverage.out
