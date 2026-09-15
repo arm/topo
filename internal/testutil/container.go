@@ -23,7 +23,7 @@ type ContainerSpec struct {
 	image   string
 	runArgs []string
 	setup   func(c *Container) error
-	cleanup func(c *Container)
+	cleanup func(c *Container) error
 }
 
 var PasswordedSSHContainer = ContainerSpec{
@@ -41,9 +41,7 @@ var DinDContainer = ContainerSpec{
 		}
 		return waitForDockerDaemon(c)
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
+	cleanup: removeHostKey,
 }
 
 var PasswordlessSSHContainer = ContainerSpec{
@@ -55,9 +53,7 @@ var PasswordlessSSHContainer = ContainerSpec{
 		}
 		return nil
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
+	cleanup: removeHostKey,
 }
 
 var PodmanContainer = ContainerSpec{
@@ -70,9 +66,7 @@ var PodmanContainer = ContainerSpec{
 		}
 		return waitForPodmanService(c)
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
+	cleanup: removeHostKey,
 }
 
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
@@ -126,7 +120,9 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	if spec.cleanup != nil {
 		t.Cleanup(func() {
 			defer MeasureTestPhase(t, "cleanup: fixture host key")()
-			spec.cleanup(c)
+			if err := spec.cleanup(c); err != nil {
+				t.Errorf("container cleanup failed: %v", err)
+			}
 		})
 	}
 
@@ -193,7 +189,15 @@ func deleteContainer(containerName string) {
 	_ = cmd.Run()
 }
 
+var knownHostsLockPath = filepath.Join(os.TempDir(), "topo-e2e-known_hosts.lock")
+
 func acceptHostKey(c *Container) error {
+	flock, err := AcquireFlock(knownHostsLockPath)
+	if err != nil {
+		return err
+	}
+	defer flock.Release()
+
 	// #nosec G204 -- ignore as its a test helper
 	cmd := exec.Command("ssh", c.SSHDestination, "-o", "StrictHostKeyChecking=accept-new", "true")
 	output, err := cmd.CombinedOutput()
@@ -203,14 +207,24 @@ func acceptHostKey(c *Container) error {
 	return nil
 }
 
-func removeHostKey(c *Container) {
+func removeHostKey(c *Container) error {
 	u, err := url.Parse(c.SSHDestination)
 	if err != nil {
-		return
+		return err
 	}
 	host := fmt.Sprintf("[%s]:%s", u.Hostname(), u.Port())
+	flock, err := AcquireFlock(knownHostsLockPath)
+	if err != nil {
+		return err
+	}
+	defer flock.Release()
+
 	// #nosec G204 -- ignore as its a test helper
-	_ = exec.Command("ssh-keygen", "-R", host).Run()
+	output, err := exec.Command("ssh-keygen", "-R", host).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("remove host key: %w output: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 func waitForPort(host string, port string, timeout time.Duration) error {

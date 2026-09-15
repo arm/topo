@@ -11,6 +11,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	golang.org/x/sync v0.22.0
+	golang.org/x/sys v0.13.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -45,6 +46,5 @@ require (
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 )
