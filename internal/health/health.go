@@ -1,10 +1,6 @@
 package health
 
-import (
-	"context"
-
-	"github.com/arm/topo/internal/ssh"
-)
+import "context"
 
 type CheckStatus string
 
@@ -33,24 +29,28 @@ type TargetReport struct {
 	Dependencies []DependencyReport
 }
 
-type CheckHostOptions struct {
-	SkipVersionChecks bool
+type HealthReport struct {
+	Host   HostReport
+	Target *TargetReport
 }
 
-func CheckHost(opts CheckHostOptions) HostReport {
-	graph := NewDependencyGraph(DependencyGraphOptions{SkipVersionChecks: opts.SkipVersionChecks})
-	evaluatedGraph := graph.Evaluate(context.Background())
-	return HostReport{Dependencies: toDependencyReports(evaluatedGraph.Host)}
-}
-
-func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) TargetReport {
-	graph := NewDependencyGraph(DependencyGraphOptions{Target: &dest, AcceptHostKeys: acceptNewHostKeys})
+func Check(ctx context.Context, options DependencyGraphOptions) HealthReport {
+	graph := NewDependencyGraph(options)
 	evaluatedGraph := graph.Evaluate(ctx)
-	return TargetReport{
-		Destination:  dest.String(),
-		IsLocalhost:  dest.IsPlainLocalhost(),
+	report := HealthReport{
+		Host: HostReport{Dependencies: toDependencyReports(evaluatedGraph.Host)},
+	}
+	if graph.Target == nil {
+		return report
+	}
+
+	targetReport := TargetReport{
+		Destination:  options.Target.String(),
+		IsLocalhost:  options.Target.IsPlainLocalhost(),
 		Dependencies: toDependencyReports(evaluatedGraph.Target),
 	}
+	report.Target = &targetReport
+	return report
 }
 
 func ToDependencyReport(status DependencyStatus) DependencyReport {

@@ -40,24 +40,28 @@ var healthCmd = &cobra.Command{
 			spinner = term.StartSpinner(os.Stderr, "Checking health...")
 		}
 
-		hostReport := health.CheckHost(health.CheckHostOptions{SkipVersionChecks: skipVersionCheck})
-		var targetReport *health.TargetReport
+		var target *ssh.Destination
 		var targetHint string
-
 		if targetArg, ok := lookupTarget(cmd); ok {
-			ctx, cancel := contextWithTimeout(cmd)
-			defer cancel()
-			targetHealthReport := health.CheckTarget(ctx, ssh.NewDestination(targetArg), acceptNewHostKeys)
-			targetReport = &targetHealthReport
+			destination := ssh.NewDestination(targetArg)
+			target = &destination
 		} else {
 			targetHint = "provide --target or set TOPO_TARGET to check target health"
 		}
+
+		ctx, cancel := contextWithTimeout(cmd)
+		defer cancel()
+		report := health.Check(ctx, health.DependencyGraphOptions{
+			Target:            target,
+			SkipVersionChecks: skipVersionCheck,
+			AcceptHostKeys:    acceptNewHostKeys,
+		})
 
 		if spinner != nil {
 			spinner.Stop()
 		}
 
-		return views.Print(views.NewHealthReport(hostReport, targetReport, targetHint), os.Stdout, outputFormat)
+		return views.Print(views.NewHealthReport(report.Host, report.Target, targetHint), os.Stdout, outputFormat)
 	},
 }
 
