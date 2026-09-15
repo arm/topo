@@ -18,6 +18,11 @@ func NewHealthReport(host health.HostReport, target *health.TargetReport, target
 	return HealthReport{Host: host, Target: target, TargetHint: targetHint}
 }
 
+type healthCheckSection struct {
+	ShowPassedSummary bool
+	Checks            []health.DependencyReport
+}
+
 const healthReportTemplate = `
 {{- define "checkRow" -}}
 {{ status .Status }}{{ .Name }}{{- if .Value }} ({{ .Value }}){{- end }}
@@ -30,27 +35,48 @@ const healthReportTemplate = `
   {{- end }}
 {{- end -}}
 {{- end -}}
-{{ sectionHeading "Host" }}
-{{- range $hostCheckRow := .Host.Dependencies }}
-{{ template "checkRow" $hostCheckRow }}
+{{- define "checkSection" -}}
+{{- if .ShowPassedSummary }}
+{{ successStatus }}All checks passed
 {{- end }}
+{{- range .Checks }}
+{{ template "checkRow" . }}
+{{- end -}}
+{{- end -}}
+{{ sectionHeading "Host" }}{{ template "checkSection" (section .Host.Dependencies) }}
 
-{{ sectionHeading "Target" }}
-{{- if .Target }}
-  {{- range $targetCheckRow := .Target.Dependencies }}
-{{ template "checkRow" $targetCheckRow }}
-  {{- end }}
+{{ if .Target }}{{ sectionHeading (printf "Target: %s" .Target.Destination) }}{{ template "checkSection" (section .Target.Dependencies) }}
 {{- else -}}
+{{ sectionHeading "Target" }}
 {{ .TargetHint }}
 {{- end }}
 
 `
 
+type HealthReportView struct {
+	HealthReport
+	Verbose bool
+}
+
+func (r HealthReportView) AsPlain(isTTY bool) (string, error) {
+	return renderHealthReport(r.HealthReport, isTTY, r.Verbose)
+}
+
 func (r HealthReport) AsPlain(isTTY bool) (string, error) {
+	return renderHealthReport(r, isTTY, false)
+}
+
+func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
+	funcMap["successStatus"] = func() string {
+		return healthStatusFormatter(isTTY)(health.CheckStatusOK)
+	}
 	funcMap["sectionHeading"] = func(heading string) string {
 		return sectionHeading(heading, isTTY)
+	}
+	funcMap["section"] = func(checks []health.DependencyReport) healthCheckSection {
+		return newHealthCheckSection(checks, verbose)
 	}
 	tmpl, err := template.
 		New("healthcheck").
@@ -168,4 +194,23 @@ func toJSONDependencyReport(check health.DependencyReport) jsonDependencyReport 
 		jsonCheck.Fix = &jsonFix{Description: check.Fix.Description, Command: check.Fix.Command}
 	}
 	return jsonCheck
+}
+
+func newHealthCheckSection(checks []health.DependencyReport, verbose bool) healthCheckSection {
+	section := healthCheckSection{
+		Checks: make([]health.DependencyReport, 0, len(checks)),
+	}
+	allPassed := len(checks) > 0
+
+	for _, check := range checks {
+		if verbose || check.Status != health.CheckStatusOK {
+			section.Checks = append(section.Checks, check)
+		}
+		if check.Status != health.CheckStatusOK && check.Status != health.CheckStatusInfo {
+			allPassed = false
+		}
+	}
+	section.ShowPassedSummary = !verbose && allPassed
+
+	return section
 }
