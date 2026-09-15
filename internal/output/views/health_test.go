@@ -25,7 +25,7 @@ func TestHealthReport(t *testing.T) {
 			}, nil, "")
 			var out bytes.Buffer
 
-			err := views.PrintHealthReport(toPrint, &out, term.Plain, true)
+			err := views.Print(views.HealthReportView{HealthReport: toPrint, Verbose: true}, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "┌─ Host ")
@@ -130,7 +130,7 @@ func TestHealthReport(t *testing.T) {
 			}, "")
 			var out bytes.Buffer
 
-			err := views.PrintHealthReport(toPrint, &out, term.Plain, true)
+			err := views.Print(views.HealthReportView{HealthReport: toPrint, Verbose: true}, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), " ✓ Processing Domain Driver (remoteproc)\n ✓ Hardware Info")

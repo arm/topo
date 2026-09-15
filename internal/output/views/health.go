@@ -2,8 +2,6 @@ package views
 
 import (
 	"bytes"
-	"fmt"
-	"io"
 	"text/template"
 
 	"github.com/arm/topo/internal/health"
@@ -55,18 +53,13 @@ const healthReportTemplate = `
 
 `
 
-func PrintHealthReport(report HealthReport, w io.Writer, format term.Format, verbose bool) error {
-	if format == term.JSON {
-		return Print(report, w, format)
-	}
-	out, err := renderHealthReport(report, term.IsTTY(w), verbose)
-	if err != nil {
-		return fmt.Errorf("render view as plain text: %w", err)
-	}
-	if _, err := fmt.Fprint(w, out); err != nil {
-		return fmt.Errorf("write view output: %w", err)
-	}
-	return nil
+type HealthReportView struct {
+	HealthReport
+	Verbose bool
+}
+
+func (r HealthReportView) AsPlain(isTTY bool) (string, error) {
+	return renderHealthReport(r.HealthReport, isTTY, r.Verbose)
 }
 
 func (r HealthReport) AsPlain(isTTY bool) (string, error) {

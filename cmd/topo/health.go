@@ -62,8 +62,11 @@ var healthCmd = &cobra.Command{
 			spinner.Stop()
 		}
 
-		toPrint := views.NewHealthReport(hostReport, targetReport, targetHint)
-		return views.PrintHealthReport(toPrint, os.Stdout, outputFormat, verbose)
+		toPrint := views.HealthReportView{
+			HealthReport: views.NewHealthReport(hostReport, targetReport, targetHint),
+			Verbose:      verbose,
+		}
+		return views.Print(toPrint, os.Stdout, outputFormat)
 	},
 }
 
