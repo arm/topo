@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -178,6 +179,34 @@ func resolveOutput(cmd *cobra.Command) term.Format {
 		return term.JSON
 	}
 	return term.Plain
+}
+
+const envFileFlag = "env-file"
+
+func addEnvFileFlag(cmd *cobra.Command) {
+	cmd.Flags().StringArray(
+		envFileFlag, []string{".env", env.DefaultFilename},
+		"path to env file to source values for compose interpolation",
+	)
+}
+
+func getEnvFiles(cmd *cobra.Command, composeFilePath string) ([]string, error) {
+	envFiles, err := cmd.Flags().GetStringArray(envFileFlag)
+	if err != nil {
+		panic(fmt.Sprintf("internal error: env-file flag not registered: %v", err))
+	}
+
+	root := filepath.Dir(composeFilePath)
+	skipMissing := true
+	if cmd.Flag(envFileFlag).Changed {
+		skipMissing = false
+		root, err = os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current working directory: %w", err)
+		}
+	}
+
+	return env.ResolveFiles(root, envFiles, skipMissing)
 }
 
 func experimentalFeaturesEnabled() bool {

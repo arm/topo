@@ -35,7 +35,11 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.LoadScope(composeFile, targetArg)
+		envFiles, err := getEnvFiles(cmd, composeFile)
+		if err != nil {
+			return err
+		}
+		scope, err := project.BuildScope(composeFile, targetArg, envFiles)
 		if err != nil {
 			return err
 		}
@@ -102,6 +106,7 @@ func newPodmanContainerList(containers []podman.Container) views.ContainerList {
 func init() {
 	addTargetFlag(topoPsCmd)
 	addComposeFileFlag(topoPsCmd)
+	addEnvFileFlag(topoPsCmd)
 	topoPsCmd.Flags().BoolP("all", "a", false, "show all containers, including stopped")
 	if experimentalFeaturesEnabled() {
 		addEngineFlag(topoPsCmd)
