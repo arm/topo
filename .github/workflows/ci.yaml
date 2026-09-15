@@ -198,7 +198,92 @@ jobs:
           go build -v ./cmd/topo
 
       - name: Run tests with coverage
-        env: 
+        if: runner.os != 'Windows'
+        env:
           DOCKER_HOST: ${{ matrix.docker_host }}
         run: |
           go test ./... -v -covermode=atomic -coverprofile=coverage.out
+
+      - name: Profile Windows tests (cold and warm)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          DOCKER_HOST: ${{ matrix.docker_host }}
+          TOPO_TEST_TIMINGS: '1'
+        run: |
+          New-Item -ItemType Directory -Force windows-test-profile | Out-Null
+          $failed = $false
+          foreach ($pass in @('cold', 'warm')) {
+            $log = "windows-test-profile/$pass.jsonl"
+            $timer = [Diagnostics.Stopwatch]::StartNew()
+            go test ./... -count=1 -json -covermode=atomic "-coverprofile=windows-test-profile/coverage-$pass.out" *> $log
+            $exitCode = $LASTEXITCODE
+            $timer.Stop()
+            if ($exitCode -ne 0) { $failed = $true }
+
+            $events = @(Get-Content $log | ForEach-Object {
+              if ($_ -match '^\{') { $_ | ConvertFrom-Json }
+              else { Write-Host $_ }
+            })
+            $summary = @(
+              "## Windows tests: $pass"
+              "Wall time: $([math]::Round($timer.Elapsed.TotalSeconds, 2))s; exit code: $exitCode"
+              "Test events: $(@($events | Where-Object { $_.Test -and $_.Action -eq 'pass' }).Count) passed, $(@($events | Where-Object { $_.Test -and $_.Action -eq 'skip' }).Count) skipped"
+              ''
+              '| Package | Result | Seconds |'
+              '| --- | --- | ---: |'
+            )
+            $summary += $events | Where-Object { -not $_.Test -and $_.Action -in @('pass', 'fail', 'skip') } | ForEach-Object {
+              "| $($_.Package) | $($_.Action) | $($_.Elapsed) |"
+            }
+            $summary | Tee-Object -FilePath "windows-test-profile/$pass-summary.md" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+            $events | Where-Object { $_.Output -match '\[DEBUG-perf\]' } | ForEach-Object {
+              "$($_.Package) $($_.Test): $($_.Output.Trim())"
+            } | Tee-Object -FilePath "windows-test-profile/$pass-phases.txt" | Write-Host
+            if ($exitCode -ne 0) { Get-Content $log -Tail 100 | Write-Host }
+          }
+          if ($failed) { throw 'Windows tests failed; see profiling artifacts.' }
+
+      - name: Compare Windows and WSL command overhead
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        env:
+          DOCKER_HOST: ${{ matrix.docker_host }}
+        run: |
+          New-Item -ItemType Directory -Force windows-test-profile | Out-Null
+          $commands = [ordered]@{
+            'Windows process (cmd)' = { cmd /c exit 0 }
+            'WSL process (true)' = { wsl -d Ubuntu-24.04 --exec true }
+            'Windows SSH to WSL' = { ssh -o BatchMode=yes -o ConnectTimeout=10 -p 2222 test@localhost true }
+            'Windows Docker over SSH' = { docker info --format '{{.OSType}}' }
+            'Docker inside WSL (Unix socket)' = { wsl -d Ubuntu-24.04 --exec docker -H unix:///var/run/docker.sock info --format '{{.OSType}}' }
+          }
+          $samples = foreach ($entry in $commands.GetEnumerator()) {
+            foreach ($iteration in 1..10) {
+              $timer = [Diagnostics.Stopwatch]::StartNew()
+              & $entry.Value | Out-Null
+              $exitCode = $LASTEXITCODE
+              $timer.Stop()
+              if ($exitCode -ne 0) { throw "$($entry.Key) failed with exit code $exitCode" }
+              [pscustomobject]@{
+                Command = $entry.Key
+                Iteration = $iteration
+                Milliseconds = [math]::Round($timer.Elapsed.TotalMilliseconds, 2)
+              }
+            }
+          }
+          $samples | Export-Csv windows-test-profile/commands.csv -NoTypeInformation
+          $summary = @('## Command overhead (10 calls each)', '', '| Command | Mean ms | Min ms | Max ms |', '| --- | ---: | ---: | ---: |')
+          $summary += $samples | Group-Object Command | ForEach-Object {
+            $stats = $_.Group | Measure-Object Milliseconds -Average -Minimum -Maximum
+            "| $($_.Name) | $([math]::Round($stats.Average, 2)) | $($stats.Minimum) | $($stats.Maximum) |"
+          }
+          $summary | Tee-Object -FilePath windows-test-profile/commands-summary.md | Out-File $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Upload Windows profiling results
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-test-profile
+          path: windows-test-profile/
+          if-no-files-found: warn

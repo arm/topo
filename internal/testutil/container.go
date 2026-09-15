@@ -80,17 +80,23 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	if testing.Short() {
 		t.Skip("skipping test that requires a container in short mode")
 	}
+	finishPhase := MeasureTestPhase(t, "fixture: docker info")
 	RequireLinuxDockerEngine(t)
+	finishPhase()
 
+	finishPhase = MeasureTestPhase(t, "fixture: build image "+spec.image)
 	if err := buildImage(spec); err != nil {
 		t.Fatalf("failed to build image: %v", err)
 	}
 
+	finishPhase()
 	containerName := generateContainerName(t)
 	t.Cleanup(func() {
+		defer MeasureTestPhase(t, "cleanup: delete fixture container")()
 		deleteContainer(containerName)
 	})
 
+	finishPhase = MeasureTestPhase(t, "fixture: start container and wait for port")
 	if err := runContainer(containerName, spec); err != nil {
 		t.Fatalf("failed to start container: %v", err)
 	}
@@ -104,18 +110,22 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Fatalf("container port not ready: %v", err)
 	}
 
+	finishPhase()
 	c := &Container{
 		SSHDestination: fmt.Sprintf("ssh://root@localhost:%s", port),
 		Name:           containerName,
 	}
 
 	if spec.setup != nil {
+		finishPhase = MeasureTestPhase(t, "fixture: host key and daemon readiness")
 		if err := spec.setup(c); err != nil {
 			t.Fatalf("container setup failed: %v", err)
 		}
+		finishPhase()
 	}
 	if spec.cleanup != nil {
 		t.Cleanup(func() {
+			defer MeasureTestPhase(t, "cleanup: fixture host key")()
 			spec.cleanup(c)
 		})
 	}
