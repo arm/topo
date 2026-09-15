@@ -58,7 +58,7 @@ type Fix struct {
 	Command     string
 }
 
-func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
+func hostRequiredDependencies(skipVersionChecks bool) []Dependency {
 	topo := NewDependencyOnTopo(skipVersionChecks)
 	r := runner.NewLocal()
 	ssh := NewDependencyOnSSH(r)
@@ -67,7 +67,7 @@ func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
 	return []Dependency{topo, ssh, docker, dockerCompose}
 }
 
-func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) []Dependency {
+func targetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) []Dependency {
 	r := runner.For(target)
 
 	remoteTargetPrerequisites := []DependencyID(nil)
@@ -349,40 +349,4 @@ func NewDependencyOnLscpu(r runner.Runner, prerequisites ...DependencyID) Depend
 			return DependencyCheckResult{SuccessValue: "lscpu"}
 		},
 	}
-}
-
-type DependencyStatus struct {
-	Dependency Dependency
-	Result     DependencyCheckResult
-}
-
-func PerformChecks(ctx context.Context, dependencies []Dependency) []DependencyStatus {
-	healthy := make(map[DependencyID]struct{})
-	result := make([]DependencyStatus, 0, len(dependencies))
-
-	for _, dep := range dependencies {
-		if !allPrerequisitesFulfilled(dep.Prerequisites, healthy) {
-			continue
-		}
-
-		checkResult := DependencyCheckResult{}
-		if dep.Check != nil {
-			checkResult = dep.Check(ctx)
-		}
-		if checkResult.Failure == nil {
-			healthy[dep.ID] = struct{}{}
-		}
-
-		result = append(result, DependencyStatus{Dependency: dep, Result: checkResult})
-	}
-	return result
-}
-
-func allPrerequisitesFulfilled(required []DependencyID, healthy map[DependencyID]struct{}) bool {
-	for _, dep := range required {
-		if _, ok := healthy[dep]; !ok {
-			return false
-		}
-	}
-	return true
 }
