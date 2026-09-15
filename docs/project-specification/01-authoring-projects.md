@@ -4,7 +4,7 @@ title: Authoring Topo Projects
 description: Create a Topo Project with Compose services and the metadata required by Topo.
 ---
 
-# Topo Project Authoring Guide
+# Authoring Topo Projects
 
 This guide details how to create [Topo Projects](../introduction/glossary.md#topo-project) for the Topo ecosystem.
 
