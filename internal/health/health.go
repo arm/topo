@@ -40,14 +40,12 @@ func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	report := HealthReport{
 		Host: HostReport{Dependencies: toDependencyReports(evaluatedHealthCheck.Host)},
 	}
-	if healthCheck.Target == nil {
-		return report
-	}
-
 	targetReport := TargetReport{
-		Destination:  options.Target.String(),
-		IsLocalhost:  options.Target.IsPlainLocalhost(),
 		Dependencies: toDependencyReports(evaluatedHealthCheck.Target),
+	}
+	if options.Target != nil {
+		targetReport.Destination = options.Target.String()
+		targetReport.IsLocalhost = options.Target.IsPlainLocalhost()
 	}
 	report.Target = &targetReport
 	return report

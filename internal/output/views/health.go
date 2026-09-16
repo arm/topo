@@ -9,13 +9,12 @@ import (
 )
 
 type HealthReport struct {
-	Host       health.HostReport
-	Target     *health.TargetReport
-	TargetHint string
+	Host   health.HostReport
+	Target *health.TargetReport
 }
 
-func NewHealthReport(host health.HostReport, target *health.TargetReport, targetHint string) HealthReport {
-	return HealthReport{Host: host, Target: target, TargetHint: targetHint}
+func NewHealthReport(host health.HostReport, target *health.TargetReport) HealthReport {
+	return HealthReport{Host: host, Target: target}
 }
 
 const healthReportTemplate = `
@@ -40,8 +39,6 @@ const healthReportTemplate = `
   {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
   {{- end }}
-{{- else }}
-{{ status "warning" }}{{ .TargetHint }}
 {{- end }}
 
 `

@@ -23,7 +23,7 @@ func TestHealthReport(t *testing.T) {
 						Value:  "flux",
 					},
 				},
-			}, nil, "")
+			}, nil)
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -42,7 +42,7 @@ func TestHealthReport(t *testing.T) {
 						Value:  "docker not found on path",
 					},
 				},
-			}, nil, "")
+			}, nil)
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -58,7 +58,7 @@ func TestHealthReport(t *testing.T) {
 					Name:   "Pineapple on pizza",
 					Status: health.CheckStatusWarning,
 				}},
-			}, "")
+			})
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -74,7 +74,7 @@ func TestHealthReport(t *testing.T) {
 					Name:   "Has potatoes",
 					Status: health.CheckStatusInfo,
 				}},
-			}, "")
+			})
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -90,7 +90,7 @@ func TestHealthReport(t *testing.T) {
 					Name:   "Connected",
 					Status: health.CheckStatusError,
 				}},
-			}, "")
+			})
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -106,7 +106,7 @@ func TestHealthReport(t *testing.T) {
 					{ID: health.DependencyIDRemoteproc, Name: "Processing Domain Driver (remoteproc)", Status: health.CheckStatusOK},
 					{Name: "Hardware Info", Status: health.CheckStatusOK},
 				},
-			}, "")
+			})
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -119,7 +119,7 @@ func TestHealthReport(t *testing.T) {
 		})
 
 		t.Run("it renders the target destination", func(t *testing.T) {
-			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{Destination: "ssh://user@my-target"}, "")
+			toPrint := views.NewHealthReport(health.HostReport{}, &health.TargetReport{Destination: "ssh://user@my-target"})
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -135,7 +135,7 @@ func TestHealthReport(t *testing.T) {
 					Name:   "Connected",
 					Status: health.CheckStatusError,
 				}},
-			}, "")
+			})
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -156,7 +156,7 @@ func TestHealthReport(t *testing.T) {
 						},
 					},
 				},
-			}, nil, "")
+			}, nil)
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -173,7 +173,7 @@ func TestHealthReport(t *testing.T) {
 				{Name: "Broken", Status: health.CheckStatusError},
 				{Name: "Deprecated", Status: health.CheckStatusWarning},
 				{Name: "Skipped", Status: health.CheckStatusInfo},
-			}}, nil, "")
+			}}, nil)
 
 			out, err := toPrint.AsPlain(true)
 
@@ -183,17 +183,6 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out, term.Color(term.Red, " ✗ "))
 			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
 			assert.Contains(t, out, term.Color(term.Blue, " i "))
-		})
-
-		t.Run("when no target is specified, prints the hint", func(t *testing.T) {
-			hint := "Need to work on your aim"
-			toPrint := views.NewHealthReport(health.HostReport{}, nil, hint)
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ! "+hint)
 		})
 	})
 
@@ -224,7 +213,7 @@ func TestHealthReport(t *testing.T) {
 					},
 					{Name: "Container Engine", Status: health.CheckStatusOK, Value: "docker"},
 				},
-			}, "")
+			})
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.JSON)

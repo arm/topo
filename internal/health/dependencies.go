@@ -67,32 +67,32 @@ func hostRequiredDependencies(skipVersionChecks bool) []Dependency {
 	return []Dependency{topo, ssh, docker, dockerCompose}
 }
 
-func targetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) []Dependency {
-	r := runner.For(target)
-
-	remoteTargetPrerequisites := []DependencyID(nil)
+func targetRequiredDependencies(target *ssh.Destination, acceptNewHostKeys bool, missingTargetFixMessage string) []Dependency {
+	prerequisites := []DependencyID(nil)
 	dependencies := []Dependency(nil)
-	if !target.IsPlainLocalhost() {
-		connectivity := NewConnectivityDependency(target, acceptNewHostKeys)
+	if target == nil || !target.IsPlainLocalhost() {
+		connectivity := NewConnectivityDependency(target, acceptNewHostKeys, missingTargetFixMessage)
+		prerequisites = []DependencyID{connectivity.ID}
 		dependencies = append(dependencies, connectivity)
-		remoteTargetPrerequisites = []DependencyID{connectivity.ID}
 	}
-
-	docker := NewDependencyOnDocker(DependencyID("target-docker"), r, remoteTargetPrerequisites...)
-	remoteproc := NewDependencyOnRemoteproc(r, remoteTargetPrerequisites...)
-	remoteprocRuntime := NewDependencyOnRemoteprocRuntime(
-		target,
-		r,
-		append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...)...,
-	)
-	remoteprocRuntimeShim := NewDependencyOnRemoteprocRuntimeShim(
-		target,
-		r,
-		append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...)...,
-	)
-	lscpu := NewDependencyOnLscpu(r, remoteTargetPrerequisites...)
-
-	return append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
+	if target != nil {
+		r := runner.For(*target)
+		docker := NewDependencyOnDocker(DependencyID("target-docker"), r, prerequisites...)
+		remoteproc := NewDependencyOnRemoteproc(r, prerequisites...)
+		remoteprocRuntime := NewDependencyOnRemoteprocRuntime(
+			*target,
+			r,
+			append([]DependencyID{docker.ID, remoteproc.ID}, prerequisites...)...,
+		)
+		remoteprocRuntimeShim := NewDependencyOnRemoteprocRuntimeShim(
+			*target,
+			r,
+			append([]DependencyID{docker.ID, remoteproc.ID}, prerequisites...)...,
+		)
+		lscpu := NewDependencyOnLscpu(r, prerequisites...)
+		dependencies = append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
+	}
+	return dependencies
 }
 
 func NewDependencyOnSSH(r runner.Runner) Dependency {
@@ -222,12 +222,20 @@ func NewDependencyOnDockerCompose(r runner.Runner, prerequisites ...DependencyID
 	}
 }
 
-func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) Dependency {
-	sshRunner := runner.NewSSH(target)
+func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, missingTargetFixMessage string) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			if target == nil {
+				failure := &DependencyCheckFailure{Severity: SeverityWarning, Message: "target not specified"}
+				if missingTargetFixMessage != "" {
+					failure.Fix = &Fix{Description: missingTargetFixMessage}
+				}
+				return DependencyCheckResult{Failure: failure}
+			}
+
+			sshRunner := runner.NewSSH(*target)
 			err := probe.SSHAuthentication(ctx, sshRunner, acceptNewHostKeys)
 			if err == nil {
 				return DependencyCheckResult{SuccessValue: target.String()}
@@ -238,15 +246,15 @@ func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) D
 			case errors.Is(err, probe.ErrAuthFailed), errors.Is(err, probe.ErrTooManyAuthFails):
 				failure.Fix = &Fix{
 					Description: "Configure SSH keys on remote target",
-					Command:     fmt.Sprintf("topo setup-keys --target %s", target),
+					Command:     fmt.Sprintf("topo setup-keys --target %s", *target),
 				}
 			case errors.Is(err, probe.ErrHostKeyUnknown):
 				failure.Fix = &Fix{
 					Description: "Trust the target's SSH host key",
-					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", target),
+					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", *target),
 				}
 			case errors.Is(err, probe.ErrHostKeyChanged):
-				sshConfig, configErr := ssh.LoadConfig(target)
+				sshConfig, configErr := ssh.LoadConfig(*target)
 				fixCommand := ""
 				if configErr == nil {
 					fixCommand = fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(sshConfig.AsKnownHostsEntry()))
