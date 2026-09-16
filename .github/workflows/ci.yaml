@@ -46,20 +46,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Isolate test SSH host keys
-        shell: bash
-        run: |
-          mkdir -p "$HOME/.ssh/topo-test-known-hosts"
-          touch "$HOME/.ssh/config"
-          cat > "$HOME/.ssh/config.topo-tests" <<'EOF'
-          Match host localhost
-              UserKnownHostsFile ~/.ssh/topo-test-known-hosts/%p
-
-          Host *
-          EOF
-          cat "$HOME/.ssh/config" >> "$HOME/.ssh/config.topo-tests"
-          mv "$HOME/.ssh/config.topo-tests" "$HOME/.ssh/config"
-
       - name: Install WSL (Windows)
         if: runner.os == 'Windows'
         uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7

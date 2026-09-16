@@ -74,6 +74,7 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Skip("skipping test that requires a container in short mode")
 	}
 	RequireLinuxDockerEngine(t)
+	configureSSH(t)
 	containerName := generateContainerName(t)
 
 	if err := buildImage(spec); err != nil {
