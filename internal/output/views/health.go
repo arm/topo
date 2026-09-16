@@ -40,7 +40,7 @@ const healthReportTemplate = `
   {{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
   {{- end }}
-{{- else -}}
+{{- else }}
 {{ .TargetHint }}
 {{- end }}
 
