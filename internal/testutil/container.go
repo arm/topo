@@ -94,14 +94,14 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
-	t.Cleanup(func() { removeHostKey(t, port) })
+	t.Cleanup(func() { removeHostKey(t, containerName) })
 
 	if err := waitForSSH("localhost", port, 10*time.Second); err != nil {
 		t.Fatalf("container SSH not ready: %v", err)
 	}
 
 	c := &Container{
-		SSHDestination: fmt.Sprintf("ssh://root@localhost:%s", port),
+		SSHDestination: fmt.Sprintf("ssh://root@%s:%s", containerName, port),
 		Name:           containerName,
 	}
 
@@ -183,14 +183,14 @@ func acceptHostKey(c *Container) error {
 	return nil
 }
 
-func removeHostKey(t *testing.T, port string) {
+func removeHostKey(t *testing.T, containerName string) {
 	t.Helper()
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Errorf("failed to locate SSH directory: %v", err)
 		return
 	}
-	path := filepath.Join(home, ".ssh", "topo-test-known-hosts", port)
+	path := filepath.Join(home, ".ssh", "topo-test-known-hosts", containerName)
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		t.Errorf("failed to remove test known-hosts file: %v", err)
 	}

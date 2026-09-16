@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testSSHConfig = `Match host localhost user root
-    UserKnownHostsFile ~/.ssh/topo-test-known-hosts/%p
+const testSSHConfig = `Host topo-test-*
+    HostName localhost
+    UserKnownHostsFile ~/.ssh/topo-test-known-hosts/%n
 
 Host *
 `
