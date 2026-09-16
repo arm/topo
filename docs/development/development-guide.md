@@ -1,3 +1,10 @@
+---
+sidebar_position: 0
+slug: /development/guide
+title: Development guide
+description: Set up the repository, build and test the CLI, and preview documentation changes.
+---
+
 # Development guide
 
 This guide covers the development workflow, tools, and conventions for contributing to `topo`.

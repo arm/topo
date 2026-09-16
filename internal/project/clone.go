@@ -12,21 +12,21 @@ import (
 )
 
 func Clone(output io.Writer, path string, src Source, resolver parameter.Resolver) error {
-	if err := term.PrintHeader(output, "Copy files"); err != nil {
+	if err := term.PrintFirstHeader(output, "Copy files"); err != nil {
 		return err
 	}
 	if err := copyProject(src, path); err != nil {
 		return err
 	}
 
-	if err := term.PrintHeader(output, "Configure project"); err != nil {
+	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
 		return err
 	}
 	if err := configure(path, resolver); err != nil {
 		return err
 	}
 
-	if err := term.PrintHeader(output, "Project ready"); err != nil {
+	if err := term.PrintNthHeader(output, "Project ready"); err != nil {
 		return err
 	}
 	return printSummary(output, path)

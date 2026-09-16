@@ -2,14 +2,18 @@ package health
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/upgrade"
+	"github.com/arm/topo/internal/version"
 )
 
 const containerEngineInstallURL = "https://github.com/arm/topo#install-a-container-engine"
@@ -55,77 +59,11 @@ type Fix struct {
 }
 
 func HostRequiredDependencies(skipVersionChecks bool) []Dependency {
+	topo := NewDependencyOnTopo(skipVersionChecks)
 	r := runner.NewLocal()
-
-	topo := Dependency{
-		ID:    DependencyID("topo"),
-		Label: "Topo",
-		Check: func(ctx context.Context) DependencyCheckResult {
-			if skipVersionChecks {
-				return DependencyCheckResult{SuccessValue: "topo"}
-			}
-			if failure := CheckTopoIsUpToDate(ctx); failure != nil {
-				return DependencyCheckResult{Failure: failure}
-			}
-			return DependencyCheckResult{SuccessValue: "topo"}
-		},
-	}
-
-	ssh := Dependency{
-		ID:    DependencyID("ssh"),
-		Label: "OpenSSH",
-		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := r.BinaryExists(ctx, "ssh"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
-			}
-			if failure := CheckOpenSSHAvailable(ctx, r, "ssh"); failure != nil {
-				return DependencyCheckResult{Failure: failure}
-			}
-			return DependencyCheckResult{SuccessValue: "ssh"}
-		},
-	}
-
-	docker := Dependency{
-		ID:    DependencyID("host-docker"),
-		Label: "Container Engine",
-		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := r.BinaryExists(ctx, "docker"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityError,
-					Message:  err.Error(),
-					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
-				}}
-			}
-			if _, _, err := r.Run(ctx, "docker info"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityError,
-					Message:  err.Error(),
-					Fix:      &Fix{Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL},
-				}}
-			}
-			return DependencyCheckResult{SuccessValue: "docker"}
-		},
-	}
-
-	dockerCompose := Dependency{
-		ID:    DependencyID("docker-compose"),
-		Label: "Docker Compose",
-		Check: func(ctx context.Context) DependencyCheckResult {
-			if _, _, err := r.Run(ctx, "docker-compose"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityError,
-					Message:  err.Error(),
-					Fix:      &Fix{Description: "Ensure Docker Compose is installed as a plugin for Docker. See " + containerEngineInstallURL},
-				}}
-			}
-			if failure := CheckDockerComposeMinVersion(ctx, r, "2.21.0"); failure != nil {
-				return DependencyCheckResult{Failure: failure}
-			}
-			return DependencyCheckResult{SuccessValue: "docker-compose"}
-		},
-		Prerequisites: []DependencyID{docker.ID},
-	}
-
+	ssh := NewDependencyOnSSH(r)
+	docker := NewDependencyOnDocker(DependencyID("host-docker"), r)
+	dockerCompose := NewDependencyOnDockerCompose(r, docker.ID)
 	return []Dependency{topo, ssh, docker, dockerCompose}
 }
 
@@ -140,10 +78,91 @@ func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) 
 		remoteTargetPrerequisites = []DependencyID{connectivity.ID}
 	}
 
-	docker := Dependency{
-		ID:            DependencyID("target-docker"),
+	docker := NewDependencyOnDocker(DependencyID("target-docker"), r, remoteTargetPrerequisites...)
+	remoteproc := NewDependencyOnRemoteproc(r, remoteTargetPrerequisites...)
+	remoteprocRuntime := NewDependencyOnRemoteprocRuntime(
+		target,
+		r,
+		append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...)...,
+	)
+	remoteprocRuntimeShim := NewDependencyOnRemoteprocRuntimeShim(
+		target,
+		r,
+		append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...)...,
+	)
+	lscpu := NewDependencyOnLscpu(r, remoteTargetPrerequisites...)
+
+	return append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
+}
+
+func NewDependencyOnSSH(r runner.Runner) Dependency {
+	return Dependency{
+		ID:    DependencyID("ssh"),
+		Label: "OpenSSH",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := r.BinaryExists(ctx, "ssh"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
+			}
+			_, stderr, err := r.Run(ctx, "ssh -V")
+			if err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
+			}
+			if !strings.Contains(stderr, "OpenSSH_") {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Message: fmt.Sprintf("%q does not resolve to OpenSSH: %s", "ssh", stderr),
+					Fix: &Fix{
+						Description: "Install OpenSSH and ensure its ssh executable is first on PATH",
+					},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "ssh"}
+		},
+	}
+}
+
+func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
+	return Dependency{
+		ID:    DependencyID("topo"),
+		Label: "Topo",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if skipVersionChecks || version.Version == version.Dev {
+				return DependencyCheckResult{SuccessValue: "topo"}
+			}
+			binPath, binPathErr := upgrade.CurrentBinaryPath()
+
+			var latest string
+			var err error
+			if binPathErr == nil && upgrade.IsBinaryManagedByHomebrew(binPath) {
+				latest, err = version.FetchLatestHomebrew(ctx, version.HomebrewFormulaURL)
+			} else {
+				latest, err = version.FetchLatestArtifactory(ctx, version.ArtifactoryBaseURL)
+			}
+			if err != nil {
+				logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
+				return DependencyCheckResult{SuccessValue: "topo"}
+			}
+			if latest == version.Version {
+				return DependencyCheckResult{SuccessValue: "topo"}
+			}
+
+			fix := Fix{Description: "Upgrade Topo"}
+			if binPathErr == nil {
+				_, fix.Command = upgrade.GetUpgradeCommand(binPath)
+			}
+			return DependencyCheckResult{Failure: &DependencyCheckFailure{
+				Severity: SeverityInfo,
+				Message:  fmt.Sprintf("out of date - current: %s, latest version: %s", version.Version, latest),
+				Fix:      &fix,
+			}}
+		},
+	}
+}
+
+func NewDependencyOnDocker(id DependencyID, r runner.Runner, prerequisites ...DependencyID) Dependency {
+	return Dependency{
+		ID:            id,
 		Label:         "Container Engine",
-		Prerequisites: remoteTargetPrerequisites,
+		Prerequisites: prerequisites,
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "docker"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -162,47 +181,45 @@ func TargetRequiredDependencies(target ssh.Destination, acceptNewHostKeys bool) 
 			return DependencyCheckResult{SuccessValue: "docker"}
 		},
 	}
+}
 
-	remoteproc := NewRemoteprocDependency(r, remoteTargetPrerequisites...)
-
-	remoteprocRuntime := NewRemoteprocRuntimeDependency(
-		target,
-		r,
-		append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...)...,
-	)
-
-	remoteprocRuntimeShim := Dependency{
-		ID:            DependencyID("containerd-shim-remoteproc-v1"),
-		Label:         "Remoteproc Shim",
-		Prerequisites: append([]DependencyID{docker.ID, remoteproc.ID}, remoteTargetPrerequisites...),
+func NewDependencyOnDockerCompose(r runner.Runner, prerequisites ...DependencyID) Dependency {
+	return Dependency{
+		ID:    DependencyID("docker-compose"),
+		Label: "Docker Compose",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
+			if _, _, err := r.Run(ctx, "docker-compose"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityWarning,
+					Severity: SeverityError,
 					Message:  err.Error(),
+					Fix:      &Fix{Description: "Ensure Docker Compose is installed as a plugin for Docker. See " + containerEngineInstallURL},
+				}}
+			}
+
+			stdout, _, err := r.Run(ctx, "docker compose version --format json")
+			if err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
+			}
+
+			var output struct {
+				Version string `json:"version"`
+			}
+			if err := json.Unmarshal([]byte(stdout), &output); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
+			}
+			if !version.IsAtLeastVersion(output.Version, "2.21.0") {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Message: fmt.Sprintf("installed docker compose version %s is older than required version %s", output.Version, "2.21.0"),
 					Fix: &Fix{
-						Description: "Install the Remoteproc Runtime",
-						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
+						Description: fmt.Sprintf("Upgrade Docker Compose to version %s or later. See %s", "2.21.0", containerEngineInstallURL),
 					},
 				}}
 			}
-			return DependencyCheckResult{SuccessValue: "containerd-shim-remoteproc-v1"}
-		},
-	}
 
-	lscpu := Dependency{
-		ID:            DependencyID("lscpu"),
-		Label:         "Hardware Info",
-		Prerequisites: remoteTargetPrerequisites,
-		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := r.BinaryExists(ctx, "lscpu"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
-			}
-			return DependencyCheckResult{SuccessValue: "lscpu"}
+			return DependencyCheckResult{SuccessValue: "docker-compose"}
 		},
+		Prerequisites: prerequisites,
 	}
-
-	return append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
 }
 
 func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) Dependency {
@@ -244,7 +261,7 @@ func NewConnectivityDependency(target ssh.Destination, acceptNewHostKeys bool) D
 	}
 }
 
-func NewRemoteprocDependency(r runner.Runner, prerequisites ...DependencyID) Dependency {
+func NewDependencyOnRemoteproc(r runner.Runner, prerequisites ...DependencyID) Dependency {
 	return Dependency{
 		ID:            DependencyIDRemoteproc,
 		Label:         "Processing Domain Driver (remoteproc)",
@@ -278,7 +295,7 @@ func NewRemoteprocDependency(r runner.Runner, prerequisites ...DependencyID) Dep
 	}
 }
 
-func NewRemoteprocRuntimeDependency(target ssh.Destination, r runner.Runner, prerequisites ...DependencyID) Dependency {
+func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner, prerequisites ...DependencyID) Dependency {
 	return Dependency{
 		ID:            DependencyID("remoteproc-runtime"),
 		Label:         "Remoteproc Runtime",
@@ -295,6 +312,41 @@ func NewRemoteprocRuntimeDependency(target ssh.Destination, r runner.Runner, pre
 				}}
 			}
 			return DependencyCheckResult{SuccessValue: "remoteproc-runtime"}
+		},
+	}
+}
+
+func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runner, prerequisites ...DependencyID) Dependency {
+	return Dependency{
+		ID:            DependencyID("containerd-shim-remoteproc-v1"),
+		Label:         "Remoteproc Shim",
+		Prerequisites: prerequisites,
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityWarning,
+					Message:  err.Error(),
+					Fix: &Fix{
+						Description: "Install the Remoteproc Runtime",
+						Command:     fmt.Sprintf("topo install remoteproc-runtime --target %s", target),
+					},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "containerd-shim-remoteproc-v1"}
+		},
+	}
+}
+
+func NewDependencyOnLscpu(r runner.Runner, prerequisites ...DependencyID) Dependency {
+	return Dependency{
+		ID:            DependencyID("lscpu"),
+		Label:         "Hardware Info",
+		Prerequisites: prerequisites,
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := r.BinaryExists(ctx, "lscpu"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
+			}
+			return DependencyCheckResult{SuccessValue: "lscpu"}
 		},
 	}
 }

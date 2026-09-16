@@ -1,3 +1,9 @@
+---
+sidebar_position: 5
+title: Project authoring best practices
+description: Follow recommendations for delivering a consistent user experience with Topo Projects.
+---
+
 # Project Authoring Best Practices
 
 Recommendations for delivering the best and most consistent user experience with Topo Projects

@@ -1,5 +1,7 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
+title: Install Docker for Topo
+description: Install Docker to build images on the host and run containers on the target.
 ---
 
 # Install Docker for Topo
