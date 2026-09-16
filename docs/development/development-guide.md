@@ -48,15 +48,7 @@ From the repository root, opt in to SSH configuration when running container tes
 SETUP_TEST_SSH=1 go test ./...
 ```
 
-In PowerShell:
-
-```powershell
-$env:SETUP_TEST_SSH = "1"
-go test ./...
-Remove-Item Env:SETUP_TEST_SSH
-```
-
-This adds `topo-test-*` aliases to `~/.ssh/config` (`%USERPROFILE%\.ssh\config` on Windows), preserving existing settings. Fixtures use separate files under `~/.ssh/topo-test-known-hosts/` instead of your normal `known_hosts`. CI enables this opt-in automatically.
+This adds `topo-test-*` aliases to `~/.ssh/config` (`%USERPROFILE%\.ssh\config` on Windows), preserving existing settings. Fixtures use separate files under `~/.ssh/topo-test-known-hosts/` instead of your normal `known_hosts`.
 
 The configuration persists. Subsequent runs need only `go test ./...`, without the environment variable.
 
