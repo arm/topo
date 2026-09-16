@@ -42,17 +42,23 @@ The project uses [Go's built-in support for unit testing](https://pkg.go.dev/cmd
 
 Container tests require OpenSSH and Docker running Linux containers. Some tests also require Podman. Test container images are built automatically.
 
-Run this one-time setup from the repository root before running container tests:
+From the repository root, opt in to SSH configuration when running container tests:
 
 ```sh
-go run ./internal/testutil/cmd/setup-test-ssh
+SETUP_TEST_SSH=1 go test ./...
 ```
 
-It adds `topo-test-*` aliases to `~/.ssh/config` (`%USERPROFILE%\.ssh\config` on Windows), preserving existing settings. Fixtures use separate files under `~/.ssh/topo-test-known-hosts/` instead of your normal `known_hosts`.
+In PowerShell:
 
-```sh
+```powershell
+$env:SETUP_TEST_SSH = "1"
 go test ./...
+Remove-Item Env:SETUP_TEST_SSH
 ```
+
+This adds `topo-test-*` aliases to `~/.ssh/config` (`%USERPROFILE%\.ssh\config` on Windows), preserving existing settings. Fixtures use separate files under `~/.ssh/topo-test-known-hosts/` instead of your normal `known_hosts`. CI enables this opt-in automatically.
+
+The configuration persists. Subsequent runs need only `go test ./...`, without the environment variable.
 
 Container tests skip if the SSH setup is missing. Tests also skip when a required Docker or Podman executable is missing. Use `go test -v ./...` to see skip reasons.
 

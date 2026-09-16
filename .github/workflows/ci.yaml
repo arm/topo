@@ -193,9 +193,6 @@ jobs:
           cache-dependency-path: |
             **/go.sum
 
-      - name: Configure test SSH
-        run: go run ./internal/testutil/cmd/setup-test-ssh
-
       - name: Build
         run: |
           go build -v ./cmd/topo
@@ -203,5 +200,6 @@ jobs:
       - name: Run tests with coverage
         env:
           DOCKER_HOST: ${{ matrix.docker_host }}
+          SETUP_TEST_SSH: '1'
         run: |
           go test ./... -v -covermode=atomic -coverprofile=coverage.out
