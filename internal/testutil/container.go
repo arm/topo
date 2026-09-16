@@ -75,7 +75,7 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	}
 	RequireLinuxDockerEngine(t)
 	containerName := generateContainerName(t)
-	requireSSHConfig(t, containerName)
+	requireKnownHostsSSHConfig(t, containerName)
 
 	if err := buildImage(spec); err != nil {
 		t.Fatalf("failed to build image: %v", err)

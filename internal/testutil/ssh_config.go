@@ -19,7 +19,7 @@ const testSSHConfig = `Host topo-test-*
 Host *
 `
 
-func requireSSHConfig(t testing.TB, containerName string) {
+func requireKnownHostsSSHConfig(t testing.TB, containerName string) {
 	t.Helper()
 	if _, err := exec.LookPath("ssh"); err != nil {
 		t.Skipf("container tests require OpenSSH: %v", err)
