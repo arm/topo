@@ -40,14 +40,21 @@ golangci-lint run --fix
 
 The project uses [Go's built-in support for unit testing](https://pkg.go.dev/cmd/go/internal/test) to provide test coverage.
 
-```bash
-# Run all tests
+Container tests require OpenSSH and Docker running Linux containers. Some tests also require Podman. Test container images are built automatically.
+
+Run this one-time setup from the repository root before running container tests:
+
+```sh
+go run ./internal/testutil/cmd/setup-test-ssh
+```
+
+It adds `topo-test-*` aliases to `~/.ssh/config` (`%USERPROFILE%\.ssh\config` on Windows), preserving existing settings. Fixtures use separate files under `~/.ssh/topo-test-known-hosts/` instead of your normal `known_hosts`.
+
+```sh
 go test ./...
 ```
 
-Some tests have a dependency on docker. Test container images are built automatically when needed.
-
-> Note that if docker is missing, the dependent tests will just be skipped as opposed to failing.
+Container tests skip if the SSH setup is missing. Tests also skip when a required Docker or Podman executable is missing. Use `go test -v ./...` to see skip reasons.
 
 #### Golden Files
 
