@@ -13,39 +13,65 @@ import (
 
 func TestDependencyRegistry(t *testing.T) {
 	t.Run("Check", func(t *testing.T) {
-		t.Run("evaluates a successful dependency once when shared", func(t *testing.T) {
+		t.Run("evaluates each dependency once", func(t *testing.T) {
 			var evaluations atomic.Int32
-			registry := health.NewDependencyRegistry([]health.Dependency{{
-				ID: "shared",
+			keyboard := health.Dependency{
+				ID: "keyboard",
 				Check: func(context.Context) health.DependencyCheckResult {
 					evaluations.Add(1)
 					return health.DependencyCheckResult{SuccessValue: "ready"}
 				},
-			}})
+			}
+			registry := health.NewDependencyRegistry([]health.Dependency{keyboard})
 
-			results := checkDependencyConcurrently(registry, "shared")
+			var results [2]health.DependencyCheckResult
+			var waitGroup sync.WaitGroup
+			waitGroup.Add(len(results))
+			for index := range results {
+				go func() {
+					defer waitGroup.Done()
+					results[index], _ = registry.Check(context.Background(), keyboard.ID)
+				}()
+			}
+			waitGroup.Wait()
 
 			assert.Equal(t, int32(1), evaluations.Load())
 			assert.Equal(t, health.DependencyCheckResult{SuccessValue: "ready"}, results[0])
 			assert.Equal(t, results[0], results[1])
 		})
 
-		t.Run("evaluates a failed dependency once when shared", func(t *testing.T) {
-			var evaluations atomic.Int32
-			failure := &health.DependencyCheckFailure{Message: "unavailable"}
-			registry := health.NewDependencyRegistry([]health.Dependency{{
-				ID: "shared",
+		t.Run("omits a dependency when a prerequisite fails", func(t *testing.T) {
+			dough := health.Dependency{ID: "dough", Check: failingCheck}
+			pizza := health.Dependency{
+				ID:            "pizza",
+				Prerequisites: []health.DependencyID{dough.ID},
 				Check: func(context.Context) health.DependencyCheckResult {
-					evaluations.Add(1)
-					return health.DependencyCheckResult{Failure: failure}
+					return health.DependencyCheckResult{SuccessValue: "pizza ready!"}
 				},
-			}})
+			}
+			registry := health.NewDependencyRegistry([]health.Dependency{pizza, dough})
 
-			results := checkDependencyConcurrently(registry, "shared")
+			_, hasUnmetPrerequisites := registry.Check(context.Background(), pizza.ID)
 
-			assert.Equal(t, int32(1), evaluations.Load())
-			assert.Equal(t, health.DependencyCheckResult{Failure: failure}, results[0])
-			assert.Equal(t, results[0], results[1])
+			assert.True(t, hasUnmetPrerequisites)
+		})
+
+		t.Run("evaluates a dependency when a prerequisite passes", func(t *testing.T) {
+			dough := health.Dependency{ID: "dough", Check: passingCheck}
+			pizza := health.Dependency{
+				ID:            "pizza",
+				Prerequisites: []health.DependencyID{dough.ID},
+				Check: func(context.Context) health.DependencyCheckResult {
+					return health.DependencyCheckResult{SuccessValue: "pizza ready!"}
+				},
+			}
+			registry := health.NewDependencyRegistry([]health.Dependency{pizza, dough})
+
+			got, hasUnmetPrerequisites := registry.Check(context.Background(), pizza.ID)
+
+			assert.False(t, hasUnmetPrerequisites)
+			wantResult := pizza.Check(context.Background())
+			assert.Equal(t, wantResult, got)
 		})
 	})
 }
@@ -109,19 +135,4 @@ func TestDependencyGraph(t *testing.T) {
 			assert.Equal(t, want, got.Host)
 		})
 	})
-}
-
-func checkDependencyConcurrently(registry *health.DependencyRegistry, id health.DependencyID) [2]health.DependencyCheckResult {
-	var results [2]health.DependencyCheckResult
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(len(results))
-
-	for index := range results {
-		go func() {
-			defer waitGroup.Done()
-			results[index] = registry.Check(context.Background(), id)
-		}()
-	}
-	waitGroup.Wait()
-	return results
 }

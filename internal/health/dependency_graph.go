@@ -29,9 +29,18 @@ func NewDependencyRegistry(dependencies []Dependency) *DependencyRegistry {
 	return &DependencyRegistry{dependencies: registered}
 }
 
-func (r *DependencyRegistry) Check(ctx context.Context, id DependencyID) DependencyCheckResult {
+func (r *DependencyRegistry) Check(ctx context.Context, id DependencyID) (DependencyCheckResult, bool) {
 	dependency := r.dependency(id)
+	for _, prerequisiteID := range dependency.dependency.Prerequisites {
+		prerequisiteResult, hasUnmetPrerequisites := r.Check(ctx, prerequisiteID)
+		if hasUnmetPrerequisites || prerequisiteResult.Failure != nil {
+			return DependencyCheckResult{}, true
+		}
+	}
+	return r.checkDependency(ctx, dependency), false
+}
 
+func (r *DependencyRegistry) checkDependency(ctx context.Context, dependency *dependencyNode) DependencyCheckResult {
 	dependency.once.Do(func() {
 		if dependency.dependency.Check != nil {
 			dependency.result = dependency.dependency.Check(ctx)
@@ -99,29 +108,17 @@ func (g DependencyGraph) evaluateDependencies(ctx context.Context, dependencies 
 	statuses := make([]DependencyStatus, 0, len(dependencies))
 	for _, id := range dependencies {
 		dependency := g.Registry.dependency(id).dependency
-		if !prerequisitesFulfilled(ctx, g.Registry, dependency.Prerequisites) {
+		result, hasUnmetPrerequisites := g.Registry.Check(ctx, id)
+		if hasUnmetPrerequisites {
 			continue
 		}
 		statuses = append(statuses, DependencyStatus{
 			ID:     dependency.ID,
 			Label:  dependency.Label,
-			Result: g.Registry.Check(ctx, id),
+			Result: result,
 		})
 	}
 	return statuses
-}
-
-func prerequisitesFulfilled(ctx context.Context, registry *DependencyRegistry, prerequisites []DependencyID) bool {
-	for _, prerequisite := range prerequisites {
-		dependency := registry.dependency(prerequisite).dependency
-		if !prerequisitesFulfilled(ctx, registry, dependency.Prerequisites) {
-			return false
-		}
-		if registry.Check(ctx, prerequisite).Failure != nil {
-			return false
-		}
-	}
-	return true
 }
 
 func dependencyIDs(dependencies []Dependency) []DependencyID {
