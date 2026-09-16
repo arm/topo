@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,7 +44,7 @@ func requireSSHConfig(t testing.TB, containerName string) {
 		t.Skip("container tests require SSH setup: rerun with SETUP_TEST_SSH=1")
 	}
 	require.NoError(t, err)
-	require.True(t, info.IsDir(), "test known-hosts path must be a directory")
+	require.True(t, info.IsDir(), fmt.Sprintf("%s must be a directory", knownHostsDir))
 }
 
 func configureSSH(t testing.TB) {
