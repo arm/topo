@@ -57,7 +57,11 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.LoadScope(composeFile, targetArg)
+		envFiles, err := getEnvFiles(cmd, composeFile)
+		if err != nil {
+			return err
+		}
+		scope, err := project.BuildScope(composeFile, targetArg, envFiles)
 		if err != nil {
 			return err
 		}
@@ -200,6 +204,7 @@ func resolveSkipRemotePortCheck(cmd *cobra.Command) bool {
 func init() {
 	addTargetFlag(deployCmd)
 	addComposeFileFlag(deployCmd)
+	addEnvFileFlag(deployCmd)
 	if experimentalFeaturesEnabled() {
 		addEngineFlag(deployCmd)
 	}

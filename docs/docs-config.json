@@ -3,13 +3,27 @@
   "indexPageDirectory": "landing-page",
   "navbarItems": [
     {
-      "label": "Documentation",
-      "to": "introduction",
+      "label": "Getting Started",
+      "to": "/introduction/what-is-topo",
+      "activeBaseRegex": "(^|/)introduction(?:/|$)",
+      "position": "left"
+    },
+    {
+      "label": "Project Specification",
+      "to": "/project-specification/overview",
+      "activeBaseRegex": "(^|/)project-specification(?:/|$)",
+      "position": "left"
+    },
+    {
+      "label": "Contributing",
+      "to": "/development/guide",
+      "activeBaseRegex": "(^|/)development(?:/|$)",
       "position": "left"
     }
   ],
-  "sidebarIDs": ["documentation"],
   "sidebarDirectoryMap": {
-    "documentation": ["introduction", "project-specification", "development"]
+    "introduction": ["introduction"],
+    "project-specification": ["project-specification"],
+    "contributing": ["development"]
   }
 }

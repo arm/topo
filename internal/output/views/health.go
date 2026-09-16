@@ -48,7 +48,7 @@ const healthReportTemplate = `
 {{ if .Target }}{{ sectionHeading (printf "Target: %s" .Target.Destination) }}{{ template "checkSection" (section .Target.Dependencies) }}
 {{- else -}}
 {{ sectionHeading "Target" }}
-{{ .TargetHint }}
+{{ status "warning" }}{{ .TargetHint }}
 {{- end }}
 
 `

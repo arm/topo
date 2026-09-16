@@ -1,10 +1,6 @@
 package health
 
-import (
-	"context"
-
-	"github.com/arm/topo/internal/ssh"
-)
+import "context"
 
 type CheckStatus string
 
@@ -27,35 +23,38 @@ type HostReport struct {
 	Dependencies []DependencyReport
 }
 
-type CheckHostOptions struct {
-	SkipVersionChecks bool
-}
-
 type TargetReport struct {
 	Destination  string
 	IsLocalhost  bool
 	Dependencies []DependencyReport
 }
 
-func CheckHost(opts CheckHostOptions) HostReport {
-	deps := HostRequiredDependencies(opts.SkipVersionChecks)
-	dependencyStatuses := PerformChecks(context.Background(), deps)
-	return HostReport{
-		Dependencies: toDependencyReports(dependencyStatuses),
-	}
+type HealthReport struct {
+	Host   HostReport
+	Target *TargetReport
 }
 
-func CheckTarget(ctx context.Context, dest ssh.Destination, acceptNewHostKeys bool) TargetReport {
-	targetDependencyStatuses := PerformChecks(ctx, TargetRequiredDependencies(dest, acceptNewHostKeys))
-	return TargetReport{
-		Destination:  dest.String(),
-		IsLocalhost:  dest.IsPlainLocalhost(),
-		Dependencies: toDependencyReports(targetDependencyStatuses),
+func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
+	healthCheck := NewHealthCheck(options)
+	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
+	report := HealthReport{
+		Host: HostReport{Dependencies: toDependencyReports(evaluatedHealthCheck.Host)},
 	}
+	if healthCheck.Target == nil {
+		return report
+	}
+
+	targetReport := TargetReport{
+		Destination:  options.Target.String(),
+		IsLocalhost:  options.Target.IsPlainLocalhost(),
+		Dependencies: toDependencyReports(evaluatedHealthCheck.Target),
+	}
+	report.Target = &targetReport
+	return report
 }
 
 func ToDependencyReport(status DependencyStatus) DependencyReport {
-	report := DependencyReport{ID: status.Dependency.ID, Name: status.Dependency.Label}
+	report := DependencyReport{ID: status.ID, Name: status.Label}
 	if status.Result.Failure == nil {
 		report.Status = CheckStatusOK
 		report.Value = status.Result.SuccessValue

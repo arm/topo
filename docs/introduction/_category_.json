@@ -1,5 +1,10 @@
 {
-  "label": "Introduction",
+  "label": "Getting Started",
   "position": 0,
-  "link": null
+  "link": {
+    "type": "generated-index",
+    "slug": "/introduction",
+    "title": "Getting Started",
+    "description": "Install Topo, learn the core concepts, and deploy your first project."
+  }
 }

@@ -1,8 +1,11 @@
 ---
 sidebar_position: 0
+slug: /introduction/what-is-topo
+title: What is Topo?
+description: Learn where Topo runs, what it deploys, and how to use it with Arm-based Linux devices.
 ---
 
-# Overview
+# What is Topo?
 
 Topo helps you discover, configure, and deploy containerized software to Arm-based Linux devices over SSH. It uses Compose projects, container images, and standard container tools.
 
@@ -45,4 +48,4 @@ Later deployments reuse cached image layers where possible. This reduces the wor
 
 - [Install Topo](install.mdx) and follow [Getting started](getting-started.md) to deploy a web application to a target.
 - Use the [Topo extension for Visual Studio Code](https://github.com/arm/vscode-topo) for editor integration.
-- Review the [Topo Project Specification](../project-specification) to learn how Topo Projects are defined.
+- Review the [Topo Project Specification](../project-specification/README.md) to learn how Topo Projects are defined.

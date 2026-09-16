@@ -2,6 +2,9 @@
   background: var(--ifm-background-color);
   color: var(--ifm-font-color-base);
   min-height: 100vh;
+  width: 100%;
+  max-width: var(--arm-layout-max-width);
+  margin-inline: auto;
 }
 
 .page h1,
@@ -14,7 +17,7 @@
 
 .hero {
   display: grid;
-  grid-template-columns: 1fr minmax(520px, 620px);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr);
   gap: 2rem;
   padding: 4.5rem clamp(1.5rem, 4vw, 2rem);
   align-items: center;
@@ -169,12 +172,6 @@
   max-width: 100%;
 }
 
-@media screen and (min-width: 1440px) {
-  .hero {
-    grid-template-columns: 1fr minmax(620px, 900px);
-  }
-}
-
 .codeSection {
   padding: 2.2rem clamp(1.5rem, 4vw, 2rem) 0.9rem;
 }
@@ -260,13 +257,18 @@
   line-height: 1.45;
 }
 
+.exampleCard :global(.theme-code-block) {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--arm-grey-30);
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .exampleCode {
   margin: 0;
-  padding: 1rem;
-  background: var(--arm-grey-05);
-  border-top: 1px solid var(--arm-grey-30);
-  border-bottom: 1px solid var(--arm-grey-30);
-  overflow: auto;
+  background: var(--arm-grey-05) !important;
+  border-radius: 0;
 }
 
 .exampleCode code {
@@ -277,9 +279,12 @@
   white-space: pre;
 }
 
+:global(html[data-theme="dark"]) .exampleCard :global(.theme-code-block) {
+  border-color: var(--arm-code-border);
+}
+
 :global(html[data-theme="dark"]) .exampleCode {
   background: var(--arm-code-background);
-  border-color: var(--arm-code-border);
 }
 
 :global(html[data-theme="dark"]) .exampleCode code {
@@ -356,7 +361,7 @@
   line-height: 1.4;
 }
 
-@media screen and (max-width: 960px) {
+@media screen and (max-width: 1000px) {
   .hero {
     display: flex;
     flex-direction: column;

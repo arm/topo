@@ -28,7 +28,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(views.HealthReportView{HealthReport: toPrint, Verbose: true}, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), "┌─ Host ")
+			assert.Contains(t, out.String(), "── Host ")
 			assert.Contains(t, out.String(), " ✓ Flux Capacitor (flux)")
 		})
 
@@ -210,7 +210,7 @@ func TestHealthReport(t *testing.T) {
 			out, err := toPrint.AsPlain(true)
 
 			require.NoError(t, err)
-			assert.Contains(t, out, term.Color(term.Dim, "┌─ "))
+			assert.Contains(t, out, term.Color(term.Dim, "── "))
 			assert.Contains(t, out, term.Color(term.Green, " ✓ "))
 			assert.Contains(t, out, term.Color(term.Red, " ✗ "))
 			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
@@ -225,7 +225,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), hint)
+			assert.Contains(t, out.String(), " ! "+hint)
 		})
 	})
 

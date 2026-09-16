@@ -1,4 +1,10 @@
-# Getting started
+---
+sidebar_position: 2
+title: Deploy your first project
+description: Check a target, discover a compatible Topo Project, and deploy the Project.
+---
+
+# Deploy your first project
 
 After you [install Topo](install.mdx), use this guide to check a [target](glossary.md#target), discover a compatible [Topo Project](glossary.md#topo-project), and deploy the project.
 

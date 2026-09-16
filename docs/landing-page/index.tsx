@@ -1,5 +1,6 @@
 import Link from "@docusaurus/Link";
 import useBaseUrl from "@docusaurus/useBaseUrl";
+import CodeBlock from "@theme/CodeBlock";
 import Layout from "@theme/Layout";
 import type { ReactElement } from "react";
 
@@ -97,9 +98,9 @@ export default function Home(): ReactElement {
                   <h3>{example.title}</h3>
                   <p>{example.description}</p>
                 </div>
-                <pre className={styles.exampleCode}>
-                  <code>{example.code}</code>
-                </pre>
+                <CodeBlock className={styles.exampleCode} language="text">
+                  {example.code}
+                </CodeBlock>
               </article>
             ))}
           </div>

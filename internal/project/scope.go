@@ -1,13 +1,16 @@
 package project
 
-import "github.com/arm/topo/internal/env"
+import (
+	"github.com/arm/topo/internal/env"
+)
 
 type Scope struct {
 	ComposeFile string
 	Env         []string
+	EnvFiles    []string
 }
 
-func LoadScope(composeFile string, target string) (Scope, error) {
+func BuildScope(composeFile string, target string, envFiles []string) (Scope, error) {
 	targetEnv, err := env.ResolveTargetEnv(target)
 	if err != nil {
 		return Scope{}, err
@@ -16,5 +19,6 @@ func LoadScope(composeFile string, target string) (Scope, error) {
 	return Scope{
 		ComposeFile: composeFile,
 		Env:         targetEnv,
+		EnvFiles:    envFiles,
 	}, nil
 }
