@@ -1,8 +1,11 @@
 package testutil
 
 import (
+	"bufio"
 	"crypto/rand"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -92,8 +95,8 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 
 	t.Cleanup(func() { removeHostKey(t, port) })
 
-	if err := waitForPort("localhost", port, 10*time.Second); err != nil {
-		t.Fatalf("container port not ready: %v", err)
+	if err := waitForSSH("localhost", port, 10*time.Second); err != nil {
+		t.Fatalf("container SSH not ready: %v", err)
 	}
 
 	c := &Container{
@@ -192,22 +195,40 @@ func removeHostKey(t *testing.T, port string) {
 	}
 }
 
-func waitForPort(host string, port string, timeout time.Duration) error {
+func waitForSSH(host string, port string, timeout time.Duration) error {
 	addr := net.JoinHostPort(host, port)
 	deadline := time.Now().Add(timeout)
-	var lastErr error
+	lastErr := os.ErrDeadlineExceeded
 
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
-		if err == nil {
-			_ = conn.Close()
+		lastErr = readSSHBanner(addr, min(2*time.Second, time.Until(deadline)))
+		if lastErr == nil {
 			return nil
 		}
-		lastErr = err
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(min(200*time.Millisecond, time.Until(deadline)))
 	}
 
-	return fmt.Errorf("port %s not ready: %w", addr, lastErr)
+	return fmt.Errorf("SSH at %s not ready: %w", addr, lastErr)
+}
+
+func readSSHBanner(addr string, timeout time.Duration) (err error) {
+	deadline := time.Now().Add(timeout)
+	conn, err := net.DialTimeout("tcp", addr, timeout)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, conn.Close()) }()
+	if err := conn.SetReadDeadline(deadline); err != nil {
+		return err
+	}
+	banner, err := bufio.NewReader(io.LimitReader(conn, 255)).ReadString('\n')
+	if err != nil {
+		return err
+	}
+	if !strings.HasPrefix(banner, "SSH-") {
+		return fmt.Errorf("unexpected SSH banner: %q", banner)
+	}
+	return nil
 }
 
 func waitForPodmanService(c *Container) error {
