@@ -43,7 +43,7 @@ func ResolveFiles(root string, files []string, skipMissing bool) ([]string, erro
 	return paths, nil
 }
 
-func SaveFile(path string, values map[string]string) error {
+func WriteFile(path string, values map[string]string) error {
 	content, err := encodeFile(values)
 	if err != nil {
 		return fmt.Errorf("failed to encode env file content: %w", err)

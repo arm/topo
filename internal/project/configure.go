@@ -26,11 +26,11 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 
 func MigrateToEnv(composeFilePath string) error {
 	projectDir := filepath.Dir(composeFilePath)
-	envFile := filepath.Join(projectDir, env.DefaultFilename)
+	envFilePath := filepath.Join(projectDir, env.DefaultFilename)
 
-	_, err := os.Stat(envFile)
+	_, err := os.Stat(envFilePath)
 	if !os.IsNotExist(err) {
-		return fmt.Errorf("env file already exists: %s", envFile)
+		return fmt.Errorf("env file already exists: %s", envFilePath)
 	}
 
 	project, err := loadProject(composeFilePath)
@@ -54,7 +54,7 @@ func MigrateToEnv(composeFilePath string) error {
 		return fmt.Errorf("no parameter values to migrate")
 	}
 
-	err = env.SaveFile(envFile, values)
+	err = env.WriteFile(envFilePath, values)
 	if err != nil {
 		return fmt.Errorf("failed to save env file: %w", err)
 	}
@@ -65,7 +65,7 @@ func MigrateToEnv(composeFilePath string) error {
 	}
 	err = applyParameterValuesToComposeFile(composeFilePath, references)
 	if err != nil {
-		deleteErr := os.Remove(envFile)
+		deleteErr := os.Remove(envFilePath)
 		return errors.Join(fmt.Errorf("failed to apply parameter values to compose file: %w", err), deleteErr)
 	}
 	return nil
