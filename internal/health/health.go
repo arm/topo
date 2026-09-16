@@ -44,6 +44,7 @@ func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 		Dependencies: toDependencyReports(evaluatedHealthCheck.Target),
 	}
 	if options.Target != nil {
+		// Legacy JSON support
 		targetReport.Destination = options.Target.String()
 		targetReport.IsLocalhost = options.Target.IsPlainLocalhost()
 	}
