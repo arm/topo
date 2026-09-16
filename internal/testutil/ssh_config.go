@@ -90,3 +90,16 @@ func configureSSH(t testing.TB) {
 	}
 	require.NoError(t, os.Rename(file.Name(), path)) // #nosec G703 -- installs our temporary file at the resolved config path.
 }
+
+func removeKnownHost(t *testing.T, containerName string) {
+	t.Helper()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Errorf("failed to locate SSH directory: %v", err)
+		return
+	}
+	path := filepath.Join(home, ".ssh", "topo-test-known-hosts", containerName)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		t.Errorf("failed to remove test known-hosts file: %v", err)
+	}
+}
