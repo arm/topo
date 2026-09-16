@@ -1,5 +1,10 @@
 {
   "label": "Contributing",
   "position": 2,
-  "link": null
+  "link": {
+    "type": "generated-index",
+    "slug": "/development/contributing",
+    "title": "Contributing",
+    "description": "Find the development guidance and compatibility policies for contributing to Topo."
+  }
 }

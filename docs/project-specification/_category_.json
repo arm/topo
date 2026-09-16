@@ -1,5 +1,10 @@
 {
   "label": "Project Specification",
   "position": 1,
-  "link": null
+  "link": {
+    "type": "generated-index",
+    "slug": "/project-specification",
+    "title": "Project Specification",
+    "description": "Learn how to author, configure, validate, and optimise portable Topo Projects."
+  }
 }

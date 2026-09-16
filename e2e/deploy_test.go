@@ -35,6 +35,7 @@ func TestDeploy(t *testing.T) {
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 
 		requirePS(t, topo, cloneDir, container.SSHDestination, nil, "hello-server", "8080")
+		requirePrintenv(t, container.SSHDestination, composeFile, "hello-server", "STATE", "California\n")
 	})
 
 	t.Run("ps -a shows stopped containers", func(t *testing.T) {
@@ -55,6 +56,28 @@ func TestDeploy(t *testing.T) {
 		assert.NotContains(t, psOut, "busybox")
 
 		requirePS(t, topo, projectDir, container.SSHDestination, []string{"-a"}, "busybox", "Exited")
+	})
+
+	t.Run("explicit env files resolve from cwd and ignores default env files", func(t *testing.T) {
+		workingDir, projectDir := t.TempDir(), t.TempDir()
+		testutil.RequireWriteFile(t, filepath.Join(workingDir, ".env.custom"), "TOPO_CUSTOM_ENV_FILE_VAR=.env.custom")
+		testutil.RequireWriteFile(t, filepath.Join(projectDir, ".env"), "TOPO_DEFAULT_ENV_FILE_VAR=.env")
+		composeFile := testutil.RequireWriteComposeFile(t, projectDir, `services:
+  sleeper:
+    image: busybox
+    command: ["sleep", "300"]
+    stop_grace_period: 1s
+    environment:
+      RESULT: "${TOPO_CUSTOM_ENV_FILE_VAR:-omitted},${TOPO_DEFAULT_ENV_FILE_VAR:-omitted}"
+`)
+		t.Cleanup(func() { composeDown(t, composeFile, container.SSHDestination) })
+		cmd := exec.Command(topo, "deploy", "--target", container.SSHDestination, "--skip-project-checks", "-f", composeFile, "--env-file", ".env.custom")
+		cmd.Dir = workingDir
+
+		out, err := cmd.CombinedOutput()
+
+		require.NoErrorf(t, err, "deploy failed: %s", out)
+		requirePrintenv(t, container.SSHDestination, composeFile, "sleeper", "RESULT", ".env.custom,omitted\n")
 	})
 }
 
@@ -100,6 +123,12 @@ func requirePS(t *testing.T, topo, projectDir, sshDestination string, extraArgs 
 		assert.Contains(t, output, expected)
 	}
 	return output
+}
+
+func requirePrintenv(t *testing.T, sshDestination, composeFile, service, envVar, expected string) {
+	values, err := exec.Command("docker", "-H", sshDestination, "compose", "-f", composeFile, "exec", "-T", service, "printenv", envVar).CombinedOutput()
+	require.NoErrorf(t, err, "reading deployed environment failed: %s", values)
+	assert.Equal(t, expected, string(values))
 }
 
 func requireStop(t *testing.T, topo, projectDir, sshDestination string) {

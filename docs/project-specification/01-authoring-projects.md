@@ -1,4 +1,10 @@
-# Topo Project Authoring Guide
+---
+sidebar_position: 1
+title: Authoring Topo Projects
+description: Create a Topo Project with Compose services and the metadata required by Topo.
+---
+
+# Authoring Topo Projects
 
 This guide details how to create [Topo Projects](../introduction/glossary.md#topo-project) for the Topo ecosystem.
 

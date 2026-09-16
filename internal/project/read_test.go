@@ -216,7 +216,7 @@ services:
 		assert.YAMLEq(t, composeFileContents, string(got))
 	})
 
-	t.Run("inherits environment variables from .env file", func(t *testing.T) {
+	t.Run("inherits environment variables from custom dotenv file", func(t *testing.T) {
 		dir := t.TempDir()
 		serviceName := "test-service"
 		composeFileContents := fmt.Sprintf(`
@@ -227,9 +227,10 @@ services:
 `, serviceName)
 		composeFilePath := testutil.RequireWriteComposeFile(t, dir, composeFileContents)
 		imageName := "image-from-env"
-		testutil.RequireWriteFile(t, filepath.Join(dir, ".env"), fmt.Sprintf("IMAGE_NAME=%s", imageName))
+		envFile := filepath.Join(dir, ".something.env")
+		testutil.RequireWriteFile(t, envFile, fmt.Sprintf("IMAGE_NAME=%s", imageName))
 
-		composeProject, err := project.Read(project.Scope{ComposeFile: composeFilePath})
+		composeProject, err := project.Read(project.Scope{ComposeFile: composeFilePath, EnvFiles: []string{envFile}})
 		require.NoError(t, err)
 
 		require.Contains(t, composeProject.Services, serviceName)

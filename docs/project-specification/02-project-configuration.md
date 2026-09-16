@@ -1,3 +1,9 @@
+---
+sidebar_position: 2
+title: Project configuration
+description: Define configurable project parameters and connect them to Compose build arguments.
+---
+
 # Project Configuration
 
 ## Overview

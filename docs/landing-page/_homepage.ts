@@ -101,7 +101,7 @@ export const homepageContent = {
       title: "Contribute to Topo",
       description:
         "Work on Topo itself and follow the contributor workflow.",
-      to: "/development",
+      to: "/development/guide",
       cta: "Open the guide",
       variant: "secondary",
     },
