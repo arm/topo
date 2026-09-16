@@ -193,7 +193,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), hint)
+			assert.Contains(t, out.String(), " ! "+hint)
 		})
 	})
 
