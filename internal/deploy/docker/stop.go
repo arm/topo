@@ -10,7 +10,7 @@ import (
 )
 
 func Stop(ctx context.Context, output io.Writer, scope project.Scope, destination ssh.Destination) error {
-	if err := term.PrintHeader(output, "Stop services"); err != nil {
+	if err := term.PrintFirstHeader(output, "Stop services"); err != nil {
 		return err
 	}
 	return StopServices(ctx, output, NewHostFromDestination(destination), scope)
