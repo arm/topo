@@ -14,14 +14,14 @@ func NewSequence(operations ...Operation) Sequence {
 
 func (s Sequence) Run(cmdOutput io.Writer) error {
 	printHeader := term.PrintFirstHeader
-	for _, op := range s {
+	for index, op := range s {
 		if cmdOutput != nil {
 			description := op.Description()
 			err := printHeader(cmdOutput, description)
 			if err != nil {
 				return err
 			}
-			if description != "" {
+			if index == 0 {
 				printHeader = term.PrintNthHeader
 			}
 		}
