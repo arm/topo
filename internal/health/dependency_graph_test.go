@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -76,39 +75,19 @@ func TestDependencyRegistry(t *testing.T) {
 	})
 }
 
-func TestNewDependencyGraph(t *testing.T) {
-	t.Run("creates compatibility host and target groups", func(t *testing.T) {
-		target := ssh.NewDestination("pi@edge-a")
-
-		graph := health.NewDependencyGraph(health.DependencyGraphOptions{Target: &target})
-
-		assert.NotNil(t, graph.Registry)
-		assert.NotEmpty(t, graph.Host)
-		assert.NotEmpty(t, graph.Target)
-	})
-
-	t.Run("creates only the host group without a target", func(t *testing.T) {
-		graph := health.NewDependencyGraph(health.DependencyGraphOptions{})
-
-		assert.NotNil(t, graph.Registry)
-		assert.NotEmpty(t, graph.Host)
-		assert.Empty(t, graph.Target)
-	})
-}
-
-func TestDependencyGraph(t *testing.T) {
+func TestHealthCheck(t *testing.T) {
 	t.Run("Evaluate", func(t *testing.T) {
 		t.Run("reports successful dependencies in the group", func(t *testing.T) {
 			virus := health.Dependency{ID: "virus", Check: passingCheck}
 			bartek := health.Dependency{ID: "bartek", Prerequisites: []health.DependencyID{virus.ID}, Check: passingCheck}
 			registry := health.NewDependencyRegistry([]health.Dependency{virus, bartek})
 
-			graph := health.DependencyGraph{
+			healthCheck := health.HealthCheck{
 				Registry: registry,
 				Host:     []health.DependencyID{bartek.ID, virus.ID},
 			}
 
-			got := graph.Evaluate(context.Background())
+			got := healthCheck.Evaluate(context.Background())
 
 			want := []health.DependencyStatus{
 				{ID: bartek.ID, Label: bartek.Label, Result: bartek.Check(context.Background())},
@@ -122,12 +101,12 @@ func TestDependencyGraph(t *testing.T) {
 			pizza := health.Dependency{ID: "pizza", Prerequisites: []health.DependencyID{flour.ID}, Check: passingCheck}
 			registry := health.NewDependencyRegistry([]health.Dependency{flour, pizza})
 
-			graph := health.DependencyGraph{
+			healthCheck := health.HealthCheck{
 				Registry: registry,
 				Host:     []health.DependencyID{flour.ID, pizza.ID},
 			}
 
-			got := graph.Evaluate(context.Background())
+			got := healthCheck.Evaluate(context.Background())
 
 			want := []health.DependencyStatus{
 				{ID: flour.ID, Label: flour.Label, Result: flour.Check(context.Background())},

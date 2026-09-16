@@ -57,13 +57,13 @@ func (r *DependencyRegistry) dependency(id DependencyID) *dependencyNode {
 	return dependency
 }
 
-type DependencyGraphOptions struct {
+type HealthCheckOptions struct {
 	Target            *ssh.Destination
 	SkipVersionChecks bool
 	AcceptHostKeys    bool
 }
 
-type DependencyGraph struct {
+type HealthCheck struct {
 	Registry *DependencyRegistry
 	Host     []DependencyID
 	Target   []DependencyID
@@ -75,40 +75,40 @@ type DependencyStatus struct {
 	Result DependencyCheckResult
 }
 
-type EvaluatedDependencyGraph struct {
+type EvaluatedHealthCheck struct {
 	Host   []DependencyStatus
 	Target []DependencyStatus
 }
 
-func NewDependencyGraph(options DependencyGraphOptions) DependencyGraph {
+func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 	hostDependencies := hostRequiredDependencies(options.SkipVersionChecks)
 	dependencies := hostDependencies
-	graph := DependencyGraph{
+	healthCheck := HealthCheck{
 		Host: dependencyIDs(hostDependencies),
 	}
 
 	if options.Target != nil {
 		targetDependencies := targetRequiredDependencies(*options.Target, options.AcceptHostKeys)
 		dependencies = append(dependencies, targetDependencies...)
-		graph.Target = dependencyIDs(targetDependencies)
+		healthCheck.Target = dependencyIDs(targetDependencies)
 	}
 
-	graph.Registry = NewDependencyRegistry(dependencies)
-	return graph
+	healthCheck.Registry = NewDependencyRegistry(dependencies)
+	return healthCheck
 }
 
-func (g DependencyGraph) Evaluate(ctx context.Context) EvaluatedDependencyGraph {
-	return EvaluatedDependencyGraph{
-		Host:   g.evaluateDependencies(ctx, g.Host),
-		Target: g.evaluateDependencies(ctx, g.Target),
+func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
+	return EvaluatedHealthCheck{
+		Host:   h.evaluateDependencies(ctx, h.Host),
+		Target: h.evaluateDependencies(ctx, h.Target),
 	}
 }
 
-func (g DependencyGraph) evaluateDependencies(ctx context.Context, dependencies []DependencyID) []DependencyStatus {
+func (h HealthCheck) evaluateDependencies(ctx context.Context, dependencies []DependencyID) []DependencyStatus {
 	statuses := make([]DependencyStatus, 0, len(dependencies))
 	for _, id := range dependencies {
-		dependency := g.Registry.dependency(id).dependency
-		result, hasUnmetPrerequisites := g.Registry.Check(ctx, id)
+		dependency := h.Registry.dependency(id).dependency
+		result, hasUnmetPrerequisites := h.Registry.Check(ctx, id)
 		if hasUnmetPrerequisites {
 			continue
 		}

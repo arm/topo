@@ -34,20 +34,20 @@ type HealthReport struct {
 	Target *TargetReport
 }
 
-func Check(ctx context.Context, options DependencyGraphOptions) HealthReport {
-	graph := NewDependencyGraph(options)
-	evaluatedGraph := graph.Evaluate(ctx)
+func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
+	healthCheck := NewHealthCheck(options)
+	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
 	report := HealthReport{
-		Host: HostReport{Dependencies: toDependencyReports(evaluatedGraph.Host)},
+		Host: HostReport{Dependencies: toDependencyReports(evaluatedHealthCheck.Host)},
 	}
-	if graph.Target == nil {
+	if healthCheck.Target == nil {
 		return report
 	}
 
 	targetReport := TargetReport{
 		Destination:  options.Target.String(),
 		IsLocalhost:  options.Target.IsPlainLocalhost(),
-		Dependencies: toDependencyReports(evaluatedGraph.Target),
+		Dependencies: toDependencyReports(evaluatedHealthCheck.Target),
 	}
 	report.Target = &targetReport
 	return report

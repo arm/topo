@@ -51,7 +51,7 @@ var healthCmd = &cobra.Command{
 
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
-		report := health.Check(ctx, health.DependencyGraphOptions{
+		report := health.Check(ctx, health.HealthCheckOptions{
 			Target:            target,
 			SkipVersionChecks: skipVersionCheck,
 			AcceptHostKeys:    acceptNewHostKeys,
