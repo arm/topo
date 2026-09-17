@@ -9,7 +9,7 @@ import (
 
 func TestToDependencyReport(t *testing.T) {
 	t.Run("returns successful dependency result", func(t *testing.T) {
-		status := health.DependencyStatus{
+		status := health.EvaluatedDependency{
 			ID:     "docker",
 			Label:  "Container Engine",
 			Result: health.DependencyCheckResult{SuccessValue: "docker"},
@@ -27,7 +27,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns error dependency result", func(t *testing.T) {
-		status := health.DependencyStatus{
+		status := health.EvaluatedDependency{
 			Label: "Rube Goldberg",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityError,
@@ -46,7 +46,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns warning dependency result", func(t *testing.T) {
-		status := health.DependencyStatus{
+		status := health.EvaluatedDependency{
 			Label: "Remoteproc Runtime",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
@@ -65,7 +65,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns informational dependency result", func(t *testing.T) {
-		status := health.DependencyStatus{
+		status := health.EvaluatedDependency{
 			Label: "Remoteproc Runtime",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityInfo,
@@ -84,7 +84,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("propagates fix from failed dependency", func(t *testing.T) {
-		status := health.DependencyStatus{
+		status := health.EvaluatedDependency{
 			Label: "Food",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,

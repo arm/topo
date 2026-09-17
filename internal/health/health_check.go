@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 
+	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -15,32 +16,59 @@ type HealthCheckOptions struct {
 
 type HealthCheck struct {
 	Registry *DependencyRegistry
-	Host     []DependencyID
-	Target   []DependencyID
+	Host     []*DependencyNode
+	Target   []*DependencyNode
 }
 
-type DependencyStatus struct {
+type EvaluatedDependency struct {
 	ID     DependencyID
 	Label  string
 	Result DependencyCheckResult
 }
 
 type EvaluatedHealthCheck struct {
-	Host   []DependencyStatus
-	Target []DependencyStatus
+	Host   []EvaluatedDependency
+	Target []EvaluatedDependency
 }
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
-	hostDependencies := hostRequiredDependencies(options.SkipVersionChecks)
-	targetDependencies := targetRequiredDependencies(options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage)
-	dependencies := append(hostDependencies, targetDependencies...)
-	healthCheck := HealthCheck{
-		Host:   dependencyIDs(hostDependencies),
-		Target: dependencyIDs(targetDependencies),
+	registry := NewDependencyRegistry()
+
+	dependencyTopo := registry.Register(NewDependencyOnTopo(options.SkipVersionChecks))
+	localRunner := runner.NewLocal()
+	dependencySSH := registry.Register(NewDependencyOnSSH(localRunner))
+	dependencyDocker := registry.Register(NewDependencyOnDocker(localRunner))
+	dependencyDockerCompose := registry.Register(NewDependencyOnDockerCompose(localRunner), dependencyDocker)
+	hostDependencies := []*DependencyNode{dependencyTopo, dependencySSH, dependencyDocker, dependencyDockerCompose}
+
+	targetPrerequisites := []*DependencyNode(nil)
+	targetDependencies := []*DependencyNode(nil)
+	if options.Target == nil || !options.Target.IsPlainLocalhost() {
+		dependencyConnectivity := registry.Register(NewConnectivityDependency(options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage))
+		targetPrerequisites = []*DependencyNode{dependencyConnectivity}
+		targetDependencies = append(targetDependencies, dependencyConnectivity)
+	}
+	if options.Target != nil {
+		targetRunner := runner.For(*options.Target)
+		dependencyDocker := registry.Register(NewDependencyOnDocker(targetRunner), targetPrerequisites...)
+		dependencyRemoteproc := registry.Register(NewDependencyOnRemoteproc(targetRunner), targetPrerequisites...)
+		dependencyRemoteprocRuntime := registry.Register(
+			NewDependencyOnRemoteprocRuntime(*options.Target, targetRunner),
+			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
+		)
+		dependencyRemoteprocRuntimeShim := registry.Register(
+			NewDependencyOnRemoteprocRuntimeShim(*options.Target, targetRunner),
+			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
+		)
+		dependencyLscpu := registry.Register(NewDependencyOnLscpu(targetRunner), targetPrerequisites...)
+		targetDependencies = append(targetDependencies, dependencyDocker, dependencyRemoteproc, dependencyRemoteprocRuntime, dependencyRemoteprocRuntimeShim, dependencyLscpu)
 	}
 
-	healthCheck.Registry = NewDependencyRegistry(dependencies)
-	return healthCheck
+	return HealthCheck{
+		Registry: registry,
+		Host:     hostDependencies,
+		Target:   targetDependencies,
+	}
 }
 
 func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
@@ -50,27 +78,19 @@ func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
 	}
 }
 
-func (h HealthCheck) evaluateDependencies(ctx context.Context, dependencies []DependencyID) []DependencyStatus {
-	statuses := make([]DependencyStatus, 0, len(dependencies))
-	for _, id := range dependencies {
-		dependency := h.Registry.dependency(id).dependency
-		result, hasUnmetPrerequisites := h.Registry.Check(ctx, id)
-		if hasUnmetPrerequisites {
+func (h HealthCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
+	statuses := make([]EvaluatedDependency, 0, len(references))
+	for _, reference := range references {
+		result, checked := h.Registry.Check(ctx, reference)
+		if !checked {
 			continue
 		}
-		statuses = append(statuses, DependencyStatus{
+		dependency := reference.Dependency()
+		statuses = append(statuses, EvaluatedDependency{
 			ID:     dependency.ID,
 			Label:  dependency.Label,
 			Result: result,
 		})
 	}
 	return statuses
-}
-
-func dependencyIDs(dependencies []Dependency) []DependencyID {
-	ids := make([]DependencyID, len(dependencies))
-	for index, dependency := range dependencies {
-		ids[index] = dependency.ID
-	}
-	return ids
 }

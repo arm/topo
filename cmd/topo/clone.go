@@ -77,10 +77,13 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.Clone(os.Stdout, path, projectSource, resolver)
+		return project.Clone(os.Stdout, path, projectSource, resolver, migrateToEnv(cmd))
 	},
 }
 
 func init() {
+	if experimentalFeaturesEnabled() {
+		addMigrateToEnvFlag(topoCloneCmd)
+	}
 	rootCmd.AddCommand(topoCloneCmd)
 }
