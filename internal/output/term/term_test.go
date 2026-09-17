@@ -100,16 +100,20 @@ func TestPrintHeader(t *testing.T) {
 
 		require.NoError(t, term.PrintNthHeader(&buf, "Hello"))
 
-		want := "\n── Hello ───────────────────────────────────────────────────\n"
+		want := "\n── Hello " + strings.Repeat("─", 51) + "\n"
+		//                 ^
+		//         123456789 => 60 - 9 = 51
 		assert.Equal(t, want, buf.String())
 	})
 
-	t.Run("counts unicode descriptions by runes", func(t *testing.T) {
+	t.Run("correctly pads around unicode symbols", func(t *testing.T) {
 		var buf bytes.Buffer
 
-		require.NoError(t, term.PrintNthHeader(&buf, "✓"))
+		require.NoError(t, term.PrintNthHeader(&buf, "✓✓✓"))
 
-		want := "\n── ✓ ───────────────────────────────────────────────────────\n"
+		want := "\n── ✓✓✓ " + strings.Repeat("─", 53) + "\n"
+		//               ^
+		//         1234567 => 60 - 7 = 53
 		assert.Equal(t, want, buf.String())
 	})
 
