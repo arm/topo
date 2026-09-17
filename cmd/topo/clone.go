@@ -82,8 +82,6 @@ interactive prompts.`,
 }
 
 func init() {
-	if experimentalFeaturesEnabled() {
-		addMigrateToEnvFlag(topoCloneCmd)
-	}
+	addMigrateToEnvFlag(topoCloneCmd)
 	rootCmd.AddCommand(topoCloneCmd)
 }

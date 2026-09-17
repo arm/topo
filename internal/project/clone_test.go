@@ -55,7 +55,7 @@ services:
 		assert.FileExists(t, composeFilePath)
 	})
 
-	t.Run("preserves current build arg values", func(t *testing.T) {
+	t.Run("preserves current env values and leaves Compose unchanged", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		composeFileContents := `services:
@@ -72,7 +72,10 @@ x-topo:
     GREETING:
       required: true
 `
-		mockSource := mockSourceWithComposeFile(t, composeFileContents)
+		mockSource := mockSourceWithContent(t, map[string]string{
+			compose.DefaultFileName(): composeFileContents,
+			env.DefaultFilename:       "GREETING=hello\n",
+		})
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver), false)
@@ -80,7 +83,7 @@ x-topo:
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
-		assert.NoFileExists(t, filepath.Join(destDir, env.DefaultFilename))
+		testutil.RequireEnvFileValues(t, filepath.Join(destDir, env.DefaultFilename), map[string]string{"GREETING": "hello"})
 	})
 
 	t.Run("removes destination directory when parameter configuration fails", func(t *testing.T) {
@@ -91,7 +94,7 @@ services:
   app:
     build:
       args:
-        GREETING: ""
+        GREETING: ${GREETING}
 x-topo:
   parameters:
     GREETING:
@@ -101,12 +104,32 @@ x-topo:
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), false)
 
-		require.Error(t, err)
+		require.ErrorContains(t, err, "missing value(s) for required parameters")
 		_, statErr := os.Stat(destDir)
 		assert.True(t, os.IsNotExist(statErr))
 	})
 
-	t.Run("migrates configured values to the env file", func(t *testing.T) {
+	t.Run("rejects unreferenced parameters with clone-specific migration guidance", func(t *testing.T) {
+		destDir := filepath.Join(t.TempDir(), "demo")
+		source := mockSourceWithComposeFile(t, `
+services:
+  app:
+    build:
+      args:
+        GREETING: hello
+x-topo:
+  parameters:
+    GREETING: {}
+`)
+
+		err := project.Clone(t.Output(), destDir, source, parameter.NewStrictResolverChain(), false)
+
+		require.ErrorIs(t, err, project.ErrNoParameterReferences)
+		assert.ErrorContains(t, err, "Try cloning again with '--migrate-to-env'")
+		assert.NoDirExists(t, destDir)
+	})
+
+	t.Run("configures provided values after migrating legacy build args", func(t *testing.T) {
 		destDir := filepath.Join(t.TempDir(), "demo")
 		source := mockSourceWithContent(t, map[string]string{
 			"compose.yml": `services:
@@ -152,7 +175,7 @@ services:
   app:
     build:
       args:
-        GREETING: ""
+        GREETING: ${GREETING}
 x-topo:
   parameters:
     GREETING:

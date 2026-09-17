@@ -25,16 +25,6 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 		return err
 	}
 
-	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
-		return err
-	}
-	if err := Configure(composeFilePath, resolver); err != nil {
-		if rmErr := os.RemoveAll(path); rmErr != nil {
-			return errors.Join(err, rmErr)
-		}
-		return fmt.Errorf("configure failed: %w", err)
-	}
-
 	if migrateToEnv {
 		if err := term.PrintNthHeader(output, "Migrate to dotenv-based configuration"); err != nil {
 			return err
@@ -45,7 +35,19 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 			}
 			return fmt.Errorf("migration failed: %w", err)
 		}
+	}
 
+	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
+		return err
+	}
+	if err := Configure(composeFilePath, resolver); err != nil {
+		if rmErr := os.RemoveAll(path); rmErr != nil {
+			return errors.Join(err, rmErr)
+		}
+		if errors.Is(err, ErrNoParameterReferences) {
+			return fmt.Errorf("%w; this project might use the parameter format from Topo versions older than 14.0.0. Try cloning again with '--migrate-to-env'", err)
+		}
+		return fmt.Errorf("configure failed: %w", err)
 	}
 
 	if err := term.PrintNthHeader(output, "Project ready"); err != nil {

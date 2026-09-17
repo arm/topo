@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: Project configuration
-description: Define configurable project parameters and connect them to Compose build arguments.
+description: Define project parameters and reference them through environment variables.
 ---
 
 # Project Configuration
@@ -11,6 +11,8 @@ description: Define configurable project parameters and connect them to Compose 
 [Topo Projects](../introduction/glossary.md#topo-project) support configuration through project parameters:
 
 - [`x-topo.parameters`](../introduction/glossary.md#x-topo) defines parameter metadata (description, whether required, examples, and advisory hints)
+- Compose environment variable references connect parameter names to their uses in the project
+- `topo configure` saves parameter values in `.env.topo` without rewriting the Compose file
 - When a project parameter is used during an image build, its value is passed through standard Compose `build.args` and consumed by the Dockerfile as an `ARG`
 
 ## How Project Parameters Work
@@ -26,9 +28,9 @@ services:
     platform: linux/arm64
     build:
       context: .
-      # Initial value: allows running with plain docker compose
+      # The fallback allows running without a configured value.
       args:
-        GREETING: "Hello, World"
+        GREETING: "${GREETING:-Hello, World}"
 
 x-topo:
   name: "Topo Welcome"
@@ -58,6 +60,35 @@ ARG GREETING
 RUN test -n "$GREETING" || (echo "ERROR: GREETING project parameter is required" && exit 1)
 ...
 ```
+
+## Configure parameter values
+
+From the project directory, run:
+
+```sh
+topo configure GREETING="Hello from Arm SME"
+```
+
+Topo saves the value in `.env.topo`. The Compose file continues to reference `${GREETING:-Hello, World}`.
+To use the saved values with Docker Compose directly, specify the environment file:
+
+```sh
+docker compose --env-file .env.topo up --build
+```
+
+Parameter names must match their environment variable references. If the project defines parameters but none are referenced, `topo configure` rejects the project as using the legacy format.
+
+## Migrate a legacy configured project for use with Topo 14.0.0
+
+Topo 14.0.0 replaces configuration by rewriting literal build arguments with configuration through environment variable references.
+Before configuring a legacy project, run:
+
+```sh
+topo configure --migrate-to-env
+```
+
+The migration moves current parameter values to `.env.topo` and replaces their uses in the Compose file with environment variable references.
+Review the Compose file changes after migration. Then use `topo configure` to update parameter values.
 
 ## Parameter Hints
 
