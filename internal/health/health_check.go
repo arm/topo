@@ -15,20 +15,30 @@ type HealthCheckOptions struct {
 }
 
 type HealthCheck struct {
+	Deployment       ReadinessCheck
+	ProjectDiscovery ReadinessCheck
+}
+
+type ReadinessCheck struct {
 	Registry *DependencyRegistry
 	Host     []*DependencyNode
 	Target   []*DependencyNode
+}
+
+type EvaluatedHealthCheck struct {
+	Deployment       EvaluatedReadinessCheck
+	ProjectDiscovery EvaluatedReadinessCheck
+}
+
+type EvaluatedReadinessCheck struct {
+	Host   []EvaluatedDependency
+	Target []EvaluatedDependency
 }
 
 type EvaluatedDependency struct {
 	ID     DependencyID
 	Label  string
 	Result DependencyCheckResult
-}
-
-type EvaluatedHealthCheck struct {
-	Host   []EvaluatedDependency
-	Target []EvaluatedDependency
 }
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
@@ -39,14 +49,17 @@ func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 	dependencySSH := registry.Register(NewDependencyOnSSH(localRunner))
 	dependencyDocker := registry.Register(NewDependencyOnDocker(localRunner))
 	dependencyDockerCompose := registry.Register(NewDependencyOnDockerCompose(localRunner), dependencyDocker)
-	hostDependencies := []*DependencyNode{dependencyTopo, dependencySSH, dependencyDocker, dependencyDockerCompose}
+	deploymentHostDependencies := []*DependencyNode{dependencyTopo, dependencySSH, dependencyDocker, dependencyDockerCompose}
+	projectDiscoveryHostDependencies := []*DependencyNode{dependencySSH}
 
 	targetPrerequisites := []*DependencyNode(nil)
-	targetDependencies := []*DependencyNode(nil)
+	deploymentTargetDependencies := []*DependencyNode(nil)
+	projectDiscoveryTargetDependencies := []*DependencyNode(nil)
 	if options.Target == nil || !options.Target.IsPlainLocalhost() {
 		dependencyConnectivity := registry.Register(NewConnectivityDependency(options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage))
 		targetPrerequisites = []*DependencyNode{dependencyConnectivity}
-		targetDependencies = append(targetDependencies, dependencyConnectivity)
+		deploymentTargetDependencies = append(deploymentTargetDependencies, dependencyConnectivity)
+		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyConnectivity)
 	}
 	if options.Target != nil {
 		targetRunner := runner.For(*options.Target)
@@ -61,24 +74,39 @@ func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
 		)
 		dependencyLscpu := registry.Register(NewDependencyOnLscpu(targetRunner), targetPrerequisites...)
-		targetDependencies = append(targetDependencies, dependencyDocker, dependencyRemoteproc, dependencyRemoteprocRuntime, dependencyRemoteprocRuntimeShim, dependencyLscpu)
+		deploymentTargetDependencies = append(deploymentTargetDependencies, dependencyDocker, dependencyRemoteproc, dependencyRemoteprocRuntime, dependencyRemoteprocRuntimeShim)
+		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyLscpu)
 	}
 
 	return HealthCheck{
-		Registry: registry,
-		Host:     hostDependencies,
-		Target:   targetDependencies,
+		Deployment: ReadinessCheck{
+			Registry: registry,
+			Host:     deploymentHostDependencies,
+			Target:   deploymentTargetDependencies,
+		},
+		ProjectDiscovery: ReadinessCheck{
+			Registry: registry,
+			Host:     projectDiscoveryHostDependencies,
+			Target:   projectDiscoveryTargetDependencies,
+		},
 	}
 }
 
 func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
 	return EvaluatedHealthCheck{
+		Deployment:       h.Deployment.Evaluate(ctx),
+		ProjectDiscovery: h.ProjectDiscovery.Evaluate(ctx),
+	}
+}
+
+func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
+	return EvaluatedReadinessCheck{
 		Host:   h.evaluateDependencies(ctx, h.Host),
 		Target: h.evaluateDependencies(ctx, h.Target),
 	}
 }
 
-func (h HealthCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
+func (h ReadinessCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
 	statuses := make([]EvaluatedDependency, 0, len(references))
 	for _, reference := range references {
 		result, checked := h.Registry.Check(ctx, reference)

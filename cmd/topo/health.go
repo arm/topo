@@ -59,7 +59,7 @@ var healthCmd = &cobra.Command{
 			spinner.Stop()
 		}
 
-		return views.Print(views.NewHealthReport(report.Host, report.Target), os.Stdout, outputFormat)
+		return views.Print(views.HealthReport(report), os.Stdout, outputFormat)
 	},
 }
 

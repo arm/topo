@@ -2,6 +2,8 @@ package views
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/arm/topo/internal/health"
@@ -9,15 +11,12 @@ import (
 )
 
 type HealthReport struct {
-	Host   health.HostReport
-	Target health.TargetReport
+	TargetDetails    health.TargetDetails
+	Deployment       health.ReadinessReport
+	ProjectDiscovery health.ReadinessReport
 }
 
-func NewHealthReport(host health.HostReport, target health.TargetReport) HealthReport {
-	return HealthReport{Host: host, Target: target}
-}
-
-const healthReportTemplate = `
+const functionalityHealthReportTemplate = `
 {{- define "checkRow" -}}
 {{ status .Status }}{{ .Name }}{{- if .Value }} ({{ .Value }}){{- end }}
 {{- if .Fix }}
@@ -29,28 +28,49 @@ const healthReportTemplate = `
   {{- end }}
 {{- end -}}
 {{- end -}}
-{{ sectionHeading "Host" }}
-{{- range $hostCheckRow := .Host.Dependencies }}
-{{ template "checkRow" $hostCheckRow }}
+{{- define "indentedCheckRow" -}}
+{{ "  " }}{{ status .Status }}{{ .Name }}{{- if .Value }} ({{ .Value }}){{- end }}
+{{- if .Fix }}
+    Fix:
+      {{ .Fix.Description }}
+  {{- if .Fix.Command }}
+    Command:
+      {{ .Fix.Command }}
+  {{- end }}
+{{- end -}}
+{{- end -}}
+{{- define "functionality" -}}
+{{ functionalityHeading .Name .Report }}
+{{ status (dependencyStatus .Report.Host) }}Host
+{{- range .Report.Host }}
+{{ template "indentedCheckRow" . }}
 {{- end }}
-
-{{ sectionHeading "Target" }}
-{{- range $targetCheckRow := .Target.Dependencies }}
-{{ template "checkRow" $targetCheckRow }}
+{{ status (dependencyStatus .Report.Target) }}Target
+{{- range .Report.Target }}
+{{ template "indentedCheckRow" . }}
 {{- end }}
+{{- end -}}
+{{ template "functionality" (functionality "Deployment" .Deployment) }}
 
+{{ template "functionality" (functionality "Project management" .ProjectDiscovery) }}
 `
+
+type functionalityTemplateData struct {
+	Name   string
+	Report health.ReadinessReport
+}
 
 func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
-	funcMap["sectionHeading"] = func(heading string) string {
-		return sectionHeading(heading, isTTY)
+	funcMap["functionality"] = func(name string, report health.ReadinessReport) functionalityTemplateData {
+		return functionalityTemplateData{Name: name, Report: report}
 	}
-	tmpl, err := template.
-		New("healthcheck").
-		Funcs(funcMap).
-		Parse(healthReportTemplate)
+	funcMap["functionalityHeading"] = func(name string, report health.ReadinessReport) string {
+		return functionalityHeading(name, report, isTTY)
+	}
+	funcMap["dependencyStatus"] = dependencyStatus
+	tmpl, err := template.New("functionality-healthcheck").Funcs(funcMap).Parse(functionalityHealthReportTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -58,12 +78,81 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	if err := tmpl.Execute(&buf, r); err != nil {
 		return "", err
 	}
-
 	return buf.String(), nil
 }
 
 func (r HealthReport) AsJSON() (string, error) {
-	return asJSON(toJSONHealthReport(r))
+	targetDependencies := legacyTargetDependencies(r.Deployment.Target, r.ProjectDiscovery.Target)
+	return asJSON(toJSONHealthReport(legacyHealthReport{
+		HostDependencies:   r.Deployment.Host,
+		TargetDependencies: targetDependencies,
+		TargetDetails:      r.TargetDetails,
+	}))
+}
+
+type legacyHealthReport struct {
+	HostDependencies   []health.DependencyReport
+	TargetDependencies []health.DependencyReport
+	TargetDetails      health.TargetDetails
+}
+
+func legacyTargetDependencies(deployment, projectDiscovery []health.DependencyReport) []health.DependencyReport {
+	targetDependencies := append([]health.DependencyReport(nil), deployment...)
+	for _, dependency := range projectDiscovery {
+		if dependency.ID != health.DependencyIDConnectivity {
+			targetDependencies = append(targetDependencies, dependency)
+		}
+	}
+	return targetDependencies
+}
+
+func functionalityHeading(name string, report health.ReadinessReport, isTTY bool) string {
+	status, unreadyDependencies := functionalityStatus(report)
+	readiness := "ready"
+	indicator := ""
+	color := term.Green
+	if unreadyDependencies > 0 {
+		readiness = "not ready"
+		icon := "✗"
+		color = term.Red
+		if status == health.CheckStatusWarning {
+			icon = "!"
+			color = term.Yellow
+			readiness = "ready"
+		}
+		indicator = fmt.Sprintf("%s %d", icon, unreadyDependencies)
+		readiness += " (" + indicator + ")"
+	}
+	heading := sectionHeading(name+": "+readiness, isTTY)
+	if !isTTY || indicator == "" {
+		return heading
+	}
+	return strings.Replace(heading, indicator, term.Color(color, indicator), 1)
+}
+
+func functionalityStatus(report health.ReadinessReport) (health.CheckStatus, int) {
+	dependencies := append([]health.DependencyReport(nil), report.Host...)
+	dependencies = append(dependencies, report.Target...)
+	unreadyDependencies := 0
+	for _, dependency := range dependencies {
+		if dependency.Status == health.CheckStatusWarning || dependency.Status == health.CheckStatusError {
+			unreadyDependencies++
+		}
+	}
+	return dependencyStatus(dependencies), unreadyDependencies
+}
+
+func dependencyStatus(dependencies []health.DependencyReport) health.CheckStatus {
+	status := health.CheckStatusOK
+	for _, dependency := range dependencies {
+		if dependency.Status == health.CheckStatusError {
+			return health.CheckStatusError
+		}
+		if dependency.Status == health.CheckStatusWarning {
+			status = health.CheckStatusWarning
+		}
+	}
+	return status
 }
 
 func sectionHeading(heading string, isTTY bool) string {
@@ -117,25 +206,25 @@ type jsonFix struct {
 	Command     string `json:"command,omitempty"`
 }
 
-func toJSONHealthReport(report HealthReport) jsonHealthReport {
+func toJSONHealthReport(report legacyHealthReport) jsonHealthReport {
 	jsonReport := jsonHealthReport{
-		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.Host.Dependencies)},
+		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.HostDependencies)},
 	}
-	if report.Target.Destination != "" {
-		jsonTarget := toJSONTargetReport(report.Target)
+	if report.TargetDetails.Destination != "" {
+		jsonTarget := toJSONTargetReport(report.TargetDependencies, report.TargetDetails)
 		jsonReport.Target = &jsonTarget
 	}
 	return jsonReport
 }
 
-func toJSONTargetReport(report health.TargetReport) jsonTargetReport {
+func toJSONTargetReport(dependencies []health.DependencyReport, details health.TargetDetails) jsonTargetReport {
 	jsonTarget := jsonTargetReport{
-		Destination:            report.Destination,
-		IsLocalhost:            report.IsLocalhost,
-		Dependencies:           make([]jsonDependencyReport, 0, len(report.Dependencies)),
+		Destination:            details.Destination,
+		IsLocalhost:            details.IsLocalhost,
+		Dependencies:           make([]jsonDependencyReport, 0, len(dependencies)),
 		ProcessingDomainDriver: jsonDependencyReport{Name: "Processing Domain Driver (remoteproc)"},
 	}
-	for _, check := range report.Dependencies {
+	for _, check := range dependencies {
 		jsonCheck := toJSONDependencyReport(check)
 		switch check.ID {
 		case health.DependencyIDConnectivity:
