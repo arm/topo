@@ -11,13 +11,15 @@ import (
 func TestHealthCheck(t *testing.T) {
 	t.Run("Evaluate", func(t *testing.T) {
 		t.Run("reports successful dependencies in the group", func(t *testing.T) {
+			registry := health.NewDependencyRegistry()
 			virus := health.Dependency{ID: "virus", Check: passingCheck}
-			bartek := health.Dependency{ID: "bartek", Prerequisites: []health.DependencyID{virus.ID}, Check: passingCheck}
-			registry := health.NewDependencyRegistry([]health.Dependency{virus, bartek})
+			virusRef := registry.Register(virus)
+			bartek := health.Dependency{ID: "bartek", Prerequisites: []*health.DependencyNode{virusRef}, Check: passingCheck}
+			bartekRef := registry.Register(bartek)
 
 			healthCheck := health.HealthCheck{
 				Registry: registry,
-				Host:     []health.DependencyID{bartek.ID, virus.ID},
+				Host:     []*health.DependencyNode{bartekRef, virusRef},
 			}
 
 			got := healthCheck.Evaluate(context.Background())
@@ -30,13 +32,15 @@ func TestHealthCheck(t *testing.T) {
 		})
 
 		t.Run("reports a failed prerequisite and omits its dependent", func(t *testing.T) {
+			registry := health.NewDependencyRegistry()
 			flour := health.Dependency{ID: "flour", Check: failingCheck}
-			pizza := health.Dependency{ID: "pizza", Prerequisites: []health.DependencyID{flour.ID}, Check: passingCheck}
-			registry := health.NewDependencyRegistry([]health.Dependency{flour, pizza})
+			flourRef := registry.Register(flour)
+			pizza := health.Dependency{ID: "pizza", Prerequisites: []*health.DependencyNode{flourRef}, Check: passingCheck}
+			pizzaRef := registry.Register(pizza)
 
 			healthCheck := health.HealthCheck{
 				Registry: registry,
-				Host:     []health.DependencyID{flour.ID, pizza.ID},
+				Host:     []*health.DependencyNode{flourRef, pizzaRef},
 			}
 
 			got := healthCheck.Evaluate(context.Background())

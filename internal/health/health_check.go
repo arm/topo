@@ -15,8 +15,8 @@ type HealthCheckOptions struct {
 
 type HealthCheck struct {
 	Registry *DependencyRegistry
-	Host     []DependencyID
-	Target   []DependencyID
+	Host     []*DependencyNode
+	Target   []*DependencyNode
 }
 
 type EvaluatedDependency struct {
@@ -31,16 +31,12 @@ type EvaluatedHealthCheck struct {
 }
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
-	hostDependencies := hostRequiredDependencies(options.SkipVersionChecks)
-	targetDependencies := targetRequiredDependencies(options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage)
-	dependencies := append(hostDependencies, targetDependencies...)
-	healthCheck := HealthCheck{
-		Host:   dependencyIDs(hostDependencies),
-		Target: dependencyIDs(targetDependencies),
+	registry := NewDependencyRegistry()
+	return HealthCheck{
+		Registry: registry,
+		Host:     hostRequiredDependencies(registry, options.SkipVersionChecks),
+		Target:   targetRequiredDependencies(registry, options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage),
 	}
-
-	healthCheck.Registry = NewDependencyRegistry(dependencies)
-	return healthCheck
 }
 
 func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
@@ -50,11 +46,11 @@ func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
 	}
 }
 
-func (h HealthCheck) evaluateDependencies(ctx context.Context, dependencies []DependencyID) []EvaluatedDependency {
+func (h HealthCheck) evaluateDependencies(ctx context.Context, dependencies []*DependencyNode) []EvaluatedDependency {
 	statuses := make([]EvaluatedDependency, 0, len(dependencies))
-	for _, id := range dependencies {
-		dependency := h.Registry.dependency(id).dependency
-		result, hasUnmetPrerequisites := h.Registry.Check(ctx, id)
+	for _, reference := range dependencies {
+		dependency := h.Registry.dependency(reference).dependency
+		result, hasUnmetPrerequisites := h.Registry.Check(ctx, reference)
 		if hasUnmetPrerequisites {
 			continue
 		}
@@ -65,12 +61,4 @@ func (h HealthCheck) evaluateDependencies(ctx context.Context, dependencies []De
 		})
 	}
 	return statuses
-}
-
-func dependencyIDs(dependencies []Dependency) []DependencyID {
-	ids := make([]DependencyID, len(dependencies))
-	for index, dependency := range dependencies {
-		ids[index] = dependency.ID
-	}
-	return ids
 }
