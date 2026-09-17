@@ -31,7 +31,7 @@ type TargetReport struct {
 
 type HealthReport struct {
 	Host   HostReport
-	Target *TargetReport
+	Target TargetReport
 }
 
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
@@ -39,17 +39,15 @@ func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
 	report := HealthReport{
 		Host: HostReport{Dependencies: toDependencyReports(evaluatedHealthCheck.Host)},
+		Target: TargetReport{
+			Dependencies: toDependencyReports(evaluatedHealthCheck.Target),
+		},
 	}
-	if healthCheck.Target == nil {
-		return report
+	if options.Target != nil {
+		// Legacy JSON support
+		report.Target.Destination = options.Target.String()
+		report.Target.IsLocalhost = options.Target.IsPlainLocalhost()
 	}
-
-	targetReport := TargetReport{
-		Destination:  options.Target.String(),
-		IsLocalhost:  options.Target.IsPlainLocalhost(),
-		Dependencies: toDependencyReports(evaluatedHealthCheck.Target),
-	}
-	report.Target = &targetReport
 	return report
 }
 

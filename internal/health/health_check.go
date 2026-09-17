@@ -7,9 +7,10 @@ import (
 )
 
 type HealthCheckOptions struct {
-	Target            *ssh.Destination
-	SkipVersionChecks bool
-	AcceptHostKeys    bool
+	Target                  *ssh.Destination
+	MissingTargetFixMessage string
+	SkipVersionChecks       bool
+	AcceptHostKeys          bool
 }
 
 type HealthCheck struct {
@@ -31,15 +32,11 @@ type EvaluatedHealthCheck struct {
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 	hostDependencies := hostRequiredDependencies(options.SkipVersionChecks)
-	dependencies := hostDependencies
+	targetDependencies := targetRequiredDependencies(options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage)
+	dependencies := append(hostDependencies, targetDependencies...)
 	healthCheck := HealthCheck{
-		Host: dependencyIDs(hostDependencies),
-	}
-
-	if options.Target != nil {
-		targetDependencies := targetRequiredDependencies(*options.Target, options.AcceptHostKeys)
-		dependencies = append(dependencies, targetDependencies...)
-		healthCheck.Target = dependencyIDs(targetDependencies)
+		Host:   dependencyIDs(hostDependencies),
+		Target: dependencyIDs(targetDependencies),
 	}
 
 	healthCheck.Registry = NewDependencyRegistry(dependencies)
