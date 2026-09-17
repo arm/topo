@@ -13,6 +13,10 @@ type DependencyNode struct {
 	result        DependencyCheckResult
 }
 
+func (n *DependencyNode) Dependency() Dependency {
+	return n.dependency
+}
+
 type DependencyRegistry struct {
 	dependencies []*DependencyNode
 }
@@ -23,7 +27,7 @@ func NewDependencyRegistry() *DependencyRegistry {
 
 func (r *DependencyRegistry) Register(dependency Dependency, prerequisites ...*DependencyNode) *DependencyNode {
 	for _, prerequisite := range prerequisites {
-		r.dependency(prerequisite)
+		r.assertRegistered(prerequisite)
 	}
 
 	node := &DependencyNode{dependency: dependency, prerequisites: prerequisites}
@@ -32,7 +36,7 @@ func (r *DependencyRegistry) Register(dependency Dependency, prerequisites ...*D
 }
 
 func (r *DependencyRegistry) Check(ctx context.Context, node *DependencyNode) (DependencyCheckResult, bool) {
-	r.dependency(node)
+	r.assertRegistered(node)
 	for _, prerequisite := range node.prerequisites {
 		prerequisiteResult, hasUnmetPrerequisites := r.Check(ctx, prerequisite)
 		if hasUnmetPrerequisites || prerequisiteResult.Failure != nil {
@@ -51,9 +55,8 @@ func (r *DependencyRegistry) checkDependency(ctx context.Context, node *Dependen
 	return node.result
 }
 
-func (r *DependencyRegistry) dependency(node *DependencyNode) *DependencyNode {
+func (r *DependencyRegistry) assertRegistered(node *DependencyNode) {
 	if !slices.Contains(r.dependencies, node) {
 		panic("health dependency is not registered in this registry")
 	}
-	return node
 }
