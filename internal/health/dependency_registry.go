@@ -2,55 +2,61 @@ package health
 
 import (
 	"context"
-	"fmt"
+	"slices"
 	"sync"
 )
 
-type dependencyNode struct {
-	dependency Dependency
-	once       sync.Once
-	result     DependencyCheckResult
+type DependencyNode struct {
+	dependency    Dependency
+	prerequisites []*DependencyNode
+	once          sync.Once
+	result        DependencyCheckResult
+}
+
+func (n *DependencyNode) Dependency() Dependency {
+	return n.dependency
 }
 
 type DependencyRegistry struct {
-	dependencies map[DependencyID]*dependencyNode
+	dependencies []*DependencyNode
 }
 
-func NewDependencyRegistry(dependencies []Dependency) *DependencyRegistry {
-	registered := make(map[DependencyID]*dependencyNode, len(dependencies))
-	for _, dependency := range dependencies {
-		if _, exists := registered[dependency.ID]; exists {
-			panic(fmt.Sprintf("duplicate health dependency ID: %q", dependency.ID))
-		}
-		registered[dependency.ID] = &dependencyNode{dependency: dependency}
+func NewDependencyRegistry() *DependencyRegistry {
+	return &DependencyRegistry{}
+}
+
+func (r *DependencyRegistry) Register(dependency Dependency, prerequisites ...*DependencyNode) *DependencyNode {
+	for _, prerequisite := range prerequisites {
+		r.assertRegistered(prerequisite)
 	}
-	return &DependencyRegistry{dependencies: registered}
+
+	node := &DependencyNode{dependency: dependency, prerequisites: prerequisites}
+	r.dependencies = append(r.dependencies, node)
+	return node
 }
 
-func (r *DependencyRegistry) Check(ctx context.Context, id DependencyID) (DependencyCheckResult, bool) {
-	dependency := r.dependency(id)
-	for _, prerequisiteID := range dependency.dependency.Prerequisites {
-		prerequisiteResult, hasUnmetPrerequisites := r.Check(ctx, prerequisiteID)
-		if hasUnmetPrerequisites || prerequisiteResult.Failure != nil {
-			return DependencyCheckResult{}, true
+func (r *DependencyRegistry) Check(ctx context.Context, node *DependencyNode) (DependencyCheckResult, bool) {
+	r.assertRegistered(node)
+	for _, prerequisite := range node.prerequisites {
+		prerequisiteResult, checked := r.Check(ctx, prerequisite)
+		if !checked || prerequisiteResult.Failure != nil {
+			return DependencyCheckResult{}, false
 		}
 	}
-	return r.checkDependency(ctx, dependency), false
+	return r.checkDependency(ctx, node), true
 }
 
-func (r *DependencyRegistry) checkDependency(ctx context.Context, dependency *dependencyNode) DependencyCheckResult {
-	dependency.once.Do(func() {
-		if dependency.dependency.Check != nil {
-			dependency.result = dependency.dependency.Check(ctx)
+func (r *DependencyRegistry) checkDependency(ctx context.Context, node *DependencyNode) DependencyCheckResult {
+	node.once.Do(func() {
+		if node.dependency.Check != nil {
+			node.result = node.dependency.Check(ctx)
 		}
 	})
-	return dependency.result
+	return node.result
 }
 
-func (r *DependencyRegistry) dependency(id DependencyID) *dependencyNode {
-	dependency, exists := r.dependencies[id]
-	if !exists {
-		panic(fmt.Sprintf("health dependency not registered: %q", id))
+func (r *DependencyRegistry) assertRegistered(node *DependencyNode) {
+	if !slices.Contains(r.dependencies, node) {
+		panic("health dependency is not registered in this registry")
 	}
-	return dependency
 }
