@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 
+	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -32,10 +33,41 @@ type EvaluatedHealthCheck struct {
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 	registry := NewDependencyRegistry()
+
+	dependencyTopo := registry.Register(NewDependencyOnTopo(options.SkipVersionChecks))
+	localRunner := runner.NewLocal()
+	dependencySSH := registry.Register(NewDependencyOnSSH(localRunner))
+	dependencyDocker := registry.Register(NewDependencyOnDocker(localRunner))
+	dependencyDockerCompose := registry.Register(NewDependencyOnDockerCompose(localRunner), dependencyDocker)
+	hostDependencies := []*DependencyNode{dependencyTopo, dependencySSH, dependencyDocker, dependencyDockerCompose}
+
+	targetPrerequisites := []*DependencyNode(nil)
+	targetDependencies := []*DependencyNode(nil)
+	if options.Target == nil || !options.Target.IsPlainLocalhost() {
+		dependencyConnectivity := registry.Register(NewConnectivityDependency(options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage))
+		targetPrerequisites = []*DependencyNode{dependencyConnectivity}
+		targetDependencies = append(targetDependencies, dependencyConnectivity)
+	}
+	if options.Target != nil {
+		targetRunner := runner.For(*options.Target)
+		dependencyDocker := registry.Register(NewDependencyOnDocker(targetRunner), targetPrerequisites...)
+		dependencyRemoteproc := registry.Register(NewDependencyOnRemoteproc(targetRunner), targetPrerequisites...)
+		dependencyRemoteprocRuntime := registry.Register(
+			NewDependencyOnRemoteprocRuntime(*options.Target, targetRunner),
+			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
+		)
+		dependencyRemoteprocRuntimeShim := registry.Register(
+			NewDependencyOnRemoteprocRuntimeShim(*options.Target, targetRunner),
+			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
+		)
+		dependencyLscpu := registry.Register(NewDependencyOnLscpu(targetRunner), targetPrerequisites...)
+		targetDependencies = append(targetDependencies, dependencyDocker, dependencyRemoteproc, dependencyRemoteprocRuntime, dependencyRemoteprocRuntimeShim, dependencyLscpu)
+	}
+
 	return HealthCheck{
 		Registry: registry,
-		Host:     hostRequiredDependencies(registry, options.SkipVersionChecks),
-		Target:   targetRequiredDependencies(registry, options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage),
+		Host:     hostDependencies,
+		Target:   targetDependencies,
 	}
 }
 

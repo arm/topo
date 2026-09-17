@@ -58,41 +58,6 @@ type Fix struct {
 	Command     string
 }
 
-func hostRequiredDependencies(registry *DependencyRegistry, skipVersionChecks bool) []*DependencyNode {
-	topo := registry.Register(NewDependencyOnTopo(skipVersionChecks))
-	r := runner.NewLocal()
-	ssh := registry.Register(NewDependencyOnSSH(r))
-	docker := registry.Register(NewDependencyOnDocker(r))
-	dockerCompose := registry.Register(NewDependencyOnDockerCompose(r), docker)
-	return []*DependencyNode{topo, ssh, docker, dockerCompose}
-}
-
-func targetRequiredDependencies(registry *DependencyRegistry, target *ssh.Destination, acceptNewHostKeys bool, missingTargetFixMessage string) []*DependencyNode {
-	prerequisites := []*DependencyNode(nil)
-	dependencies := []*DependencyNode(nil)
-	if target == nil || !target.IsPlainLocalhost() {
-		connectivity := registry.Register(NewConnectivityDependency(target, acceptNewHostKeys, missingTargetFixMessage))
-		prerequisites = []*DependencyNode{connectivity}
-		dependencies = append(dependencies, connectivity)
-	}
-	if target != nil {
-		r := runner.For(*target)
-		docker := registry.Register(NewDependencyOnDocker(r), prerequisites...)
-		remoteproc := registry.Register(NewDependencyOnRemoteproc(r), prerequisites...)
-		remoteprocRuntime := registry.Register(
-			NewDependencyOnRemoteprocRuntime(*target, r),
-			append([]*DependencyNode{docker, remoteproc}, prerequisites...)...,
-		)
-		remoteprocRuntimeShim := registry.Register(
-			NewDependencyOnRemoteprocRuntimeShim(*target, r),
-			append([]*DependencyNode{docker, remoteproc}, prerequisites...)...,
-		)
-		lscpu := registry.Register(NewDependencyOnLscpu(r), prerequisites...)
-		dependencies = append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
-	}
-	return dependencies
-}
-
 func NewDependencyOnSSH(r runner.Runner) Dependency {
 	return Dependency{
 		Label: "OpenSSH",
