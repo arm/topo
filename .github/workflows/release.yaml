@@ -46,7 +46,13 @@ jobs:
           if [ "${{ inputs.pre-release }}" = "true" ]; then
             next="$(svu prerelease --prerelease pre)"
           else
-            next="$(svu next)"
+            while read -r tag; do
+              if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                git tag --delete "$tag"
+              fi
+            done < <(git tag --list 'v*')
+
+            next="$(svu next --tag.mode current)"
           fi
           echo "next_version=$next" >> "$GITHUB_OUTPUT"
 
