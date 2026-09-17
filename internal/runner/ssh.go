@@ -51,10 +51,17 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArgs []string) (string, string, error) {
 	args := append(multiplexArgs(), extraSSHArgs...)
 	stdout, stderr, err := ssh.RunCommand(ctx, r.dest, cmdStr, stdin, args...)
-	if err != nil && ctx.Err() != nil {
+	if err == nil {
+		return stdout, stderr, nil
+	}
+	if ctx.Err() != nil {
 		return "", "", ErrTimeout
 	}
-	return stdout, stderr, err
+	return stdout, stderr, &CommandError{
+		Command: fmt.Sprintf("ssh %s %s", r.dest, cmdStr),
+		Stderr:  stderr,
+		Err:     err,
+	}
 }
 
 func multiplexArgs() []string {

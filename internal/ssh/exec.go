@@ -3,7 +3,6 @@ package ssh
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os/exec"
 	"slices"
 
@@ -36,7 +35,7 @@ func RunCommand(ctx context.Context, dest Destination, cmdStr string, stdin []by
 		if classified := ClassifyStderr(stderr); classified != nil {
 			err = classified
 		}
-		return stdout, stderr, fmt.Errorf("ssh command to %s failed: %w | stderr: %s", dest, err, stderr)
+		return stdout, stderr, err
 	}
 	return stdout, stderr, nil
 }
