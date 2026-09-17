@@ -94,6 +94,7 @@ func applyArgsMappingNode(args *yaml.Node, values map[string]string, used map[st
 		for param, value := range values {
 			if key.Value == param {
 				argValue.Value = value
+				argValue.Tag = "!!str"
 				used[param] = true
 			}
 		}
