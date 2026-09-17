@@ -28,7 +28,7 @@ const (
 type Dependency struct {
 	Label string
 	Check DependencyCheckFn
-	// Used to maintain legacy JSON ouptut
+	// Used to maintain legacy JSON output
 	ID DependencyID
 }
 
