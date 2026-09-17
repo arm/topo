@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
@@ -28,7 +29,7 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain(), false)
 
 		require.NoError(t, err)
 		out := output.String()
@@ -47,7 +48,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), false)
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -74,11 +75,12 @@ x-topo:
 		mockSource := mockSourceWithComposeFile(t, composeFileContents)
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver))
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver), false)
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
+		assert.NoFileExists(t, filepath.Join(destDir, env.DefaultFilename))
 	})
 
 	t.Run("removes destination directory when parameter configuration fails", func(t *testing.T) {
@@ -97,11 +99,48 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain())
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), false)
 
 		require.Error(t, err)
 		_, statErr := os.Stat(destDir)
 		assert.True(t, os.IsNotExist(statErr))
+	})
+
+	t.Run("migrates configured values to the env file", func(t *testing.T) {
+		destDir := filepath.Join(t.TempDir(), "demo")
+		source := mockSourceWithContent(t, map[string]string{
+			"compose.yml": `services:
+  app:
+    build:
+      args:
+        GREETING: hello
+x-topo:
+  parameters:
+    GREETING: {}
+`,
+		})
+		resolver := parameter.NewStaticResolver(parameter.Values{"GREETING": "configured"})
+		var output bytes.Buffer
+
+		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(resolver), true)
+
+		require.NoError(t, err)
+		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(destDir, env.DefaultFilename)), "\nGREETING=\"configured\"\n")
+		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(destDir, "compose.yml")), "GREETING: ${GREETING?configured via topo}")
+	})
+
+	t.Run("removes destination directory when migration fails", func(t *testing.T) {
+		destDir := filepath.Join(t.TempDir(), "demo")
+		source := mockSourceWithContent(t, map[string]string{
+			compose.DefaultFileName(): "services: {}\n",
+			env.DefaultFilename:       "GREETING=existing\n",
+		})
+		var output bytes.Buffer
+
+		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(), true)
+
+		require.ErrorContains(t, err, "migration failed: env file already exists")
+		assert.NoDirExists(t, destDir)
 	})
 
 	t.Run("can configure compose.yml projects", func(t *testing.T) {
@@ -124,7 +163,7 @@ x-topo:
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
 			"GREETING": "a-value",
-		}))
+		}), false)
 
 		require.NoError(t, err)
 	})
