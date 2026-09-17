@@ -10,10 +10,10 @@ import (
 
 type HealthReport struct {
 	Host   health.HostReport
-	Target *health.TargetReport
+	Target health.TargetReport
 }
 
-func NewHealthReport(host health.HostReport, target *health.TargetReport) HealthReport {
+func NewHealthReport(host health.HostReport, target health.TargetReport) HealthReport {
 	return HealthReport{Host: host, Target: target}
 }
 
@@ -35,10 +35,8 @@ const healthReportTemplate = `
 {{- end }}
 
 {{ sectionHeading "Target" }}
-{{- if .Target }}
-  {{- range $targetCheckRow := .Target.Dependencies }}
+{{- range $targetCheckRow := .Target.Dependencies }}
 {{ template "checkRow" $targetCheckRow }}
-  {{- end }}
 {{- end }}
 
 `
@@ -123,8 +121,8 @@ func toJSONHealthReport(report HealthReport) jsonHealthReport {
 	jsonReport := jsonHealthReport{
 		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.Host.Dependencies)},
 	}
-	if report.Target != nil {
-		jsonTarget := toJSONTargetReport(*report.Target)
+	if report.Target.Destination != "" {
+		jsonTarget := toJSONTargetReport(report.Target)
 		jsonReport.Target = &jsonTarget
 	}
 	return jsonReport
