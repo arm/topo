@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 func PrintFirstHeader(w io.Writer, description string) error {
@@ -33,8 +34,9 @@ func Header(description string, isTTY bool) string {
 	prefix := "── "
 	suffix := " "
 
-	descriptionWidth := len(description)
-	barWidth := max(totalWidth-len(prefix)-descriptionWidth-len(suffix), 0)
+	descriptionWidth := utf8.RuneCountInString(description)
+	contentWidth := utf8.RuneCountInString(prefix) + descriptionWidth + utf8.RuneCountInString(suffix)
+	barWidth := max(totalWidth-contentWidth, 0)
 	bar := suffix + strings.Repeat("─", barWidth)
 	if !isTTY {
 		return prefix + description + bar

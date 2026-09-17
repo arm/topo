@@ -179,13 +179,13 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, missingTargetFixMessage string) Dependency {
+func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, missingTargetMessage string, missingTargetSeverity CheckSeverity, missingTargetFixMessage string) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if target == nil {
-				failure := &DependencyCheckFailure{Severity: SeverityWarning, Message: "target not specified"}
+				failure := &DependencyCheckFailure{Severity: missingTargetSeverity, Message: missingTargetMessage}
 				if missingTargetFixMessage != "" {
 					failure.Fix = &Fix{Description: missingTargetFixMessage}
 				}
