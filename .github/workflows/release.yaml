@@ -46,7 +46,7 @@ jobs:
           if [ "${{ inputs.pre-release }}" = "true" ]; then
             next="$(svu prerelease --prerelease pre)"
           else
-            next="$(svu next)"
+            next="$(svu next --tag.mode current)"
           fi
           echo "next_version=$next" >> "$GITHUB_OUTPUT"
 
