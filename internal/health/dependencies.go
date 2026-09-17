@@ -26,9 +26,10 @@ const (
 )
 
 type Dependency struct {
-	ID    DependencyID
 	Label string
 	Check DependencyCheckFn
+	// Used to maintain legacy JSON ouptut
+	ID DependencyID
 }
 
 type DependencyCheckFn func(ctx context.Context) DependencyCheckResult
@@ -61,7 +62,7 @@ func hostRequiredDependencies(registry *DependencyRegistry, skipVersionChecks bo
 	topo := registry.Register(NewDependencyOnTopo(skipVersionChecks))
 	r := runner.NewLocal()
 	ssh := registry.Register(NewDependencyOnSSH(r))
-	docker := registry.Register(NewDependencyOnDocker(DependencyID("host-docker"), r))
+	docker := registry.Register(NewDependencyOnDocker(r))
 	dockerCompose := registry.Register(NewDependencyOnDockerCompose(r), docker)
 	return []*DependencyNode{topo, ssh, docker, dockerCompose}
 }
@@ -76,7 +77,7 @@ func targetRequiredDependencies(registry *DependencyRegistry, target *ssh.Destin
 	}
 	if target != nil {
 		r := runner.For(*target)
-		docker := registry.Register(NewDependencyOnDocker(DependencyID("target-docker"), r), prerequisites...)
+		docker := registry.Register(NewDependencyOnDocker(r), prerequisites...)
 		remoteproc := registry.Register(NewDependencyOnRemoteproc(r), prerequisites...)
 		remoteprocRuntime := registry.Register(
 			NewDependencyOnRemoteprocRuntime(*target, r),
@@ -94,7 +95,6 @@ func targetRequiredDependencies(registry *DependencyRegistry, target *ssh.Destin
 
 func NewDependencyOnSSH(r runner.Runner) Dependency {
 	return Dependency{
-		ID:    DependencyID("ssh"),
 		Label: "OpenSSH",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "ssh"); err != nil {
@@ -119,7 +119,6 @@ func NewDependencyOnSSH(r runner.Runner) Dependency {
 
 func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 	return Dependency{
-		ID:    DependencyID("topo"),
 		Label: "Topo",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if skipVersionChecks || version.Version == version.Dev {
@@ -155,9 +154,8 @@ func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 	}
 }
 
-func NewDependencyOnDocker(id DependencyID, r runner.Runner) Dependency {
+func NewDependencyOnDocker(r runner.Runner) Dependency {
 	return Dependency{
-		ID:    id,
 		Label: "Container Engine",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "docker"); err != nil {
@@ -181,7 +179,6 @@ func NewDependencyOnDocker(id DependencyID, r runner.Runner) Dependency {
 
 func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	return Dependency{
-		ID:    DependencyID("docker-compose"),
 		Label: "Docker Compose",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if _, _, err := r.Run(ctx, "docker-compose"); err != nil {
@@ -299,7 +296,6 @@ func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 
 func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner) Dependency {
 	return Dependency{
-		ID:    DependencyID("remoteproc-runtime"),
 		Label: "Remoteproc Runtime",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
@@ -319,7 +315,6 @@ func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner) D
 
 func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runner) Dependency {
 	return Dependency{
-		ID:    DependencyID("containerd-shim-remoteproc-v1"),
 		Label: "Remoteproc Shim",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
@@ -339,7 +334,6 @@ func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runne
 
 func NewDependencyOnLscpu(r runner.Runner) Dependency {
 	return Dependency{
-		ID:    DependencyID("lscpu"),
 		Label: "Hardware Info",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "lscpu"); err != nil {

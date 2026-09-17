@@ -58,14 +58,10 @@ func TestDependencyRegistry(t *testing.T) {
 
 		t.Run("omits a dependency when a transitive prerequisite fails", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
-			flour := registry.Register(health.Dependency{ID: "flour", Check: failingCheck})
-			dough := registry.Register(health.Dependency{
-				ID:    "dough",
-				Check: passingCheck,
-			}, flour)
+			flour := registry.Register(health.Dependency{Check: failingCheck})
+			dough := registry.Register(health.Dependency{Check: passingCheck}, flour)
 			evaluated := false
 			pizza := registry.Register(health.Dependency{
-				ID: "pizza",
 				Check: func(context.Context) health.DependencyCheckResult {
 					evaluated = true
 					return health.DependencyCheckResult{SuccessValue: "pizza ready!"}
@@ -80,9 +76,8 @@ func TestDependencyRegistry(t *testing.T) {
 
 		t.Run("evaluates a dependency when a prerequisite passes", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
-			dough := registry.Register(health.Dependency{ID: "dough", Check: passingCheck})
+			dough := registry.Register(health.Dependency{Check: passingCheck})
 			pizza := health.Dependency{
-				ID: "pizza",
 				Check: func(context.Context) health.DependencyCheckResult {
 					return health.DependencyCheckResult{SuccessValue: "pizza ready!"}
 				},
