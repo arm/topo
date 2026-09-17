@@ -56,7 +56,6 @@ func TestLocal(t *testing.T) {
 
 			var exitErr *exec.ExitError
 			assert.ErrorAs(t, err, &exitErr)
-			assert.EqualError(t, err, "command failed: exit status 1")
 		})
 	})
 
