@@ -35,7 +35,8 @@ func Header(description string, isTTY bool) string {
 	suffix := " "
 
 	descriptionWidth := utf8.RuneCountInString(description)
-	barWidth := max(totalWidth-utf8.RuneCountInString(prefix)-descriptionWidth-utf8.RuneCountInString(suffix), 0)
+	contentWidth := utf8.RuneCountInString(prefix) + descriptionWidth + utf8.RuneCountInString(suffix)
+	barWidth := max(totalWidth-contentWidth, 0)
 	bar := suffix + strings.Repeat("─", barWidth)
 	if !isTTY {
 		return prefix + description + bar
