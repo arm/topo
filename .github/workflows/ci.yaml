@@ -36,13 +36,16 @@ jobs:
   build-and-test:
     strategy:
       fail-fast: false
-      matrix: 
+      matrix:
         os: [ ubuntu-latest, ubuntu-24.04-arm, windows-latest ]
         include:
           - os: windows-latest
             docker_host: ssh://test@localhost:2222
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
       - name: Install WSL (Windows)
         if: runner.os == 'Windows'
         uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7
@@ -182,9 +185,6 @@ jobs:
           docker-compose version
           podman compose version
 
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
@@ -198,7 +198,8 @@ jobs:
           go build -v ./cmd/topo
 
       - name: Run tests with coverage
-        env: 
+        env:
           DOCKER_HOST: ${{ matrix.docker_host }}
+          SETUP_TEST_SSH: '1'
         run: |
-          go test ./... -p 1 -v -covermode=atomic -coverprofile=coverage.out
+          go test ./... -v -covermode=atomic -coverprofile=coverage.out
