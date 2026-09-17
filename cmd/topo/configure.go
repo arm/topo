@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var migrateToEnv bool
-
 var configureCmd = &cobra.Command{
 	Use:   "configure [PARAMETER=VALUE ...]",
 	Short: "Configure project parameters",
@@ -37,7 +35,7 @@ interactive prompts.`,
 			return err
 		}
 
-		if migrateToEnv {
+		if migrateToEnv(cmd) {
 			err := project.MigrateToEnv(composeFile)
 			if err != nil {
 				return err
@@ -67,7 +65,7 @@ interactive prompts.`,
 func init() {
 	addComposeFileFlag(configureCmd)
 	if experimentalFeaturesEnabled() {
-		configureCmd.Flags().BoolVar(&migrateToEnv, "migrate-to-env", false, fmt.Sprintf("move parameter values from the compose file to %q, updating the compose file accordingly", env.DefaultFilename))
+		addMigrateToEnvFlag(configureCmd)
 	}
 	rootCmd.AddCommand(configureCmd)
 }
