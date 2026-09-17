@@ -68,9 +68,9 @@ func TestDependencyRegistry(t *testing.T) {
 				},
 			}, dough)
 
-			_, hasUnmetPrerequisites := registry.Check(context.Background(), pizza)
+			_, checked := registry.Check(context.Background(), pizza)
 
-			assert.True(t, hasUnmetPrerequisites)
+			assert.False(t, checked)
 			assert.False(t, evaluated)
 		})
 
@@ -84,9 +84,9 @@ func TestDependencyRegistry(t *testing.T) {
 			}
 			pizzaRef := registry.Register(pizza, dough)
 
-			got, hasUnmetPrerequisites := registry.Check(context.Background(), pizzaRef)
+			got, checked := registry.Check(context.Background(), pizzaRef)
 
-			assert.False(t, hasUnmetPrerequisites)
+			assert.True(t, checked)
 			wantResult := pizza.Check(context.Background())
 			assert.Equal(t, wantResult, got)
 		})

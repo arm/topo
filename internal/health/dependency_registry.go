@@ -38,12 +38,12 @@ func (r *DependencyRegistry) Register(dependency Dependency, prerequisites ...*D
 func (r *DependencyRegistry) Check(ctx context.Context, node *DependencyNode) (DependencyCheckResult, bool) {
 	r.assertRegistered(node)
 	for _, prerequisite := range node.prerequisites {
-		prerequisiteResult, hasUnmetPrerequisites := r.Check(ctx, prerequisite)
-		if hasUnmetPrerequisites || prerequisiteResult.Failure != nil {
-			return DependencyCheckResult{}, true
+		prerequisiteResult, checked := r.Check(ctx, prerequisite)
+		if !checked || prerequisiteResult.Failure != nil {
+			return DependencyCheckResult{}, false
 		}
 	}
-	return r.checkDependency(ctx, node), false
+	return r.checkDependency(ctx, node), true
 }
 
 func (r *DependencyRegistry) checkDependency(ctx context.Context, node *DependencyNode) DependencyCheckResult {

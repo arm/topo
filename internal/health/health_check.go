@@ -81,8 +81,8 @@ func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
 func (h HealthCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
 	statuses := make([]EvaluatedDependency, 0, len(references))
 	for _, reference := range references {
-		result, hasUnmetPrerequisites := h.Registry.Check(ctx, reference)
-		if hasUnmetPrerequisites {
+		result, checked := h.Registry.Check(ctx, reference)
+		if !checked {
 			continue
 		}
 		dependency := reference.Dependency()
