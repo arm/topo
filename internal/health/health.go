@@ -51,7 +51,7 @@ func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	return report
 }
 
-func ToDependencyReport(status DependencyStatus) DependencyReport {
+func ToDependencyReport(status EvaluatedDependency) DependencyReport {
 	report := DependencyReport{ID: status.ID, Name: status.Label}
 	if status.Result.Failure == nil {
 		report.Status = CheckStatusOK
@@ -76,7 +76,7 @@ func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {
 	}
 }
 
-func toDependencyReports(statuses []DependencyStatus) []DependencyReport {
+func toDependencyReports(statuses []EvaluatedDependency) []DependencyReport {
 	reports := make([]DependencyReport, len(statuses))
 	for i, status := range statuses {
 		reports[i] = ToDependencyReport(status)
