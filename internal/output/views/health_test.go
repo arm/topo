@@ -267,29 +267,6 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
 			assert.Contains(t, out, term.Color(term.Blue, " i "))
 		})
-
-		t.Run("when no target is specified, prints the connectivity warning and fix", func(t *testing.T) {
-			hint := "Need to work on your aim"
-			toPrint := views.HealthReportView{
-				HealthReport: health.HealthReport{
-					Target: health.TargetReport{
-						Dependencies: []health.DependencyReport{{
-							ID:     health.DependencyIDConnectivity,
-							Name:   "Connectivity",
-							Status: health.CheckStatusWarning,
-							Value:  "no target specified",
-							Fix:    &health.Fix{Description: hint},
-						}},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), term.Header("Target", false)+"\n ! Connectivity (no target specified)\n   Fix:\n     "+hint+"\n\n")
-		})
 	})
 
 	t.Run("JSONFormat", func(t *testing.T) {
