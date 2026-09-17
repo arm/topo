@@ -8,14 +8,10 @@ import (
 	"github.com/arm/topo/internal/output/term"
 )
 
-type HealthReport struct {
-	Host       health.HostReport
-	Target     *health.TargetReport
+type HealthReportView struct {
+	health.HealthReport
 	TargetHint string
-}
-
-func NewHealthReport(host health.HostReport, target *health.TargetReport, targetHint string) HealthReport {
-	return HealthReport{Host: host, Target: target, TargetHint: targetHint}
+	Verbose    bool
 }
 
 type healthCheckSection struct {
@@ -53,20 +49,7 @@ const healthReportTemplate = `
 
 `
 
-type HealthReportView struct {
-	HealthReport
-	Verbose bool
-}
-
 func (r HealthReportView) AsPlain(isTTY bool) (string, error) {
-	return renderHealthReport(r.HealthReport, isTTY, r.Verbose)
-}
-
-func (r HealthReport) AsPlain(isTTY bool) (string, error) {
-	return renderHealthReport(r, isTTY, false)
-}
-
-func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
 	funcMap["successStatus"] = func() string {
@@ -76,7 +59,7 @@ func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 		return sectionHeading(heading, isTTY)
 	}
 	funcMap["section"] = func(checks []health.DependencyReport) healthCheckSection {
-		return newHealthCheckSection(checks, verbose)
+		return newHealthCheckSection(checks, r.Verbose)
 	}
 	tmpl, err := template.
 		New("healthcheck").
@@ -93,8 +76,8 @@ func renderHealthReport(r HealthReport, isTTY, verbose bool) (string, error) {
 	return buf.String(), nil
 }
 
-func (r HealthReport) AsJSON() (string, error) {
-	return asJSON(toJSONHealthReport(r))
+func (r HealthReportView) AsJSON() (string, error) {
+	return asJSON(toJSONHealthReport(r.HealthReport))
 }
 
 func sectionHeading(heading string, isTTY bool) string {
@@ -148,7 +131,7 @@ type jsonFix struct {
 	Command     string `json:"command,omitempty"`
 }
 
-func toJSONHealthReport(report HealthReport) jsonHealthReport {
+func toJSONHealthReport(report health.HealthReport) jsonHealthReport {
 	jsonReport := jsonHealthReport{
 		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.Host.Dependencies)},
 	}
