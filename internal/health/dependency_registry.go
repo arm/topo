@@ -6,23 +6,23 @@ import (
 	"sync"
 )
 
-type dependencyNode struct {
+type DependencyNode struct {
 	dependency Dependency
 	once       sync.Once
 	result     DependencyCheckResult
 }
 
 type DependencyRegistry struct {
-	dependencies map[DependencyID]*dependencyNode
+	dependencies map[DependencyID]*DependencyNode
 }
 
 func NewDependencyRegistry(dependencies []Dependency) *DependencyRegistry {
-	registered := make(map[DependencyID]*dependencyNode, len(dependencies))
+	registered := make(map[DependencyID]*DependencyNode, len(dependencies))
 	for _, dependency := range dependencies {
 		if _, exists := registered[dependency.ID]; exists {
 			panic(fmt.Sprintf("duplicate health dependency ID: %q", dependency.ID))
 		}
-		registered[dependency.ID] = &dependencyNode{dependency: dependency}
+		registered[dependency.ID] = &DependencyNode{dependency: dependency}
 	}
 	return &DependencyRegistry{dependencies: registered}
 }
@@ -38,7 +38,7 @@ func (r *DependencyRegistry) Check(ctx context.Context, id DependencyID) (Depend
 	return r.checkDependency(ctx, dependency), false
 }
 
-func (r *DependencyRegistry) checkDependency(ctx context.Context, dependency *dependencyNode) DependencyCheckResult {
+func (r *DependencyRegistry) checkDependency(ctx context.Context, dependency *DependencyNode) DependencyCheckResult {
 	dependency.once.Do(func() {
 		if dependency.dependency.Check != nil {
 			dependency.result = dependency.dependency.Check(ctx)
@@ -47,7 +47,7 @@ func (r *DependencyRegistry) checkDependency(ctx context.Context, dependency *de
 	return dependency.result
 }
 
-func (r *DependencyRegistry) dependency(id DependencyID) *dependencyNode {
+func (r *DependencyRegistry) dependency(id DependencyID) *DependencyNode {
 	dependency, exists := r.dependencies[id]
 	if !exists {
 		panic(fmt.Sprintf("health dependency not registered: %q", id))
