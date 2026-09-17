@@ -55,8 +55,31 @@ func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 	targetPrerequisites := []*DependencyNode(nil)
 	deploymentTargetDependencies := []*DependencyNode(nil)
 	projectDiscoveryTargetDependencies := []*DependencyNode(nil)
-	if options.Target == nil || !options.Target.IsPlainLocalhost() {
-		dependencyConnectivity := registry.Register(NewConnectivityDependency(options.Target, options.AcceptHostKeys, options.MissingTargetFixMessage))
+	if options.Target == nil {
+		deploymentConnectivity := registry.Register(NewConnectivityDependency(
+			nil,
+			options.AcceptHostKeys,
+			"target not specified",
+			SeverityError,
+			options.MissingTargetFixMessage,
+		))
+		projectDiscoveryConnectivity := registry.Register(NewConnectivityDependency(
+			nil,
+			options.AcceptHostKeys,
+			"target not specified; cannot calculate project compatibility",
+			SeverityWarning,
+			options.MissingTargetFixMessage,
+		))
+		deploymentTargetDependencies = append(deploymentTargetDependencies, deploymentConnectivity)
+		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, projectDiscoveryConnectivity)
+	} else if !options.Target.IsPlainLocalhost() {
+		dependencyConnectivity := registry.Register(NewConnectivityDependency(
+			options.Target,
+			options.AcceptHostKeys,
+			"target not specified",
+			SeverityError,
+			options.MissingTargetFixMessage,
+		))
 		targetPrerequisites = []*DependencyNode{dependencyConnectivity}
 		deploymentTargetDependencies = append(deploymentTargetDependencies, dependencyConnectivity)
 		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyConnectivity)
