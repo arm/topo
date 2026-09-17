@@ -209,6 +209,23 @@ func getEnvFiles(cmd *cobra.Command, composeFilePath string) ([]string, error) {
 	return env.ResolveFiles(root, envFiles, skipMissing)
 }
 
+const migrateToEnvFlag = "migrate-to-env"
+
+func addMigrateToEnvFlag(cmd *cobra.Command) {
+	cmd.Flags().Bool(migrateToEnvFlag, false, fmt.Sprintf("move parameter values from the compose file to %q, updating the compose file accordingly", env.DefaultFilename))
+}
+
+func migrateToEnv(cmd *cobra.Command) bool {
+	if cmd.Flags().Lookup(migrateToEnvFlag) == nil {
+		return false
+	}
+	enabled, err := cmd.Flags().GetBool(migrateToEnvFlag)
+	if err != nil {
+		panic(fmt.Sprintf("internal error: migrate-to-env flag not registered: %v", err))
+	}
+	return enabled
+}
+
 func experimentalFeaturesEnabled() bool {
 	const experimentalFeaturesEnvVar = "TOPO_EXPERIMENTAL_FEATURES"
 	return env.IsVarTruthy(experimentalFeaturesEnvVar)
