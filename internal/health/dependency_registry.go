@@ -7,9 +7,10 @@ import (
 )
 
 type DependencyNode struct {
-	dependency Dependency
-	once       sync.Once
-	result     DependencyCheckResult
+	dependency    Dependency
+	prerequisites []*DependencyNode
+	once          sync.Once
+	result        DependencyCheckResult
 }
 
 type DependencyRegistry struct {
@@ -20,18 +21,19 @@ func NewDependencyRegistry() *DependencyRegistry {
 	return &DependencyRegistry{}
 }
 
-func (r *DependencyRegistry) Register(dependency Dependency) *DependencyNode {
-	for _, prerequisite := range dependency.Prerequisites {
+func (r *DependencyRegistry) Register(dependency Dependency, prerequisites ...*DependencyNode) *DependencyNode {
+	for _, prerequisite := range prerequisites {
 		r.dependency(prerequisite)
 	}
-	node := &DependencyNode{dependency: dependency}
+
+	node := &DependencyNode{dependency: dependency, prerequisites: prerequisites}
 	r.dependencies = append(r.dependencies, node)
 	return node
 }
 
 func (r *DependencyRegistry) Check(ctx context.Context, node *DependencyNode) (DependencyCheckResult, bool) {
 	r.dependency(node)
-	for _, prerequisite := range node.dependency.Prerequisites {
+	for _, prerequisite := range node.prerequisites {
 		prerequisiteResult, hasUnmetPrerequisites := r.Check(ctx, prerequisite)
 		if hasUnmetPrerequisites || prerequisiteResult.Failure != nil {
 			return DependencyCheckResult{}, true

@@ -24,7 +24,7 @@ func TestDependencyRegistry(t *testing.T) {
 						registry.Check(context.Background(), ref)
 					})
 					assert.Panics(t, func() {
-						registry.Register(health.Dependency{Prerequisites: []*health.DependencyNode{ref}})
+						registry.Register(health.Dependency{}, ref)
 					})
 				})
 			}
@@ -60,19 +60,17 @@ func TestDependencyRegistry(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			flour := registry.Register(health.Dependency{ID: "flour", Check: failingCheck})
 			dough := registry.Register(health.Dependency{
-				ID:            "dough",
-				Prerequisites: []*health.DependencyNode{flour},
-				Check:         passingCheck,
-			})
+				ID:    "dough",
+				Check: passingCheck,
+			}, flour)
 			evaluated := false
 			pizza := registry.Register(health.Dependency{
-				ID:            "pizza",
-				Prerequisites: []*health.DependencyNode{dough},
+				ID: "pizza",
 				Check: func(context.Context) health.DependencyCheckResult {
 					evaluated = true
 					return health.DependencyCheckResult{SuccessValue: "pizza ready!"}
 				},
-			})
+			}, dough)
 
 			_, hasUnmetPrerequisites := registry.Check(context.Background(), pizza)
 
@@ -84,13 +82,12 @@ func TestDependencyRegistry(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			dough := registry.Register(health.Dependency{ID: "dough", Check: passingCheck})
 			pizza := health.Dependency{
-				ID:            "pizza",
-				Prerequisites: []*health.DependencyNode{dough},
+				ID: "pizza",
 				Check: func(context.Context) health.DependencyCheckResult {
 					return health.DependencyCheckResult{SuccessValue: "pizza ready!"}
 				},
 			}
-			pizzaRef := registry.Register(pizza)
+			pizzaRef := registry.Register(pizza, dough)
 
 			got, hasUnmetPrerequisites := registry.Check(context.Background(), pizzaRef)
 

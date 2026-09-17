@@ -26,10 +26,9 @@ const (
 )
 
 type Dependency struct {
-	ID            DependencyID
-	Label         string
-	Check         DependencyCheckFn
-	Prerequisites []*DependencyNode
+	ID    DependencyID
+	Label string
+	Check DependencyCheckFn
 }
 
 type DependencyCheckFn func(ctx context.Context) DependencyCheckResult
@@ -63,7 +62,7 @@ func hostRequiredDependencies(registry *DependencyRegistry, skipVersionChecks bo
 	r := runner.NewLocal()
 	ssh := registry.Register(NewDependencyOnSSH(r))
 	docker := registry.Register(NewDependencyOnDocker(DependencyID("host-docker"), r))
-	dockerCompose := registry.Register(NewDependencyOnDockerCompose(r, docker))
+	dockerCompose := registry.Register(NewDependencyOnDockerCompose(r), docker)
 	return []*DependencyNode{topo, ssh, docker, dockerCompose}
 }
 
@@ -77,19 +76,17 @@ func targetRequiredDependencies(registry *DependencyRegistry, target *ssh.Destin
 	}
 	if target != nil {
 		r := runner.For(*target)
-		docker := registry.Register(NewDependencyOnDocker(DependencyID("target-docker"), r, prerequisites...))
-		remoteproc := registry.Register(NewDependencyOnRemoteproc(r, prerequisites...))
-		remoteprocRuntime := registry.Register(NewDependencyOnRemoteprocRuntime(
-			*target,
-			r,
+		docker := registry.Register(NewDependencyOnDocker(DependencyID("target-docker"), r), prerequisites...)
+		remoteproc := registry.Register(NewDependencyOnRemoteproc(r), prerequisites...)
+		remoteprocRuntime := registry.Register(
+			NewDependencyOnRemoteprocRuntime(*target, r),
 			append([]*DependencyNode{docker, remoteproc}, prerequisites...)...,
-		))
-		remoteprocRuntimeShim := registry.Register(NewDependencyOnRemoteprocRuntimeShim(
-			*target,
-			r,
+		)
+		remoteprocRuntimeShim := registry.Register(
+			NewDependencyOnRemoteprocRuntimeShim(*target, r),
 			append([]*DependencyNode{docker, remoteproc}, prerequisites...)...,
-		))
-		lscpu := registry.Register(NewDependencyOnLscpu(r, prerequisites...))
+		)
+		lscpu := registry.Register(NewDependencyOnLscpu(r), prerequisites...)
 		dependencies = append(dependencies, docker, remoteproc, remoteprocRuntime, remoteprocRuntimeShim, lscpu)
 	}
 	return dependencies
@@ -158,11 +155,10 @@ func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 	}
 }
 
-func NewDependencyOnDocker(id DependencyID, r runner.Runner, prerequisites ...*DependencyNode) Dependency {
+func NewDependencyOnDocker(id DependencyID, r runner.Runner) Dependency {
 	return Dependency{
-		ID:            id,
-		Label:         "Container Engine",
-		Prerequisites: prerequisites,
+		ID:    id,
+		Label: "Container Engine",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "docker"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -183,7 +179,7 @@ func NewDependencyOnDocker(id DependencyID, r runner.Runner, prerequisites ...*D
 	}
 }
 
-func NewDependencyOnDockerCompose(r runner.Runner, prerequisites ...*DependencyNode) Dependency {
+func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	return Dependency{
 		ID:    DependencyID("docker-compose"),
 		Label: "Docker Compose",
@@ -218,7 +214,6 @@ func NewDependencyOnDockerCompose(r runner.Runner, prerequisites ...*DependencyN
 
 			return DependencyCheckResult{SuccessValue: "docker-compose"}
 		},
-		Prerequisites: prerequisites,
 	}
 }
 
@@ -269,11 +264,10 @@ func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, 
 	}
 }
 
-func NewDependencyOnRemoteproc(r runner.Runner, prerequisites ...*DependencyNode) Dependency {
+func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 	return Dependency{
-		ID:            DependencyIDRemoteproc,
-		Label:         "Processing Domain Driver (remoteproc)",
-		Prerequisites: prerequisites,
+		ID:    DependencyIDRemoteproc,
+		Label: "Processing Domain Driver (remoteproc)",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			remoteProcessors, err := probe.Remoteproc(ctx, r)
 			if err != nil {
@@ -303,11 +297,10 @@ func NewDependencyOnRemoteproc(r runner.Runner, prerequisites ...*DependencyNode
 	}
 }
 
-func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner, prerequisites ...*DependencyNode) Dependency {
+func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner) Dependency {
 	return Dependency{
-		ID:            DependencyID("remoteproc-runtime"),
-		Label:         "Remoteproc Runtime",
-		Prerequisites: prerequisites,
+		ID:    DependencyID("remoteproc-runtime"),
+		Label: "Remoteproc Runtime",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -324,11 +317,10 @@ func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner, p
 	}
 }
 
-func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runner, prerequisites ...*DependencyNode) Dependency {
+func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runner) Dependency {
 	return Dependency{
-		ID:            DependencyID("containerd-shim-remoteproc-v1"),
-		Label:         "Remoteproc Shim",
-		Prerequisites: prerequisites,
+		ID:    DependencyID("containerd-shim-remoteproc-v1"),
+		Label: "Remoteproc Shim",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -345,11 +337,10 @@ func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runne
 	}
 }
 
-func NewDependencyOnLscpu(r runner.Runner, prerequisites ...*DependencyNode) Dependency {
+func NewDependencyOnLscpu(r runner.Runner) Dependency {
 	return Dependency{
-		ID:            DependencyID("lscpu"),
-		Label:         "Hardware Info",
-		Prerequisites: prerequisites,
+		ID:    DependencyID("lscpu"),
+		Label: "Hardware Info",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "lscpu"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
