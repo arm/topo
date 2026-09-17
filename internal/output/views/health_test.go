@@ -254,13 +254,8 @@ func TestHealthReport(t *testing.T) {
 							{Name: "Skipped", Status: health.CheckStatusInfo},
 						},
 					},
-					Target: health.TargetReport{
-						Dependencies: []health.DependencyReport{
-							{ID: health.DependencyIDConnectivity, Status: health.CheckStatusOK},
-							{ID: health.DependencyIDRemoteproc, Status: health.CheckStatusOK},
-						},
-					},
 				},
+				Verbose: true,
 			}
 
 			out, err := toPrint.AsPlain(true)
