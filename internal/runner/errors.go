@@ -9,7 +9,7 @@ type CommandError struct {
 }
 
 func (err *CommandError) Error() string {
-	return fmt.Sprintf("command failed: %v", err.Err)
+	return fmt.Sprintf("command %q failed: %v", err.Command, err.Err)
 }
 
 func (err *CommandError) Unwrap() error {
