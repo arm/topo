@@ -2,6 +2,7 @@ package env_test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -50,6 +51,80 @@ func TestResolveFiles(t *testing.T) {
 
 		require.ErrorContains(t, err, "failed to check env file")
 		assert.Nil(t, paths)
+	})
+}
+
+func TestReadFile(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		content string
+		want    map[string]string
+	}{
+		{
+			name:    "returns values from an env file",
+			content: "GREETING=Hello\nPORT=8080\n",
+			want:    map[string]string{"GREETING": "Hello", "PORT": "8080"},
+		},
+		{
+			name:    "preserves explicitly empty values",
+			content: "GREETING=\n",
+			want:    map[string]string{"GREETING": ""},
+		},
+		{
+			name: "returns an empty map for an empty file",
+			want: map[string]string{},
+		},
+		{
+			name:    "preserves single quoted values literally",
+			content: "GREETING='Hello # ${NAME}'\n",
+			want:    map[string]string{"GREETING": "Hello # ${NAME}"},
+		},
+		{
+			name:    "resolves references to values in the file",
+			content: "NAME=World\nGREETING=Hello ${NAME}\n",
+			want:    map[string]string{"NAME": "World", "GREETING": "Hello World"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), ".env")
+			testutil.RequireWriteFile(t, path, test.content)
+
+			got, err := env.ReadFile(path)
+
+			require.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+
+	t.Run("wraps the error when the file does not exist", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+
+		got, err := env.ReadFile(path)
+
+		assert.ErrorIs(t, err, os.ErrNotExist)
+		assert.ErrorContains(t, err, "failed to open env file")
+		assert.Nil(t, got)
+	})
+
+	t.Run("returns an error when the path is a directory", func(t *testing.T) {
+		path := t.TempDir()
+
+		got, err := env.ReadFile(path)
+
+		assert.ErrorContains(t, err, "failed to read env file")
+		assert.Nil(t, got)
+	})
+
+	t.Run("does not return partial values when parsing fails", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+		testutil.RequireWriteFile(t, path, `NAME=World
+GREETING="unterminated
+`)
+
+		got, err := env.ReadFile(path)
+
+		assert.ErrorContains(t, err, "failed to read env file")
+		assert.Nil(t, got)
 	})
 }
 

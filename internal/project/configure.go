@@ -3,16 +3,43 @@ package project
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
 )
 
+var ErrNoParameterReferences = errors.New("none of the declared parameters are referenced as environment variables in the Compose file")
+
 func Configure(composeFilePath string, resolver parameter.Resolver) error {
-	values, err := collectValues(composeFilePath, resolver)
+	envFile := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
+	currentValues, err := env.ReadFile(envFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to load current environment values: %w", err)
+	}
+
+	definitions, err := LoadParameterDefinitions(composeFilePath, currentValues)
+	if err != nil {
+		return fmt.Errorf("failed to load parameter definitions: %w", err)
+	}
+
+	if len(definitions) == 0 {
+		return nil
+	}
+
+	if err := validateParameterReferences(composeFilePath, definitions); err != nil {
+		if errors.Is(err, ErrNoParameterReferences) {
+			return fmt.Errorf("%w; this project might use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration", err)
+		}
+		return err
+	}
+
+	values, err := resolver.Resolve(definitions)
 	if err != nil {
 		return fmt.Errorf("failed to collect parameter values: %w", err)
 	}
@@ -21,7 +48,11 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return nil
 	}
 
-	return applyParameterValuesToComposeFile(composeFilePath, values)
+	if currentValues == nil {
+		currentValues = make(map[string]string)
+	}
+	maps.Copy(currentValues, values)
+	return env.WriteFile(envFile, currentValues)
 }
 
 func MigrateToEnv(composeFilePath string) error {
@@ -74,6 +105,27 @@ func MigrateToEnv(composeFilePath string) error {
 	return nil
 }
 
+func validateParameterReferences(composeFilePath string, definitions []parameter.Definition) error {
+	referencedEnvVars, err := ReferencedEnvVars(composeFilePath)
+	if err != nil {
+		return err
+	}
+
+	unreferencedDefinitions := slices.DeleteFunc(slices.Clone(definitions), func(d parameter.Definition) bool {
+		return slices.Contains(referencedEnvVars, d.Name)
+	})
+
+	if len(unreferencedDefinitions) == len(definitions) {
+		return ErrNoParameterReferences
+	}
+
+	for _, param := range unreferencedDefinitions {
+		logger.Warn(fmt.Sprintf("parameter %q is not referenced through an environment variable in the Compose file; configuring it will have no effect", param.Name))
+	}
+
+	return nil
+}
+
 func applyParameterValuesToComposeFile(composeFilePath string, values parameter.Values) error {
 	f, err := os.Open(composeFilePath)
 	if err != nil {
@@ -115,27 +167,4 @@ func loadProject(composeFilePath string) (Project, error) {
 		return Project{}, err
 	}
 	return project, nil
-}
-
-func collectValues(composeFilePath string, resolver parameter.Resolver) (parameter.Values, error) {
-	project, err := loadProject(composeFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return resolver.Resolve(toDefinitions(project.Metadata.Parameters, project.currentParameterValues))
-}
-
-func toDefinitions(parameters []Parameter, currentValues map[string][]string) []parameter.Definition {
-	definitions := make([]parameter.Definition, len(parameters))
-	for i, definition := range parameters {
-		definitions[i] = parameter.Definition{
-			Name:          definition.Name,
-			Description:   definition.Description,
-			Required:      definition.Required,
-			Example:       definition.Example,
-			CurrentValues: currentValues[definition.Name],
-		}
-	}
-	return definitions
 }

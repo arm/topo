@@ -3,9 +3,13 @@ package project
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 
 	"github.com/compose-spec/compose-go/v2/cli"
+	"github.com/compose-spec/compose-go/v2/loader"
+	"github.com/compose-spec/compose-go/v2/template"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
@@ -39,6 +43,24 @@ func PullableServices(scope Scope) ([]string, error) {
 	}
 	sort.Strings(names)
 	return names, nil
+}
+
+func ReferencedEnvVars(composeFilePath string) ([]string, error) {
+	options, err := cli.NewProjectOptions([]string{composeFilePath},
+		cli.WithResolvedPaths(false),
+		cli.WithNormalization(false),
+		cli.WithLoadOptions(func(o *loader.Options) {
+			o.SkipInterpolation = true
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	model, err := options.LoadModel(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return slices.Collect(maps.Keys(template.ExtractVariables(model, nil))), nil
 }
 
 func Read(scope Scope) (*types.Project, error) {

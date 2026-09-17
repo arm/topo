@@ -64,8 +64,6 @@ interactive prompts.`,
 
 func init() {
 	addComposeFileFlag(configureCmd)
-	if experimentalFeaturesEnabled() {
-		addMigrateToEnvFlag(configureCmd)
-	}
+	addMigrateToEnvFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
 }
