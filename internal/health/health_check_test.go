@@ -10,6 +10,44 @@ import (
 
 func TestHealthCheck(t *testing.T) {
 	t.Run("Evaluate", func(t *testing.T) {
+		t.Run("evaluates deployment and project discovery checks", func(t *testing.T) {
+			registry := health.NewDependencyRegistry()
+			deployment := health.Dependency{ID: "deployment", Check: passingCheck}
+			deploymentRef := registry.Register(deployment)
+			projectDiscovery := health.Dependency{ID: "project-discovery", Check: failingCheck}
+			projectDiscoveryRef := registry.Register(projectDiscovery)
+			healthCheck := health.HealthCheck{
+				Deployment:       health.ReadinessCheck{Registry: registry, Host: []*health.DependencyNode{deploymentRef}},
+				ProjectDiscovery: health.ReadinessCheck{Registry: registry, Target: []*health.DependencyNode{projectDiscoveryRef}},
+			}
+
+			got := healthCheck.Evaluate(context.Background())
+
+			want := health.EvaluatedHealthCheck{
+				Deployment: health.EvaluatedReadinessCheck{
+					Host: []health.EvaluatedDependency{{
+						ID:     deployment.ID,
+						Label:  deployment.Label,
+						Result: deployment.Check(context.Background()),
+					}},
+					Target: []health.EvaluatedDependency{},
+				},
+				ProjectDiscovery: health.EvaluatedReadinessCheck{
+					Host: []health.EvaluatedDependency{},
+					Target: []health.EvaluatedDependency{{
+						ID:     projectDiscovery.ID,
+						Label:  projectDiscovery.Label,
+						Result: projectDiscovery.Check(context.Background()),
+					}},
+				},
+			}
+			assert.Equal(t, want, got)
+		})
+	})
+}
+
+func TestReadinessCheck(t *testing.T) {
+	t.Run("Evaluate", func(t *testing.T) {
 		t.Run("reports successful dependencies in the group", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			virus := health.Dependency{ID: "virus", Check: passingCheck}
@@ -17,7 +55,7 @@ func TestHealthCheck(t *testing.T) {
 			bartek := health.Dependency{ID: "bartek", Check: passingCheck}
 			bartekRef := registry.Register(bartek, virusRef)
 
-			healthCheck := health.HealthCheck{
+			healthCheck := health.ReadinessCheck{
 				Registry: registry,
 				Host:     []*health.DependencyNode{bartekRef, virusRef},
 			}
@@ -38,7 +76,7 @@ func TestHealthCheck(t *testing.T) {
 			pizza := health.Dependency{ID: "pizza", Check: passingCheck}
 			pizzaRef := registry.Register(pizza, flourRef)
 
-			healthCheck := health.HealthCheck{
+			healthCheck := health.ReadinessCheck{
 				Registry: registry,
 				Host:     []*health.DependencyNode{flourRef, pizzaRef},
 			}
