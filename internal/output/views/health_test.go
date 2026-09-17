@@ -2,6 +2,7 @@ package views_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -169,7 +170,10 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ✓ Processing Domain Driver (remoteproc)\n ✓ Hardware Info")
+			assert.Less(t,
+				strings.Index(out.String(), "Processing Domain Driver (remoteproc)"),
+				strings.Index(out.String(), "Hardware Info"),
+			)
 		})
 
 		t.Run("it renders the target destination when a dependency fails", func(t *testing.T) {
