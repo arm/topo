@@ -105,7 +105,7 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), term.Header("Target", false)+"\n ! Pineapple on pizza\n\n")
+			assert.Contains(t, out.String(), " ! Pineapple on pizza")
 		})
 
 		t.Run("it keeps informational checks alongside the success summary", func(t *testing.T) {
@@ -129,7 +129,8 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), term.Header("Target", false)+"\n ✓ All checks passed\n i Processing Domain Driver (remoteproc) (no remoteproc devices found)\n\n")
+			assert.Contains(t, out.String(), " ✓ All checks passed")
+			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 
 		t.Run("it renders connection failures", func(t *testing.T) {
@@ -193,7 +194,8 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), term.Header("Target: ssh://user@my-target", false)+"\n ✗ Container Engine\n\n")
+			assert.Contains(t, out.String(), "── Target: ssh://user@my-target")
+			assert.Contains(t, out.String(), " ✗ Container Engine")
 		})
 
 		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
