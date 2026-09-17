@@ -10,8 +10,9 @@ import (
 func TestToDependencyReport(t *testing.T) {
 	t.Run("returns successful dependency result", func(t *testing.T) {
 		status := health.DependencyStatus{
-			Dependency: health.Dependency{ID: "docker", Label: "Container Engine"},
-			Result:     health.DependencyCheckResult{SuccessValue: "docker"},
+			ID:     "docker",
+			Label:  "Container Engine",
+			Result: health.DependencyCheckResult{SuccessValue: "docker"},
 		}
 
 		got := health.ToDependencyReport(status)
@@ -27,7 +28,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("returns error dependency result", func(t *testing.T) {
 		status := health.DependencyStatus{
-			Dependency: health.Dependency{Label: "Rube Goldberg"},
+			Label: "Rube Goldberg",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityError,
 				Message:  "whatever not found on path",
@@ -46,7 +47,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("returns warning dependency result", func(t *testing.T) {
 		status := health.DependencyStatus{
-			Dependency: health.Dependency{Label: "Remoteproc Runtime"},
+			Label: "Remoteproc Runtime",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
 				Message:  "remoteproc-runtime not found on path",
@@ -65,7 +66,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("returns informational dependency result", func(t *testing.T) {
 		status := health.DependencyStatus{
-			Dependency: health.Dependency{Label: "Remoteproc Runtime"},
+			Label: "Remoteproc Runtime",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityInfo,
 				Message:  "no remoteproc devices found",
@@ -84,7 +85,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("propagates fix from failed dependency", func(t *testing.T) {
 		status := health.DependencyStatus{
-			Dependency: health.Dependency{Label: "Food"},
+			Label: "Food",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
 				Message:  "not enough pineapple",
