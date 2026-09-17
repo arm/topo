@@ -19,15 +19,15 @@ type HealthCheck struct {
 	Target   []DependencyID
 }
 
-type DependencyStatus struct {
+type EvaluatedDependency struct {
 	ID     DependencyID
 	Label  string
 	Result DependencyCheckResult
 }
 
 type EvaluatedHealthCheck struct {
-	Host   []DependencyStatus
-	Target []DependencyStatus
+	Host   []EvaluatedDependency
+	Target []EvaluatedDependency
 }
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
@@ -50,15 +50,15 @@ func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
 	}
 }
 
-func (h HealthCheck) evaluateDependencies(ctx context.Context, dependencies []DependencyID) []DependencyStatus {
-	statuses := make([]DependencyStatus, 0, len(dependencies))
+func (h HealthCheck) evaluateDependencies(ctx context.Context, dependencies []DependencyID) []EvaluatedDependency {
+	statuses := make([]EvaluatedDependency, 0, len(dependencies))
 	for _, id := range dependencies {
 		dependency := h.Registry.dependency(id).dependency
 		result, hasUnmetPrerequisites := h.Registry.Check(ctx, id)
 		if hasUnmetPrerequisites {
 			continue
 		}
-		statuses = append(statuses, DependencyStatus{
+		statuses = append(statuses, EvaluatedDependency{
 			ID:     dependency.ID,
 			Label:  dependency.Label,
 			Result: result,

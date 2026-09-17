@@ -22,7 +22,7 @@ func TestHealthCheck(t *testing.T) {
 
 			got := healthCheck.Evaluate(context.Background())
 
-			want := []health.DependencyStatus{
+			want := []health.EvaluatedDependency{
 				{ID: bartek.ID, Label: bartek.Label, Result: bartek.Check(context.Background())},
 				{ID: virus.ID, Label: virus.Label, Result: virus.Check(context.Background())},
 			}
@@ -41,7 +41,7 @@ func TestHealthCheck(t *testing.T) {
 
 			got := healthCheck.Evaluate(context.Background())
 
-			want := []health.DependencyStatus{
+			want := []health.EvaluatedDependency{
 				{ID: flour.ID, Label: flour.Label, Result: flour.Check(context.Background())},
 			}
 			assert.Equal(t, want, got.Host)
