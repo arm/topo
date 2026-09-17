@@ -100,13 +100,17 @@ func TestPrintHeader(t *testing.T) {
 
 		require.NoError(t, term.PrintNthHeader(&buf, "Hello"))
 
-		const totalWidth = 60
-		prefix := "── "
-		suffix := " "
-		barWidth := totalWidth - len(prefix) - len("Hello") - len(suffix)
-		expected := "\n" + prefix + "Hello" + suffix + strings.Repeat("─", barWidth) + "\n"
+		want := "\n── Hello ───────────────────────────────────────────────────\n"
+		assert.Equal(t, want, buf.String())
+	})
 
-		assert.Equal(t, expected, buf.String())
+	t.Run("counts unicode descriptions by runes", func(t *testing.T) {
+		var buf bytes.Buffer
+
+		require.NoError(t, term.PrintNthHeader(&buf, "✓"))
+
+		want := "\n── ✓ ───────────────────────────────────────────────────────\n"
+		assert.Equal(t, want, buf.String())
 	})
 
 	t.Run("renders without padding when description is too long", func(t *testing.T) {
@@ -120,10 +124,11 @@ func TestPrintHeader(t *testing.T) {
 	})
 
 	t.Run("dims borders for terminal output", func(t *testing.T) {
-		header := term.Header("Hello", true)
+		got := term.Header("Hello", true)
 
-		assert.Contains(t, header, term.Color(term.Dim, "── "))
-		barWidth := 60 - len("── ") - len("Hello") - len(" ")
-		assert.Contains(t, header, term.Color(term.Dim, " "+strings.Repeat("─", barWidth)))
+		want := term.Color(term.Dim, "── ") +
+			"Hello" +
+			term.Color(term.Dim, " ───────────────────────────────────────────────────")
+		assert.Equal(t, want, got)
 	})
 }

@@ -17,33 +17,37 @@ func TestHealthReport(t *testing.T) {
 			toPrint := views.HealthReport{
 				TargetDetails: health.TargetDetails{},
 				Deployment: health.ReadinessReport{
-					Host: []health.DependencyReport{{Name: "Docker Compose", Status: health.CheckStatusError}},
-					Target: []health.DependencyReport{{
-						Name:   "Docker API via SSH",
-						Status: health.CheckStatusOK,
-					}},
+					Host: []health.DependencyReport{
+						{Name: "Computer", Status: health.CheckStatusWarning},
+						{Name: "Docker Compose", Status: health.CheckStatusError},
+					},
+					Target: []health.DependencyReport{
+						{Name: "Docker API via SSH", Status: health.CheckStatusOK},
+					},
 				},
 				ProjectDiscovery: health.ReadinessReport{
-					Host: []health.DependencyReport{{Name: "OpenSSH client", Status: health.CheckStatusOK}},
-					Target: []health.DependencyReport{{
-						Name:   "Hardware Info (lscpu)",
-						Status: health.CheckStatusOK,
-					}},
+					Host: []health.DependencyReport{
+						{Name: "OpenSSH", Status: health.CheckStatusOK},
+					},
+					Target: []health.DependencyReport{
+						{Name: "Hardware Info (lscpu)", Status: health.CheckStatusOK},
+					},
 				},
 			}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
 
-			want := `── Deployment: not ready (✗ 1) ───────────────────────
+			want := `── Deployment: not ready (✗ 1 ! 1) ─────────────────────────
  ✗ Host
+   ! Computer
    ✗ Docker Compose
  ✓ Target
    ✓ Docker API via SSH
 
-── Project management: ready ───────────────────────────
+── Project management: ready ───────────────────────────────
  ✓ Host
-   ✓ OpenSSH client
+   ✓ OpenSSH
  ✓ Target
    ✓ Hardware Info (lscpu)
 `

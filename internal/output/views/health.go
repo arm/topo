@@ -18,41 +18,32 @@ type HealthReport struct {
 
 const functionalityHealthReportTemplate = `
 {{- define "checkRow" -}}
-{{ status .Status }}{{ .Name }}{{- if .Value }} ({{ .Value }}){{- end }}
-{{- if .Fix }}
-   Fix:
-     {{ .Fix.Description }}
-  {{- if .Fix.Command }}
-   Command:
-     {{ .Fix.Command }}
-  {{- end }}
-{{- end -}}
-{{- end -}}
-{{- define "indentedCheckRow" -}}
 {{ "  " }}{{ status .Status }}{{ .Name }}{{- if .Value }} ({{ .Value }}){{- end }}
 {{- if .Fix }}
-    Fix:
-      {{ .Fix.Description }}
+     Fix:
+       {{ .Fix.Description }}
   {{- if .Fix.Command }}
-    Command:
-      {{ .Fix.Command }}
+     Command:
+       {{ .Fix.Command }}
   {{- end }}
 {{- end -}}
 {{- end -}}
+
 {{- define "functionality" -}}
 {{ functionalityHeading .Name .Report }}
-{{ status (dependencyStatus .Report.Host) }}Host
+{{ status (dependencyGroupStatus .Report.Host) }}Host
 {{- range .Report.Host }}
-{{ template "indentedCheckRow" . }}
+{{ template "checkRow" . }}
 {{- end }}
-{{ status (dependencyStatus .Report.Target) }}Target
+{{ status (dependencyGroupStatus .Report.Target) }}Target
 {{- range .Report.Target }}
-{{ template "indentedCheckRow" . }}
+{{ template "checkRow" . }}
 {{- end }}
 {{- end -}}
-{{ template "functionality" (functionality "Deployment" .Deployment) }}
 
-{{ template "functionality" (functionality "Project management" .ProjectDiscovery) }}
+{{ template "functionality" (buildFunctionalityTemplateData "Deployment" .Deployment) }}
+
+{{ template "functionality" (buildFunctionalityTemplateData "Project management" .ProjectDiscovery) }}
 `
 
 type functionalityTemplateData struct {
@@ -63,13 +54,13 @@ type functionalityTemplateData struct {
 func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
-	funcMap["functionality"] = func(name string, report health.ReadinessReport) functionalityTemplateData {
+	funcMap["buildFunctionalityTemplateData"] = func(name string, report health.ReadinessReport) functionalityTemplateData {
 		return functionalityTemplateData{Name: name, Report: report}
 	}
 	funcMap["functionalityHeading"] = func(name string, report health.ReadinessReport) string {
 		return functionalityHeading(name, report, isTTY)
 	}
-	funcMap["dependencyStatus"] = dependencyStatus
+	funcMap["dependencyGroupStatus"] = dependencyGroupStatus
 	tmpl, err := template.New("functionality-healthcheck").Funcs(funcMap).Parse(functionalityHealthReportTemplate)
 	if err != nil {
 		return "", err
@@ -107,42 +98,50 @@ func legacyTargetDependencies(deployment, projectDiscovery []health.DependencyRe
 }
 
 func functionalityHeading(name string, report health.ReadinessReport, isTTY bool) string {
-	status, unreadyDependencies := functionalityStatus(report)
+	statusCount := countStatuses(report)
+	if statusCount.errors == 0 && statusCount.warnings == 0 {
+		return sectionHeading(name+": ready", isTTY)
+	}
+
 	readiness := "ready"
-	indicator := ""
-	color := term.Green
-	if unreadyDependencies > 0 {
+	if statusCount.errors > 0 {
 		readiness = "not ready"
-		icon := "✗"
-		color = term.Red
-		if status == health.CheckStatusWarning {
-			icon = "!"
-			color = term.Yellow
-			readiness = "ready"
-		}
-		indicator = fmt.Sprintf("%s %d", icon, unreadyDependencies)
-		readiness += " (" + indicator + ")"
 	}
-	heading := sectionHeading(name+": "+readiness, isTTY)
-	if !isTTY || indicator == "" {
-		return heading
+
+	indicators := make([]string, 0, 2)
+	if statusCount.errors > 0 {
+		indicators = append(indicators, statusIndicator("✗", term.Red, statusCount.errors, isTTY))
 	}
-	return strings.Replace(heading, indicator, term.Color(color, indicator), 1)
+	if statusCount.warnings > 0 {
+		indicators = append(indicators, statusIndicator("!", term.Yellow, statusCount.warnings, isTTY))
+	}
+
+	heading := fmt.Sprintf("%s: %s (%s)", name, readiness, strings.Join(indicators, " "))
+	return sectionHeading(heading, isTTY)
 }
 
-func functionalityStatus(report health.ReadinessReport) (health.CheckStatus, int) {
+func statusIndicator(symbol, color string, count uint, isTTY bool) string {
+	if isTTY {
+		symbol = term.Color(color, symbol)
+	}
+	return fmt.Sprintf("%s %d", symbol, count)
+}
+
+func countStatuses(report health.ReadinessReport) (statusCount struct{ warnings, errors uint }) {
 	dependencies := append([]health.DependencyReport(nil), report.Host...)
 	dependencies = append(dependencies, report.Target...)
-	unreadyDependencies := 0
 	for _, dependency := range dependencies {
-		if dependency.Status == health.CheckStatusWarning || dependency.Status == health.CheckStatusError {
-			unreadyDependencies++
+		switch dependency.Status {
+		case health.CheckStatusWarning:
+			statusCount.warnings++
+		case health.CheckStatusError:
+			statusCount.errors++
 		}
 	}
-	return dependencyStatus(dependencies), unreadyDependencies
+	return
 }
 
-func dependencyStatus(dependencies []health.DependencyReport) health.CheckStatus {
+func dependencyGroupStatus(dependencies []health.DependencyReport) health.CheckStatus {
 	status := health.CheckStatusOK
 	for _, dependency := range dependencies {
 		if dependency.Status == health.CheckStatusError {
