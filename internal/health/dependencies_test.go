@@ -25,6 +25,22 @@ func TestNewDependencyOnTopoCheck(t *testing.T) {
 	})
 }
 
+func TestNewConnectivityDependency(t *testing.T) {
+	t.Run("reports a missing target with its fix", func(t *testing.T) {
+		fixMessage := "Specify a target"
+		dependency := health.NewConnectivityDependency(nil, false, fixMessage)
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityWarning,
+			Message:  "target not specified",
+			Fix:      &health.Fix{Description: fixMessage},
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
 func TestNewDependencyOnSSHCheck(t *testing.T) {
 	buildRunner := func(result runner.FakeResult) runner.Runner {
 		return &runner.Fake{

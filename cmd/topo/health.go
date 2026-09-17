@@ -46,20 +46,18 @@ var healthCmd = &cobra.Command{
 		}
 
 		var target *ssh.Destination
-		var targetHint string
 		if targetArg, ok := lookupTarget(cmd); ok {
 			destination := ssh.NewDestination(targetArg)
 			target = &destination
-		} else {
-			targetHint = "provide --target or set TOPO_TARGET to check target health"
 		}
 
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 		report := health.Check(ctx, health.HealthCheckOptions{
-			Target:            target,
-			SkipVersionChecks: skipVersionCheck,
-			AcceptHostKeys:    acceptNewHostKeys,
+			Target:                  target,
+			MissingTargetFixMessage: "provide --target or set TOPO_TARGET to check target health",
+			SkipVersionChecks:       skipVersionCheck,
+			AcceptHostKeys:          acceptNewHostKeys,
 		})
 
 		if spinner != nil {
@@ -68,7 +66,6 @@ var healthCmd = &cobra.Command{
 
 		toPrint := views.HealthReportView{
 			HealthReport: report,
-			TargetHint:   targetHint,
 			Verbose:      verbose,
 		}
 		return views.Print(toPrint, os.Stdout, outputFormat)

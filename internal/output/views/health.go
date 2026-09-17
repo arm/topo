@@ -10,8 +10,7 @@ import (
 
 type HealthReportView struct {
 	health.HealthReport
-	TargetHint string
-	Verbose    bool
+	Verbose bool
 }
 
 type healthCheckSection struct {
@@ -41,11 +40,7 @@ const healthReportTemplate = `
 {{- end -}}
 {{ sectionHeading "Host" }}{{ template "checkSection" (section .Host.Dependencies) }}
 
-{{ if .Target }}{{ sectionHeading (printf "Target: %s" .Target.Destination) }}{{ template "checkSection" (section .Target.Dependencies) }}
-{{- else -}}
-{{ sectionHeading "Target" }}
-{{ status "warning" }}{{ .TargetHint }}
-{{- end }}
+{{ if .Target.Destination }}{{ sectionHeading (printf "Target: %s" .Target.Destination) }}{{ else }}{{ sectionHeading "Target" }}{{ end }}{{ template "checkSection" (section .Target.Dependencies) }}
 
 `
 
@@ -135,8 +130,8 @@ func toJSONHealthReport(report health.HealthReport) jsonHealthReport {
 	jsonReport := jsonHealthReport{
 		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.Host.Dependencies)},
 	}
-	if report.Target != nil {
-		jsonTarget := toJSONTargetReport(*report.Target)
+	if report.Target.Destination != "" {
+		jsonTarget := toJSONTargetReport(report.Target)
 		jsonReport.Target = &jsonTarget
 	}
 	return jsonReport

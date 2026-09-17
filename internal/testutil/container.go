@@ -1,9 +1,12 @@
 package testutil
 
 import (
+	"bufio"
+	"crypto/rand"
+	"errors"
 	"fmt"
+	"io"
 	"net"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +26,6 @@ type ContainerSpec struct {
 	image   string
 	runArgs []string
 	setup   func(c *Container) error
-	cleanup func(c *Container)
 }
 
 var PasswordedSSHContainer = ContainerSpec{
@@ -41,9 +43,6 @@ var DinDContainer = ContainerSpec{
 		}
 		return waitForDockerDaemon(c)
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
 }
 
 var PasswordlessSSHContainer = ContainerSpec{
@@ -54,9 +53,6 @@ var PasswordlessSSHContainer = ContainerSpec{
 			return err
 		}
 		return nil
-	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
 	},
 }
 
@@ -70,9 +66,6 @@ var PodmanContainer = ContainerSpec{
 		}
 		return waitForPodmanService(c)
 	},
-	cleanup: func(c *Container) {
-		removeHostKey(c)
-	},
 }
 
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
@@ -81,12 +74,13 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Skip("skipping test that requires a container in short mode")
 	}
 	RequireLinuxDockerEngine(t)
+	containerName := generateContainerName(t)
+	requireKnownHostsSSHConfig(t, containerName)
 
 	if err := buildImage(spec); err != nil {
 		t.Fatalf("failed to build image: %v", err)
 	}
 
-	containerName := generateContainerName(t)
 	t.Cleanup(func() {
 		deleteContainer(containerName)
 	})
@@ -100,12 +94,14 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 		t.Fatalf("failed to get container port: %v", err)
 	}
 
-	if err := waitForPort("localhost", port, 10*time.Second); err != nil {
-		t.Fatalf("container port not ready: %v", err)
+	t.Cleanup(func() { removeKnownHost(t, containerName) })
+
+	if err := waitForSSH("localhost", port, 10*time.Second); err != nil {
+		t.Fatalf("container SSH not ready: %v", err)
 	}
 
 	c := &Container{
-		SSHDestination: fmt.Sprintf("ssh://root@localhost:%s", port),
+		SSHDestination: fmt.Sprintf("ssh://root@%s:%s", containerName, port),
 		Name:           containerName,
 	}
 
@@ -114,12 +110,6 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 			t.Fatalf("container setup failed: %v", err)
 		}
 	}
-	if spec.cleanup != nil {
-		t.Cleanup(func() {
-			spec.cleanup(c)
-		})
-	}
-
 	return c
 }
 
@@ -158,7 +148,7 @@ func buildImage(spec ContainerSpec) error {
 }
 
 func generateContainerName(t *testing.T) string {
-	return fmt.Sprintf("topo-test-%s", SanitiseTestName(t))
+	return fmt.Sprintf("topo-test-%s-%s", SanitiseTestName(t), strings.ToLower(rand.Text()))
 }
 
 func runContainer(containerName string, spec ContainerSpec) error {
@@ -193,32 +183,40 @@ func acceptHostKey(c *Container) error {
 	return nil
 }
 
-func removeHostKey(c *Container) {
-	u, err := url.Parse(c.SSHDestination)
-	if err != nil {
-		return
-	}
-	host := fmt.Sprintf("[%s]:%s", u.Hostname(), u.Port())
-	// #nosec G204 -- ignore as its a test helper
-	_ = exec.Command("ssh-keygen", "-R", host).Run()
-}
-
-func waitForPort(host string, port string, timeout time.Duration) error {
+func waitForSSH(host string, port string, timeout time.Duration) error {
 	addr := net.JoinHostPort(host, port)
 	deadline := time.Now().Add(timeout)
-	var lastErr error
+	lastErr := os.ErrDeadlineExceeded
 
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
-		if err == nil {
-			_ = conn.Close()
+		lastErr = readSSHBanner(addr, min(2*time.Second, time.Until(deadline)))
+		if lastErr == nil {
 			return nil
 		}
-		lastErr = err
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(min(200*time.Millisecond, time.Until(deadline)))
 	}
 
-	return fmt.Errorf("port %s not ready: %w", addr, lastErr)
+	return fmt.Errorf("SSH at %s not ready: %w", addr, lastErr)
+}
+
+func readSSHBanner(addr string, timeout time.Duration) (err error) {
+	deadline := time.Now().Add(timeout)
+	conn, err := net.DialTimeout("tcp", addr, timeout)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, conn.Close()) }()
+	if err := conn.SetReadDeadline(deadline); err != nil {
+		return err
+	}
+	banner, err := bufio.NewReader(io.LimitReader(conn, 255)).ReadString('\n')
+	if err != nil {
+		return err
+	}
+	if !strings.HasPrefix(banner, "SSH-") {
+		return fmt.Errorf("unexpected SSH banner: %q", banner)
+	}
+	return nil
 }
 
 func waitForPodmanService(c *Container) error {
