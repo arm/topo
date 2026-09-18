@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func TestLocal(t *testing.T) {
 
 			stdout, stderr, err := r.Run(context.Background(), "sh -c 'echo stdout-output; echo stderr-output >&2; exit 1'")
 
-			var commandErr *runner.CommandError
+			var commandErr *command.Error
 			require.ErrorAs(t, err, &commandErr)
 			assert.Equal(t, "stdout-output\n", stdout)
 			assert.Equal(t, "stderr-output\n", stderr)

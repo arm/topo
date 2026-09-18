@@ -52,11 +52,11 @@ func OpenTunnel(ctx context.Context, w io.Writer, dest Destination, port string)
 
 	if t.useControlSockets {
 		if err := cmd.Run(); err != nil {
-			return nil, command.FormatError(cmd.Args, err)
+			return nil, command.NewError(cmd, err)
 		}
 	} else {
 		if err := cmd.Start(); err != nil {
-			return nil, command.FormatError(cmd.Args, err)
+			return nil, command.NewError(cmd, err)
 		}
 		t.command = cmd
 	}
@@ -82,7 +82,7 @@ func (t *Tunnel) Close(ctx context.Context, w io.Writer) error {
 		cmd.Stdout = w
 		cmd.Stderr = w
 		if runErr := cmd.Run(); runErr != nil {
-			err = command.FormatError(cmd.Args, runErr)
+			err = command.NewError(cmd, runErr)
 		}
 	} else {
 		err = killCommand(t.command)

@@ -24,7 +24,7 @@ func RunCommand(ctx context.Context, output io.Writer, socket Socket, args ...st
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Run(); err != nil {
-		return command.FormatError(cmd.Args, err)
+		return command.NewError(cmd, err)
 	}
 	return nil
 }
@@ -57,7 +57,7 @@ func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, sco
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Run(); err != nil {
-		return command.FormatError(cmd.Args, err)
+		return command.NewError(cmd, err)
 	}
 	return nil
 }

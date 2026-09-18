@@ -39,7 +39,7 @@ func OpenTCPToUnixSocketTunnel(ctx context.Context, output io.Writer, dest Desti
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Start(); err != nil {
-		return nil, command.FormatError(cmd.Args, err)
+		return nil, command.NewError(cmd, err)
 	}
 
 	tunnel := &TCPToUnixSocketTunnel{
