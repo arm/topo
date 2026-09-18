@@ -87,7 +87,7 @@ func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 		Label: "Topo",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if skipVersionChecks || version.Version == version.Dev {
-				return DependencyCheckResult{SuccessValue: "topo"}
+				return DependencyCheckResult{SuccessValue: fmt.Sprintf("topo: %s", version.Version)}
 			}
 			binPath, binPathErr := upgrade.CurrentBinaryPath()
 
@@ -100,10 +100,10 @@ func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 			}
 			if err != nil {
 				logger.Warn(fmt.Sprintf("failed to fetch latest version: %v", err))
-				return DependencyCheckResult{SuccessValue: "topo"}
+				return DependencyCheckResult{SuccessValue: fmt.Sprintf("topo: %s", version.Version)}
 			}
 			if latest == version.Version {
-				return DependencyCheckResult{SuccessValue: "topo"}
+				return DependencyCheckResult{SuccessValue: fmt.Sprintf("topo: %s", version.Version)}
 			}
 
 			fix := Fix{Description: "Upgrade Topo"}
@@ -130,14 +130,15 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
 				}}
 			}
-			if _, _, err := r.Run(ctx, "docker info"); err != nil {
+			dockerVersion, _, err := r.Run(ctx, `docker version --format {{.Client.Version}}`)
+			if err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
 					Fix:      &Fix{Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL},
 				}}
 			}
-			return DependencyCheckResult{SuccessValue: "docker"}
+			return DependencyCheckResult{SuccessValue: fmt.Sprintf("docker: %s", strings.TrimSpace(dockerVersion))}
 		},
 	}
 }
@@ -174,7 +175,7 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 				}}
 			}
 
-			return DependencyCheckResult{SuccessValue: "docker-compose"}
+			return DependencyCheckResult{SuccessValue: fmt.Sprintf("docker-compose: %s", output.Version)}
 		},
 	}
 }
