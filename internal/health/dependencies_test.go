@@ -21,7 +21,7 @@ func TestNewDependencyOnTopoCheck(t *testing.T) {
 
 		dependency := health.NewDependencyOnTopo(false)
 
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "topo"}, dependency.Check(context.Background()))
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "topo: dev"}, dependency.Check(context.Background()))
 	})
 }
 
@@ -93,7 +93,7 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 
 		got := dependency.Check(context.Background())
 
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose: 2.21.0"}, got)
 	})
 
 	t.Run("accepts Docker Compose newer than the minimum version", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 
 		got := dependency.Check(context.Background())
 
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose: 5.2.0"}, got)
 	})
 
 	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {
