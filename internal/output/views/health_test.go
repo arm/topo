@@ -78,19 +78,20 @@ func TestHealthReport(t *testing.T) {
 	})
 
 	t.Run("AsJSON", func(t *testing.T) {
-		t.Run("preserves the legacy combined target dependencies", func(t *testing.T) {
+		t.Run("combines target dependencies including connectivity and processing domain drivers", func(t *testing.T) {
 			toPrint := views.HealthReport{
 				TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{{Name: "Topo", Status: health.CheckStatusOK}},
 					Target: []health.DependencyReport{
-						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
+						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK, Value: "ssh://user@my-target"},
 						{Name: "Container Engine", Status: health.CheckStatusOK},
+						{Name: "Processing Domain Driver (remoteproc)", Status: health.CheckStatusOK, Value: "remoteproc0"},
 					},
 				},
 				ProjectDiscovery: health.ReadinessReport{
 					Target: []health.DependencyReport{
-						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
+						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK, Value: "ssh://user@my-target"},
 						{Name: "Hardware Info", Status: health.CheckStatusOK},
 					},
 				},
@@ -105,12 +106,62 @@ func TestHealthReport(t *testing.T) {
 				"target":{
 					"destination":"ssh://user@my-target",
 					"isLocalhost":false,
-					"connectivity":{"name":"Connectivity","status":"ok","value":""},
 					"dependencies":[
+						{"name":"Connectivity","status":"ok","value":"ssh://user@my-target"},
 						{"name":"Container Engine","status":"ok","value":""},
+						{"name":"Processing Domain Driver (remoteproc)","status":"ok","value":"remoteproc0"},
 						{"name":"Hardware Info","status":"ok","value":""}
-					],
-					"processingDomainDriver":{"name":"Processing Domain Driver (remoteproc)","status":"","value":""}
+					]
+				}
+			}`, out.String())
+		})
+
+		t.Run("omits connectivity for plain localhost", func(t *testing.T) {
+			toPrint := views.HealthReport{
+				TargetDetails: health.TargetDetails{Destination: "localhost", IsLocalhost: true},
+				Deployment: health.ReadinessReport{
+					Target: []health.DependencyReport{
+						{Name: "Container Engine", Status: health.CheckStatusOK, Value: "docker"},
+						{Name: "Processing Domain Driver (remoteproc)", Status: health.CheckStatusInfo, Value: "no remoteproc devices found"},
+					},
+				},
+			}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.JSON)
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"host":{"dependencies":[]},
+				"target":{
+					"destination":"localhost",
+					"isLocalhost":true,
+					"dependencies":[
+						{"name":"Container Engine","status":"ok","value":"docker"},
+						{"name":"Processing Domain Driver (remoteproc)","status":"info","value":"no remoteproc devices found"}
+					]
+				}
+			}`, out.String())
+		})
+
+		t.Run("omits all other target dependencies when connectivity fails", func(t *testing.T) {
+			toPrint := views.HealthReport{
+				TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
+				Deployment: health.ReadinessReport{
+					Target: []health.DependencyReport{{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusError, Value: "connection refused"}},
+				},
+			}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.JSON)
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"host":{"dependencies":[]},
+				"target":{
+					"destination":"ssh://user@my-target",
+					"isLocalhost":false,
+					"dependencies":[{"name":"Connectivity","status":"error","value":"connection refused"}]
 				}
 			}`, out.String())
 		})

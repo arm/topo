@@ -1,32 +1,14 @@
 package e2e
 
 import (
-	"encoding/json"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-const targetDestinationPlaceholder = "TARGET_DESTINATION"
-
-func replaceNonDeterministicDestination(t *testing.T, out string) string {
-	t.Helper()
-	var obj map[string]map[string]any
-	err := json.Unmarshal([]byte(out), &obj)
-	require.NoError(t, err)
-
-	obj["target"]["destination"] = targetDestinationPlaceholder
-	connectivity, ok := obj["target"]["connectivity"].(map[string]any)
-	require.True(t, ok)
-	connectivity["value"] = targetDestinationPlaceholder
-
-	normalizedOut, err := json.MarshalIndent(obj, "", "  ")
-	require.NoError(t, err)
-	return string(normalizedOut)
-}
 
 func TestHealthCheck(t *testing.T) {
 	container := testutil.StartContainer(t, testutil.DinDContainer)
@@ -63,7 +45,7 @@ func TestHealthCheck(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Contains(t, out, container.SSHDestination)
-		out = replaceNonDeterministicDestination(t, out)
+		out = strings.ReplaceAll(out, container.SSHDestination, "TARGET_DESTINATION")
 		testutil.AssertJsonGoldenFile(t, out, "testdata/TestHealthCheckJson.golden")
 	})
 }

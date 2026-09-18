@@ -73,21 +73,20 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 }
 
 func (r HealthReport) AsJSON() (string, error) {
-	targetDependencies := legacyTargetDependencies(r.Deployment.Target, r.ProjectDiscovery.Target)
-	return asJSON(toJSONHealthReport(legacyHealthReport{
-		HostDependencies:   r.Deployment.Host,
-		TargetDependencies: targetDependencies,
-		TargetDetails:      r.TargetDetails,
-	}))
+	report := jsonHealthReport{
+		Host: jsonHostReport{Dependencies: toJSONDependencyReports(r.Deployment.Host)},
+	}
+	if r.TargetDetails.Destination != "" {
+		report.Target = &jsonTargetReport{
+			Destination:  r.TargetDetails.Destination,
+			IsLocalhost:  r.TargetDetails.IsLocalhost,
+			Dependencies: toJSONDependencyReports(combinedTargetDependencies(r.Deployment.Target, r.ProjectDiscovery.Target)),
+		}
+	}
+	return asJSON(report)
 }
 
-type legacyHealthReport struct {
-	HostDependencies   []health.DependencyReport
-	TargetDependencies []health.DependencyReport
-	TargetDetails      health.TargetDetails
-}
-
-func legacyTargetDependencies(deployment, projectDiscovery []health.DependencyReport) []health.DependencyReport {
+func combinedTargetDependencies(deployment, projectDiscovery []health.DependencyReport) []health.DependencyReport {
 	targetDependencies := append([]health.DependencyReport(nil), deployment...)
 	for _, dependency := range projectDiscovery {
 		if dependency.ID != health.DependencyIDConnectivity {
@@ -186,11 +185,9 @@ type jsonHostReport struct {
 }
 
 type jsonTargetReport struct {
-	Destination            string                 `json:"destination"`
-	IsLocalhost            bool                   `json:"isLocalhost"`
-	Connectivity           jsonDependencyReport   `json:"connectivity"`
-	Dependencies           []jsonDependencyReport `json:"dependencies"`
-	ProcessingDomainDriver jsonDependencyReport   `json:"processingDomainDriver"`
+	Destination  string                 `json:"destination"`
+	IsLocalhost  bool                   `json:"isLocalhost"`
+	Dependencies []jsonDependencyReport `json:"dependencies"`
 }
 
 type jsonDependencyReport struct {
@@ -203,38 +200,6 @@ type jsonDependencyReport struct {
 type jsonFix struct {
 	Description string `json:"description"`
 	Command     string `json:"command,omitempty"`
-}
-
-func toJSONHealthReport(report legacyHealthReport) jsonHealthReport {
-	jsonReport := jsonHealthReport{
-		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.HostDependencies)},
-	}
-	if report.TargetDetails.Destination != "" {
-		jsonTarget := toJSONTargetReport(report.TargetDependencies, report.TargetDetails)
-		jsonReport.Target = &jsonTarget
-	}
-	return jsonReport
-}
-
-func toJSONTargetReport(dependencies []health.DependencyReport, details health.TargetDetails) jsonTargetReport {
-	jsonTarget := jsonTargetReport{
-		Destination:            details.Destination,
-		IsLocalhost:            details.IsLocalhost,
-		Dependencies:           make([]jsonDependencyReport, 0, len(dependencies)),
-		ProcessingDomainDriver: jsonDependencyReport{Name: "Processing Domain Driver (remoteproc)"},
-	}
-	for _, check := range dependencies {
-		jsonCheck := toJSONDependencyReport(check)
-		switch check.ID {
-		case health.DependencyIDConnectivity:
-			jsonTarget.Connectivity = jsonCheck
-		case health.DependencyIDRemoteproc:
-			jsonTarget.ProcessingDomainDriver = jsonCheck
-		default:
-			jsonTarget.Dependencies = append(jsonTarget.Dependencies, jsonCheck)
-		}
-	}
-	return jsonTarget
 }
 
 func toJSONDependencyReports(checks []health.DependencyReport) []jsonDependencyReport {

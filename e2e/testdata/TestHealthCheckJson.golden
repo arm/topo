@@ -24,16 +24,21 @@
     ]
   },
   "target": {
-    "connectivity": {
-      "name": "Connectivity",
-      "status": "ok",
-      "value": "TARGET_DESTINATION"
-    },
     "dependencies": [
+      {
+        "name": "Connectivity",
+        "status": "ok",
+        "value": "TARGET_DESTINATION"
+      },
       {
         "name": "Container Engine",
         "status": "ok",
         "value": "docker"
+      },
+      {
+        "name": "Processing Domain Driver (remoteproc)",
+        "status": "info",
+        "value": "no remoteproc devices found"
       },
       {
         "name": "Hardware Info",
@@ -42,11 +47,6 @@
       }
     ],
     "destination": "TARGET_DESTINATION",
-    "isLocalhost": false,
-    "processingDomainDriver": {
-      "name": "Processing Domain Driver (remoteproc)",
-      "status": "info",
-      "value": "no remoteproc devices found"
-    }
+    "isLocalhost": false
   }
 }
