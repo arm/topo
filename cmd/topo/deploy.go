@@ -80,10 +80,14 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err := term.PrintNthHeader(os.Stdout, "Deployment Success"); err != nil {
 			return err
 		}
+		composeFileFlagValue := cmd.Flag(composeFileFlag)
 		return post_deploy.PrintDeploySuccess(
 			os.Stdout,
 			scope,
-			defaultDeploySuccessMessage(composeFilePath, cmd.Flag(composeFileFlag).Changed),
+			defaultDeploySuccessMessage(
+				strings.TrimSpace(composeFileFlagValue.Value.String()),
+				composeFileFlagValue.Changed,
+			),
 		)
 	},
 }
