@@ -23,7 +23,7 @@ func TestCheckTunnelExposure(t *testing.T) {
 		}, "12345")
 
 		assert.ErrorContains(t, err, "cannot conclusively rule out network access to registry port 12345")
-		assert.ErrorContains(t, err, `Could not resolve hostname not-a-host`)
+		assert.ErrorIs(t, err, ssh.ErrConnectionFailed)
 		assert.ErrorContains(t, err, "use `--skip-remote-port-check` if you understand the security risk")
 	})
 

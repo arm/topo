@@ -23,7 +23,7 @@ var (
 	ErrTooManyAuthFails  = sshError{message: "too many authentication failures"}
 	ErrConnectionFailed  = sshError{message: "connection failed"}
 	ErrConnectionTimeout = sshError{message: "connection timed out"}
-	ErrHostKeyUnknown    = sshError{message: "host key is not known"}
+	ErrHostKeyUnknown    = sshError{message: "host key is unknown"}
 	ErrHostKeyChanged    = sshError{message: "host key has changed"}
 )
 

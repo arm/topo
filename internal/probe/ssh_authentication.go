@@ -2,37 +2,14 @@ package probe
 
 import (
 	"context"
-	"errors"
 
 	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
-)
-
-var (
-	ErrHostKeyUnknown   = errors.New("ssh host key is unknown")
-	ErrHostKeyChanged   = errors.New("ssh host key has changed")
-	ErrAuthFailed       = errors.New("ssh authentication failed")
-	ErrTooManyAuthFails = errors.New("ssh too many authentication failures")
 )
 
 // SSHAuthentication verifies SSH connectivity by attempting public key authentication.
 func SSHAuthentication(ctx context.Context, r *runner.SSH, acceptNewHostKeys bool) error {
 	_, _, err := r.RunWithArgs(ctx, "true", sshAuthArgs(acceptNewHostKeys)...)
-	if err == nil {
-		return nil
-	}
-	switch {
-	case errors.Is(err, ssh.ErrHostKeyChanged):
-		return ErrHostKeyChanged
-	case errors.Is(err, ssh.ErrHostKeyUnknown):
-		return ErrHostKeyUnknown
-	case errors.Is(err, ssh.ErrAuthFailed):
-		return ErrAuthFailed
-	case errors.Is(err, ssh.ErrTooManyAuthFails):
-		return ErrTooManyAuthFails
-	default:
-		return err
-	}
+	return err
 }
 
 func sshAuthArgs(acceptNewHostKeys bool) []string {
