@@ -167,17 +167,13 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	return Dependency{
 		Label: "Docker Compose",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if _, _, err := r.Run(ctx, "docker-compose"); err != nil {
+			stdout, _, err := r.Run(ctx, "docker compose version --format json")
+			if err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
 					Fix:      &Fix{Description: "Ensure Docker Compose is installed as a plugin for Docker. See " + containerEngineInstallURL},
 				}}
-			}
-
-			stdout, _, err := r.Run(ctx, "docker compose version --format json")
-			if err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
 			}
 
 			var output struct {
@@ -195,7 +191,7 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 				}}
 			}
 
-			return DependencyCheckResult{SuccessValue: "docker-compose"}
+			return DependencyCheckResult{SuccessValue: "docker compose"}
 		},
 	}
 }
