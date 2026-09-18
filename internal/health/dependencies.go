@@ -179,13 +179,13 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, missingTargetFixMessage string) Dependency {
+func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, missingTargetMessage string, missingTargetSeverity CheckSeverity, missingTargetFixMessage string) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if target == nil {
-				failure := &DependencyCheckFailure{Severity: SeverityWarning, Message: "target not specified"}
+				failure := &DependencyCheckFailure{Severity: missingTargetSeverity, Message: missingTargetMessage}
 				if missingTargetFixMessage != "" {
 					failure.Fix = &Fix{Description: missingTargetFixMessage}
 				}
@@ -200,17 +200,17 @@ func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, 
 
 			failure := DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}
 			switch {
-			case errors.Is(err, probe.ErrAuthFailed), errors.Is(err, probe.ErrTooManyAuthFails):
+			case errors.Is(err, ssh.ErrAuthFailed), errors.Is(err, ssh.ErrTooManyAuthFails):
 				failure.Fix = &Fix{
 					Description: "Configure SSH keys on remote target",
 					Command:     fmt.Sprintf("topo setup-keys --target %s", *target),
 				}
-			case errors.Is(err, probe.ErrHostKeyUnknown):
+			case errors.Is(err, ssh.ErrHostKeyUnknown):
 				failure.Fix = &Fix{
 					Description: "Trust the target's SSH host key",
 					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", *target),
 				}
-			case errors.Is(err, probe.ErrHostKeyChanged):
+			case errors.Is(err, ssh.ErrHostKeyChanged):
 				sshConfig, configErr := ssh.LoadConfig(*target)
 				fixCommand := ""
 				if configErr == nil {

@@ -26,14 +26,15 @@ func TestNewDependencyOnTopoCheck(t *testing.T) {
 }
 
 func TestNewConnectivityDependency(t *testing.T) {
-	t.Run("reports a missing target with its fix", func(t *testing.T) {
+	t.Run("reports a missing target with its severity and fix", func(t *testing.T) {
+		severityWhenMissing := health.SeverityInfo
 		fixMessage := "Specify a target"
-		dependency := health.NewConnectivityDependency(nil, false, fixMessage)
+		dependency := health.NewConnectivityDependency(nil, false, "target not specified", severityWhenMissing, fixMessage)
 
 		got := dependency.Check(context.Background())
 
 		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-			Severity: health.SeverityWarning,
+			Severity: severityWhenMissing,
 			Message:  "target not specified",
 			Fix:      &health.Fix{Description: fixMessage},
 		}}

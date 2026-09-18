@@ -19,36 +19,47 @@ type DependencyReport struct {
 	Fix    *Fix
 }
 
-type HostReport struct {
-	Dependencies []DependencyReport
+type TargetDetails struct {
+	Destination string
+	IsLocalhost bool
 }
 
-type TargetReport struct {
-	Destination  string
-	IsLocalhost  bool
-	Dependencies []DependencyReport
+type ReadinessReport struct {
+	Host   []DependencyReport
+	Target []DependencyReport
 }
 
 type HealthReport struct {
-	Host   HostReport
-	Target TargetReport
+	TargetDetails    TargetDetails
+	Deployment       ReadinessReport
+	ProjectDiscovery ReadinessReport
 }
 
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	healthCheck := NewHealthCheck(options)
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
-	report := HealthReport{
-		Host: HostReport{Dependencies: toDependencyReports(evaluatedHealthCheck.Host)},
-		Target: TargetReport{
-			Dependencies: toDependencyReports(evaluatedHealthCheck.Target),
-		},
+	return HealthReport{
+		TargetDetails:    targetDetails(options),
+		Deployment:       toReadinessReport(evaluatedHealthCheck.Deployment),
+		ProjectDiscovery: toReadinessReport(evaluatedHealthCheck.ProjectDiscovery),
 	}
-	if options.Target != nil {
-		// Legacy JSON support
-		report.Target.Destination = options.Target.String()
-		report.Target.IsLocalhost = options.Target.IsPlainLocalhost()
+}
+
+func targetDetails(options HealthCheckOptions) TargetDetails {
+	if options.Target == nil {
+		return TargetDetails{}
 	}
-	return report
+	return TargetDetails{
+		Destination: options.Target.String(),
+		IsLocalhost: options.Target.IsPlainLocalhost(),
+	}
+}
+
+func toReadinessReport(evaluatedHealthCheck EvaluatedReadinessCheck) ReadinessReport {
+	return ReadinessReport{
+		Host:   toDependencyReports(evaluatedHealthCheck.Host),
+		Target: toDependencyReports(evaluatedHealthCheck.Target),
+	}
 }
 
 func ToDependencyReport(status EvaluatedDependency) DependencyReport {

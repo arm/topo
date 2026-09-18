@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"context"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -39,6 +40,22 @@ func TestLocal(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, "hello && echo world\n", got)
+		})
+
+		t.Run("returns structured error for command failure", func(t *testing.T) {
+			r := runner.NewLocal()
+
+			stdout, stderr, err := r.Run(context.Background(), "sh -c 'echo stdout-output; echo stderr-output >&2; exit 1'")
+
+			var commandErr *runner.CommandError
+			require.ErrorAs(t, err, &commandErr)
+			assert.Equal(t, "stdout-output\n", stdout)
+			assert.Equal(t, "stderr-output\n", stderr)
+			assert.Equal(t, "sh -c 'echo stdout-output; echo stderr-output >&2; exit 1'", commandErr.Command)
+			assert.Equal(t, "stderr-output\n", commandErr.Stderr)
+
+			var exitErr *exec.ExitError
+			assert.ErrorAs(t, err, &exitErr)
 		})
 	})
 
