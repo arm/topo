@@ -9,44 +9,146 @@ import (
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/version"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewDependencyOnTopoCheck(t *testing.T) {
-	t.Run("passes for development builds", func(t *testing.T) {
-		originalVersion := version.Version
-		version.Version = version.Dev
-		t.Cleanup(func() { version.Version = originalVersion })
-
-		dependency := health.NewDependencyOnTopo(false)
-
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "topo"}, dependency.Check(context.Background()))
-	})
-}
-
-func TestNewConnectivityDependency(t *testing.T) {
-	t.Run("reports a missing target with its severity and fix", func(t *testing.T) {
-		severityWhenMissing := health.SeverityInfo
-		fixMessage := "Specify a target"
-		dependency := health.NewConnectivityDependency(nil, false, "target not specified", severityWhenMissing, fixMessage)
+func TestNewMissingTargetDependency(t *testing.T) {
+	t.Run("reports the configured severity and fix", func(t *testing.T) {
+		dependency := health.NewMissingTargetDependency("target not specified", health.SeverityInfo, "Specify a target")
 
 		got := dependency.Check(context.Background())
 
 		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-			Severity: severityWhenMissing,
+			Severity: health.SeverityInfo,
 			Message:  "target not specified",
-			Fix:      &health.Fix{Description: fixMessage},
+			Fix:      &health.Fix{Description: "Specify a target"},
 		}}
 		assert.Equal(t, want, got)
 	})
 }
 
+func TestNewConnectivityDependency(t *testing.T) {
+	t.Run("uses injected known hosts entry for changed host keys", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate:    func(context.Context) error { return ssh.ErrHostKeyChanged },
+			KnownHostsEntry: func() (string, error) { return "[example.com]:2222", nil },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "host key has changed",
+			Fix: &health.Fix{
+				Description: "Remove the old SSH host key from known_hosts, then retry",
+				Command:     "ssh-keygen -R '[example.com]:2222'",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("omits the removal command when the known hosts entry cannot be resolved", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate:    func(context.Context) error { return ssh.ErrHostKeyChanged },
+			KnownHostsEntry: func() (string, error) { return "", errors.New("cannot load SSH config") },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "host key has changed",
+			Fix: &health.Fix{
+				Description: "Remove the old SSH host key from known_hosts, then retry",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns setup keys advice for authentication failures", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate: func(context.Context) error { return ssh.ErrAuthFailed },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "authentication failed",
+			Fix: &health.Fix{
+				Description: "Configure SSH keys on remote target",
+				Command:     "topo setup-keys --target ssh://user@example.com",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns setup keys advice for too many authentication failures", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate: func(context.Context) error { return ssh.ErrTooManyAuthFails },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "too many authentication failures",
+			Fix: &health.Fix{
+				Description: "Configure SSH keys on remote target",
+				Command:     "topo setup-keys --target ssh://user@example.com",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns host key trust advice for unknown host keys", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate: func(context.Context) error { return ssh.ErrHostKeyUnknown },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "host key is unknown",
+			Fix: &health.Fix{
+				Description: "Trust the target's SSH host key",
+				Command:     "topo health --target ssh://user@example.com --accept-new-host-keys",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
+func TestNewDependencyOnRemoteDocker(t *testing.T) {
+	t.Run("does not probe the target when Docker is missing on the host", func(t *testing.T) {
+		probeCalled := false
+		dependency := health.NewDependencyOnRemoteDocker(&runner.Fake{}, func(context.Context) error {
+			probeCalled = true
+			return nil
+		})
+
+		got := dependency.Check(context.Background())
+
+		assert.False(t, probeCalled)
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  `cannot probe from host: "docker" not found in $PATH`,
+			Fix:      &health.Fix{Description: "Install a supported container engine on the host. See https://github.com/arm/topo#install-a-container-engine"},
+		}}, got)
+	})
+}
+
 func TestNewDependencyOnSSHCheck(t *testing.T) {
-	buildRunner := func(result runner.FakeResult) runner.Runner {
+	buildRunner := func(sshVResult runner.FakeResult) runner.Runner {
 		return &runner.Fake{
 			Binaries: []string{"ssh"},
-			Commands: map[string]runner.FakeResult{"ssh -V": result},
+			Commands: map[string]runner.FakeResult{"ssh -V": sshVResult},
 		}
 	}
 

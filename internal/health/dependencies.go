@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
@@ -144,27 +142,23 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteDocker(dest ssh.Destination) Dependency {
+func NewDependencyOnRemoteDocker(hostRunner runner.Runner, probeInfo func(context.Context) error) Dependency {
 	return Dependency{
 		Label: "Container Engine",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			r := runner.NewLocal()
-			if err := r.BinaryExists(ctx, "docker"); err != nil {
+			if err := hostRunner.BinaryExists(ctx, "docker"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
-					Message:  fmt.Errorf("cannot probe from host: %w", err).Error(),
+					Message:  fmt.Sprintf("cannot probe from host: %v", err),
 					Fix:      &Fix{Description: "Install a supported container engine on the host. See " + containerEngineInstallURL},
 				}}
 			}
-			host := docker.NewHostFromDestination(dest)
-			if err := docker.RunCommand(ctx, io.Discard, host, "info"); err != nil {
-				return DependencyCheckResult{
-					Failure: &DependencyCheckFailure{
-						Severity: SeverityError,
-						Message:  err.Error(),
-						Fix:      &Fix{Description: "Ensure docker is installed and running on the target. See " + containerEngineInstallURL},
-					},
-				}
+			if err := probeInfo(ctx); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+					Fix:      &Fix{Description: "Ensure docker is installed and running on the target. See " + containerEngineInstallURL},
+				}}
 			}
 			return DependencyCheckResult{SuccessValue: "docker"}
 		},
@@ -204,21 +198,31 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, missingTargetMessage string, missingTargetSeverity CheckSeverity, missingTargetFixMessage string) Dependency {
+func NewMissingTargetDependency(message string, severity CheckSeverity, fixMessage string) Dependency {
+	return Dependency{
+		ID:    DependencyIDConnectivity,
+		Label: "Connectivity",
+		Check: func(context.Context) DependencyCheckResult {
+			failure := &DependencyCheckFailure{Severity: severity, Message: message}
+			if fixMessage != "" {
+				failure.Fix = &Fix{Description: fixMessage}
+			}
+			return DependencyCheckResult{Failure: failure}
+		},
+	}
+}
+
+type ConnectivityOperations struct {
+	Authenticate    func(context.Context) error
+	KnownHostsEntry func() (string, error)
+}
+
+func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOperations) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if target == nil {
-				failure := &DependencyCheckFailure{Severity: missingTargetSeverity, Message: missingTargetMessage}
-				if missingTargetFixMessage != "" {
-					failure.Fix = &Fix{Description: missingTargetFixMessage}
-				}
-				return DependencyCheckResult{Failure: failure}
-			}
-
-			sshRunner := runner.NewSSH(*target)
-			err := probe.SSHAuthentication(ctx, sshRunner, acceptNewHostKeys)
+			err := operations.Authenticate(ctx)
 			if err == nil {
 				return DependencyCheckResult{SuccessValue: target.String()}
 			}
@@ -228,18 +232,18 @@ func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, 
 			case errors.Is(err, ssh.ErrAuthFailed), errors.Is(err, ssh.ErrTooManyAuthFails):
 				failure.Fix = &Fix{
 					Description: "Configure SSH keys on remote target",
-					Command:     fmt.Sprintf("topo setup-keys --target %s", *target),
+					Command:     fmt.Sprintf("topo setup-keys --target %s", target),
 				}
 			case errors.Is(err, ssh.ErrHostKeyUnknown):
 				failure.Fix = &Fix{
 					Description: "Trust the target's SSH host key",
-					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", *target),
+					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", target),
 				}
 			case errors.Is(err, ssh.ErrHostKeyChanged):
-				sshConfig, configErr := ssh.LoadConfig(*target)
+				knownHostsEntry, configErr := operations.KnownHostsEntry()
 				fixCommand := ""
 				if configErr == nil {
-					fixCommand = fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(sshConfig.AsKnownHostsEntry()))
+					fixCommand = fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(knownHostsEntry))
 				}
 				failure.Fix = &Fix{
 					Description: "Remove the old SSH host key from known_hosts, then retry",
