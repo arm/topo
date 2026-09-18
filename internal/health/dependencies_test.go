@@ -14,7 +14,11 @@ import (
 
 func TestNewMissingTargetDependency(t *testing.T) {
 	t.Run("reports the configured severity and fix", func(t *testing.T) {
-		dependency := health.NewMissingTargetDependency("target not specified", health.SeverityInfo, "Specify a target")
+		dependency := health.NewMissingTargetDependency(health.MissingTargetOptions{
+			Message:    "target not specified",
+			Severity:   health.SeverityInfo,
+			FixMessage: "Specify a target",
+		})
 
 		got := dependency.Check(context.Background())
 

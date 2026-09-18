@@ -198,14 +198,20 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-func NewMissingTargetDependency(message string, severity CheckSeverity, fixMessage string) Dependency {
+type MissingTargetOptions struct {
+	Message    string
+	Severity   CheckSeverity
+	FixMessage string
+}
+
+func NewMissingTargetDependency(options MissingTargetOptions) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(context.Context) DependencyCheckResult {
-			failure := &DependencyCheckFailure{Severity: severity, Message: message}
-			if fixMessage != "" {
-				failure.Fix = &Fix{Description: fixMessage}
+			failure := &DependencyCheckFailure{Severity: options.Severity, Message: options.Message}
+			if options.FixMessage != "" {
+				failure.Fix = &Fix{Description: options.FixMessage}
 			}
 			return DependencyCheckResult{Failure: failure}
 		},

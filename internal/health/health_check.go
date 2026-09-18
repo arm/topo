@@ -127,12 +127,16 @@ func newProductionChecks(options HealthCheckOptions) Checks {
 			DockerCompose: NewDependencyOnDockerCompose(localRunner),
 		},
 		Target: TargetChecks{
-			MissingForDeployment: NewMissingTargetDependency(
-				"target not specified", SeverityError, options.MissingTargetFixMessage,
-			),
-			MissingForProjectDiscovery: NewMissingTargetDependency(
-				"target not specified; cannot calculate project compatibility", SeverityWarning, options.MissingTargetFixMessage,
-			),
+			MissingForDeployment: NewMissingTargetDependency(MissingTargetOptions{
+				Message:    "target not specified",
+				Severity:   SeverityError,
+				FixMessage: options.MissingTargetFixMessage,
+			}),
+			MissingForProjectDiscovery: NewMissingTargetDependency(MissingTargetOptions{
+				Message:    "target not specified; cannot calculate project compatibility",
+				Severity:   SeverityWarning,
+				FixMessage: options.MissingTargetFixMessage,
+			}),
 		},
 	}
 	if options.Target == nil {
