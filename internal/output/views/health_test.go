@@ -79,7 +79,7 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "Project management: ready (! 1)")
 		})
 
-		t.Run("it summarizes healthy host and target checks", func(t *testing.T) {
+		t.Run("it summarizes healthy checks while keeping informational checks visible", func(t *testing.T) {
 			toPrint := views.HealthReportView{
 				HealthReport: health.HealthReport{
 					TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
@@ -90,7 +90,12 @@ func TestHealthReport(t *testing.T) {
 						Target: []health.DependencyReport{
 							{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
 							{Name: "Container Engine", Status: health.CheckStatusOK},
-							{ID: health.DependencyIDRemoteproc, Name: "Processing Domain Driver", Status: health.CheckStatusOK},
+							{
+								ID:     health.DependencyIDRemoteproc,
+								Name:   "Processing Domain Driver (remoteproc)",
+								Status: health.CheckStatusInfo,
+								Value:  "no remoteproc devices found",
+							},
 						},
 					},
 				},
@@ -102,6 +107,7 @@ func TestHealthReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), " ✓ Host\n   ✓ All checks passed\n")
 			assert.Contains(t, out.String(), " ✓ Target: ssh://user@my-target\n   ✓ All checks passed\n")
+			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 
 		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
@@ -125,31 +131,6 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), " ✗ Host\n   ✗ Container Engine (docker not found on path)\n")
-		})
-
-		t.Run("it keeps informational checks alongside the success summary", func(t *testing.T) {
-			toPrint := views.HealthReportView{
-				HealthReport: health.HealthReport{
-					Deployment: health.ReadinessReport{
-						Target: []health.DependencyReport{
-							{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
-							{
-								ID:     health.DependencyIDRemoteproc,
-								Name:   "Processing Domain Driver (remoteproc)",
-								Status: health.CheckStatusInfo,
-								Value:  "no remoteproc devices found",
-							},
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ✓ All checks passed")
-			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 	})
 
