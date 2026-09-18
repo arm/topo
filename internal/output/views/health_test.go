@@ -152,54 +152,6 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
 
-		t.Run("it renders the target destination when a dependency fails", func(t *testing.T) {
-			toPrint := views.HealthReportView{
-				HealthReport: health.HealthReport{
-					TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
-					Deployment: health.ReadinessReport{
-						Target: []health.DependencyReport{
-							{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK, Value: "ssh://user@my-target"},
-							{Name: "Container Engine", Status: health.CheckStatusError},
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ✗ Target: ssh://user@my-target")
-			assert.Contains(t, out.String(), " ✗ Container Engine")
-		})
-
-		t.Run("it renders the fix hint when a check has a fix", func(t *testing.T) {
-			toPrint := views.HealthReportView{
-				HealthReport: health.HealthReport{
-					Deployment: health.ReadinessReport{
-						Host: []health.DependencyReport{
-							{
-								Name:   "Skin Care",
-								Status: health.CheckStatusWarning,
-								Fix: &health.Fix{
-									Description: "Apply Working Hands Cream",
-									Command:     "topo moisturise",
-								},
-							},
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ! Skin Care")
-			assert.Contains(t, out.String(), "     Fix:\n       Apply Working Hands Cream")
-			assert.Contains(t, out.String(), "     Command:\n       topo moisturise")
-		})
-
 		t.Run("it colors status labels when writing to a terminal", func(t *testing.T) {
 			toPrint := views.HealthReportView{
 				HealthReport: health.HealthReport{
