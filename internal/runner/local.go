@@ -50,7 +50,11 @@ func (r *Local) exec(ctx context.Context, cmdStr string, stdin []byte) (string, 
 			return "", "", ErrTimeout
 		}
 		stderr := stderrBuf.String()
-		return stdoutBuf.String(), stderr, fmt.Errorf("local command failed: %w | stderr: %s", err, stderr)
+		return stdoutBuf.String(), stderr, &CommandError{
+			Command: cmdStr,
+			Stderr:  stderr,
+			Err:     err,
+		}
 	}
 	return stdoutBuf.String(), stderrBuf.String(), nil
 }

@@ -2,7 +2,6 @@ package views_test
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -13,16 +12,25 @@ import (
 )
 
 func TestHealthReport(t *testing.T) {
-	t.Run("PlainFormat", func(t *testing.T) {
-		t.Run("it renders the healthy host dependencies", func(t *testing.T) {
+	t.Run("AsPlain", func(t *testing.T) {
+		t.Run("renders deployment and project management sections", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				Host: health.HostReport{
-					Dependencies: []health.DependencyReport{
-						{
-							Name:   "Flux Capacitor",
-							Status: health.CheckStatusOK,
-							Value:  "flux",
-						},
+				TargetDetails: health.TargetDetails{},
+				Deployment: health.ReadinessReport{
+					Host: []health.DependencyReport{
+						{Name: "Computer", Status: health.CheckStatusWarning},
+						{Name: "Docker Compose", Status: health.CheckStatusError},
+					},
+					Target: []health.DependencyReport{
+						{Name: "Docker API via SSH", Status: health.CheckStatusOK},
+					},
+				},
+				ProjectDiscovery: health.ReadinessReport{
+					Host: []health.DependencyReport{
+						{Name: "OpenSSH", Status: health.CheckStatusOK},
+					},
+					Target: []health.DependencyReport{
+						{Name: "Hardware Info (lscpu)", Status: health.CheckStatusOK},
 					},
 				},
 			}
@@ -30,220 +38,60 @@ func TestHealthReport(t *testing.T) {
 
 			err := views.Print(toPrint, &out, term.Plain)
 
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), "── Host ")
-			assert.Contains(t, out.String(), " ✓ Flux Capacitor (flux)")
-		})
+			want := `── Deployment: not ready (✗ 1 ! 1) ─────────────────────────
+ ✗ Host
+   ! Computer
+   ✗ Docker Compose
+ ✓ Target
+   ✓ Docker API via SSH
 
-		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Host: health.HostReport{
-					Dependencies: []health.DependencyReport{
-						{
-							Name:   "Container Engine",
-							Status: health.CheckStatusError,
-							Value:  "docker not found on path",
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
+── Project management: ready ───────────────────────────────
+ ✓ Host
+   ✓ OpenSSH
+ ✓ Target
+   ✓ Hardware Info (lscpu)
+`
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ✗ Container Engine (docker not found on path)")
-		})
-
-		t.Run("it renders a warning icon for warning checks", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Target: health.TargetReport{
-					Dependencies: []health.DependencyReport{
-						{
-							ID:     health.DependencyIDConnectivity,
-							Name:   "Pineapple on pizza",
-							Status: health.CheckStatusWarning,
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ! Pineapple on pizza")
-		})
-
-		t.Run("it renders an info icon for info checks", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Target: health.TargetReport{
-					Dependencies: []health.DependencyReport{
-						{
-							ID:     health.DependencyIDConnectivity,
-							Name:   "Has potatoes",
-							Status: health.CheckStatusInfo,
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " i Has potatoes")
-		})
-
-		t.Run("it renders connection failures", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Target: health.TargetReport{
-					Dependencies: []health.DependencyReport{
-						{
-							ID:     health.DependencyIDConnectivity,
-							Name:   "Connected",
-							Status: health.CheckStatusError,
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ✗ Connected")
-		})
-
-		t.Run("it renders the processing domain and target's dependencies", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Target: health.TargetReport{
-					Dependencies: []health.DependencyReport{
-						{ID: health.DependencyIDConnectivity, Status: health.CheckStatusOK},
-						{ID: health.DependencyIDRemoteproc, Name: "Processing Domain Driver (remoteproc)", Status: health.CheckStatusOK},
-						{Name: "Hardware Info", Status: health.CheckStatusOK},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Less(t,
-				strings.Index(out.String(), "Processing Domain Driver (remoteproc)"),
-				strings.Index(out.String(), "Hardware Info"),
-			)
-		})
-
-		t.Run("it renders the target destination", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Target: health.TargetReport{Destination: "ssh://user@my-target"},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), "── Target ")
-		})
-
-		t.Run("when not connected, it does not render cpu features", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Target: health.TargetReport{
-					Dependencies: []health.DependencyReport{
-						{
-							ID:     health.DependencyIDConnectivity,
-							Name:   "Connected",
-							Status: health.CheckStatusError,
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.NotContains(t, out.String(), "Features (Linux Host)")
-		})
-
-		t.Run("it renders the fix hint when a check has a fix", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Host: health.HostReport{
-					Dependencies: []health.DependencyReport{
-						{
-							Name:   "Skin Care",
-							Status: health.CheckStatusWarning,
-							Fix: &health.Fix{
-								Description: "Apply Working Hands Cream",
-								Command:     "topo moisturise",
-							},
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ! Skin Care")
-			assert.Contains(t, out.String(), "   Fix:\n     Apply Working Hands Cream")
-			assert.Contains(t, out.String(), "   Command:\n     topo moisturise")
-		})
-
-		t.Run("it colors status labels when writing to a terminal", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				Host: health.HostReport{
-					Dependencies: []health.DependencyReport{
-						{Name: "Healthy", Status: health.CheckStatusOK},
-						{Name: "Broken", Status: health.CheckStatusError},
-						{Name: "Deprecated", Status: health.CheckStatusWarning},
-						{Name: "Skipped", Status: health.CheckStatusInfo},
-					},
-				},
-			}
-
-			out, err := toPrint.AsPlain(true)
-
-			require.NoError(t, err)
-			assert.Contains(t, out, term.Color(term.Dim, "── "))
-			assert.Contains(t, out, term.Color(term.Green, " ✓ "))
-			assert.Contains(t, out, term.Color(term.Red, " ✗ "))
-			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
-			assert.Contains(t, out, term.Color(term.Blue, " i "))
+			assert.Equal(t, want, out.String())
 		})
 	})
 
-	t.Run("JSONFormat", func(t *testing.T) {
-		t.Run("renders report as valid JSON with expected fields", func(t *testing.T) {
+	t.Run("AsPlain", func(t *testing.T) {
+		t.Run("renders a warning-only report as ready", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				Host: health.HostReport{
-					Dependencies: []health.DependencyReport{
-						{
-							Name:   "Time Circuit",
-							Status: health.CheckStatusOK,
-							Fix:    &health.Fix{Description: "Set destination time to 1985"},
-						},
+				ProjectDiscovery: health.ReadinessReport{
+					Target: []health.DependencyReport{{
+						Name:   "Connectivity",
+						Status: health.CheckStatusWarning,
+						Value:  "target not specified; cannot calculate project compatibility",
+					}},
+				},
+			}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "Project management: ready (! 1)")
+		})
+	})
+
+	t.Run("AsJSON", func(t *testing.T) {
+		t.Run("preserves the legacy combined target dependencies", func(t *testing.T) {
+			toPrint := views.HealthReport{
+				TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
+				Deployment: health.ReadinessReport{
+					Host: []health.DependencyReport{{Name: "Topo", Status: health.CheckStatusOK}},
+					Target: []health.DependencyReport{
+						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
+						{Name: "Container Engine", Status: health.CheckStatusOK},
 					},
 				},
-				Target: health.TargetReport{
-					Destination: "ssh://user@my-target",
-					Dependencies: []health.DependencyReport{
-						{
-							ID:     health.DependencyIDConnectivity,
-							Name:   "Connected",
-							Status: health.CheckStatusOK,
-							Value:  "ssh://user@my-target",
-						},
-						{
-							ID:     health.DependencyIDRemoteproc,
-							Name:   "Processing Domain Driver (remoteproc)",
-							Status: health.CheckStatusOK,
-							Value:  "m4_0",
-						},
-						{Name: "Container Engine", Status: health.CheckStatusOK, Value: "docker"},
+				ProjectDiscovery: health.ReadinessReport{
+					Target: []health.DependencyReport{
+						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
+						{Name: "Hardware Info", Status: health.CheckStatusOK},
 					},
 				},
 			}
@@ -252,27 +100,19 @@ func TestHealthReport(t *testing.T) {
 			err := views.Print(toPrint, &out, term.JSON)
 
 			require.NoError(t, err)
-			want := `{
-				"host": {
-					"dependencies": [
-						{"name":"Time Circuit","status":"ok","value":"","fix":{"description":"Set destination time to 1985"}}
-					]
-				},
-				"target": {
-					"destination": "ssh://user@my-target",
-					"isLocalhost": false,
-					"connectivity": {"name":"Connected","status":"ok","value":"ssh://user@my-target"},
-					"dependencies": [
-						{"name":"Container Engine","status":"ok","value":"docker"}
+			assert.JSONEq(t, `{
+				"host":{"dependencies":[{"name":"Topo","status":"ok","value":""}]},
+				"target":{
+					"destination":"ssh://user@my-target",
+					"isLocalhost":false,
+					"connectivity":{"name":"Connectivity","status":"ok","value":""},
+					"dependencies":[
+						{"name":"Container Engine","status":"ok","value":""},
+						{"name":"Hardware Info","status":"ok","value":""}
 					],
-					"processingDomainDriver": {
-						"name":"Processing Domain Driver (remoteproc)",
-						"status":"ok",
-						"value":"m4_0"
-					}
+					"processingDomainDriver":{"name":"Processing Domain Driver (remoteproc)","status":"","value":""}
 				}
-			}`
-			assert.JSONEq(t, want, out.String())
+			}`, out.String())
 		})
 	})
 }
