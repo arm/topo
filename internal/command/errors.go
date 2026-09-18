@@ -13,14 +13,6 @@ type Error struct {
 	Err     error
 }
 
-func (err *Error) Error() string {
-	return fmt.Sprintf("command %q failed: %v", err.Command, err.Err)
-}
-
-func (err *Error) Unwrap() error {
-	return err.Err
-}
-
 func NewError(cmd *exec.Cmd, err error) *Error {
 	stderr := ""
 	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
@@ -31,4 +23,12 @@ func NewError(cmd *exec.Cmd, err error) *Error {
 		Err:     err,
 		Stderr:  stderr,
 	}
+}
+
+func (err *Error) Error() string {
+	return fmt.Sprintf("command %q failed: %v", err.Command, err.Err)
+}
+
+func (err *Error) Unwrap() error {
+	return err.Err
 }
