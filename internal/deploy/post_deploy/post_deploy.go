@@ -4,18 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	cmdtext "github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/project"
 )
-
-func DefaultMessage(composeFile string) string {
-	if composeFile == compose.DefaultFileName() {
-		return "Run `topo ps` to see deployed containers"
-	}
-
-	return fmt.Sprintf("Run `topo ps -f %s` to see deployed containers", cmdtext.QuoteArg(composeFile))
-}
 
 func getSuccessMessage(scope project.Scope) (string, error) {
 	composeProject, err := project.Read(scope)
