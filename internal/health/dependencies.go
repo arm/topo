@@ -22,15 +22,12 @@ const containerEngineInstallURL = "https://github.com/arm/topo#install-a-contain
 
 type DependencyID string
 
-const (
-	DependencyIDConnectivity DependencyID = "target-connectivity"
-	DependencyIDRemoteproc   DependencyID = "remoteproc"
-)
+const DependencyIDConnectivity DependencyID = "target-connectivity"
 
 type Dependency struct {
 	Label string
 	Check DependencyCheckFn
-	// Used to maintain legacy JSON output
+	// Used to omit duplicate connectivity checks in JSON output.
 	ID DependencyID
 }
 
@@ -245,7 +242,6 @@ func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, 
 
 func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 	return Dependency{
-		ID:    DependencyIDRemoteproc,
 		Label: "Processing Domain Driver (remoteproc)",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			remoteProcessors, err := probe.Remoteproc(ctx, r)
