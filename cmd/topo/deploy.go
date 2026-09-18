@@ -9,11 +9,14 @@ import (
 	"strings"
 	"syscall"
 
+	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/deploy/post_deploy"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
+	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 
@@ -53,23 +56,35 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		composeFile, err := getComposeFileName(cmd)
+		composeFilePath, err := resolveComposeFilePath(cmd)
 		if err != nil {
 			return err
 		}
-		envFiles, err := getEnvFiles(cmd, composeFile)
+		envFiles, err := getEnvFiles(cmd, composeFilePath)
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFile, targetArg, envFiles)
+		scope, err := project.BuildScope(composeFilePath, targetArg, envFiles)
 		if err != nil {
 			return err
 		}
 
 		if selectedEngine == containerEnginePodman {
-			return deployWithPodman(cmd, scope, targetArg)
+			err = deployWithPodman(cmd, scope, targetArg)
+		} else {
+			err = deployWithDocker(cmd, scope, targetArg)
 		}
-		return deployWithDocker(cmd, scope, targetArg)
+		if err != nil {
+			return err
+		}
+		if err := term.PrintNthHeader(os.Stdout, "Deployment Success"); err != nil {
+			return err
+		}
+		return post_deploy.PrintDeploySuccess(
+			os.Stdout,
+			scope,
+			defaultDeploySuccessMessage(composeFilePath, cmd.Flag(composeFileFlag).Changed),
+		)
 	},
 }
 
@@ -144,6 +159,14 @@ func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg string)
 	return executeDeployment(cmd, func(ctx context.Context) error {
 		return docker.Deploy(ctx, os.Stdout, scope, deployOpts)
 	})
+}
+
+func defaultDeploySuccessMessage(composeFilePath string, explicitComposeFile bool) string {
+	psCommand := "topo ps"
+	if explicitComposeFile {
+		psCommand += " -f " + cmdtext.QuoteArg(composeFilePath)
+	}
+	return fmt.Sprintf("Run `%s` to see deployed containers", psCommand)
 }
 
 func ensureProjectIsReady(scope project.Scope) error {

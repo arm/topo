@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -65,14 +64,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts Dep
 	if err := term.PrintNthHeader(output, "Start services"); err != nil {
 		return err
 	}
-	if err := StartServices(ctx, output, NewHostFromDestination(opts.TargetHost), scope, opts.RecreateMode); err != nil {
-		return err
-	}
-
-	if err := term.PrintNthHeader(output, "Deployment Success"); err != nil {
-		return err
-	}
-	return post_deploy.PrintDeploySuccess(output, scope, post_deploy.DefaultMessage(scope.ComposeFile))
+	return StartServices(ctx, output, NewHostFromDestination(opts.TargetHost), scope, opts.RecreateMode)
 }
 
 func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceHost, targetHost Host, scope project.Scope) error {

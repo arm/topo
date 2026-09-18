@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -83,17 +82,14 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		return err
 	}
 
-	if tunnel != nil {
-		if err := closeRemoteTunnel(tunnel); err != nil {
-			return err
-		}
-		tunnel = nil
+	if tunnel == nil {
+		return nil
 	}
-
-	if err := term.PrintNthHeader(output, "Deployment Success"); err != nil {
+	if err := closeRemoteTunnel(tunnel); err != nil {
 		return err
 	}
-	return post_deploy.PrintDeploySuccess(output, scope, post_deploy.DefaultMessage(scope.ComposeFile))
+	tunnel = nil
+	return nil
 }
 
 func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, scope project.Scope) error {
