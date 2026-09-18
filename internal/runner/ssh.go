@@ -57,7 +57,7 @@ func (r *SSH) exec(ctx context.Context, cmdStr string, stdin []byte, extraSSHArg
 	if ctx.Err() != nil {
 		return "", "", ErrTimeout
 	}
-	return stdout, stderr, &CommandError{
+	return stdout, stderr, &command.Error{
 		Command: fmt.Sprintf("ssh %s %s", r.dest, cmdStr),
 		Stderr:  stderr,
 		Err:     err,
