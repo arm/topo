@@ -219,71 +219,67 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 }
 
 func TestRemoteprocDependency(t *testing.T) {
-	t.Run("Check", func(t *testing.T) {
-		buildRunnerWithRemoteProcs := func(names []string) runner.Runner {
-			return &runner.Fake{Commands: map[string]runner.FakeResult{
-				"cat /sys/class/remoteproc/*/name": {Output: strings.Join(names, "\n")},
-			}}
+	buildRunnerWithRemoteProcs := func(names []string) runner.Runner {
+		return &runner.Fake{Commands: map[string]runner.FakeResult{
+			"cat /sys/class/remoteproc/*/name": {Output: strings.Join(names, "\n")},
+		}}
+	}
+
+	t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
+		r := buildRunnerWithRemoteProcs(nil)
+		dependency := health.NewDependencyOnRemoteproc(r)
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{
+			Failure: &health.DependencyCheckFailure{
+				Severity: health.SeverityInfo,
+				Message:  "no remoteproc devices found",
+			},
 		}
+		assert.Equal(t, want, got)
+	})
 
-		t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
-			r := buildRunnerWithRemoteProcs(nil)
-			d := health.NewDependencyOnRemoteproc(r)
+	t.Run("fails when remoteproc probe fails", func(t *testing.T) {
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
+		}}
+		dependency := health.NewDependencyOnRemoteproc(r)
 
-			got := d.Check(context.Background())
+		got := dependency.Check(context.Background())
 
-			want := health.DependencyCheckResult{
-				Failure: &health.DependencyCheckFailure{
-					Severity: health.SeverityInfo,
-					Message:  "no remoteproc devices found",
-				},
-			}
-			assert.Equal(t, want, got)
-		})
+		want := health.DependencyCheckResult{
+			Failure: &health.DependencyCheckFailure{
+				Severity: health.SeverityError,
+				Message:  "timed out",
+			},
+		}
+		assert.Equal(t, want, got)
+	})
 
-		t.Run("fails when remoteproc probe fails", func(t *testing.T) {
-			r := &runner.Fake{Commands: map[string]runner.FakeResult{
-				"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
-			}}
-			d := health.NewDependencyOnRemoteproc(r)
+	t.Run("reports remoteproc device names", func(t *testing.T) {
+		r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
+		dependency := health.NewDependencyOnRemoteproc(r)
 
-			got := d.Check(context.Background())
+		got := dependency.Check(context.Background())
 
-			want := health.DependencyCheckResult{
-				Failure: &health.DependencyCheckFailure{
-					Severity: health.SeverityError,
-					Message:  "timed out",
-				},
-			}
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("reports remoteproc device names", func(t *testing.T) {
-			r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
-			d := health.NewDependencyOnRemoteproc(r)
-
-			got := d.Check(context.Background())
-
-			assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
-		})
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
 	})
 }
 
 func TestRemoteprocRuntimeDependency(t *testing.T) {
-	t.Run("Check", func(t *testing.T) {
-		t.Run("includes an install fix with the target", func(t *testing.T) {
-			dep := health.NewDependencyOnRemoteprocRuntime(ssh.NewDestination("user@my-target"), &runner.Fake{})
+	t.Run("includes an install fix with the target", func(t *testing.T) {
+		dependency := health.NewDependencyOnRemoteprocRuntime(ssh.NewDestination("user@my-target"), &runner.Fake{})
 
-			result := dep.Check(context.Background())
+		result := dependency.Check(context.Background())
 
-			assert.Equal(t, &health.DependencyCheckFailure{
-				Severity: health.SeverityWarning,
-				Message:  `"remoteproc-runtime" not found in $PATH`,
-				Fix: &health.Fix{
-					Description: "Install the Remoteproc Runtime",
-					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
-				},
-			}, result.Failure)
-		})
+		assert.Equal(t, &health.DependencyCheckFailure{
+			Severity: health.SeverityWarning,
+			Message:  `"remoteproc-runtime" not found in $PATH`,
+			Fix: &health.Fix{
+				Description: "Install the Remoteproc Runtime",
+				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+			},
+		}, result.Failure)
 	})
 }
