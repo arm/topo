@@ -85,8 +85,8 @@ func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyConnectivity)
 	}
 	if options.Target != nil {
+		dependencyDocker := registry.Register(NewDependencyOnRemoteDocker(*options.Target), targetPrerequisites...)
 		targetRunner := runner.For(*options.Target)
-		dependencyDocker := registry.Register(NewDependencyOnDocker(targetRunner), targetPrerequisites...)
 		dependencyRemoteproc := registry.Register(NewDependencyOnRemoteproc(targetRunner), targetPrerequisites...)
 		dependencyRemoteprocRuntime := registry.Register(
 			NewDependencyOnRemoteprocRuntime(*options.Target, targetRunner),

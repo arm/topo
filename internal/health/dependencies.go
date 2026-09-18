@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
@@ -136,6 +138,25 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 					Message:  err.Error(),
 					Fix:      &Fix{Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL},
 				}}
+			}
+			return DependencyCheckResult{SuccessValue: "docker"}
+		},
+	}
+}
+
+func NewDependencyOnRemoteDocker(dest ssh.Destination) Dependency {
+	return Dependency{
+		Label: "Container Engine",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			host := docker.NewHostFromDestination(dest)
+			if err := docker.RunCommand(ctx, io.Discard, host, "info"); err != nil {
+				return DependencyCheckResult{
+					Failure: &DependencyCheckFailure{
+						Severity: SeverityError,
+						Message:  err.Error(),
+						Fix:      &Fix{Description: "Ensure docker is installed and running on the target. See " + containerEngineInstallURL},
+					},
+				}
 			}
 			return DependencyCheckResult{SuccessValue: "docker"}
 		},
