@@ -39,7 +39,7 @@ func run(cmd *exec.Cmd, output io.Writer) error {
 	cmd.Stdout = output
 	cmd.Stderr = output
 	if err := cmd.Run(); err != nil {
-		return command.FormatError(cmd.Args, err)
+		return command.NewError(cmd, err)
 	}
 	return nil
 }

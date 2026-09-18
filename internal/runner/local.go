@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/google/shlex"
 )
 
@@ -50,7 +51,7 @@ func (r *Local) exec(ctx context.Context, cmdStr string, stdin []byte) (string, 
 			return "", "", ErrTimeout
 		}
 		stderr := stderrBuf.String()
-		return stdoutBuf.String(), stderr, &CommandError{
+		return stdoutBuf.String(), stderr, &command.Error{
 			Command: cmdStr,
 			Stderr:  stderr,
 			Err:     err,
