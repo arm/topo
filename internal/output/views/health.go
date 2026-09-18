@@ -10,10 +10,14 @@ import (
 	"github.com/arm/topo/internal/output/term"
 )
 
-type HealthReport struct {
-	TargetDetails    health.TargetDetails
-	Deployment       health.ReadinessReport
-	ProjectDiscovery health.ReadinessReport
+type HealthReportView struct {
+	health.HealthReport
+	Verbose bool
+}
+
+type healthCheckSection struct {
+	ShowPassedSummary bool
+	Checks            []health.DependencyReport
 }
 
 const functionalityHealthReportTemplate = `
@@ -29,16 +33,19 @@ const functionalityHealthReportTemplate = `
 {{- end -}}
 {{- end -}}
 
+{{- define "checkSection" -}}
+{{- if .ShowPassedSummary }}
+{{ "  " }}{{ successStatus }}All checks passed
+{{- end }}
+{{- range .Checks }}
+{{ template "checkRow" . }}
+{{- end -}}
+{{- end -}}
+
 {{- define "functionality" -}}
 {{ functionalityHeading .Name .Report }}
-{{ status (dependencyGroupStatus .Report.Host) }}Host
-{{- range .Report.Host }}
-{{ template "checkRow" . }}
-{{- end }}
-{{ status (dependencyGroupStatus .Report.Target) }}Target
-{{- range .Report.Target }}
-{{ template "checkRow" . }}
-{{- end }}
+{{ status (dependencyGroupStatus .Report.Host) }}Host{{ template "checkSection" (section .Report.Host) }}
+{{ status (dependencyGroupStatus .Report.Target) }}{{ targetHeading }}{{ template "checkSection" (section .Report.Target) }}
 {{- end -}}
 
 {{ template "functionality" (buildFunctionalityTemplateData "Deployment" .Deployment) }}
@@ -51,7 +58,7 @@ type functionalityTemplateData struct {
 	Report health.ReadinessReport
 }
 
-func (r HealthReport) AsPlain(isTTY bool) (string, error) {
+func (r HealthReportView) AsPlain(isTTY bool) (string, error) {
 	funcMap := getFuncMap(isTTY)
 	funcMap["status"] = healthStatusFormatter(isTTY)
 	funcMap["buildFunctionalityTemplateData"] = func(name string, report health.ReadinessReport) functionalityTemplateData {
@@ -61,6 +68,18 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 		return functionalityHeading(name, report, isTTY)
 	}
 	funcMap["dependencyGroupStatus"] = dependencyGroupStatus
+	funcMap["successStatus"] = func() string {
+		return healthStatusFormatter(isTTY)(health.CheckStatusOK)
+	}
+	funcMap["section"] = func(checks []health.DependencyReport) healthCheckSection {
+		return newHealthCheckSection(checks, r.Verbose)
+	}
+	funcMap["targetHeading"] = func() string {
+		if r.TargetDetails.Destination != "" {
+			return "Target: " + r.TargetDetails.Destination
+		}
+		return "Target"
+	}
 	tmpl, err := template.New("functionality-healthcheck").Funcs(funcMap).Parse(functionalityHealthReportTemplate)
 	if err != nil {
 		return "", err
@@ -72,7 +91,7 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	return buf.String(), nil
 }
 
-func (r HealthReport) AsJSON() (string, error) {
+func (r HealthReportView) AsJSON() (string, error) {
 	targetDependencies := legacyTargetDependencies(r.Deployment.Target, r.ProjectDiscovery.Target)
 	return asJSON(toJSONHealthReport(legacyHealthReport{
 		HostDependencies:   r.Deployment.Host,
@@ -251,4 +270,23 @@ func toJSONDependencyReport(check health.DependencyReport) jsonDependencyReport 
 		jsonCheck.Fix = &jsonFix{Description: check.Fix.Description, Command: check.Fix.Command}
 	}
 	return jsonCheck
+}
+
+func newHealthCheckSection(checks []health.DependencyReport, verbose bool) healthCheckSection {
+	section := healthCheckSection{
+		Checks: make([]health.DependencyReport, 0, len(checks)),
+	}
+	allPassed := len(checks) > 0
+
+	for _, check := range checks {
+		if verbose || check.Status != health.CheckStatusOK {
+			section.Checks = append(section.Checks, check)
+		}
+		if check.Status != health.CheckStatusOK && check.Status != health.CheckStatusInfo {
+			allPassed = false
+		}
+	}
+	section.ShowPassedSummary = !verbose && allPassed
+
+	return section
 }
