@@ -54,9 +54,15 @@ func registryHostPort(inspectOutput []byte) (string, error) {
 		HostPort string `json:"HostPort"`
 	}
 	type containerInspect struct {
+		State struct {
+			Running bool `json:"Running"`
+		} `json:"State"`
 		HostConfig struct {
 			PortBindings map[string][]portBinding `json:"PortBindings"`
 		} `json:"HostConfig"`
+		NetworkSettings struct {
+			Ports map[string][]portBinding `json:"Ports"`
+		} `json:"NetworkSettings"`
 	}
 
 	var containers []containerInspect
@@ -68,6 +74,9 @@ func registryHostPort(inspectOutput []byte) (string, error) {
 	}
 
 	bindings := containers[0].HostConfig.PortBindings["5000/tcp"]
+	if containers[0].State.Running {
+		bindings = containers[0].NetworkSettings.Ports["5000/tcp"]
+	}
 	if len(bindings) == 0 || bindings[0].HostPort == "" {
 		return "", fmt.Errorf("container port 5000 is not published")
 	}

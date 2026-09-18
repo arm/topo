@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 
@@ -45,17 +46,26 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		assertContainerPort(t, containerName, port)
 	})
 
+	t.Run("reuses a running registry with an engine-assigned port", func(t *testing.T) {
+		const containerName = "topo-test-registry-assigned-port"
+		port := startTestRegistry(t, containerName)
+		var output bytes.Buffer
+
+		err := docker.EnsureRegistryRunning(t.Context(), &output, containerName, port)
+
+		require.NoError(t, err, output.String())
+		assertContainerRunning(t, containerName)
+		assertContainerPort(t, containerName, port)
+	})
+
 	t.Run("returns an error when an existing registry uses a different port", func(t *testing.T) {
 		const containerName = "topo-test-registry-port-mismatch"
-		requireContainerAbsent(t, containerName)
-		alreadyRunningOnPort := requireAvailableTCPPort(t, "127.0.0.1")
-		newlyRequestedPort := requireAvailableTCPPort(t, "127.0.0.1")
-		for newlyRequestedPort == alreadyRunningOnPort {
-			newlyRequestedPort = requireAvailableTCPPort(t, "127.0.0.1")
+		alreadyRunningOnPort := startTestRegistry(t, containerName)
+		newlyRequestedPort := "5000"
+		if newlyRequestedPort == alreadyRunningOnPort {
+			newlyRequestedPort = "5001"
 		}
 		var output bytes.Buffer
-		require.NoError(t, docker.EnsureRegistryRunning(t.Context(), &output, containerName, alreadyRunningOnPort), output.String())
-		output.Reset()
 
 		err := docker.EnsureRegistryRunning(t.Context(), &output, containerName, newlyRequestedPort)
 
@@ -68,25 +78,29 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		const containerName = "topo-test-registry-port-conflict"
 		requireContainerAbsent(t, containerName)
 		const portOwnerContainerName = "topo-test-registry-port-owner"
-		requireContainerAbsent(t, portOwnerContainerName)
-		port := requireAvailableTCPPort(t, "127.0.0.1")
-		portOwnerOutput, err := docker.Command(
-			t.Context(),
-			docker.LocalHost,
-			"run",
-			"-d",
-			"-p", fmt.Sprintf("127.0.0.1:%s:5000", port),
-			"--name", portOwnerContainerName,
-			"registry:2",
-		).CombinedOutput()
-		require.NoError(t, err, string(portOwnerOutput))
+		port := startTestRegistry(t, portOwnerContainerName)
 		var output bytes.Buffer
 
-		err = docker.EnsureRegistryRunning(t.Context(), &output, containerName, port)
+		err := docker.EnsureRegistryRunning(t.Context(), &output, containerName, port)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, fmt.Sprintf("port is already in use, this could be an existing %s or another process", containerName))
 	})
+}
+
+func startTestRegistry(t *testing.T, containerName string) string {
+	t.Helper()
+	requireContainerAbsent(t, containerName)
+	output, err := docker.Command(t.Context(), docker.LocalHost,
+		"run", "-d", "-p", "127.0.0.1::5000", "--name", containerName, "registry:2",
+	).CombinedOutput()
+	require.NoError(t, err, string(output))
+	output, err = docker.Command(t.Context(), docker.LocalHost, "port", containerName, "5000").CombinedOutput()
+	require.NoError(t, err, string(output))
+	host, port, err := net.SplitHostPort(strings.TrimSpace(string(output)))
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1", host)
+	return port
 }
 
 func requireContainerAbsent(t *testing.T, containerName string) {

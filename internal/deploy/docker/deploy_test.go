@@ -44,9 +44,8 @@ func TestDeployment(t *testing.T) {
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
-		registryPort := requireAvailableTCPPort(t, "127.0.0.1")
 		registryContainerName := testContainerName(t) + "-registry"
-		cleanupRegistryContainer(t, registryContainerName)
+		registryPort := startTestRegistry(t, registryContainerName)
 		container := startContainer(t, dinDContainer)
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 		remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
@@ -92,15 +91,4 @@ CMD ["tail", "-f", "/dev/null"]
 		}
 	})
 	return project.Scope{ComposeFile: composeFilePath}, imageName
-}
-
-func cleanupRegistryContainer(t *testing.T, containerName string) {
-	t.Helper()
-	_ = docker.Command(t.Context(), docker.LocalHost, "rm", "-f", containerName).Run()
-	t.Cleanup(func() {
-		removeOutput, err := docker.Command(context.Background(), docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
-		if err != nil {
-			t.Logf("failed to remove registry container: %v: %s", err, string(removeOutput))
-		}
-	})
 }

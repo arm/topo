@@ -63,9 +63,8 @@ services:
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
 		requireLocalPodman(t)
-		registryPort := requireAvailableTCPPort(t)
 		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
-		t.Cleanup(func() { cleanupRegistryContainer(t, registryContainerName) })
+		registryPort := startTestRegistry(t, registryContainerName)
 		podmanContainer := startPodmanInContainer(t)
 		scope, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
@@ -168,14 +167,6 @@ func fixPodmanInDockerQuirk(contents string) (string, error) {
 		return "", err
 	}
 	return string(updatedContents), nil
-}
-
-func cleanupRegistryContainer(t *testing.T, containerName string) {
-	t.Helper()
-	output, err := podman.Command(context.Background(), podman.LocalSocket, "rm", "-f", containerName).CombinedOutput()
-	if err != nil {
-		t.Logf("failed to remove registry container: %v: %s", err, output)
-	}
 }
 
 func cleanupComposeProject(t *testing.T, scope project.Scope) {

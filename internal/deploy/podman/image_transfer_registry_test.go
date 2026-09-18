@@ -1,7 +1,6 @@
 package podman_test
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -14,10 +13,7 @@ import (
 func TestTransferImagesViaRegistry(t *testing.T) {
 	requireLocalPodman(t)
 	registryContainerName := "topo-test-registry-transfer-" + sanitiseTestName(t)
-	requireRegistryContainerAbsent(t, registryContainerName)
-	registryPort := requireAvailableTCPPort(t)
-	var output bytes.Buffer
-	require.NoError(t, podman.EnsureRegistryRunning(t.Context(), &output, registryContainerName, registryPort), output.String())
+	registryPort := startTestRegistry(t, registryContainerName)
 
 	scope, imageName := imageTransferFixture(t)
 	require.NoError(t, podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, scope))
