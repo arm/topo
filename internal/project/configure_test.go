@@ -13,7 +13,7 @@ import (
 )
 
 func TestMigrateToEnv(t *testing.T) {
-	t.Run("moves current values to env and replaces only declared parameters", func(t *testing.T) {
+	t.Run("migrates repeated identical values and replaces only declared parameters", func(t *testing.T) {
 		root := t.TempDir()
 		contents := `services:
   app:
@@ -21,6 +21,9 @@ func TestMigrateToEnv(t *testing.T) {
       args:
         FOO: current
         OTHER: unchanged
+  second:
+    build:
+      args: ["FOO=current"]
 x-topo:
   parameters:
     FOO: {}
@@ -32,6 +35,9 @@ x-topo:
       args:
         FOO: ${FOO?configured via topo}
         OTHER: unchanged
+  second:
+    build:
+      args: ["FOO=${FOO?configured via topo}"]
 x-topo:
   parameters:
     FOO: {}
