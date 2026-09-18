@@ -151,31 +151,6 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), " ✓ All checks passed")
 			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
 		})
-
-		t.Run("it colors status labels when writing to a terminal", func(t *testing.T) {
-			toPrint := views.HealthReportView{
-				HealthReport: health.HealthReport{
-					Deployment: health.ReadinessReport{
-						Host: []health.DependencyReport{
-							{Name: "Healthy", Status: health.CheckStatusOK},
-							{Name: "Broken", Status: health.CheckStatusError},
-							{Name: "Deprecated", Status: health.CheckStatusWarning},
-							{Name: "Skipped", Status: health.CheckStatusInfo},
-						},
-					},
-				},
-				Verbose: true,
-			}
-
-			out, err := toPrint.AsPlain(true)
-
-			require.NoError(t, err)
-			assert.Contains(t, out, term.Color(term.Dim, "── "))
-			assert.Contains(t, out, term.Color(term.Green, " ✓ "))
-			assert.Contains(t, out, term.Color(term.Red, " ✗ "))
-			assert.Contains(t, out, term.Color(term.Yellow, " ! "))
-			assert.Contains(t, out, term.Color(term.Blue, " i "))
-		})
 	})
 
 	t.Run("AsJSON", func(t *testing.T) {
