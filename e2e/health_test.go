@@ -38,6 +38,7 @@ func TestHealthCheck(t *testing.T) {
 
 		assert.Contains(t, out, " ✓ OpenSSH (ssh)")
 		assert.Contains(t, out, " ✓ Container Engine (docker)")
+		assert.Contains(t, out, " ✓ Docker Compose (docker compose)")
 	})
 
 	t.Run("shows that it's connected to a valid target", func(t *testing.T) {

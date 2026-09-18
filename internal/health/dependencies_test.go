@@ -83,7 +83,6 @@ func TestNewDependencyOnSSHCheck(t *testing.T) {
 func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 	buildRunner := func(version string) runner.Runner {
 		return &runner.Fake{Commands: map[string]runner.FakeResult{
-			"docker-compose":                       {},
 			"docker compose version --format json": {Output: `{"version": "` + version + `"}`},
 		}}
 	}
@@ -93,7 +92,7 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 
 		got := dependency.Check(context.Background())
 
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker compose"}, got)
 	})
 
 	t.Run("accepts Docker Compose newer than the minimum version", func(t *testing.T) {
@@ -101,7 +100,7 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 
 		got := dependency.Check(context.Background())
 
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker compose"}, got)
 	})
 
 	t.Run("returns an upgrade fix when Docker Compose is too old", func(t *testing.T) {

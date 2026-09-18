@@ -19,7 +19,7 @@
       {
         "name": "Docker Compose",
         "status": "ok",
-        "value": "docker-compose"
+        "value": "docker compose"
       }
     ]
   },
