@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/compose-spec/compose-go/v2/dotenv"
 )
 
 const DefaultFilename = ".env.topo"
@@ -41,6 +43,20 @@ func ResolveFiles(root string, files []string, skipMissing bool) ([]string, erro
 		}
 	}
 	return paths, nil
+}
+
+func ReadFile(path string) (map[string]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open env file: %w", err)
+	}
+
+	content, readErr := dotenv.Parse(f)
+	if err := errors.Join(readErr, f.Close()); err != nil {
+		return nil, fmt.Errorf("failed to read env file: %w", err)
+	}
+
+	return content, nil
 }
 
 func WriteFile(path string, values map[string]string) error {

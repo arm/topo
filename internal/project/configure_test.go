@@ -13,6 +13,30 @@ import (
 )
 
 func TestMigrateToEnv(t *testing.T) {
+	for _, value := range []string{"30", "1.5", "true"} {
+		t.Run("migrates typed scalar "+value+" to a configurable string reference", func(t *testing.T) {
+			root := t.TempDir()
+			path := testutil.RequireWriteComposeFile(t, root, `services:
+  app:
+    image: alpine
+    build:
+      context: .
+      args:
+        VALUE: `+value+`
+x-topo:
+  parameters:
+    VALUE: {}
+`)
+
+			err := project.MigrateToEnv(path)
+
+			require.NoError(t, err)
+			model, err := project.Read(project.Scope{ComposeFile: path, EnvFiles: []string{filepath.Join(root, env.DefaultFilename)}})
+			require.NoError(t, err)
+			assert.Equal(t, &value, model.Services["app"].Build.Args["VALUE"])
+		})
+	}
+
 	t.Run("migrates repeated identical values and replaces only declared parameters", func(t *testing.T) {
 		root := t.TempDir()
 		contents := `services:
@@ -182,23 +206,62 @@ x-topo:
 }
 
 func TestConfigure(t *testing.T) {
-	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
-		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
-		resolver := parameter.NewStrictResolverChain()
+	t.Run("preserves existing values when updating one parameter", func(t *testing.T) {
+		root := t.TempDir()
+		path := testutil.RequireWriteComposeFile(t, root, `services:
+  app:
+    image: alpine
+    environment: {A: "${A}", B: "${B}"}
+x-topo:
+  parameters: {A: {}, B: {required: true}}
+`)
+		envPath := filepath.Join(root, env.DefaultFilename)
+		testutil.RequireWriteFile(t, envPath, "A=original\nB=keep-me\n")
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"A": "updated"}))
 
-		err := project.Configure(invalidPath, resolver)
+		err := project.Configure(path, resolver)
 
-		require.ErrorContains(t, err, "can't read compose file")
+		require.NoError(t, err)
+		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated", "B": "keep-me"})
 	})
 
-	t.Run("updates the compose file with provided parameters", func(t *testing.T) {
-		composeFileContents := `
+	t.Run("rejects legacy projects with migration instructions", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   app:
     build:
       context: .
       args:
         FOO: bar
+x-topo:
+  parameters:
+    FOO: {}
+`)
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"FOO": "baz"}))
+
+		err := project.Configure(path, resolver)
+
+		require.ErrorIs(t, err, project.ErrNoParameterReferences)
+		assert.ErrorContains(t, err, "topo configure --migrate-to-env")
+	})
+
+	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
+		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
+		resolver := parameter.NewStrictResolverChain()
+
+		err := project.Configure(invalidPath, resolver)
+
+		require.ErrorContains(t, err, "failed to open compose file")
+	})
+
+	t.Run("writes provided parameters to env and leaves Compose unchanged", func(t *testing.T) {
+		composeFileContents := `
+services:
+  app:
+    build:
+      context: .
+      args:
+        FOO: ${FOO}
 
 x-topo:
   name: My Project
@@ -213,71 +276,9 @@ x-topo:
 		resolver := parameter.NewStrictResolverChain(static)
 
 		err := project.Configure(composeFilePath, resolver)
-		require.NoError(t, err)
-
-		want := `
-services:
-  app:
-    build:
-      context: .
-      args:
-        FOO: baz
-
-x-topo:
-  name: My Project
-  parameters:
-    FOO:
-      description: a dummy parameter
-      required: true
-      example: bar
-`
-		got := testutil.RequireReadFile(t, composeFilePath)
-
-		assert.YAMLEq(t, want, got)
-	})
-
-	t.Run("rejects empty input for required parameters when any current value is empty", func(t *testing.T) {
-		composeFileContents := `services:
-  configured:
-    build:
-      args:
-        FOO: current
-  empty:
-    build:
-      args:
-        FOO: ""
-x-topo:
-  parameters:
-    FOO:
-      required: true
-      default: default
-`
-		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
-
-		err := project.Configure(composeFilePath, resolver)
-
-		require.ErrorContains(t, err, "missing value(s) for required parameters")
-		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
-	})
-
-	t.Run("recognizes current values in sequence build args", func(t *testing.T) {
-		composeFileContents := `services:
-  app:
-    build:
-      args: ["FOO=current"]
-x-topo:
-  parameters:
-    FOO:
-      required: true
-      default: default
-`
-		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
-
-		err := project.Configure(composeFilePath, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
+		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename), map[string]string{"FOO": "baz"})
 	})
 }

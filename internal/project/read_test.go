@@ -185,6 +185,73 @@ services:
 	})
 }
 
+func TestReferencedEnvVars(t *testing.T) {
+	t.Run("collects unique references including nested defaults and extended services", func(t *testing.T) {
+		dir := t.TempDir()
+		testutil.RequireWriteFile(t, filepath.Join(dir, "base.yaml"), `
+services:
+  base:
+    image: ${IMAGE:-alpine}
+`)
+		path := testutil.RequireWriteComposeFile(t, dir, `
+services:
+  app:
+    extends:
+      file: base.yaml
+      service: base
+    environment:
+      FIRST: $IMAGE
+      SECOND: ${OUTER:-${INNER:-fallback}}
+`)
+
+		got, err := project.ReferencedEnvVars(path)
+
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"IMAGE", "OUTER", "INNER"}, got)
+	})
+
+	t.Run("collects required references without environment values", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
+services:
+  app:
+    image: alpine
+    environment:
+      FIRST: ${TOPO_TEST_REQUIRED?configured via topo}
+      SECOND: ${TOPO_TEST_NONEMPTY:?must be nonempty}
+`)
+
+		got, err := project.ReferencedEnvVars(path)
+
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"TOPO_TEST_REQUIRED", "TOPO_TEST_NONEMPTY"}, got)
+	})
+
+	t.Run("ignores literals and escaped references", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
+services:
+  app:
+    image: alpine
+    command: echo $$IGNORED
+    environment:
+      LITERAL: value
+`)
+
+		got, err := project.ReferencedEnvVars(path)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("returns an error for invalid yaml", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `{invalid`)
+
+		got, err := project.ReferencedEnvVars(path)
+
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+}
+
 func TestRead(t *testing.T) {
 	t.Run("when project file not found returns error", func(t *testing.T) {
 		dir := t.TempDir()
