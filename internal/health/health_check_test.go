@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,6 +44,112 @@ func TestHealthCheck(t *testing.T) {
 			}
 			assert.Equal(t, want, got)
 		})
+	})
+}
+
+func TestAssembleHealthCheck(t *testing.T) {
+	newPassingChecks := func() health.Checks {
+		passing := func(label string) health.Dependency {
+			return health.Dependency{Label: label, Check: passingCheck}
+		}
+		return health.Checks{
+			Topo: passing("Topo"), SSH: passing("OpenSSH"), Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
+			TargetDocker: passing("Target Docker"), Connectivity: passing("Connectivity"), MissingTargetForDeployment: passing("Connectivity"),
+			MissingTargetForProjectDiscovery: passing("Connectivity"), Lscpu: passing("Hardware Info"), Remoteproc: passing("Remoteproc"),
+			RemoteprocRuntime: passing("Remoteproc Runtime"), RemoteprocRuntimeShim: passing("Remoteproc Shim"),
+		}
+	}
+
+	t.Run("reports distinct missing target dependencies", func(t *testing.T) {
+		checks := newPassingChecks()
+		checks.MissingTargetForDeployment = health.Dependency{Label: "Connectivity", Check: failingCheck}
+		checks.MissingTargetForProjectDiscovery = health.Dependency{Label: "Connectivity", Check: func(context.Context) health.DependencyCheckResult {
+			return health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+				Severity: health.SeverityWarning,
+				Message:  "target unavailable for discovery",
+			}}
+		}}
+		healthCheck := health.AssembleHealthCheck(nil, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantDeploymentResults := []health.EvaluatedDependency{
+			{Label: "Connectivity", Result: checks.MissingTargetForDeployment.Check(context.Background())},
+		}
+		wantDiscoveryResults := []health.EvaluatedDependency{
+			{Label: "Connectivity", Result: checks.MissingTargetForProjectDiscovery.Check(context.Background())},
+		}
+		assert.Equal(t, wantDeploymentResults, got.Deployment.Target)
+		assert.Equal(t, wantDiscoveryResults, got.ProjectDiscovery.Target)
+	})
+
+	t.Run("bypasses connectivity for plain localhost", func(t *testing.T) {
+		checks := newPassingChecks()
+		target := ssh.NewDestination("localhost")
+		healthCheck := health.AssembleHealthCheck(&target, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantDeploymentResults := []health.EvaluatedDependency{
+			{Label: "Target Docker", Result: checks.TargetDocker.Check(context.Background())},
+			{Label: "Remoteproc", Result: checks.Remoteproc.Check(context.Background())},
+			{Label: "Remoteproc Runtime", Result: checks.RemoteprocRuntime.Check(context.Background())},
+			{Label: "Remoteproc Shim", Result: checks.RemoteprocRuntimeShim.Check(context.Background())},
+		}
+		wantDiscoveryResults := []health.EvaluatedDependency{
+			{Label: "Hardware Info", Result: checks.Lscpu.Check(context.Background())},
+		}
+		assert.Equal(t, wantDeploymentResults, got.Deployment.Target)
+		assert.Equal(t, wantDiscoveryResults, got.ProjectDiscovery.Target)
+	})
+
+	t.Run("shares connectivity and suppresses its dependent target checks", func(t *testing.T) {
+		checks := newPassingChecks()
+		checks.Connectivity.Check = failingCheck
+		target := ssh.NewDestination("user@example.com")
+		healthCheck := health.AssembleHealthCheck(&target, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantResults := []health.EvaluatedDependency{
+			{Label: "Connectivity", Result: checks.Connectivity.Check(context.Background())},
+		}
+		assert.Equal(t, wantResults, got.Deployment.Target)
+		assert.Equal(t, wantResults, got.ProjectDiscovery.Target)
+	})
+
+	t.Run("suppresses runtime checks when remoteproc fails", func(t *testing.T) {
+		checks := newPassingChecks()
+		checks.Remoteproc.Check = failingCheck
+		target := ssh.NewDestination("localhost")
+		healthCheck := health.AssembleHealthCheck(&target, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantDeploymentResults := []health.EvaluatedDependency{
+			{Label: "Target Docker", Result: checks.TargetDocker.Check(context.Background())},
+			{Label: "Remoteproc", Result: checks.Remoteproc.Check(context.Background())},
+		}
+		assert.Equal(t, wantDeploymentResults, got.Deployment.Target)
+	})
+
+	t.Run("keeps hardware discovery independent from container engine readiness", func(t *testing.T) {
+		checks := newPassingChecks()
+		checks.TargetDocker.Check = failingCheck
+		target := ssh.NewDestination("localhost")
+		healthCheck := health.AssembleHealthCheck(&target, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantDeploymentResults := []health.EvaluatedDependency{
+			{Label: "Target Docker", Result: checks.TargetDocker.Check(context.Background())},
+			{Label: "Remoteproc", Result: checks.Remoteproc.Check(context.Background())},
+		}
+		wantDiscoveryResults := []health.EvaluatedDependency{
+			{Label: "Hardware Info", Result: checks.Lscpu.Check(context.Background())},
+		}
+		assert.Equal(t, wantDeploymentResults, got.Deployment.Target)
+		assert.Equal(t, wantDiscoveryResults, got.ProjectDiscovery.Target)
 	})
 }
 
