@@ -40,14 +40,17 @@ func MigrateToEnv(composeFilePath string) error {
 
 	values := map[string]string{}
 	for _, param := range project.Metadata.Parameters {
-		if len(project.currentParameterValues[param.Name]) == 0 {
+		currentValues := project.currentParameterValues[param.Name]
+		if len(currentValues) == 0 {
 			continue
 		}
-		if len(project.currentParameterValues[param.Name]) != 1 {
-			return fmt.Errorf("parameter %s has more than one current value", param.Name)
+		for _, value := range currentValues[1:] {
+			if value != currentValues[0] {
+				return fmt.Errorf("parameter %s has more than one current value", param.Name)
+			}
 		}
 
-		values[param.Name] = project.currentParameterValues[param.Name][0]
+		values[param.Name] = currentValues[0]
 	}
 
 	if len(values) == 0 {
