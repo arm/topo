@@ -148,6 +148,14 @@ func NewDependencyOnRemoteDocker(dest ssh.Destination) Dependency {
 	return Dependency{
 		Label: "Container Engine",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			r := runner.NewLocal()
+			if err := r.BinaryExists(ctx, "docker"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  fmt.Errorf("cannot probe from host: %w", err).Error(),
+					Fix:      &Fix{Description: "Install a supported container engine on the host. See " + containerEngineInstallURL},
+				}}
+			}
 			host := docker.NewHostFromDestination(dest)
 			if err := docker.RunCommand(ctx, io.Discard, host, "info"); err != nil {
 				return DependencyCheckResult{
