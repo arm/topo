@@ -38,10 +38,23 @@ type HealthReport struct {
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	healthCheck := NewHealthCheck(options)
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
+	return evaluatedHealthCheck.Report(targetDetails(options))
+}
+
+func (h EvaluatedHealthCheck) Report(target TargetDetails) HealthReport {
+	deployment := toReadinessReport(h.Deployment, target)
+	discovery := toReadinessReport(h.ProjectDiscovery, target)
+	for i := range discovery.Target {
+		report := &discovery.Target[i]
+		if report.ID == DependencyIDTargetSpecified && report.Status == CheckStatusError {
+			report.Status = CheckStatusWarning
+			report.Value = "target not specified; cannot calculate project compatibility"
+		}
+	}
 	return HealthReport{
-		TargetDetails:    targetDetails(options),
-		Deployment:       toReadinessReport(evaluatedHealthCheck.Deployment),
-		ProjectDiscovery: toReadinessReport(evaluatedHealthCheck.ProjectDiscovery),
+		TargetDetails:    target,
+		Deployment:       deployment,
+		ProjectDiscovery: discovery,
 	}
 }
 
@@ -55,10 +68,19 @@ func targetDetails(options HealthCheckOptions) TargetDetails {
 	}
 }
 
-func toReadinessReport(evaluatedHealthCheck EvaluatedReadinessCheck) ReadinessReport {
+func toReadinessReport(evaluatedHealthCheck EvaluatedReadinessCheck, target TargetDetails) ReadinessReport {
+	targetReports := make([]DependencyReport, 0, len(evaluatedHealthCheck.Target))
+	for _, dependency := range evaluatedHealthCheck.Target {
+		// Keep prerequisite successes in the evaluation without adding report noise.
+		if dependency.Result.Failure == nil && (dependency.ID == DependencyIDTargetSpecified ||
+			(dependency.ID == DependencyIDConnectivity && target.IsLocalhost)) {
+			continue
+		}
+		targetReports = append(targetReports, ToDependencyReport(dependency))
+	}
 	return ReadinessReport{
 		Host:   toDependencyReports(evaluatedHealthCheck.Host),
-		Target: toDependencyReports(evaluatedHealthCheck.Target),
+		Target: targetReports,
 	}
 }
 
