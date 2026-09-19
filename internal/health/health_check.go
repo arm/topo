@@ -14,15 +14,88 @@ type HealthCheckOptions struct {
 	AcceptHostKeys          bool
 }
 
+type Checks struct {
+	Host   HostChecks
+	Target TargetChecks
+}
+
+type HostChecks struct {
+	Topo          Dependency
+	SSH           Dependency
+	Docker        Dependency
+	DockerCompose Dependency
+}
+
+type TargetChecks struct {
+	Docker                     Dependency
+	Connectivity               Dependency
+	MissingForDeployment       Dependency
+	MissingForProjectDiscovery Dependency
+	Hardware                   Dependency
+	Remoteproc                 Dependency
+	RemoteprocRuntime          Dependency
+	RemoteprocRuntimeShim      Dependency
+}
+
 type HealthCheck struct {
 	Deployment       ReadinessCheck
 	ProjectDiscovery ReadinessCheck
+}
+
+func NewHealthCheck(options HealthCheckOptions) HealthCheck {
+	return AssembleHealthCheck(options.Target, newProductionChecks(options))
+}
+
+func AssembleHealthCheck(target *ssh.Destination, checks Checks) HealthCheck {
+	registry := NewDependencyRegistry()
+	hostNodes := registerHostChecks(registry, checks.Host)
+	targetNodes := registerTargetChecks(registry, target, checks.Target)
+
+	return HealthCheck{
+		Deployment: ReadinessCheck{
+			Registry: registry,
+			Host:     hostNodes.deployment,
+			Target:   targetNodes.deployment,
+		},
+		ProjectDiscovery: ReadinessCheck{
+			Registry: registry,
+			Host:     hostNodes.discovery,
+			Target:   targetNodes.discovery,
+		},
+	}
+}
+
+func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
+	return EvaluatedHealthCheck{
+		Deployment:       h.Deployment.Evaluate(ctx),
+		ProjectDiscovery: h.ProjectDiscovery.Evaluate(ctx),
+	}
 }
 
 type ReadinessCheck struct {
 	Registry *DependencyRegistry
 	Host     []*DependencyNode
 	Target   []*DependencyNode
+}
+
+func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
+	return EvaluatedReadinessCheck{
+		Host:   h.evaluateDependencies(ctx, h.Host),
+		Target: h.evaluateDependencies(ctx, h.Target),
+	}
+}
+
+func (h ReadinessCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
+	statuses := make([]EvaluatedDependency, 0, len(references))
+	for _, reference := range references {
+		result, checked := h.Registry.Check(ctx, reference)
+		if !checked {
+			continue
+		}
+		dependency := reference.Dependency()
+		statuses = append(statuses, EvaluatedDependency{ID: dependency.ID, Label: dependency.Label, Result: result})
+	}
+	return statuses
 }
 
 type EvaluatedHealthCheck struct {
@@ -41,107 +114,104 @@ type EvaluatedDependency struct {
 	Result DependencyCheckResult
 }
 
-func NewHealthCheck(options HealthCheckOptions) HealthCheck {
-	registry := NewDependencyRegistry()
-
-	dependencyTopo := registry.Register(NewDependencyOnTopo(options.SkipVersionChecks))
+func newProductionChecks(options HealthCheckOptions) Checks {
 	localRunner := runner.NewLocal()
-	dependencySSH := registry.Register(NewDependencyOnSSH(localRunner))
-	dependencyDocker := registry.Register(NewDependencyOnDocker(localRunner))
-	dependencyDockerCompose := registry.Register(NewDependencyOnDockerCompose(localRunner), dependencyDocker)
-	deploymentHostDependencies := []*DependencyNode{dependencyTopo, dependencySSH, dependencyDocker, dependencyDockerCompose}
-	projectDiscoveryHostDependencies := []*DependencyNode{dependencySSH}
-
-	targetPrerequisites := []*DependencyNode(nil)
-	deploymentTargetDependencies := []*DependencyNode(nil)
-	projectDiscoveryTargetDependencies := []*DependencyNode(nil)
+	checks := Checks{
+		Host: HostChecks{
+			Topo:          NewDependencyOnTopo(options.SkipVersionChecks),
+			SSH:           NewDependencyOnSSH(localRunner),
+			Docker:        NewDependencyOnDocker(localRunner),
+			DockerCompose: NewDependencyOnDockerCompose(localRunner),
+		},
+		Target: TargetChecks{
+			MissingForDeployment: NewConnectivityDependency(
+				nil,
+				options.AcceptHostKeys,
+				"target not specified",
+				SeverityError,
+				options.MissingTargetFixMessage,
+			),
+			MissingForProjectDiscovery: NewConnectivityDependency(
+				nil,
+				options.AcceptHostKeys,
+				"target not specified; cannot calculate project compatibility",
+				SeverityWarning,
+				options.MissingTargetFixMessage,
+			),
+		},
+	}
 	if options.Target == nil {
-		deploymentConnectivity := registry.Register(NewConnectivityDependency(
-			nil,
-			options.AcceptHostKeys,
-			"target not specified",
-			SeverityError,
-			options.MissingTargetFixMessage,
-		))
-		projectDiscoveryConnectivity := registry.Register(NewConnectivityDependency(
-			nil,
-			options.AcceptHostKeys,
-			"target not specified; cannot calculate project compatibility",
-			SeverityWarning,
-			options.MissingTargetFixMessage,
-		))
-		deploymentTargetDependencies = append(deploymentTargetDependencies, deploymentConnectivity)
-		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, projectDiscoveryConnectivity)
-	} else if !options.Target.IsPlainLocalhost() {
-		dependencyConnectivity := registry.Register(NewConnectivityDependency(
-			options.Target,
-			options.AcceptHostKeys,
-			"target not specified",
-			SeverityError,
-			options.MissingTargetFixMessage,
-		))
-		targetPrerequisites = []*DependencyNode{dependencyConnectivity}
-		deploymentTargetDependencies = append(deploymentTargetDependencies, dependencyConnectivity)
-		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyConnectivity)
-	}
-	if options.Target != nil {
-		dependencyDocker := registry.Register(NewDependencyOnRemoteDocker(*options.Target), targetPrerequisites...)
-		targetRunner := runner.For(*options.Target)
-		dependencyRemoteproc := registry.Register(NewDependencyOnRemoteproc(targetRunner), targetPrerequisites...)
-		dependencyRemoteprocRuntime := registry.Register(
-			NewDependencyOnRemoteprocRuntime(*options.Target, targetRunner),
-			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
-		)
-		dependencyRemoteprocRuntimeShim := registry.Register(
-			NewDependencyOnRemoteprocRuntimeShim(*options.Target, targetRunner),
-			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
-		)
-		dependencyLscpu := registry.Register(NewDependencyOnLscpu(targetRunner), targetPrerequisites...)
-		deploymentTargetDependencies = append(deploymentTargetDependencies, dependencyDocker, dependencyRemoteproc, dependencyRemoteprocRuntime, dependencyRemoteprocRuntimeShim)
-		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyLscpu)
+		return checks
 	}
 
-	return HealthCheck{
-		Deployment: ReadinessCheck{
-			Registry: registry,
-			Host:     deploymentHostDependencies,
-			Target:   deploymentTargetDependencies,
-		},
-		ProjectDiscovery: ReadinessCheck{
-			Registry: registry,
-			Host:     projectDiscoveryHostDependencies,
-			Target:   projectDiscoveryTargetDependencies,
-		},
+	target := *options.Target
+	targetRunner := runner.For(target)
+	checks.Target.Docker = NewDependencyOnRemoteDocker(target)
+	checks.Target.Connectivity = NewConnectivityDependency(
+		options.Target,
+		options.AcceptHostKeys,
+		"target not specified",
+		SeverityError,
+		options.MissingTargetFixMessage,
+	)
+	checks.Target.Hardware = NewDependencyOnLscpu(targetRunner)
+	checks.Target.Remoteproc = NewDependencyOnRemoteproc(targetRunner)
+	checks.Target.RemoteprocRuntime = NewDependencyOnRemoteprocRuntime(target, targetRunner)
+	checks.Target.RemoteprocRuntimeShim = NewDependencyOnRemoteprocRuntimeShim(target, targetRunner)
+	return checks
+}
+
+type hostNodes struct {
+	deployment []*DependencyNode
+	discovery  []*DependencyNode
+}
+
+func registerHostChecks(registry *DependencyRegistry, checks HostChecks) hostNodes {
+	topo := registry.Register(checks.Topo)
+	ssh := registry.Register(checks.SSH)
+	docker := registry.Register(checks.Docker)
+	compose := registry.Register(checks.DockerCompose, docker)
+
+	return hostNodes{
+		deployment: []*DependencyNode{topo, ssh, docker, compose},
+		discovery:  []*DependencyNode{ssh},
 	}
 }
 
-func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
-	return EvaluatedHealthCheck{
-		Deployment:       h.Deployment.Evaluate(ctx),
-		ProjectDiscovery: h.ProjectDiscovery.Evaluate(ctx),
-	}
+type targetNodes struct {
+	deployment []*DependencyNode
+	discovery  []*DependencyNode
 }
 
-func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
-	return EvaluatedReadinessCheck{
-		Host:   h.evaluateDependencies(ctx, h.Host),
-		Target: h.evaluateDependencies(ctx, h.Target),
-	}
-}
-
-func (h ReadinessCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
-	statuses := make([]EvaluatedDependency, 0, len(references))
-	for _, reference := range references {
-		result, checked := h.Registry.Check(ctx, reference)
-		if !checked {
-			continue
+func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination, checks TargetChecks) targetNodes {
+	if target == nil {
+		return targetNodes{
+			deployment: []*DependencyNode{registry.Register(checks.MissingForDeployment)},
+			discovery:  []*DependencyNode{registry.Register(checks.MissingForProjectDiscovery)},
 		}
-		dependency := reference.Dependency()
-		statuses = append(statuses, EvaluatedDependency{
-			ID:     dependency.ID,
-			Label:  dependency.Label,
-			Result: result,
-		})
 	}
-	return statuses
+
+	prerequisites := []*DependencyNode(nil)
+	nodes := targetNodes{}
+	if !target.IsPlainLocalhost() {
+		connectivity := registry.Register(checks.Connectivity)
+		prerequisites = []*DependencyNode{connectivity}
+		nodes.deployment = append(nodes.deployment, connectivity)
+		nodes.discovery = append(nodes.discovery, connectivity)
+	}
+
+	hardware := registry.Register(checks.Hardware, prerequisites...)
+	nodes.discovery = append(nodes.discovery, hardware)
+	nodes.deployment = append(nodes.deployment, registerTargetContainerEngineChecks(registry, checks, prerequisites...)...)
+	return nodes
+}
+
+func registerTargetContainerEngineChecks(registry *DependencyRegistry, checks TargetChecks, prerequisites ...*DependencyNode) []*DependencyNode {
+	docker := registry.Register(checks.Docker, prerequisites...)
+	remoteproc := registry.Register(checks.Remoteproc, prerequisites...)
+	runtimePrerequisites := append([]*DependencyNode{docker, remoteproc}, prerequisites...)
+	runtime := registry.Register(checks.RemoteprocRuntime, runtimePrerequisites...)
+	shim := registry.Register(checks.RemoteprocRuntimeShim, runtimePrerequisites...)
+
+	return []*DependencyNode{docker, remoteproc, runtime, shim}
 }
