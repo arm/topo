@@ -201,14 +201,12 @@ func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination,
 func registerTargetContainerEngineChecks(registry *DependencyRegistry, checks TargetChecks, prerequisites ...*DependencyNode) []*DependencyNode {
 	docker := registry.Register(checks.Docker, DependencyRequirements{Prerequisites: prerequisites})
 	remoteproc := registry.Register(checks.Remoteproc, DependencyRequirements{Prerequisites: prerequisites})
-	runtimePrerequisites := append([]*DependencyNode{docker, remoteproc}, prerequisites...)
-	runtime := registry.Register(
-		checks.RemoteprocRuntime,
-		DependencyRequirements{Prerequisites: runtimePrerequisites},
-	)
-	shim := registry.Register(
-		checks.RemoteprocRuntimeShim, DependencyRequirements{Prerequisites: runtimePrerequisites},
-	)
+	runtimeRequirements := DependencyRequirements{
+		Conditions:    []*DependencyNode{remoteproc},
+		Prerequisites: append([]*DependencyNode{docker}, prerequisites...),
+	}
+	runtime := registry.Register(checks.RemoteprocRuntime, runtimeRequirements)
+	shim := registry.Register(checks.RemoteprocRuntimeShim, runtimeRequirements)
 
 	return []*DependencyNode{docker, remoteproc, runtime, shim}
 }
