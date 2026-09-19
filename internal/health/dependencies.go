@@ -21,8 +21,9 @@ const containerEngineInstallURL = "https://github.com/arm/topo#install-a-contain
 type DependencyID string
 
 const (
-	DependencyIDConnectivity DependencyID = "target-connectivity"
-	DependencyIDRemoteproc   DependencyID = "remoteproc"
+	DependencyIDTargetSpecified DependencyID = "target-specified"
+	DependencyIDConnectivity    DependencyID = "target-connectivity"
+	DependencyIDRemoteproc      DependencyID = "remoteproc"
 )
 
 type Dependency struct {
@@ -142,10 +143,11 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteDocker(hostRunner runner.Runner, probeInfo func(context.Context) error) Dependency {
+func NewDependencyOnRemoteDocker(target *ssh.Destination, hostRunner runner.Runner, probeInfo func(context.Context, ssh.Destination) error) Dependency {
 	return Dependency{
 		Label: "Container Engine",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			target := requireTarget(target)
 			if err := hostRunner.BinaryExists(ctx, "docker"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
@@ -153,7 +155,7 @@ func NewDependencyOnRemoteDocker(hostRunner runner.Runner, probeInfo func(contex
 					Fix:      &Fix{Description: "Install a supported container engine on the host. See " + containerEngineInstallURL},
 				}}
 			}
-			if err := probeInfo(ctx); err != nil {
+			if err := probeInfo(ctx, target); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
@@ -198,20 +200,17 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-type MissingTargetOptions struct {
-	Message    string
-	Severity   CheckSeverity
-	FixMessage string
-}
-
-func NewMissingTargetDependency(options MissingTargetOptions) Dependency {
+func NewTargetSpecifiedDependency(target *ssh.Destination, fixMessage string) Dependency {
 	return Dependency{
-		ID:    DependencyIDConnectivity,
-		Label: "Connectivity",
+		ID:    DependencyIDTargetSpecified,
+		Label: "Target specified",
 		Check: func(context.Context) DependencyCheckResult {
-			failure := &DependencyCheckFailure{Severity: options.Severity, Message: options.Message}
-			if options.FixMessage != "" {
-				failure.Fix = &Fix{Description: options.FixMessage}
+			if target != nil {
+				return DependencyCheckResult{SuccessValue: target.String()}
+			}
+			failure := &DependencyCheckFailure{Severity: SeverityError, Message: "target not specified"}
+			if fixMessage != "" {
+				failure.Fix = &Fix{Description: fixMessage}
 			}
 			return DependencyCheckResult{Failure: failure}
 		},
@@ -223,11 +222,16 @@ type ConnectivityOperations struct {
 	KnownHostsEntry func() (string, error)
 }
 
-func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOperations) Dependency {
+func NewConnectivityDependency(target *ssh.Destination, newOperations func(ssh.Destination) ConnectivityOperations) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			target := requireTarget(target)
+			if target.IsPlainLocalhost() {
+				return DependencyCheckResult{SuccessValue: "local"}
+			}
+			operations := newOperations(target)
 			err := operations.Authenticate(ctx)
 			if err == nil {
 				return DependencyCheckResult{SuccessValue: target.String()}
@@ -261,11 +265,13 @@ func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOp
 	}
 }
 
-func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
+func NewDependencyOnRemoteproc(target *ssh.Destination, newRunner func(ssh.Destination) runner.Runner) Dependency {
 	return Dependency{
 		ID:    DependencyIDRemoteproc,
 		Label: "Processing Domain Driver (remoteproc)",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			target := requireTarget(target)
+			r := newRunner(target)
 			remoteProcessors, err := probe.Remoteproc(ctx, r)
 			if err != nil {
 				return DependencyCheckResult{
@@ -294,10 +300,12 @@ func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner) Dependency {
+func NewDependencyOnRemoteprocRuntime(target *ssh.Destination, newRunner func(ssh.Destination) runner.Runner) Dependency {
 	return Dependency{
 		Label: "Remoteproc Runtime",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			target := requireTarget(target)
+			r := newRunner(target)
 			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityWarning,
@@ -313,10 +321,12 @@ func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner) D
 	}
 }
 
-func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runner) Dependency {
+func NewDependencyOnRemoteprocRuntimeShim(target *ssh.Destination, newRunner func(ssh.Destination) runner.Runner) Dependency {
 	return Dependency{
 		Label: "Remoteproc Shim",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			target := requireTarget(target)
+			r := newRunner(target)
 			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityWarning,
@@ -332,14 +342,23 @@ func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runne
 	}
 }
 
-func NewDependencyOnLscpu(r runner.Runner) Dependency {
+func NewDependencyOnLscpu(target *ssh.Destination, newRunner func(ssh.Destination) runner.Runner) Dependency {
 	return Dependency{
 		Label: "Hardware Info",
 		Check: func(ctx context.Context) DependencyCheckResult {
+			target := requireTarget(target)
+			r := newRunner(target)
 			if err := r.BinaryExists(ctx, "lscpu"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
 			}
 			return DependencyCheckResult{SuccessValue: "lscpu"}
 		},
 	}
+}
+
+func requireTarget(target *ssh.Destination) ssh.Destination {
+	if target == nil {
+		panic("target check executed without its prerequisite")
+	}
+	return *target
 }

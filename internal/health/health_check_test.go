@@ -47,6 +47,37 @@ func TestHealthCheck(t *testing.T) {
 	})
 }
 
+func TestNewHealthCheck(t *testing.T) {
+	t.Run("evaluates a missing target without constructing target operations", func(t *testing.T) {
+		check := health.NewHealthCheck(health.HealthCheckOptions{MissingTargetFixMessage: "Choose a target"})
+		check.Deployment.Host = nil
+
+		got := check.Deployment.Evaluate(context.Background())
+
+		assert.Equal(t, []health.EvaluatedDependency{{
+			ID:    health.DependencyIDTargetSpecified,
+			Label: "Target specified",
+			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+				Severity: health.SeverityError,
+				Message:  "target not specified",
+				Fix:      &health.Fix{Description: "Choose a target"},
+			}},
+		}}, got.Target)
+	})
+
+	t.Run("plain localhost access succeeds without SSH", func(t *testing.T) {
+		target := ssh.NewDestination("localhost")
+		check := health.NewHealthCheck(health.HealthCheckOptions{Target: &target})
+		// Evaluate only target selection and access, not machine-dependent probes.
+		access := check.Deployment.Target[1]
+
+		got, checked := check.Deployment.Registry.Check(context.Background(), access)
+
+		assert.True(t, checked)
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "local"}, got)
+	})
+}
+
 func TestAssembleHealthCheck(t *testing.T) {
 	newPassingChecks := func() health.Checks {
 		passing := func(label string) health.Dependency {
@@ -57,50 +88,62 @@ func TestAssembleHealthCheck(t *testing.T) {
 				Topo: passing("Topo"), SSH: passing("OpenSSH"), Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
 			},
 			Target: health.TargetChecks{
-				Docker: passing("Target Docker"), Connectivity: passing("Connectivity"), MissingForDeployment: passing("Connectivity"),
-				MissingForProjectDiscovery: passing("Connectivity"), Hardware: passing("Hardware Info"), Remoteproc: passing("Remoteproc"),
-				RemoteprocRuntime: passing("Remoteproc Runtime"), RemoteprocRuntimeShim: passing("Remoteproc Shim"),
+				Specified: passing("Target specified"), Connectivity: passing("Target access"), Docker: passing("Target Docker"),
+				Hardware: passing("Hardware Info"), Remoteproc: passing("Remoteproc"), RemoteprocRuntime: passing("Remoteproc Runtime"),
+				RemoteprocRuntimeShim: passing("Remoteproc Shim"),
 			},
 		}
 	}
 
-	t.Run("reports distinct missing target dependencies", func(t *testing.T) {
+	t.Run("shares a failed target prerequisite without executing target checks", func(t *testing.T) {
 		checks := newPassingChecks()
-		checks.Target.MissingForDeployment = health.Dependency{Label: "Connectivity", Check: failingCheck}
-		checks.Target.MissingForProjectDiscovery = health.Dependency{Label: "Connectivity", Check: func(context.Context) health.DependencyCheckResult {
-			return health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-				Severity: health.SeverityWarning,
-				Message:  "target unavailable for discovery",
-			}}
-		}}
-		healthCheck := health.AssembleHealthCheck(nil, checks)
+		calls := 0
+		checks.Target.Specified.Check = func(context.Context) health.DependencyCheckResult {
+			calls++
+			return health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{Message: "target not specified"}}
+		}
+		unexpectedCheck := func(context.Context) health.DependencyCheckResult {
+			t.Error("target-dependent check executed without a target")
+			return health.DependencyCheckResult{}
+		}
+		checks.Target.Connectivity.Check = unexpectedCheck
+		checks.Target.Docker.Check = unexpectedCheck
+		checks.Target.Hardware.Check = unexpectedCheck
+		checks.Target.Remoteproc.Check = unexpectedCheck
+		checks.Target.RemoteprocRuntime.Check = unexpectedCheck
+		checks.Target.RemoteprocRuntimeShim.Check = unexpectedCheck
+		healthCheck := health.AssembleHealthCheck(checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
-		wantDeploymentResults := []health.EvaluatedDependency{
-			{Label: "Connectivity", Result: checks.Target.MissingForDeployment.Check(context.Background())},
-		}
-		wantDiscoveryResults := []health.EvaluatedDependency{
-			{Label: "Connectivity", Result: checks.Target.MissingForProjectDiscovery.Check(context.Background())},
-		}
-		assert.Equal(t, wantDeploymentResults, got.Deployment.Target)
-		assert.Equal(t, wantDiscoveryResults, got.ProjectDiscovery.Target)
+		want := []health.EvaluatedDependency{{
+			Label:  "Target specified",
+			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{Message: "target not specified"}},
+		}}
+		assert.Equal(t, want, got.Deployment.Target)
+		assert.Equal(t, want, got.ProjectDiscovery.Target)
+		assert.Equal(t, 1, calls)
+		assert.Len(t, got.Deployment.Host, 4)
+		assert.Len(t, got.ProjectDiscovery.Host, 1)
 	})
 
-	t.Run("bypasses connectivity for plain localhost", func(t *testing.T) {
+	t.Run("runs target checks after their prerequisites succeed", func(t *testing.T) {
 		checks := newPassingChecks()
-		target := ssh.NewDestination("localhost")
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		wantDeploymentResults := []health.EvaluatedDependency{
+			{Label: "Target specified", Result: checks.Target.Specified.Check(context.Background())},
+			{Label: "Target access", Result: checks.Target.Connectivity.Check(context.Background())},
 			{Label: "Target Docker", Result: checks.Target.Docker.Check(context.Background())},
 			{Label: "Remoteproc", Result: checks.Target.Remoteproc.Check(context.Background())},
 			{Label: "Remoteproc Runtime", Result: checks.Target.RemoteprocRuntime.Check(context.Background())},
 			{Label: "Remoteproc Shim", Result: checks.Target.RemoteprocRuntimeShim.Check(context.Background())},
 		}
 		wantDiscoveryResults := []health.EvaluatedDependency{
+			{Label: "Target specified", Result: checks.Target.Specified.Check(context.Background())},
+			{Label: "Target access", Result: checks.Target.Connectivity.Check(context.Background())},
 			{Label: "Hardware Info", Result: checks.Target.Hardware.Check(context.Background())},
 		}
 		assert.Equal(t, wantDeploymentResults, got.Deployment.Target)
@@ -110,13 +153,13 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("shares connectivity and suppresses its dependent target checks", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Connectivity.Check = failingCheck
-		target := ssh.NewDestination("user@example.com")
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		wantResults := []health.EvaluatedDependency{
-			{Label: "Connectivity", Result: checks.Target.Connectivity.Check(context.Background())},
+			{Label: "Target specified", Result: checks.Target.Specified.Check(context.Background())},
+			{Label: "Target access", Result: checks.Target.Connectivity.Check(context.Background())},
 		}
 		assert.Equal(t, wantResults, got.Deployment.Target)
 		assert.Equal(t, wantResults, got.ProjectDiscovery.Target)
@@ -125,12 +168,13 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("suppresses runtime checks when remoteproc fails", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Remoteproc.Check = failingCheck
-		target := ssh.NewDestination("localhost")
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		wantDeploymentResults := []health.EvaluatedDependency{
+			{Label: "Target specified", Result: checks.Target.Specified.Check(context.Background())},
+			{Label: "Target access", Result: checks.Target.Connectivity.Check(context.Background())},
 			{Label: "Target Docker", Result: checks.Target.Docker.Check(context.Background())},
 			{Label: "Remoteproc", Result: checks.Target.Remoteproc.Check(context.Background())},
 		}
@@ -140,16 +184,19 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("keeps hardware discovery independent from container engine readiness", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Docker.Check = failingCheck
-		target := ssh.NewDestination("localhost")
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		wantDeploymentResults := []health.EvaluatedDependency{
+			{Label: "Target specified", Result: checks.Target.Specified.Check(context.Background())},
+			{Label: "Target access", Result: checks.Target.Connectivity.Check(context.Background())},
 			{Label: "Target Docker", Result: checks.Target.Docker.Check(context.Background())},
 			{Label: "Remoteproc", Result: checks.Target.Remoteproc.Check(context.Background())},
 		}
 		wantDiscoveryResults := []health.EvaluatedDependency{
+			{Label: "Target specified", Result: checks.Target.Specified.Check(context.Background())},
+			{Label: "Target access", Result: checks.Target.Connectivity.Check(context.Background())},
 			{Label: "Hardware Info", Result: checks.Target.Hardware.Check(context.Background())},
 		}
 		assert.Equal(t, wantDeploymentResults, got.Deployment.Target)
