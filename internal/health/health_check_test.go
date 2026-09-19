@@ -14,12 +14,22 @@ func TestHealthCheck(t *testing.T) {
 		t.Run("evaluates deployment and project discovery checks", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			deployment := health.Dependency{ID: "deployment", Check: passingCheck}
-			deploymentRef := registry.Register(deployment, health.DependencyRequirements{})
+			deploymentRef := registry.Register(deployment, health.DependencyRequirements{}, health.DependencyScopeHost)
 			projectDiscovery := health.Dependency{ID: "project-discovery", Check: failingCheck}
-			projectDiscoveryRef := registry.Register(projectDiscovery, health.DependencyRequirements{})
+			projectDiscoveryRef := registry.Register(
+				projectDiscovery,
+				health.DependencyRequirements{},
+				health.DependencyScopeTarget,
+			)
 			healthCheck := health.HealthCheck{
-				Deployment:       health.ReadinessCheck{Registry: registry, Host: []*health.DependencyNode{deploymentRef}},
-				ProjectDiscovery: health.ReadinessCheck{Registry: registry, Target: []*health.DependencyNode{projectDiscoveryRef}},
+				Deployment: health.ReadinessCheck{
+					Registry:     registry,
+					Dependencies: []*health.DependencyNode{deploymentRef},
+				},
+				ProjectDiscovery: health.ReadinessCheck{
+					Registry:     registry,
+					Dependencies: []*health.DependencyNode{projectDiscoveryRef},
+				},
 			}
 
 			got := healthCheck.Evaluate(context.Background())
@@ -188,16 +198,17 @@ func TestReadinessCheck(t *testing.T) {
 		t.Run("reports successful dependencies in the group", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			virus := health.Dependency{ID: "virus", Check: passingCheck}
-			virusRef := registry.Register(virus, health.DependencyRequirements{})
+			virusRef := registry.Register(virus, health.DependencyRequirements{}, health.DependencyScopeHost)
 			bartek := health.Dependency{ID: "bartek", Check: passingCheck}
 			bartekRef := registry.Register(
 				bartek,
 				health.DependencyRequirements{Prerequisites: []*health.DependencyNode{virusRef}},
+				health.DependencyScopeHost,
 			)
 
 			healthCheck := health.ReadinessCheck{
-				Registry: registry,
-				Host:     []*health.DependencyNode{bartekRef, virusRef},
+				Registry:     registry,
+				Dependencies: []*health.DependencyNode{bartekRef, virusRef},
 			}
 
 			got := healthCheck.Evaluate(context.Background())
@@ -212,16 +223,17 @@ func TestReadinessCheck(t *testing.T) {
 		t.Run("reports a failed prerequisite and omits its dependent", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			flour := health.Dependency{ID: "flour", Check: failingCheck}
-			flourRef := registry.Register(flour, health.DependencyRequirements{})
+			flourRef := registry.Register(flour, health.DependencyRequirements{}, health.DependencyScopeHost)
 			pizza := health.Dependency{ID: "pizza", Check: passingCheck}
 			pizzaRef := registry.Register(
 				pizza,
 				health.DependencyRequirements{Prerequisites: []*health.DependencyNode{flourRef}},
+				health.DependencyScopeHost,
 			)
 
 			healthCheck := health.ReadinessCheck{
-				Registry: registry,
-				Host:     []*health.DependencyNode{flourRef, pizzaRef},
+				Registry:     registry,
+				Dependencies: []*health.DependencyNode{flourRef, pizzaRef},
 			}
 
 			got := healthCheck.Evaluate(context.Background())

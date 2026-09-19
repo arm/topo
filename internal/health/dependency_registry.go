@@ -9,9 +9,17 @@ import (
 type DependencyNode struct {
 	dependency   Dependency
 	requirements DependencyRequirements
+	scope        DependencyScope
 	once         sync.Once
 	evaluation   DependencyEvaluation
 }
+
+type DependencyScope uint8
+
+const (
+	DependencyScopeHost DependencyScope = iota
+	DependencyScopeTarget
+)
 
 type DependencyRequirements struct {
 	Prerequisites []*DependencyNode
@@ -38,6 +46,10 @@ func (n *DependencyNode) Dependency() Dependency {
 	return n.dependency
 }
 
+func (n *DependencyNode) Scope() DependencyScope {
+	return n.scope
+}
+
 type DependencyRegistry struct {
 	dependencies []*DependencyNode
 }
@@ -46,7 +58,11 @@ func NewDependencyRegistry() *DependencyRegistry {
 	return &DependencyRegistry{}
 }
 
-func (r *DependencyRegistry) Register(dependency Dependency, requirements DependencyRequirements) *DependencyNode {
+func (r *DependencyRegistry) Register(
+	dependency Dependency,
+	requirements DependencyRequirements,
+	scope DependencyScope,
+) *DependencyNode {
 	for _, condition := range requirements.Conditions {
 		r.assertRegistered(condition)
 	}
@@ -54,7 +70,11 @@ func (r *DependencyRegistry) Register(dependency Dependency, requirements Depend
 		r.assertRegistered(prerequisite)
 	}
 
-	node := &DependencyNode{dependency: dependency, requirements: requirements}
+	node := &DependencyNode{
+		dependency:   dependency,
+		requirements: requirements,
+		scope:        scope,
+	}
 	r.dependencies = append(r.dependencies, node)
 	return node
 }

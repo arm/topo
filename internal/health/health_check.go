@@ -54,14 +54,12 @@ func AssembleHealthCheck(target *ssh.Destination, checks Checks) HealthCheck {
 
 	return HealthCheck{
 		Deployment: ReadinessCheck{
-			Registry: registry,
-			Host:     hostNodes.deployment,
-			Target:   targetNodes.deployment,
+			Registry:     registry,
+			Dependencies: append(hostNodes.deployment, targetNodes.deployment...),
 		},
 		ProjectDiscovery: ReadinessCheck{
-			Registry: registry,
-			Host:     hostNodes.discovery,
-			Target:   targetNodes.discovery,
+			Registry:     registry,
+			Dependencies: append(hostNodes.discovery, targetNodes.discovery...),
 		},
 	}
 }
@@ -74,29 +72,32 @@ func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
 }
 
 type ReadinessCheck struct {
-	Registry *DependencyRegistry
-	Host     []*DependencyNode
-	Target   []*DependencyNode
+	Registry     *DependencyRegistry
+	Dependencies []*DependencyNode
 }
 
 func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
-	return EvaluatedReadinessCheck{
-		Host:   h.evaluateDependencies(ctx, h.Host),
-		Target: h.evaluateDependencies(ctx, h.Target),
+	evaluated := EvaluatedReadinessCheck{
+		Host:   make([]EvaluatedDependency, 0, len(h.Dependencies)),
+		Target: make([]EvaluatedDependency, 0, len(h.Dependencies)),
 	}
-}
-
-func (h ReadinessCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
-	statuses := make([]EvaluatedDependency, 0, len(references))
-	for _, reference := range references {
+	for _, reference := range h.Dependencies {
 		evaluation := h.Registry.Check(ctx, reference)
 		if evaluation.State != EvaluationExecuted {
 			continue
 		}
 		dependency := reference.Dependency()
-		statuses = append(statuses, EvaluatedDependency{ID: dependency.ID, Label: dependency.Label, Result: evaluation.Result})
+		status := EvaluatedDependency{ID: dependency.ID, Label: dependency.Label, Result: evaluation.Result}
+		switch reference.Scope() {
+		case DependencyScopeHost:
+			evaluated.Host = append(evaluated.Host, status)
+		case DependencyScopeTarget:
+			evaluated.Target = append(evaluated.Target, status)
+		default:
+			panic("health dependency has an unknown scope")
+		}
 	}
-	return statuses
+	return evaluated
 }
 
 type EvaluatedHealthCheck struct {
@@ -159,12 +160,13 @@ type hostNodes struct {
 }
 
 func registerHostChecks(registry *DependencyRegistry, checks HostChecks) hostNodes {
-	topo := registry.Register(checks.Topo, DependencyRequirements{})
-	ssh := registry.Register(checks.SSH, DependencyRequirements{})
-	docker := registry.Register(checks.Docker, DependencyRequirements{})
+	topo := registry.Register(checks.Topo, DependencyRequirements{}, DependencyScopeHost)
+	ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
+	docker := registry.Register(checks.Docker, DependencyRequirements{}, DependencyScopeHost)
 	compose := registry.Register(
 		checks.DockerCompose,
 		DependencyRequirements{Prerequisites: []*DependencyNode{docker}},
+		DependencyScopeHost,
 	)
 
 	return hostNodes{
@@ -186,27 +188,44 @@ func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination,
 	prerequisites := []*DependencyNode(nil)
 	nodes := targetNodes{}
 	if !target.IsPlainLocalhost() {
-		access := registry.Register(checks.Connectivity, DependencyRequirements{})
+		access := registry.Register(checks.Connectivity, DependencyRequirements{}, DependencyScopeTarget)
 		prerequisites = []*DependencyNode{access}
 		nodes.deployment = append(nodes.deployment, access)
 		nodes.discovery = append(nodes.discovery, access)
 	}
 
-	hardware := registry.Register(checks.Hardware, DependencyRequirements{Prerequisites: prerequisites})
+	hardware := registry.Register(
+		checks.Hardware,
+		DependencyRequirements{Prerequisites: prerequisites},
+		DependencyScopeTarget,
+	)
 	nodes.deployment = append(nodes.deployment, registerTargetContainerEngineChecks(registry, checks, prerequisites...)...)
 	nodes.discovery = append(nodes.discovery, hardware)
 	return nodes
 }
 
 func registerTargetContainerEngineChecks(registry *DependencyRegistry, checks TargetChecks, prerequisites ...*DependencyNode) []*DependencyNode {
-	docker := registry.Register(checks.Docker, DependencyRequirements{Prerequisites: prerequisites})
-	remoteproc := registry.Register(checks.Remoteproc, DependencyRequirements{Prerequisites: prerequisites})
+	docker := registry.Register(
+		checks.Docker,
+		DependencyRequirements{Prerequisites: prerequisites},
+		DependencyScopeTarget,
+	)
+	remoteproc := registry.Register(
+		checks.Remoteproc,
+		DependencyRequirements{Prerequisites: prerequisites},
+		DependencyScopeTarget,
+	)
 	runtimeRequirements := DependencyRequirements{
 		Conditions:    []*DependencyNode{remoteproc},
 		Prerequisites: append([]*DependencyNode{docker}, prerequisites...),
 	}
-	runtime := registry.Register(checks.RemoteprocRuntime, runtimeRequirements)
-	shim := registry.Register(checks.RemoteprocRuntimeShim, runtimeRequirements)
+	runtime := registry.Register(
+		checks.RemoteprocRuntime,
+		runtimeRequirements,
+		DependencyScopeTarget,
+	)
+	shim := registry.Register(
+		checks.RemoteprocRuntimeShim, runtimeRequirements, DependencyScopeTarget)
 
 	return []*DependencyNode{docker, remoteproc, runtime, shim}
 }
