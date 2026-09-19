@@ -32,10 +32,10 @@ type HostChecks struct {
 type TargetChecks struct {
 	Connectivity          Dependency
 	Docker                Dependency
-	Hardware              Dependency
 	Remoteproc            Dependency
 	RemoteprocRuntime     Dependency
 	RemoteprocRuntimeShim Dependency
+	Hardware              Dependency
 }
 
 type HealthCheck struct {
@@ -89,12 +89,12 @@ func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
 func (h ReadinessCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
 	statuses := make([]EvaluatedDependency, 0, len(references))
 	for _, reference := range references {
-		result, checked := h.Registry.Check(ctx, reference)
-		if !checked {
+		evaluation := h.Registry.Check(ctx, reference)
+		if evaluation.State != EvaluationExecuted {
 			continue
 		}
 		dependency := reference.Dependency()
-		statuses = append(statuses, EvaluatedDependency{ID: dependency.ID, Label: dependency.Label, Result: result})
+		statuses = append(statuses, EvaluatedDependency{ID: dependency.ID, Label: dependency.Label, Result: evaluation.Result})
 	}
 	return statuses
 }
@@ -159,10 +159,13 @@ type hostNodes struct {
 }
 
 func registerHostChecks(registry *DependencyRegistry, checks HostChecks) hostNodes {
-	topo := registry.Register(checks.Topo)
-	ssh := registry.Register(checks.SSH)
-	docker := registry.Register(checks.Docker)
-	compose := registry.Register(checks.DockerCompose, docker)
+	topo := registry.Register(checks.Topo, DependencyRequirements{})
+	ssh := registry.Register(checks.SSH, DependencyRequirements{})
+	docker := registry.Register(checks.Docker, DependencyRequirements{})
+	compose := registry.Register(
+		checks.DockerCompose,
+		DependencyRequirements{Prerequisites: []*DependencyNode{docker}},
+	)
 
 	return hostNodes{
 		deployment: []*DependencyNode{topo, ssh, docker, compose},
@@ -183,24 +186,29 @@ func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination,
 	prerequisites := []*DependencyNode(nil)
 	nodes := targetNodes{}
 	if !target.IsPlainLocalhost() {
-		access := registry.Register(checks.Connectivity)
+		access := registry.Register(checks.Connectivity, DependencyRequirements{})
 		prerequisites = []*DependencyNode{access}
 		nodes.deployment = append(nodes.deployment, access)
 		nodes.discovery = append(nodes.discovery, access)
 	}
 
-	hardware := registry.Register(checks.Hardware, prerequisites...)
+	hardware := registry.Register(checks.Hardware, DependencyRequirements{Prerequisites: prerequisites})
 	nodes.deployment = append(nodes.deployment, registerTargetContainerEngineChecks(registry, checks, prerequisites...)...)
 	nodes.discovery = append(nodes.discovery, hardware)
 	return nodes
 }
 
 func registerTargetContainerEngineChecks(registry *DependencyRegistry, checks TargetChecks, prerequisites ...*DependencyNode) []*DependencyNode {
-	docker := registry.Register(checks.Docker, prerequisites...)
-	remoteproc := registry.Register(checks.Remoteproc, prerequisites...)
+	docker := registry.Register(checks.Docker, DependencyRequirements{Prerequisites: prerequisites})
+	remoteproc := registry.Register(checks.Remoteproc, DependencyRequirements{Prerequisites: prerequisites})
 	runtimePrerequisites := append([]*DependencyNode{docker, remoteproc}, prerequisites...)
-	runtime := registry.Register(checks.RemoteprocRuntime, runtimePrerequisites...)
-	shim := registry.Register(checks.RemoteprocRuntimeShim, runtimePrerequisites...)
+	runtime := registry.Register(
+		checks.RemoteprocRuntime,
+		DependencyRequirements{Prerequisites: runtimePrerequisites},
+	)
+	shim := registry.Register(
+		checks.RemoteprocRuntimeShim, DependencyRequirements{Prerequisites: runtimePrerequisites},
+	)
 
 	return []*DependencyNode{docker, remoteproc, runtime, shim}
 }

@@ -14,9 +14,9 @@ func TestHealthCheck(t *testing.T) {
 		t.Run("evaluates deployment and project discovery checks", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			deployment := health.Dependency{ID: "deployment", Check: passingCheck}
-			deploymentRef := registry.Register(deployment)
+			deploymentRef := registry.Register(deployment, health.DependencyRequirements{})
 			projectDiscovery := health.Dependency{ID: "project-discovery", Check: failingCheck}
-			projectDiscoveryRef := registry.Register(projectDiscovery)
+			projectDiscoveryRef := registry.Register(projectDiscovery, health.DependencyRequirements{})
 			healthCheck := health.HealthCheck{
 				Deployment:       health.ReadinessCheck{Registry: registry, Host: []*health.DependencyNode{deploymentRef}},
 				ProjectDiscovery: health.ReadinessCheck{Registry: registry, Target: []*health.DependencyNode{projectDiscoveryRef}},
@@ -188,9 +188,12 @@ func TestReadinessCheck(t *testing.T) {
 		t.Run("reports successful dependencies in the group", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			virus := health.Dependency{ID: "virus", Check: passingCheck}
-			virusRef := registry.Register(virus)
+			virusRef := registry.Register(virus, health.DependencyRequirements{})
 			bartek := health.Dependency{ID: "bartek", Check: passingCheck}
-			bartekRef := registry.Register(bartek, virusRef)
+			bartekRef := registry.Register(
+				bartek,
+				health.DependencyRequirements{Prerequisites: []*health.DependencyNode{virusRef}},
+			)
 
 			healthCheck := health.ReadinessCheck{
 				Registry: registry,
@@ -209,9 +212,12 @@ func TestReadinessCheck(t *testing.T) {
 		t.Run("reports a failed prerequisite and omits its dependent", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			flour := health.Dependency{ID: "flour", Check: failingCheck}
-			flourRef := registry.Register(flour)
+			flourRef := registry.Register(flour, health.DependencyRequirements{})
 			pizza := health.Dependency{ID: "pizza", Check: passingCheck}
-			pizzaRef := registry.Register(pizza, flourRef)
+			pizzaRef := registry.Register(
+				pizza,
+				health.DependencyRequirements{Prerequisites: []*health.DependencyNode{flourRef}},
+			)
 
 			healthCheck := health.ReadinessCheck{
 				Registry: registry,
