@@ -1,6 +1,9 @@
 package health
 
-import "context"
+import (
+	"context"
+	"slices"
+)
 
 type CheckStatus string
 
@@ -38,11 +41,40 @@ type HealthReport struct {
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	healthCheck := NewHealthCheck(options)
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
+	return evaluatedHealthCheck.Report(targetDetails(options))
+}
+
+func (h EvaluatedHealthCheck) Report(target TargetDetails) HealthReport {
+	deployment := toReadinessReport(h.Deployment)
+	discovery := toReadinessReport(h.ProjectDiscovery)
+	downgradeMissingTargetForProjectDiscovery(discovery.Target)
+	deployment.Target = removeSuccessfulTargetPrerequisiteReports(deployment.Target, target)
+	discovery.Target = removeSuccessfulTargetPrerequisiteReports(discovery.Target, target)
 	return HealthReport{
-		TargetDetails:    targetDetails(options),
-		Deployment:       toReadinessReport(evaluatedHealthCheck.Deployment),
-		ProjectDiscovery: toReadinessReport(evaluatedHealthCheck.ProjectDiscovery),
+		TargetDetails:    target,
+		Deployment:       deployment,
+		ProjectDiscovery: discovery,
 	}
+}
+
+func downgradeMissingTargetForProjectDiscovery(reports []DependencyReport) {
+	for i := range reports {
+		report := &reports[i]
+		if report.ID == DependencyIDTargetSpecified && report.Status == CheckStatusError {
+			report.Status = CheckStatusWarning
+			report.Value = "target not specified; cannot calculate project compatibility"
+			return
+		}
+	}
+}
+
+func removeSuccessfulTargetPrerequisiteReports(reports []DependencyReport, target TargetDetails) []DependencyReport {
+	return slices.DeleteFunc(reports, func(report DependencyReport) bool {
+		isOK := report.Status == CheckStatusOK
+		isTargetSpecifiedCheck := report.ID == DependencyIDTargetSpecified
+		isLocalhostConnectivityCheck := report.ID == DependencyIDConnectivity && target.IsLocalhost
+		return isOK && (isTargetSpecifiedCheck || isLocalhostConnectivityCheck)
+	})
 }
 
 func targetDetails(options HealthCheckOptions) TargetDetails {
