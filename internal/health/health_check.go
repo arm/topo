@@ -81,15 +81,15 @@ func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
 	evaluated := EvaluatedReadinessCheck{Dependencies: make([]EvaluatedDependency, 0, len(h.Dependencies))}
 	for _, reference := range h.Dependencies {
 		evaluation := h.Registry.Check(ctx, reference)
-		if evaluation.State != EvaluationExecuted {
+		if evaluation.State == EvaluationOmitted {
 			continue
 		}
 		dependency := reference.Dependency()
 		evaluated.Dependencies = append(evaluated.Dependencies, EvaluatedDependency{
-			Scope:  reference.Scope(),
-			ID:     dependency.ID,
-			Label:  dependency.Label,
-			Result: evaluation.Result,
+			Scope:      reference.Scope(),
+			ID:         dependency.ID,
+			Label:      dependency.Label,
+			Evaluation: evaluation,
 		})
 	}
 	return evaluated
@@ -105,10 +105,10 @@ type EvaluatedReadinessCheck struct {
 }
 
 type EvaluatedDependency struct {
-	Scope  DependencyScope
-	ID     DependencyID
-	Label  string
-	Result DependencyCheckResult
+	Scope      DependencyScope
+	ID         DependencyID
+	Label      string
+	Evaluation DependencyEvaluation
 }
 
 func newChecks(options HealthCheckOptions) Checks {

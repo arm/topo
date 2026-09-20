@@ -55,6 +55,39 @@ func TestHealthReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, want, out.String())
 		})
+
+		t.Run("formats blocker references", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Target: []health.DependencyReport{{
+				Scope:  health.DependencyScopeTarget,
+				Name:   "Docker daemon",
+				Status: health.CheckStatusUndetermined,
+				BlockedBy: []health.DependencyBlocker{{
+					Scope: health.DependencyScopeHost,
+					Name:  "Docker CLI",
+				}},
+			}}}}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "Deployment: undetermined (? 1)")
+			assert.Contains(t, out.String(), " ? Docker daemon (blocked by host's Docker CLI)")
+		})
+
+		t.Run("gives errors precedence over undetermined checks", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Host: []health.DependencyReport{
+				{Scope: health.DependencyScopeHost, Name: "Docker CLI", Status: health.CheckStatusError},
+			}, Target: []health.DependencyReport{
+				{Scope: health.DependencyScopeTarget, Name: "Docker daemon", Status: health.CheckStatusUndetermined},
+			}}}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "Deployment: not ready (✗ 1 ? 1)")
+		})
 	})
 
 	t.Run("AsPlain", func(t *testing.T) {
@@ -112,6 +145,32 @@ func TestHealthReport(t *testing.T) {
 					],
 					"processingDomainDriver":{"name":"Processing Domain Driver (remoteproc)","status":"","value":""}
 				}
+			}`, out.String())
+		})
+	})
+
+	t.Run("AsJSON", func(t *testing.T) {
+		t.Run("formats blocker references in the value", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Host: []health.DependencyReport{{
+				Scope:  health.DependencyScopeHost,
+				Name:   "Docker daemon",
+				Status: health.CheckStatusUndetermined,
+				BlockedBy: []health.DependencyBlocker{{
+					Scope: health.DependencyScopeHost,
+					Name:  "Docker CLI",
+				}},
+			}}}}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.JSON)
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"host":{"dependencies":[{
+					"name":"Docker daemon",
+					"status":"undetermined",
+					"value":"blocked by host's Docker CLI"
+				}]}
 			}`, out.String())
 		})
 	})
