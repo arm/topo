@@ -77,25 +77,19 @@ type ReadinessCheck struct {
 }
 
 func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
-	evaluated := EvaluatedReadinessCheck{
-		Host:   make([]EvaluatedDependency, 0, len(h.Dependencies)),
-		Target: make([]EvaluatedDependency, 0, len(h.Dependencies)),
-	}
+	evaluated := EvaluatedReadinessCheck{Dependencies: make([]EvaluatedDependency, 0, len(h.Dependencies))}
 	for _, reference := range h.Dependencies {
 		evaluation := h.Registry.Check(ctx, reference)
 		if evaluation.State != EvaluationExecuted {
 			continue
 		}
 		dependency := reference.Dependency()
-		status := EvaluatedDependency{ID: dependency.ID, Label: dependency.Label, Result: evaluation.Result}
-		switch reference.Scope() {
-		case DependencyScopeHost:
-			evaluated.Host = append(evaluated.Host, status)
-		case DependencyScopeTarget:
-			evaluated.Target = append(evaluated.Target, status)
-		default:
-			panic("health dependency has an unknown scope")
-		}
+		evaluated.Dependencies = append(evaluated.Dependencies, EvaluatedDependency{
+			Scope:  reference.Scope(),
+			ID:     dependency.ID,
+			Label:  dependency.Label,
+			Result: evaluation.Result,
+		})
 	}
 	return evaluated
 }
@@ -106,11 +100,11 @@ type EvaluatedHealthCheck struct {
 }
 
 type EvaluatedReadinessCheck struct {
-	Host   []EvaluatedDependency
-	Target []EvaluatedDependency
+	Dependencies []EvaluatedDependency
 }
 
 type EvaluatedDependency struct {
+	Scope  DependencyScope
 	ID     DependencyID
 	Label  string
 	Result DependencyCheckResult

@@ -23,8 +23,8 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 
 		t.Run("retains remote access results", func(t *testing.T) {
 			healthCheck := health.EvaluatedHealthCheck{
-				Deployment: health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{
-					{ID: health.DependencyIDConnectivity, Label: "Target access", Result: health.DependencyCheckResult{SuccessValue: "user@example.com"}},
+				Deployment: health.EvaluatedReadinessCheck{Dependencies: []health.EvaluatedDependency{
+					{Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Label: "Target access", Result: health.DependencyCheckResult{SuccessValue: "user@example.com"}},
 				}},
 			}
 
@@ -32,7 +32,7 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 			got := healthCheck.Report(&target, "")
 
 			assert.Equal(t, []health.DependencyReport{{
-				ID: health.DependencyIDConnectivity, Name: "Target access", Status: health.CheckStatusOK, Value: "user@example.com",
+				Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Name: "Target access", Status: health.CheckStatusOK, Value: "user@example.com",
 			}}, got.Deployment.Target)
 		})
 	})

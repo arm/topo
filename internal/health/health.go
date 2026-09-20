@@ -12,6 +12,7 @@ const (
 )
 
 type DependencyReport struct {
+	Scope  DependencyScope
 	ID     DependencyID
 	Name   string
 	Status CheckStatus
@@ -79,15 +80,23 @@ func targetDetails(options HealthCheckOptions) *TargetDetails {
 	}
 }
 
-func toReadinessReport(evaluatedHealthCheck EvaluatedReadinessCheck) ReadinessReport {
-	return ReadinessReport{
-		Host:   toDependencyReports(evaluatedHealthCheck.Host),
-		Target: toDependencyReports(evaluatedHealthCheck.Target),
+func toReadinessReport(evaluatedReadinessCheck EvaluatedReadinessCheck) ReadinessReport {
+	report := ReadinessReport{}
+	for _, dependency := range toDependencyReports(evaluatedReadinessCheck.Dependencies) {
+		switch dependency.Scope {
+		case DependencyScopeHost:
+			report.Host = append(report.Host, dependency)
+		case DependencyScopeTarget:
+			report.Target = append(report.Target, dependency)
+		default:
+			panic("health dependency has an unknown scope")
+		}
 	}
+	return report
 }
 
 func ToDependencyReport(status EvaluatedDependency) DependencyReport {
-	report := DependencyReport{ID: status.ID, Name: status.Label}
+	report := DependencyReport{Scope: status.Scope, ID: status.ID, Name: status.Label}
 	if status.Result.Failure == nil {
 		report.Status = CheckStatusOK
 		report.Value = status.Result.SuccessValue
