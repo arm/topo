@@ -37,7 +37,7 @@ func TestHealthCheck(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, out, " ✓ OpenSSH (ssh)")
-		assert.Contains(t, out, " ✓ Container Engine (docker)")
+		assert.Contains(t, out, " ✓ Docker daemon (reachable)")
 		assert.Contains(t, out, " ✓ Docker Compose (docker compose)")
 	})
 

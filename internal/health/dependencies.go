@@ -119,6 +119,22 @@ func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 	}
 }
 
+func NewDependencyOnDockerCLI(r runner.Runner) Dependency {
+	return Dependency{
+		Label: "Docker CLI",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := r.BinaryExists(ctx, "docker"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "docker"}
+		},
+	}
+}
+
 func NewDependencyOnDocker(r runner.Runner) Dependency {
 	return Dependency{
 		Label: "Container Engine",
@@ -142,17 +158,10 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteDocker(target ssh.Destination, hostRunner runner.Runner, probeInfo func(context.Context, ssh.Destination) error) Dependency {
+func NewDependencyOnRemoteDocker(target ssh.Destination, probeInfo func(context.Context, ssh.Destination) error) Dependency {
 	return Dependency{
-		Label: "Container Engine",
+		Label: "Docker daemon",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := hostRunner.BinaryExists(ctx, "docker"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityError,
-					Message:  fmt.Sprintf("cannot probe from host: %v", err),
-					Fix:      &Fix{Description: "Install a supported container engine on the host. See " + containerEngineInstallURL},
-				}}
-			}
 			if err := probeInfo(ctx, target); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
