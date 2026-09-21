@@ -126,7 +126,7 @@ func functionalityHeading(name string, report health.ReadinessReport, isTTY bool
 		indicators = append(indicators, statusIndicator("!", term.Yellow, statusCount.warnings, isTTY))
 	}
 	if statusCount.undetermined > 0 {
-		indicators = append(indicators, statusIndicator("?", term.LightGray, statusCount.undetermined, isTTY))
+		indicators = append(indicators, statusIndicator("?", term.Gray, statusCount.undetermined, isTTY))
 	}
 
 	heading := fmt.Sprintf("%s: %s (%s)", name, readiness, strings.Join(indicators, " "))
@@ -235,7 +235,7 @@ func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
 		case health.CheckStatusInfo:
 			label, color = " i ", term.Blue
 		case health.CheckStatusUndetermined:
-			label, color = " ? ", term.LightGray
+			label, color = " ? ", term.Gray
 		}
 		if !isTTY {
 			return label
