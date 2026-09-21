@@ -15,14 +15,10 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 			got := healthCheck.Report(nil, "Choose a target")
 
 			assert.Nil(t, got.TargetDetails)
-			assert.Equal(t, []health.DependencyReport{{
-				Name: "Target", Status: health.CheckStatusError, Value: "target not specified",
-				Fix: &health.Fix{Description: "Choose a target"},
-			}}, got.Deployment.Target)
-			assert.Equal(t, []health.DependencyReport{{
-				Name: "Target", Status: health.CheckStatusWarning, Value: "target not specified; cannot calculate project compatibility",
-				Fix: &health.Fix{Description: "Choose a target"},
-			}}, got.ProjectDiscovery.Target)
+			assert.Empty(t, got.Deployment.Target)
+			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusError, Fix: &health.Fix{Description: "Choose a target"}}, got.Deployment.TargetStatus)
+			assert.Empty(t, got.ProjectDiscovery.Target)
+			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusWarning, Fix: &health.Fix{Description: "Choose a target"}}, got.ProjectDiscovery.TargetStatus)
 		})
 
 		t.Run("hides successful selection and local access", func(t *testing.T) {

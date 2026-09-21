@@ -28,8 +28,14 @@ type TargetDetails struct {
 }
 
 type ReadinessReport struct {
-	Host   []DependencyReport
-	Target []DependencyReport
+	Host         []DependencyReport
+	Target       []DependencyReport
+	TargetStatus *TargetStatus
+}
+
+type TargetStatus struct {
+	Status CheckStatus
+	Fix    *Fix
 }
 
 type HealthReport struct {
@@ -48,8 +54,8 @@ func (h EvaluatedHealthCheck) Report(target *TargetDetails, missingTargetFixMess
 	deployment := toReadinessReport(h.Deployment)
 	discovery := toReadinessReport(h.ProjectDiscovery)
 	if target == nil {
-		deployment.Target = append(deployment.Target, missingTargetReport(SeverityError, "target not specified", missingTargetFixMessage))
-		discovery.Target = append(discovery.Target, missingTargetReport(SeverityWarning, "target not specified; cannot calculate project compatibility", missingTargetFixMessage))
+		deployment.TargetStatus = missingTargetStatus(CheckStatusError, missingTargetFixMessage)
+		discovery.TargetStatus = missingTargetStatus(CheckStatusWarning, missingTargetFixMessage)
 	} else {
 		deployment.Target = removeSuccessfulLocalhostConnectivityReports(deployment.Target, target)
 		discovery.Target = removeSuccessfulLocalhostConnectivityReports(discovery.Target, target)
@@ -61,12 +67,12 @@ func (h EvaluatedHealthCheck) Report(target *TargetDetails, missingTargetFixMess
 	}
 }
 
-func missingTargetReport(severity CheckSeverity, message, fixMessage string) DependencyReport {
-	report := DependencyReport{Name: "Target", Status: checkStatusFromSeverity(severity), Value: message}
+func missingTargetStatus(status CheckStatus, fixMessage string) *TargetStatus {
+	targetStatus := &TargetStatus{Status: status}
 	if fixMessage != "" {
-		report.Fix = &Fix{Description: fixMessage}
+		targetStatus.Fix = &Fix{Description: fixMessage}
 	}
-	return report
+	return targetStatus
 }
 
 func removeSuccessfulLocalhostConnectivityReports(reports []DependencyReport, target *TargetDetails) []DependencyReport {

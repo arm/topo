@@ -35,7 +35,13 @@ const functionalityHealthReportTemplate = `
 {{- range .Report.Host }}
 {{ template "checkRow" . }}
 {{- end }}
-{{ status (dependencyGroupStatus .Report.Target) }}Target
+{{ status (targetStatus .Report) }}Target
+{{- if .Report.TargetStatus }}
+{{- if .Report.TargetStatus.Fix }}
+{{ "   " }}Fix:
+{{ "     " }}{{ .Report.TargetStatus.Fix.Description }}
+{{- end }}
+{{- end }}
 {{- range .Report.Target }}
 {{ template "checkRow" . }}
 {{- end }}
@@ -61,6 +67,7 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 		return functionalityHeading(name, report, isTTY)
 	}
 	funcMap["dependencyGroupStatus"] = dependencyGroupStatus
+	funcMap["targetStatus"] = targetStatus
 	tmpl, err := template.New("functionality-healthcheck").Funcs(funcMap).Parse(functionalityHealthReportTemplate)
 	if err != nil {
 		return "", err
@@ -138,7 +145,23 @@ func countStatuses(report health.ReadinessReport) (statusCount struct{ warnings,
 			statusCount.errors++
 		}
 	}
+	if report.TargetStatus == nil {
+		return
+	}
+	switch report.TargetStatus.Status {
+	case health.CheckStatusWarning:
+		statusCount.warnings++
+	case health.CheckStatusError:
+		statusCount.errors++
+	}
 	return
+}
+
+func targetStatus(report health.ReadinessReport) health.CheckStatus {
+	if report.TargetStatus != nil {
+		return report.TargetStatus.Status
+	}
+	return dependencyGroupStatus(report.Target)
 }
 
 func dependencyGroupStatus(dependencies []health.DependencyReport) health.CheckStatus {

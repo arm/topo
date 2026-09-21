@@ -61,11 +61,10 @@ func TestHealthReport(t *testing.T) {
 		t.Run("renders a warning-only report as ready", func(t *testing.T) {
 			toPrint := views.HealthReport{
 				ProjectDiscovery: health.ReadinessReport{
-					Target: []health.DependencyReport{{
-						Name:   "Connectivity",
+					TargetStatus: &health.TargetStatus{
 						Status: health.CheckStatusWarning,
-						Value:  "target not specified; cannot calculate project compatibility",
-					}},
+						Fix:    &health.Fix{Description: "provide --target"},
+					},
 				},
 			}
 			var out bytes.Buffer
@@ -74,6 +73,7 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Project management: ready (! 1)")
+			assert.Contains(t, out.String(), "! Target\n   Fix:\n     provide --target")
 		})
 	})
 
