@@ -36,16 +36,16 @@ func TestHealthCheck(t *testing.T) {
 
 			want := health.EvaluatedHealthCheck{
 				Deployment: health.EvaluatedReadinessCheck{Dependencies: []health.EvaluatedDependency{{
-					Scope:  health.DependencyScopeHost,
-					ID:     deployment.ID,
-					Label:  deployment.Label,
-					Result: deployment.Check(context.Background()),
+					Scope:      health.DependencyScopeHost,
+					ID:         deployment.ID,
+					Label:      deployment.Label,
+					Evaluation: health.DependencyEvaluation{Result: deployment.Check(context.Background())},
 				}}},
 				ProjectDiscovery: health.EvaluatedReadinessCheck{Dependencies: []health.EvaluatedDependency{{
-					Scope:  health.DependencyScopeTarget,
-					ID:     projectDiscovery.ID,
-					Label:  projectDiscovery.Label,
-					Result: projectDiscovery.Check(context.Background()),
+					Scope:      health.DependencyScopeTarget,
+					ID:         projectDiscovery.ID,
+					Label:      projectDiscovery.Label,
+					Evaluation: health.DependencyEvaluation{Result: projectDiscovery.Check(context.Background())},
 				}}},
 			}
 			assert.Equal(t, want, got)
@@ -60,7 +60,8 @@ func TestAssembleHealthCheck(t *testing.T) {
 		}
 		return health.Checks{
 			Host: health.HostChecks{
-				Topo: passing("Topo"), SSH: passing("OpenSSH"), Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
+				Topo: passing("Topo"), SSH: passing("OpenSSH"), DockerCLI: passing("Docker CLI"),
+				Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
 			},
 			Target: health.TargetChecks{
 				Connectivity: passing("Target access"), Docker: passing("Target Docker"),
@@ -79,6 +80,42 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 		assert.Empty(t, targetDependencies(got.Deployment.Dependencies))
 		assert.Empty(t, targetDependencies(got.ProjectDiscovery.Dependencies))
+	})
+
+	t.Run("does not probe the target engine when Docker CLI is unavailable", func(t *testing.T) {
+		checks := newPassingChecks()
+		checks.Host.DockerCLI.Check = failingCheck
+		targetDockerChecks := 0
+		checks.Target.Docker.Check = func(context.Context) health.DependencyCheckResult {
+			targetDockerChecks++
+			return passingCheck(context.Background())
+		}
+		healthCheck := health.AssembleHealthCheck(&target, checks)
+
+		healthCheck.Evaluate(context.Background())
+
+		assert.Zero(t, targetDockerChecks)
+	})
+
+	t.Run("runs target engine and Compose checks when the host daemon fails", func(t *testing.T) {
+		checks := newPassingChecks()
+		checks.Host.Docker.Check = failingCheck
+		composeChecks := 0
+		checks.Host.DockerCompose.Check = func(context.Context) health.DependencyCheckResult {
+			composeChecks++
+			return passingCheck(context.Background())
+		}
+		targetDockerChecks := 0
+		checks.Target.Docker.Check = func(context.Context) health.DependencyCheckResult {
+			targetDockerChecks++
+			return passingCheck(context.Background())
+		}
+		healthCheck := health.AssembleHealthCheck(&target, checks)
+
+		healthCheck.Evaluate(context.Background())
+
+		assert.Equal(t, 1, composeChecks)
+		assert.Equal(t, 1, targetDockerChecks)
 	})
 
 	t.Run("runs target checks after their prerequisites succeed", func(t *testing.T) {
@@ -129,11 +166,15 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 		got := healthCheck.Evaluate(context.Background())
 
-		want := []health.Dependency{
-			checks.Target.Connectivity,
-		}
-		assertEvaluatedDependencies(t, want, targetDependencies(got.Deployment.Dependencies))
-		assertEvaluatedDependencies(t, want, targetDependencies(got.ProjectDiscovery.Dependencies))
+		assert.Equal(t, []health.EvaluationState{
+			health.EvaluationExecuted,
+			health.EvaluationBlocked,
+			health.EvaluationBlocked,
+		}, dependencyStates(targetDependencies(got.Deployment.Dependencies)))
+		assert.Equal(t, []health.EvaluationState{
+			health.EvaluationExecuted,
+			health.EvaluationBlocked,
+		}, dependencyStates(targetDependencies(got.ProjectDiscovery.Dependencies)))
 	})
 
 	t.Run("suppresses runtime checks when remoteproc fails", func(t *testing.T) {
@@ -158,17 +199,17 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 		got := healthCheck.Evaluate(context.Background())
 
-		wantDeploymentDependencies := []health.Dependency{
-			checks.Target.Connectivity,
-			checks.Target.Docker,
-			checks.Target.Remoteproc,
-		}
-		wantDiscoveryDependencies := []health.Dependency{
-			checks.Target.Connectivity,
-			checks.Target.Hardware,
-		}
-		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
-		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
+		assert.Equal(t, []health.EvaluationState{
+			health.EvaluationExecuted,
+			health.EvaluationExecuted,
+			health.EvaluationExecuted,
+			health.EvaluationBlocked,
+			health.EvaluationBlocked,
+		}, dependencyStates(targetDependencies(got.Deployment.Dependencies)))
+		assert.Equal(t, []health.EvaluationState{
+			health.EvaluationExecuted,
+			health.EvaluationExecuted,
+		}, dependencyStates(targetDependencies(got.ProjectDiscovery.Dependencies)))
 	})
 }
 
@@ -181,10 +222,10 @@ func assertEvaluatedDependencies(t *testing.T, want []health.Dependency, got []h
 	for i, dependency := range want {
 		wantResult := dependency.Check(context.Background())
 		wantDependency := health.EvaluatedDependency{
-			Scope:  health.DependencyScopeTarget,
-			ID:     dependency.ID,
-			Label:  dependency.Label,
-			Result: wantResult,
+			Scope:      health.DependencyScopeTarget,
+			ID:         dependency.ID,
+			Label:      dependency.Label,
+			Evaluation: health.DependencyEvaluation{Result: wantResult},
 		}
 		assert.Equal(t, wantDependency, got[i])
 	}
@@ -198,6 +239,14 @@ func targetDependencies(dependencies []health.EvaluatedDependency) []health.Eval
 		}
 	}
 	return targets
+}
+
+func dependencyStates(dependencies []health.EvaluatedDependency) []health.EvaluationState {
+	states := make([]health.EvaluationState, len(dependencies))
+	for i, dependency := range dependencies {
+		states[i] = dependency.Evaluation.State
+	}
+	return states
 }
 
 func TestReadinessCheck(t *testing.T) {
@@ -221,13 +270,13 @@ func TestReadinessCheck(t *testing.T) {
 			got := healthCheck.Evaluate(context.Background())
 
 			want := []health.EvaluatedDependency{
-				{Scope: health.DependencyScopeHost, ID: bartek.ID, Label: bartek.Label, Result: bartek.Check(context.Background())},
-				{Scope: health.DependencyScopeHost, ID: virus.ID, Label: virus.Label, Result: virus.Check(context.Background())},
+				{Scope: health.DependencyScopeHost, ID: bartek.ID, Label: bartek.Label, Evaluation: health.DependencyEvaluation{Result: bartek.Check(context.Background())}},
+				{Scope: health.DependencyScopeHost, ID: virus.ID, Label: virus.Label, Evaluation: health.DependencyEvaluation{Result: virus.Check(context.Background())}},
 			}
 			assert.Equal(t, want, got.Dependencies)
 		})
 
-		t.Run("reports a failed prerequisite and omits its dependent", func(t *testing.T) {
+		t.Run("reports a failed prerequisite and its blocked dependent", func(t *testing.T) {
 			registry := health.NewDependencyRegistry()
 			flour := health.Dependency{ID: "flour", Check: failingCheck}
 			flourRef := registry.Register(flour, health.DependencyRequirements{}, health.DependencyScopeHost)
@@ -245,10 +294,8 @@ func TestReadinessCheck(t *testing.T) {
 
 			got := healthCheck.Evaluate(context.Background())
 
-			want := []health.EvaluatedDependency{
-				{Scope: health.DependencyScopeHost, ID: flour.ID, Label: flour.Label, Result: flour.Check(context.Background())},
-			}
-			assert.Equal(t, want, got.Dependencies)
+			assert.Equal(t, []health.EvaluationState{health.EvaluationExecuted, health.EvaluationBlocked}, dependencyStates(got.Dependencies))
+			assert.Equal(t, []*health.DependencyNode{flourRef}, got.Dependencies[1].Evaluation.BlockedBy)
 		})
 	})
 }

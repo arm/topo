@@ -18,6 +18,7 @@ const (
 const (
 	Reset  = "\033[0m"
 	Dim    = "\033[2;90m"
+	Gray   = "\033[90m"
 	Green  = "\033[32m"
 	Yellow = "\033[33m"
 	Blue   = "\033[34m"

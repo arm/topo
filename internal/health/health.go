@@ -5,19 +5,26 @@ import "context"
 type CheckStatus string
 
 const (
-	CheckStatusOK      CheckStatus = "ok"
-	CheckStatusWarning CheckStatus = "warning"
-	CheckStatusError   CheckStatus = "error"
-	CheckStatusInfo    CheckStatus = "info"
+	CheckStatusOK           CheckStatus = "ok"
+	CheckStatusWarning      CheckStatus = "warning"
+	CheckStatusError        CheckStatus = "error"
+	CheckStatusInfo         CheckStatus = "info"
+	CheckStatusUndetermined CheckStatus = "undetermined"
 )
 
 type DependencyReport struct {
-	Scope  DependencyScope
-	ID     DependencyID
-	Name   string
-	Status CheckStatus
-	Value  string
-	Fix    *Fix
+	Scope     DependencyScope
+	ID        DependencyID
+	Name      string
+	Status    CheckStatus
+	Value     string
+	Fix       *Fix
+	BlockedBy []DependencyBlocker
+}
+
+type DependencyBlocker struct {
+	Scope DependencyScope
+	Name  string
 }
 
 type TargetDetails struct {
@@ -95,18 +102,42 @@ func toReadinessReport(evaluatedReadinessCheck EvaluatedReadinessCheck) Readines
 	return report
 }
 
-func ToDependencyReport(status EvaluatedDependency) DependencyReport {
-	report := DependencyReport{Scope: status.Scope, ID: status.ID, Name: status.Label}
-	if status.Result.Failure == nil {
+func ToDependencyReport(dependency EvaluatedDependency) DependencyReport {
+	report := DependencyReport{Scope: dependency.Scope, ID: dependency.ID, Name: dependency.Label}
+	switch dependency.Evaluation.State {
+	case EvaluationBlocked:
+		report.Status = CheckStatusUndetermined
+		report.BlockedBy = dependencyBlockers(dependency.Evaluation.BlockedBy)
+		return report
+	case EvaluationOmitted:
+		panic("cannot report an omitted health dependency")
+	case EvaluationExecuted:
+	default:
+		panic("unknown health dependency evaluation state")
+	}
+
+	result := dependency.Evaluation.Result
+	if result.Failure == nil {
 		report.Status = CheckStatusOK
-		report.Value = status.Result.SuccessValue
+		report.Value = result.SuccessValue
 		return report
 	}
 
-	report.Status = checkStatusFromSeverity(status.Result.Failure.Severity)
-	report.Value = status.Result.Failure.Message
-	report.Fix = status.Result.Failure.Fix
+	report.Status = checkStatusFromSeverity(result.Failure.Severity)
+	report.Value = result.Failure.Message
+	report.Fix = result.Failure.Fix
 	return report
+}
+
+func dependencyBlockers(blockers []*DependencyNode) []DependencyBlocker {
+	references := make([]DependencyBlocker, len(blockers))
+	for i, blocker := range blockers {
+		references[i] = DependencyBlocker{
+			Scope: blocker.Scope(),
+			Name:  blocker.Dependency().Label,
+		}
+	}
+	return references
 }
 
 func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {

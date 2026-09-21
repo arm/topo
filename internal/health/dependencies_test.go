@@ -110,23 +110,32 @@ func TestNewConnectivityDependency(t *testing.T) {
 	})
 }
 
-func TestNewDependencyOnRemoteDocker(t *testing.T) {
-	t.Run("does not probe the target when Docker is missing on the host", func(t *testing.T) {
-		probeCalled := false
+func TestNewDependencyOnRemoteDockerDaemon(t *testing.T) {
+	t.Run("reports a reachable daemon", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
-		dependency := health.NewDependencyOnRemoteDocker(target, &runner.Fake{}, func(context.Context, ssh.Destination) error {
-			probeCalled = true
+		dependency := health.NewDependencyOnRemoteDockerDaemon(target, func(context.Context, ssh.Destination) error {
 			return nil
 		})
 
 		got := dependency.Check(context.Background())
 
-		assert.False(t, probeCalled)
-		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "reachable"}, got)
+	})
+
+	t.Run("reports a failed daemon probe", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewDependencyOnRemoteDockerDaemon(target, func(context.Context, ssh.Destination) error {
+			return errors.New("Boom!")
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
-			Message:  `cannot probe from host: "docker" not found in $PATH`,
-			Fix:      &health.Fix{Description: "Install a supported container engine on the host. See https://github.com/arm/topo#install-a-container-engine"},
-		}}, got)
+			Message:  "Boom!",
+			Fix:      &health.Fix{Description: "Ensure docker is installed and running on the target. See https://github.com/arm/topo#install-a-container-engine"},
+		}}
+		assert.Equal(t, want, got)
 	})
 }
 
