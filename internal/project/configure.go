@@ -78,7 +78,7 @@ func MigrateToEnv(composeFilePath string) error {
 		}
 		for _, value := range currentValues[1:] {
 			if value != currentValues[0] {
-				return fmt.Errorf("parameter %s has more than one current value", param.Name)
+				return fmt.Errorf("parameter %s has more than one current value: %q; consider consolidating the values before migrating", param.Name, currentValues)
 			}
 		}
 
