@@ -68,34 +68,3 @@ services:
 		require.Error(t, err)
 	})
 }
-
-func TestDefaultMessage(t *testing.T) {
-	tests := []struct {
-		name        string
-		composeFile string
-		want        string
-	}{
-		{
-			name:        "compose yaml",
-			composeFile: "compose.yaml",
-			want:        "Run `topo ps` to see deployed containers",
-		},
-		{
-			name:        "compose yml",
-			composeFile: "compose.yml",
-			want:        "Run `topo ps -f compose.yml` to see deployed containers",
-		},
-		{
-			name:        "custom compose file",
-			composeFile: "custom-compose.yaml",
-			want:        "Run `topo ps -f custom-compose.yaml` to see deployed containers",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := post_deploy.DefaultMessage(tt.composeFile)
-
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}

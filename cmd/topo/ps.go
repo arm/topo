@@ -31,15 +31,15 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		composeFile, err := getComposeFileName(cmd)
+		composeFilePath, err := resolveComposeFilePath(cmd)
 		if err != nil {
 			return err
 		}
-		envFiles, err := getEnvFiles(cmd, composeFile)
+		envFiles, err := getEnvFiles(cmd, composeFilePath)
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFile, targetArg, envFiles)
+		scope, err := project.BuildScope(composeFilePath, targetArg, envFiles)
 		if err != nil {
 			return err
 		}
