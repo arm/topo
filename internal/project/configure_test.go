@@ -225,7 +225,7 @@ x-topo:
 		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated", "B": "keep-me"})
 	})
 
-	t.Run("rejects legacy projects with migration instructions", func(t *testing.T) {
+	t.Run("does not enforce migration compatibility", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
   app:
@@ -241,8 +241,8 @@ x-topo:
 
 		err := project.Configure(path, resolver)
 
-		require.ErrorIs(t, err, project.ErrNoParameterReferences)
-		assert.ErrorContains(t, err, "topo configure --migrate-to-env")
+		require.NoError(t, err)
+		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(path), env.DefaultFilename), map[string]string{"FOO": "baz"})
 	})
 
 	t.Run("allows unreferenced parameters with no matching build arg", func(t *testing.T) {

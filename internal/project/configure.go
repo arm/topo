@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/env"
@@ -15,7 +16,33 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-var ErrNoParameterReferences = errors.New("none of the declared parameters are referenced as environment variables in the Compose file")
+var ErrLegacyParameterFormat = errors.New("project appears to use legacy build-argument parameterization")
+
+func CheckEnvCompatibility(composeFilePath string) error {
+	project, err := loadProject(composeFilePath)
+	if err != nil {
+		return err
+	}
+
+	buildArgs := make(map[string]any)
+	for name, values := range project.currentParameterValues {
+		buildArgs[name] = strings.Join(values, "\n")
+	}
+	references := template.ExtractVariables(buildArgs, nil)
+	hasParameterValues := false
+	for _, param := range project.Metadata.Parameters {
+		if _, referenced := references[param.Name]; referenced {
+			return nil
+		}
+		if len(project.currentParameterValues[param.Name]) > 0 {
+			hasParameterValues = true
+		}
+	}
+	if hasParameterValues {
+		return ErrLegacyParameterFormat
+	}
+	return nil
+}
 
 func Configure(composeFilePath string, resolver parameter.Resolver) error {
 	envFile := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
@@ -33,10 +60,7 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return nil
 	}
 
-	if err := validateParameterReferences(composeFilePath, definitions); err != nil {
-		if errors.Is(err, ErrNoParameterReferences) {
-			return fmt.Errorf("%w; this project might use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration", err)
-		}
+	if err := warnUnreferencedParameters(composeFilePath, definitions); err != nil {
 		return err
 	}
 
@@ -106,7 +130,7 @@ func MigrateToEnv(composeFilePath string) error {
 	return nil
 }
 
-func validateParameterReferences(composeFilePath string, definitions []parameter.Definition) error {
+func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Definition) error {
 	model, err := readUninterpolated(composeFilePath)
 	if err != nil {
 		return err
@@ -117,18 +141,6 @@ func validateParameterReferences(composeFilePath string, definitions []parameter
 		_, referenced := referencedEnvVars[d.Name]
 		return referenced
 	})
-
-	if len(unreferencedDefinitions) == len(definitions) {
-		buildArgs, err := buildArgumentNames(model)
-		if err != nil {
-			return err
-		}
-		for _, param := range definitions {
-			if slices.Contains(buildArgs, param.Name) {
-				return ErrNoParameterReferences
-			}
-		}
-	}
 
 	for _, param := range unreferencedDefinitions {
 		logger.Warn(fmt.Sprintf("parameter %q is not referenced through an environment variable in the Compose file; configuring it will have no effect", param.Name))

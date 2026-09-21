@@ -3,8 +3,6 @@ package project
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 	"sort"
 
 	"github.com/compose-spec/compose-go/v2/cli"
@@ -83,18 +81,4 @@ func readUninterpolated(composeFilePath string) (map[string]any, error) {
 		return nil, err
 	}
 	return options.LoadModel(context.Background())
-}
-
-func buildArgumentNames(model map[string]any) ([]string, error) {
-	var project types.Project
-	if err := loader.Transform(model, &project); err != nil {
-		return nil, fmt.Errorf("failed to decode Compose model: %w", err)
-	}
-	var names []string
-	for _, service := range project.Services {
-		if service.Build != nil {
-			names = append(names, slices.Collect(maps.Keys(service.Build.Args))...)
-		}
-	}
-	return names, nil
 }
