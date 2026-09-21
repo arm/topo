@@ -176,7 +176,7 @@ func dependencyValue(report health.DependencyReport) string {
 	if report.Status != health.CheckStatusUndetermined {
 		return report.Value
 	}
-	return "blocked by " + formatBlockers(report.BlockedBy)
+	return "not checked: requires " + formatBlockers(report.BlockedBy)
 }
 
 func formatBlockers(blockers []health.DependencyBlocker) string {

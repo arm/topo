@@ -72,7 +72,7 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Deployment: undetermined (? 1)")
-			assert.Contains(t, out.String(), " ? Docker daemon (blocked by host's Docker CLI)")
+			assert.Contains(t, out.String(), " ? Docker daemon (not checked: requires host's Docker CLI)")
 		})
 
 		t.Run("gives errors precedence over undetermined checks", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestHealthReport(t *testing.T) {
 				"host":{"dependencies":[{
 					"name":"Docker daemon",
 					"status":"undetermined",
-					"value":"blocked by host's Docker CLI"
+					"value":"not checked: requires host's Docker CLI"
 				}]}
 			}`, out.String())
 		})
