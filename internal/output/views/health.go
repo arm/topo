@@ -122,11 +122,11 @@ func functionalityHeading(name string, report health.ReadinessReport, isTTY bool
 	if statusCount.errors > 0 {
 		indicators = append(indicators, statusIndicator("✗", term.Red, statusCount.errors, isTTY))
 	}
-	if statusCount.undetermined > 0 {
-		indicators = append(indicators, statusIndicator("?", term.Yellow, statusCount.undetermined, isTTY))
-	}
 	if statusCount.warnings > 0 {
 		indicators = append(indicators, statusIndicator("!", term.Yellow, statusCount.warnings, isTTY))
+	}
+	if statusCount.undetermined > 0 {
+		indicators = append(indicators, statusIndicator("?", term.Cyan, statusCount.undetermined, isTTY))
 	}
 
 	heading := fmt.Sprintf("%s: %s (%s)", name, readiness, strings.Join(indicators, " "))
@@ -140,17 +140,17 @@ func statusIndicator(symbol, color string, count uint, isTTY bool) string {
 	return fmt.Sprintf("%s %d", symbol, count)
 }
 
-func countStatuses(report health.ReadinessReport) (statusCount struct{ warnings, undetermined, errors uint }) {
+func countStatuses(report health.ReadinessReport) (statusCount struct{ errors, warnings, undetermined uint }) {
 	dependencies := append([]health.DependencyReport(nil), report.Host...)
 	dependencies = append(dependencies, report.Target...)
 	for _, dependency := range dependencies {
 		switch dependency.Status {
+		case health.CheckStatusError:
+			statusCount.errors++
 		case health.CheckStatusWarning:
 			statusCount.warnings++
 		case health.CheckStatusUndetermined:
 			statusCount.undetermined++
-		case health.CheckStatusError:
-			statusCount.errors++
 		}
 	}
 	if report.TargetStatus == nil {
