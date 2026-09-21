@@ -21,9 +21,8 @@ const containerEngineInstallURL = "https://github.com/arm/topo#install-a-contain
 type DependencyID string
 
 const (
-	DependencyIDTargetSpecified DependencyID = "target-specified"
-	DependencyIDConnectivity    DependencyID = "target-connectivity"
-	DependencyIDRemoteproc      DependencyID = "remoteproc"
+	DependencyIDConnectivity DependencyID = "target-connectivity"
+	DependencyIDRemoteproc   DependencyID = "remoteproc"
 )
 
 type Dependency struct {
@@ -143,11 +142,10 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteDocker(target *ssh.Destination, hostRunner runner.Runner, probeInfo func(context.Context, ssh.Destination) error) Dependency {
+func NewDependencyOnRemoteDocker(target ssh.Destination, hostRunner runner.Runner, probeInfo func(context.Context, ssh.Destination) error) Dependency {
 	return Dependency{
 		Label: "Container Engine",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			target := requireTarget(target)
 			if err := hostRunner.BinaryExists(ctx, "docker"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
@@ -200,34 +198,16 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-func NewTargetSpecifiedDependency(target *ssh.Destination, fixMessage string) Dependency {
-	return Dependency{
-		ID:    DependencyIDTargetSpecified,
-		Label: "Target specified",
-		Check: func(context.Context) DependencyCheckResult {
-			if target != nil {
-				return DependencyCheckResult{SuccessValue: target.String()}
-			}
-			failure := &DependencyCheckFailure{Severity: SeverityError, Message: "target not specified"}
-			if fixMessage != "" {
-				failure.Fix = &Fix{Description: fixMessage}
-			}
-			return DependencyCheckResult{Failure: failure}
-		},
-	}
-}
-
 type ConnectivityOperations struct {
 	Authenticate    func(context.Context, ssh.Destination) error
 	KnownHostsEntry func(ssh.Destination) (string, error)
 }
 
-func NewConnectivityDependency(target *ssh.Destination, operations ConnectivityOperations) Dependency {
+func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOperations) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			target := requireTarget(target)
 			if target.IsPlainLocalhost() {
 				return DependencyCheckResult{SuccessValue: "local"}
 			}
@@ -297,11 +277,10 @@ func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteprocRuntime(target *ssh.Destination, r runner.Runner) Dependency {
+func NewDependencyOnRemoteprocRuntime(target ssh.Destination, r runner.Runner) Dependency {
 	return Dependency{
 		Label: "Remoteproc Runtime",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			target := requireTarget(target)
 			if err := r.BinaryExists(ctx, "remoteproc-runtime"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityWarning,
@@ -317,11 +296,10 @@ func NewDependencyOnRemoteprocRuntime(target *ssh.Destination, r runner.Runner) 
 	}
 }
 
-func NewDependencyOnRemoteprocRuntimeShim(target *ssh.Destination, r runner.Runner) Dependency {
+func NewDependencyOnRemoteprocRuntimeShim(target ssh.Destination, r runner.Runner) Dependency {
 	return Dependency{
 		Label: "Remoteproc Shim",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			target := requireTarget(target)
 			if err := r.BinaryExists(ctx, "containerd-shim-remoteproc-v1"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityWarning,
@@ -347,11 +325,4 @@ func NewDependencyOnLscpu(r runner.Runner) Dependency {
 			return DependencyCheckResult{SuccessValue: "lscpu"}
 		},
 	}
-}
-
-func requireTarget(target *ssh.Destination) ssh.Destination {
-	if target == nil {
-		panic("target check executed without its prerequisite")
-	}
-	return *target
 }

@@ -30,7 +30,6 @@ type HostChecks struct {
 }
 
 type TargetChecks struct {
-	Specified             Dependency
 	Connectivity          Dependency
 	Docker                Dependency
 	Hardware              Dependency
@@ -45,13 +44,13 @@ type HealthCheck struct {
 }
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
-	return AssembleHealthCheck(newProductionChecks(options))
+	return AssembleHealthCheck(options.Target, newChecks(options))
 }
 
-func AssembleHealthCheck(checks Checks) HealthCheck {
+func AssembleHealthCheck(target *ssh.Destination, checks Checks) HealthCheck {
 	registry := NewDependencyRegistry()
 	hostNodes := registerHostChecks(registry, checks.Host)
-	targetNodes := registerTargetChecks(registry, checks.Target)
+	targetNodes := registerTargetChecks(registry, target, checks.Target)
 
 	return HealthCheck{
 		Deployment: ReadinessCheck{
@@ -116,43 +115,42 @@ type EvaluatedDependency struct {
 	Result DependencyCheckResult
 }
 
-func newProductionChecks(options HealthCheckOptions) Checks {
+func newChecks(options HealthCheckOptions) Checks {
 	localRunner := runner.NewLocal()
-	var targetRunner runner.Runner
-	if options.Target != nil {
-		targetRunner = runner.For(*options.Target)
+	checks := Checks{Host: HostChecks{
+		Topo:          NewDependencyOnTopo(options.SkipVersionChecks),
+		SSH:           NewDependencyOnSSH(localRunner),
+		Docker:        NewDependencyOnDocker(localRunner),
+		DockerCompose: NewDependencyOnDockerCompose(localRunner),
+	}}
+	if options.Target == nil {
+		return checks
 	}
 
-	return Checks{
-		Host: HostChecks{
-			Topo:          NewDependencyOnTopo(options.SkipVersionChecks),
-			SSH:           NewDependencyOnSSH(localRunner),
-			Docker:        NewDependencyOnDocker(localRunner),
-			DockerCompose: NewDependencyOnDockerCompose(localRunner),
-		},
-		Target: TargetChecks{
-			Specified: NewTargetSpecifiedDependency(options.Target, options.MissingTargetFixMessage),
-			Connectivity: NewConnectivityDependency(options.Target, ConnectivityOperations{
-				Authenticate: func(ctx context.Context, target ssh.Destination) error {
-					return probe.SSHAuthentication(ctx, runner.NewSSH(target), options.AcceptHostKeys)
-				},
-				KnownHostsEntry: func(target ssh.Destination) (string, error) {
-					config, err := ssh.LoadConfig(target)
-					if err != nil {
-						return "", err
-					}
-					return config.AsKnownHostsEntry(), nil
-				},
-			}),
-			Docker: NewDependencyOnRemoteDocker(options.Target, localRunner, func(ctx context.Context, target ssh.Destination) error {
-				return docker.RunCommand(ctx, io.Discard, docker.NewHostFromDestination(target), "info")
-			}),
-			Hardware:              NewDependencyOnLscpu(targetRunner),
-			Remoteproc:            NewDependencyOnRemoteproc(targetRunner),
-			RemoteprocRuntime:     NewDependencyOnRemoteprocRuntime(options.Target, targetRunner),
-			RemoteprocRuntimeShim: NewDependencyOnRemoteprocRuntimeShim(options.Target, targetRunner),
-		},
+	target := *options.Target
+	targetRunner := runner.For(target)
+	checks.Target = TargetChecks{
+		Connectivity: NewConnectivityDependency(target, ConnectivityOperations{
+			Authenticate: func(ctx context.Context, target ssh.Destination) error {
+				return probe.SSHAuthentication(ctx, runner.NewSSH(target), options.AcceptHostKeys)
+			},
+			KnownHostsEntry: func(target ssh.Destination) (string, error) {
+				config, err := ssh.LoadConfig(target)
+				if err != nil {
+					return "", err
+				}
+				return config.AsKnownHostsEntry(), nil
+			},
+		}),
+		Docker: NewDependencyOnRemoteDocker(target, localRunner, func(ctx context.Context, target ssh.Destination) error {
+			return docker.RunCommand(ctx, io.Discard, docker.NewHostFromDestination(target), "info")
+		}),
+		Hardware:              NewDependencyOnLscpu(targetRunner),
+		Remoteproc:            NewDependencyOnRemoteproc(targetRunner),
+		RemoteprocRuntime:     NewDependencyOnRemoteprocRuntime(target, targetRunner),
+		RemoteprocRuntimeShim: NewDependencyOnRemoteprocRuntimeShim(target, targetRunner),
 	}
+	return checks
 }
 
 type hostNodes struct {
@@ -177,14 +175,17 @@ type targetNodes struct {
 	discovery  []*DependencyNode
 }
 
-func registerTargetChecks(registry *DependencyRegistry, checks TargetChecks) targetNodes {
-	specified := registry.Register(checks.Specified)
-	access := registry.Register(checks.Connectivity, specified)
+func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination, checks TargetChecks) targetNodes {
+	if target == nil {
+		return targetNodes{}
+	}
+
+	access := registry.Register(checks.Connectivity)
 	hardware := registry.Register(checks.Hardware, access)
 
 	return targetNodes{
-		deployment: append([]*DependencyNode{specified, access}, registerTargetContainerEngineChecks(registry, checks, access)...),
-		discovery:  []*DependencyNode{specified, access, hardware},
+		deployment: append([]*DependencyNode{access}, registerTargetContainerEngineChecks(registry, checks, access)...),
+		discovery:  []*DependencyNode{access, hardware},
 	}
 }
 

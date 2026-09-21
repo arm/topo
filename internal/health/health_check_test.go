@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,33 +57,31 @@ func TestAssembleHealthCheck(t *testing.T) {
 				Topo: passing("Topo"), SSH: passing("OpenSSH"), Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
 			},
 			Target: health.TargetChecks{
-				Specified: passing("Target specified"), Connectivity: passing("Target access"), Docker: passing("Target Docker"),
+				Connectivity: passing("Target access"), Docker: passing("Target Docker"),
 				Hardware: passing("Hardware Info"), Remoteproc: passing("Remoteproc"), RemoteprocRuntime: passing("Remoteproc Runtime"),
 				RemoteprocRuntimeShim: passing("Remoteproc Shim"),
 			},
 		}
 	}
+	target := ssh.NewDestination("user@example.com")
 
-	t.Run("shares a failed target prerequisite with dependent target checks", func(t *testing.T) {
+	t.Run("does not register target checks when target is not specified", func(t *testing.T) {
 		checks := newPassingChecks()
-		checks.Target.Specified.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(checks)
+		healthCheck := health.AssembleHealthCheck(nil, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
-		want := []health.Dependency{checks.Target.Specified}
-		assertEvaluatedDependencies(t, want, got.Deployment.Target)
-		assertEvaluatedDependencies(t, want, got.ProjectDiscovery.Target)
+		assert.Empty(t, got.Deployment.Target)
+		assert.Empty(t, got.ProjectDiscovery.Target)
 	})
 
 	t.Run("runs target checks after their prerequisites succeed", func(t *testing.T) {
 		checks := newPassingChecks()
-		healthCheck := health.AssembleHealthCheck(checks)
+		healthCheck := health.AssembleHealthCheck(&target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		wantDeploymentDependencies := []health.Dependency{
-			checks.Target.Specified,
 			checks.Target.Connectivity,
 			checks.Target.Docker,
 			checks.Target.Remoteproc,
@@ -90,7 +89,6 @@ func TestAssembleHealthCheck(t *testing.T) {
 			checks.Target.RemoteprocRuntimeShim,
 		}
 		wantDiscoveryDependencies := []health.Dependency{
-			checks.Target.Specified,
 			checks.Target.Connectivity,
 			checks.Target.Hardware,
 		}
@@ -101,12 +99,11 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("shares connectivity and suppresses its dependent target checks", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Connectivity.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(checks)
+		healthCheck := health.AssembleHealthCheck(&target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		want := []health.Dependency{
-			checks.Target.Specified,
 			checks.Target.Connectivity,
 		}
 		assertEvaluatedDependencies(t, want, got.Deployment.Target)
@@ -116,12 +113,11 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("suppresses runtime checks when remoteproc fails", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Remoteproc.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(checks)
+		healthCheck := health.AssembleHealthCheck(&target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		want := []health.Dependency{
-			checks.Target.Specified,
 			checks.Target.Connectivity,
 			checks.Target.Docker,
 			checks.Target.Remoteproc,
@@ -132,18 +128,16 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("keeps hardware discovery independent from container engine readiness", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Docker.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(checks)
+		healthCheck := health.AssembleHealthCheck(&target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
 		wantDeploymentDependencies := []health.Dependency{
-			checks.Target.Specified,
 			checks.Target.Connectivity,
 			checks.Target.Docker,
 			checks.Target.Remoteproc,
 		}
 		wantDiscoveryDependencies := []health.Dependency{
-			checks.Target.Specified,
 			checks.Target.Connectivity,
 			checks.Target.Hardware,
 		}

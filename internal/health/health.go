@@ -33,7 +33,7 @@ type ReadinessReport struct {
 }
 
 type HealthReport struct {
-	TargetDetails    TargetDetails
+	TargetDetails    *TargetDetails
 	Deployment       ReadinessReport
 	ProjectDiscovery ReadinessReport
 }
@@ -41,15 +41,19 @@ type HealthReport struct {
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	healthCheck := NewHealthCheck(options)
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
-	return evaluatedHealthCheck.Report(targetDetails(options))
+	return evaluatedHealthCheck.Report(targetDetails(options), options.MissingTargetFixMessage)
 }
 
-func (h EvaluatedHealthCheck) Report(target TargetDetails) HealthReport {
+func (h EvaluatedHealthCheck) Report(target *TargetDetails, missingTargetFixMessage string) HealthReport {
 	deployment := toReadinessReport(h.Deployment)
 	discovery := toReadinessReport(h.ProjectDiscovery)
-	downgradeMissingTargetForProjectDiscovery(discovery.Target)
-	deployment.Target = removeSuccessfulTargetPrerequisiteReports(deployment.Target, target)
-	discovery.Target = removeSuccessfulTargetPrerequisiteReports(discovery.Target, target)
+	if target == nil {
+		deployment.Target = append(deployment.Target, missingTargetReport(SeverityError, "target not specified", missingTargetFixMessage))
+		discovery.Target = append(discovery.Target, missingTargetReport(SeverityWarning, "target not specified; cannot calculate project compatibility", missingTargetFixMessage))
+	} else {
+		deployment.Target = removeSuccessfulLocalhostConnectivityReports(deployment.Target, target)
+		discovery.Target = removeSuccessfulLocalhostConnectivityReports(discovery.Target, target)
+	}
 	return HealthReport{
 		TargetDetails:    target,
 		Deployment:       deployment,
@@ -57,31 +61,25 @@ func (h EvaluatedHealthCheck) Report(target TargetDetails) HealthReport {
 	}
 }
 
-func downgradeMissingTargetForProjectDiscovery(reports []DependencyReport) {
-	for i := range reports {
-		report := &reports[i]
-		if report.ID == DependencyIDTargetSpecified && report.Status == CheckStatusError {
-			report.Status = CheckStatusWarning
-			report.Value = "target not specified; cannot calculate project compatibility"
-			return
-		}
+func missingTargetReport(severity CheckSeverity, message, fixMessage string) DependencyReport {
+	report := DependencyReport{Name: "Target", Status: checkStatusFromSeverity(severity), Value: message}
+	if fixMessage != "" {
+		report.Fix = &Fix{Description: fixMessage}
 	}
+	return report
 }
 
-func removeSuccessfulTargetPrerequisiteReports(reports []DependencyReport, target TargetDetails) []DependencyReport {
+func removeSuccessfulLocalhostConnectivityReports(reports []DependencyReport, target *TargetDetails) []DependencyReport {
 	return slices.DeleteFunc(reports, func(report DependencyReport) bool {
-		isOK := report.Status == CheckStatusOK
-		isTargetSpecifiedCheck := report.ID == DependencyIDTargetSpecified
-		isLocalhostConnectivityCheck := report.ID == DependencyIDConnectivity && target.IsLocalhost
-		return isOK && (isTargetSpecifiedCheck || isLocalhostConnectivityCheck)
+		return report.Status == CheckStatusOK && report.ID == DependencyIDConnectivity && target.IsLocalhost
 	})
 }
 
-func targetDetails(options HealthCheckOptions) TargetDetails {
+func targetDetails(options HealthCheckOptions) *TargetDetails {
 	if options.Target == nil {
-		return TargetDetails{}
+		return nil
 	}
-	return TargetDetails{
+	return &TargetDetails{
 		Destination: options.Target.String(),
 		IsLocalhost: options.Target.IsPlainLocalhost(),
 	}

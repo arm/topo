@@ -9,46 +9,32 @@ import (
 
 func TestEvaluatedHealthCheck(t *testing.T) {
 	t.Run("Report", func(t *testing.T) {
-		t.Run("projects missing target severity without changing the shared result", func(t *testing.T) {
-			dependency := health.EvaluatedDependency{
-				ID:    health.DependencyIDTargetSpecified,
-				Label: "Target specified",
-				Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-					Severity: health.SeverityError,
-					Message:  "target not specified",
-					Fix:      &health.Fix{Description: "Choose a target"},
-				}},
-			}
-			healthCheck := health.EvaluatedHealthCheck{
-				Deployment:       health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{dependency}},
-				ProjectDiscovery: health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{dependency}},
-			}
+		t.Run("reports a missing target without assembling target checks", func(t *testing.T) {
+			healthCheck := health.EvaluatedHealthCheck{}
 
-			got := healthCheck.Report(health.TargetDetails{})
+			got := healthCheck.Report(nil, "Choose a target")
 
+			assert.Nil(t, got.TargetDetails)
 			assert.Equal(t, []health.DependencyReport{{
-				ID: health.DependencyIDTargetSpecified, Name: "Target specified",
-				Status: health.CheckStatusError, Value: "target not specified",
+				Name: "Target", Status: health.CheckStatusError, Value: "target not specified",
 				Fix: &health.Fix{Description: "Choose a target"},
 			}}, got.Deployment.Target)
 			assert.Equal(t, []health.DependencyReport{{
-				ID: health.DependencyIDTargetSpecified, Name: "Target specified",
-				Status: health.CheckStatusWarning, Value: "target not specified; cannot calculate project compatibility",
+				Name: "Target", Status: health.CheckStatusWarning, Value: "target not specified; cannot calculate project compatibility",
 				Fix: &health.Fix{Description: "Choose a target"},
 			}}, got.ProjectDiscovery.Target)
-			assert.Equal(t, health.SeverityError, dependency.Result.Failure.Severity)
 		})
 
 		t.Run("hides successful selection and local access", func(t *testing.T) {
 			healthCheck := health.EvaluatedHealthCheck{
 				Deployment: health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{
-					{ID: health.DependencyIDTargetSpecified, Label: "Target specified"},
 					{ID: health.DependencyIDConnectivity, Label: "Target access"},
 					{Label: "Hardware Info", Result: health.DependencyCheckResult{SuccessValue: "lscpu"}},
 				}},
 			}
 
-			got := healthCheck.Report(health.TargetDetails{Destination: "localhost", IsLocalhost: true})
+			target := health.TargetDetails{Destination: "localhost", IsLocalhost: true}
+			got := healthCheck.Report(&target, "")
 
 			assert.Equal(t, []health.DependencyReport{{
 				Name: "Hardware Info", Status: health.CheckStatusOK, Value: "lscpu",
@@ -58,12 +44,12 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 		t.Run("retains remote access results", func(t *testing.T) {
 			healthCheck := health.EvaluatedHealthCheck{
 				Deployment: health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{
-					{ID: health.DependencyIDTargetSpecified, Label: "Target specified"},
 					{ID: health.DependencyIDConnectivity, Label: "Target access", Result: health.DependencyCheckResult{SuccessValue: "user@example.com"}},
 				}},
 			}
 
-			got := healthCheck.Report(health.TargetDetails{Destination: "user@example.com"})
+			target := health.TargetDetails{Destination: "user@example.com"}
+			got := healthCheck.Report(&target, "")
 
 			assert.Equal(t, []health.DependencyReport{{
 				ID: health.DependencyIDConnectivity, Name: "Target access", Status: health.CheckStatusOK, Value: "user@example.com",

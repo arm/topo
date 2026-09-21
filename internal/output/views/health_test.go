@@ -15,7 +15,7 @@ func TestHealthReport(t *testing.T) {
 	t.Run("AsPlain", func(t *testing.T) {
 		t.Run("renders deployment and project management sections", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				TargetDetails: health.TargetDetails{},
+				TargetDetails: &health.TargetDetails{},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{
 						{Name: "Computer", Status: health.CheckStatusWarning},
@@ -80,7 +80,7 @@ func TestHealthReport(t *testing.T) {
 	t.Run("AsJSON", func(t *testing.T) {
 		t.Run("preserves the legacy combined target dependencies", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
+				TargetDetails: &health.TargetDetails{Destination: "ssh://user@my-target"},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{{Name: "Topo", Status: health.CheckStatusOK}},
 					Target: []health.DependencyReport{

@@ -11,7 +11,7 @@ import (
 )
 
 type HealthReport struct {
-	TargetDetails    health.TargetDetails
+	TargetDetails    *health.TargetDetails
 	Deployment       health.ReadinessReport
 	ProjectDiscovery health.ReadinessReport
 }
@@ -84,7 +84,7 @@ func (r HealthReport) AsJSON() (string, error) {
 type legacyHealthReport struct {
 	HostDependencies   []health.DependencyReport
 	TargetDependencies []health.DependencyReport
-	TargetDetails      health.TargetDetails
+	TargetDetails      *health.TargetDetails
 }
 
 func legacyTargetDependencies(deployment, projectDiscovery []health.DependencyReport) []health.DependencyReport {
@@ -209,8 +209,8 @@ func toJSONHealthReport(report legacyHealthReport) jsonHealthReport {
 	jsonReport := jsonHealthReport{
 		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.HostDependencies)},
 	}
-	if report.TargetDetails.Destination != "" {
-		jsonTarget := toJSONTargetReport(report.TargetDependencies, report.TargetDetails)
+	if report.TargetDetails != nil {
+		jsonTarget := toJSONTargetReport(report.TargetDependencies, *report.TargetDetails)
 		jsonReport.Target = &jsonTarget
 	}
 	return jsonReport
