@@ -118,45 +118,96 @@ func TestAssembleHealthCheck(t *testing.T) {
 		assert.Equal(t, 1, targetDockerChecks)
 	})
 
-	t.Run("runs target checks after their prerequisites succeed", func(t *testing.T) {
+	t.Run("reports dependencies in display order", func(t *testing.T) {
 		checks := newPassingChecks()
 		healthCheck := health.AssembleHealthCheck(&target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
-		wantDeploymentDependencies := []health.Dependency{
-			checks.Target.Connectivity,
-			checks.Target.Docker,
-			checks.Target.Remoteproc,
-			checks.Target.RemoteprocRuntime,
-			checks.Target.RemoteprocRuntimeShim,
+		wantDeploymentHostDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Host.Topo, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.SSH, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCLI, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.Docker, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCompose, State: health.EvaluationExecuted},
 		}
-		wantDiscoveryDependencies := []health.Dependency{
-			checks.Target.Connectivity,
-			checks.Target.Hardware,
+		wantDeploymentTargetDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Docker, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
 		}
-		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
-		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
+		wantDiscoveryHostDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Host.SSH, State: health.EvaluationExecuted},
+		}
+		wantDiscoveryTargetDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Hardware, State: health.EvaluationExecuted},
+		}
+		assertEvaluatedDependencies(t, wantDeploymentHostDependencies, hostDependencies(got.Deployment.Dependencies))
+		assertEvaluatedDependencies(t, wantDeploymentTargetDependencies, targetDependencies(got.Deployment.Dependencies))
+		assertEvaluatedDependencies(t, wantDiscoveryHostDependencies, hostDependencies(got.ProjectDiscovery.Dependencies))
+		assertEvaluatedDependencies(t, wantDiscoveryTargetDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
 	})
 
-	t.Run("does not report connectivity for a plain localhost target", func(t *testing.T) {
+	t.Run("does not report connectivity nor docker engine for a plain localhost target", func(t *testing.T) {
 		checks := newPassingChecks()
 		localhost := ssh.NewDestination("localhost")
 		healthCheck := health.AssembleHealthCheck(&localhost, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
-		wantDeploymentDependencies := []health.Dependency{
-			checks.Target.Docker,
-			checks.Target.Remoteproc,
-			checks.Target.RemoteprocRuntime,
-			checks.Target.RemoteprocRuntimeShim,
+		wantDeploymentDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
 		}
-		wantDiscoveryDependencies := []health.Dependency{
-			checks.Target.Hardware,
+		wantDiscoveryDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Hardware, State: health.EvaluationExecuted},
 		}
 		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
 		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
+	})
+
+	t.Run("reports host capabilities without SSH or target Docker for a plain localhost target", func(t *testing.T) {
+		checks := newPassingChecks()
+		localhost := ssh.NewDestination("localhost")
+		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantDeploymentDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Host.Topo, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCLI, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.Docker, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCompose, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
+		}
+		wantDiscoveryDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Hardware, State: health.EvaluationExecuted},
+		}
+		assertEvaluatedDependencies(t, wantDeploymentDependencies, got.Deployment.Dependencies)
+		assertEvaluatedDependencies(t, wantDiscoveryDependencies, got.ProjectDiscovery.Dependencies)
+	})
+
+	t.Run("blocks local runtime checks when the host Docker engine fails", func(t *testing.T) {
+		checks := newPassingChecks()
+		localhost := ssh.NewDestination("localhost")
+		checks.Host.Docker.Check = failingCheck
+		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		dependencies := targetDependencies(got.Deployment.Dependencies)
+		want := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationBlocked},
+			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationBlocked},
+		}
+		assertEvaluatedDependencies(t, want, dependencies)
 	})
 
 	t.Run("shares connectivity and suppresses its dependent target checks", func(t *testing.T) {
@@ -166,15 +217,17 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 		got := healthCheck.Evaluate(context.Background())
 
-		assert.Equal(t, []health.EvaluationState{
-			health.EvaluationExecuted,
-			health.EvaluationBlocked,
-			health.EvaluationBlocked,
-		}, dependencyStates(targetDependencies(got.Deployment.Dependencies)))
-		assert.Equal(t, []health.EvaluationState{
-			health.EvaluationExecuted,
-			health.EvaluationBlocked,
-		}, dependencyStates(targetDependencies(got.ProjectDiscovery.Dependencies)))
+		wantDeploymentDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Docker, State: health.EvaluationBlocked},
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationBlocked},
+		}
+		wantDiscoveryDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Hardware, State: health.EvaluationBlocked},
+		}
+		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
+		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
 	})
 
 	t.Run("suppresses runtime checks when remoteproc fails", func(t *testing.T) {
@@ -184,10 +237,10 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 		got := healthCheck.Evaluate(context.Background())
 
-		want := []health.Dependency{
-			checks.Target.Connectivity,
-			checks.Target.Docker,
-			checks.Target.Remoteproc,
+		want := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Docker, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
 		}
 		assertEvaluatedDependencies(t, want, targetDependencies(got.Deployment.Dependencies))
 	})
@@ -199,54 +252,20 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 		got := healthCheck.Evaluate(context.Background())
 
-		assert.Equal(t, []health.EvaluationState{
-			health.EvaluationExecuted,
-			health.EvaluationExecuted,
-			health.EvaluationExecuted,
-			health.EvaluationBlocked,
-			health.EvaluationBlocked,
-		}, dependencyStates(targetDependencies(got.Deployment.Dependencies)))
-		assert.Equal(t, []health.EvaluationState{
-			health.EvaluationExecuted,
-			health.EvaluationExecuted,
-		}, dependencyStates(targetDependencies(got.ProjectDiscovery.Dependencies)))
+		wantDeploymentDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Docker, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationBlocked},
+			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationBlocked},
+		}
+		wantDiscoveryDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Hardware, State: health.EvaluationExecuted},
+		}
+		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
+		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
 	})
-}
-
-func assertEvaluatedDependencies(t *testing.T, want []health.Dependency, got []health.EvaluatedDependency) {
-	t.Helper()
-	if !assert.Len(t, got, len(want)) {
-		return
-	}
-
-	for i, dependency := range want {
-		wantResult := dependency.Check(context.Background())
-		wantDependency := health.EvaluatedDependency{
-			Scope:      health.DependencyScopeTarget,
-			ID:         dependency.ID,
-			Label:      dependency.Label,
-			Evaluation: health.DependencyEvaluation{Result: wantResult},
-		}
-		assert.Equal(t, wantDependency, got[i])
-	}
-}
-
-func targetDependencies(dependencies []health.EvaluatedDependency) []health.EvaluatedDependency {
-	targets := make([]health.EvaluatedDependency, 0, len(dependencies))
-	for _, dependency := range dependencies {
-		if dependency.Scope == health.DependencyScopeTarget {
-			targets = append(targets, dependency)
-		}
-	}
-	return targets
-}
-
-func dependencyStates(dependencies []health.EvaluatedDependency) []health.EvaluationState {
-	states := make([]health.EvaluationState, len(dependencies))
-	for i, dependency := range dependencies {
-		states[i] = dependency.Evaluation.State
-	}
-	return states
 }
 
 func TestReadinessCheck(t *testing.T) {
@@ -294,8 +313,53 @@ func TestReadinessCheck(t *testing.T) {
 
 			got := healthCheck.Evaluate(context.Background())
 
-			assert.Equal(t, []health.EvaluationState{health.EvaluationExecuted, health.EvaluationBlocked}, dependencyStates(got.Dependencies))
+			want := []evaluatedDependencyExpectation{
+				{Dependency: flour, State: health.EvaluationExecuted},
+				{Dependency: pizza, State: health.EvaluationBlocked},
+			}
+			assertEvaluatedDependencies(t, want, got.Dependencies)
 			assert.Equal(t, []*health.DependencyNode{flourRef}, got.Dependencies[1].Evaluation.BlockedBy)
 		})
 	})
+}
+
+type evaluatedDependencyExpectation struct {
+	Dependency health.Dependency
+	State      health.EvaluationState
+}
+
+func assertEvaluatedDependencies(t *testing.T, want []evaluatedDependencyExpectation, got []health.EvaluatedDependency) {
+	t.Helper()
+	if !assert.Len(t, got, len(want)) {
+		return
+	}
+
+	for i, expected := range want {
+		assert.Equal(t, expected.Dependency.ID, got[i].ID)
+		assert.Equal(t, expected.Dependency.Label, got[i].Label)
+		assert.Equal(t, expected.State, got[i].Evaluation.State)
+		if expected.State == health.EvaluationExecuted {
+			assert.Equal(t, expected.Dependency.Check(context.Background()), got[i].Evaluation.Result)
+		}
+	}
+}
+
+func targetDependencies(dependencies []health.EvaluatedDependency) []health.EvaluatedDependency {
+	targets := make([]health.EvaluatedDependency, 0, len(dependencies))
+	for _, dependency := range dependencies {
+		if dependency.Scope == health.DependencyScopeTarget {
+			targets = append(targets, dependency)
+		}
+	}
+	return targets
+}
+
+func hostDependencies(dependencies []health.EvaluatedDependency) []health.EvaluatedDependency {
+	hosts := make([]health.EvaluatedDependency, 0, len(dependencies))
+	for _, dependency := range dependencies {
+		if dependency.Scope == health.DependencyScopeHost {
+			hosts = append(hosts, dependency)
+		}
+	}
+	return hosts
 }
