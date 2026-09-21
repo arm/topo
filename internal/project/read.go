@@ -9,7 +9,6 @@ import (
 
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/loader"
-	"github.com/compose-spec/compose-go/v2/template"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
@@ -45,24 +44,6 @@ func PullableServices(scope Scope) ([]string, error) {
 	return names, nil
 }
 
-func ReferencedEnvVars(composeFilePath string) ([]string, error) {
-	options, err := cli.NewProjectOptions([]string{composeFilePath},
-		cli.WithResolvedPaths(false),
-		cli.WithNormalization(false),
-		cli.WithLoadOptions(func(o *loader.Options) {
-			o.SkipInterpolation = true
-		}),
-	)
-	if err != nil {
-		return nil, err
-	}
-	model, err := options.LoadModel(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	return slices.Collect(maps.Keys(template.ExtractVariables(model, nil))), nil
-}
-
 func Read(scope Scope) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
@@ -88,4 +69,32 @@ func Read(scope Scope) (*types.Project, error) {
 		return nil, err
 	}
 	return composeProject, nil
+}
+
+func readUninterpolated(composeFilePath string) (map[string]any, error) {
+	options, err := cli.NewProjectOptions([]string{composeFilePath},
+		cli.WithResolvedPaths(false),
+		cli.WithNormalization(false),
+		cli.WithLoadOptions(func(o *loader.Options) {
+			o.SkipInterpolation = true
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return options.LoadModel(context.Background())
+}
+
+func buildArgumentNames(model map[string]any) ([]string, error) {
+	var project types.Project
+	if err := loader.Transform(model, &project); err != nil {
+		return nil, fmt.Errorf("failed to decode Compose model: %w", err)
+	}
+	var names []string
+	for _, service := range project.Services {
+		if service.Build != nil {
+			names = append(names, slices.Collect(maps.Keys(service.Build.Args))...)
+		}
+	}
+	return names, nil
 }

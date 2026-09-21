@@ -245,6 +245,30 @@ x-topo:
 		assert.ErrorContains(t, err, "topo configure --migrate-to-env")
 	})
 
+	t.Run("allows unreferenced parameters with no matching build arg", func(t *testing.T) {
+		contents := `
+services:
+  app:
+    platform: linux/arm64
+    build:
+      context: .
+      args:
+        TEST: value
+x-topo:
+  deployment_success_message: "Access it at http://${TOPO_TARGET_HOSTNAME}:8080"
+  parameters:
+    FOO: {}
+`
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"FOO": "baz"}))
+
+		err := project.Configure(path, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, contents, testutil.RequireReadFile(t, path))
+		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(path), env.DefaultFilename), map[string]string{"FOO": "baz"})
+	})
+
 	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
 		resolver := parameter.NewStrictResolverChain()

@@ -12,6 +12,7 @@ import (
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
+	"github.com/compose-spec/compose-go/v2/template"
 )
 
 var ErrNoParameterReferences = errors.New("none of the declared parameters are referenced as environment variables in the Compose file")
@@ -106,17 +107,27 @@ func MigrateToEnv(composeFilePath string) error {
 }
 
 func validateParameterReferences(composeFilePath string, definitions []parameter.Definition) error {
-	referencedEnvVars, err := ReferencedEnvVars(composeFilePath)
+	model, err := readUninterpolated(composeFilePath)
 	if err != nil {
 		return err
 	}
+	referencedEnvVars := template.ExtractVariables(model, nil)
 
 	unreferencedDefinitions := slices.DeleteFunc(slices.Clone(definitions), func(d parameter.Definition) bool {
-		return slices.Contains(referencedEnvVars, d.Name)
+		_, referenced := referencedEnvVars[d.Name]
+		return referenced
 	})
 
 	if len(unreferencedDefinitions) == len(definitions) {
-		return ErrNoParameterReferences
+		buildArgs, err := buildArgumentNames(model)
+		if err != nil {
+			return err
+		}
+		for _, param := range definitions {
+			if slices.Contains(buildArgs, param.Name) {
+				return ErrNoParameterReferences
+			}
+		}
 	}
 
 	for _, param := range unreferencedDefinitions {
