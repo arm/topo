@@ -114,7 +114,7 @@ func TestNewDependencyOnRemoteDocker(t *testing.T) {
 	t.Run("probes the target without checking the host Docker binary", func(t *testing.T) {
 		probeCalled := false
 		target := ssh.NewDestination("user@example.com")
-		dependency := health.NewDependencyOnRemoteDocker(target, func(context.Context, ssh.Destination) error {
+		dependency := health.NewDependencyOnRemoteDockerDaemon(target, func(context.Context, ssh.Destination) error {
 			probeCalled = true
 			return nil
 		})

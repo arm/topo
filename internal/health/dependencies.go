@@ -151,7 +151,7 @@ func NewDependencyOnDockerDaemon(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteDocker(target ssh.Destination, probeInfo func(context.Context, ssh.Destination) error) Dependency {
+func NewDependencyOnRemoteDockerDaemon(target ssh.Destination, probeInfo func(context.Context, ssh.Destination) error) Dependency {
 	return Dependency{
 		Label: "Docker daemon",
 		Check: func(ctx context.Context) DependencyCheckResult {

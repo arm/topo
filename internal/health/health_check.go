@@ -139,7 +139,7 @@ func newChecks(options HealthCheckOptions) Checks {
 				return config.AsKnownHostsEntry(), nil
 			},
 		}),
-		Docker: NewDependencyOnRemoteDocker(target, func(ctx context.Context, target ssh.Destination) error {
+		Docker: NewDependencyOnRemoteDockerDaemon(target, func(ctx context.Context, target ssh.Destination) error {
 			return docker.RunCommand(ctx, io.Discard, docker.NewHostFromDestination(target), "info")
 		}),
 		Hardware:              NewDependencyOnLscpu(targetRunner),
