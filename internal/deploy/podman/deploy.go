@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -25,9 +26,10 @@ type RegistryConfig struct {
 }
 
 type DeployOptions struct {
-	RecreateMode RecreateMode
-	TargetHost   ssh.Destination
-	Registry     *RegistryConfig
+	RecreateMode          RecreateMode
+	TargetHost            ssh.Destination
+	Registry              *RegistryConfig
+	DefaultSuccessMessage string
 }
 
 func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options DeployOptions) (deployErr error) {
@@ -82,14 +84,21 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		return err
 	}
 
-	if tunnel == nil {
-		return nil
+	if tunnel != nil {
+		if err := closeRemoteTunnel(tunnel); err != nil {
+			return err
+		}
+		tunnel = nil
 	}
-	if err := closeRemoteTunnel(tunnel); err != nil {
+
+	if err := term.PrintNthHeader(output, "Deployment Success"); err != nil {
 		return err
 	}
-	tunnel = nil
-	return nil
+	return post_deploy.PrintDeploySuccess(
+		output,
+		scope,
+		options.DefaultSuccessMessage,
+	)
 }
 
 func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, scope project.Scope) error {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/internal/deploy/post_deploy"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -26,9 +27,10 @@ type RegistryConfig struct {
 }
 
 type DeployOptions struct {
-	RecreateMode RecreateMode
-	TargetHost   ssh.Destination
-	Registry     *RegistryConfig
+	RecreateMode          RecreateMode
+	TargetHost            ssh.Destination
+	Registry              *RegistryConfig
+	DefaultSuccessMessage string
 }
 
 func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts DeployOptions) error {
@@ -64,7 +66,18 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts Dep
 	if err := term.PrintNthHeader(output, "Start services"); err != nil {
 		return err
 	}
-	return StartServices(ctx, output, NewHostFromDestination(opts.TargetHost), scope, opts.RecreateMode)
+	if err := StartServices(ctx, output, NewHostFromDestination(opts.TargetHost), scope, opts.RecreateMode); err != nil {
+		return err
+	}
+
+	if err := term.PrintNthHeader(output, "Deployment Success"); err != nil {
+		return err
+	}
+	return post_deploy.PrintDeploySuccess(
+		output,
+		scope,
+		opts.DefaultSuccessMessage,
+	)
 }
 
 func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceHost, targetHost Host, scope project.Scope) error {
