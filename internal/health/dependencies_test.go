@@ -122,7 +122,7 @@ func TestNewDependencyOnRemoteDocker(t *testing.T) {
 		got := dependency.Check(context.Background())
 
 		assert.True(t, probeCalled)
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker"}, got)
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "reachable"}, got)
 	})
 }
 

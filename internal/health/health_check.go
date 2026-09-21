@@ -117,7 +117,7 @@ func newChecks(options HealthCheckOptions) Checks {
 		Topo:          NewDependencyOnTopo(options.SkipVersionChecks),
 		SSH:           NewDependencyOnSSH(localRunner),
 		DockerCLI:     NewDependencyOnDockerCLI(localRunner),
-		Docker:        NewDependencyOnDocker(localRunner),
+		Docker:        NewDependencyOnDockerDaemon(localRunner),
 		DockerCompose: NewDependencyOnDockerCompose(localRunner),
 	}}
 	if options.Target == nil {

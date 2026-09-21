@@ -135,25 +135,18 @@ func NewDependencyOnDockerCLI(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnDocker(r runner.Runner) Dependency {
+func NewDependencyOnDockerDaemon(r runner.Runner) Dependency {
 	return Dependency{
-		Label: "Container Engine",
+		Label: "Docker daemon",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := r.BinaryExists(ctx, "docker"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityError,
-					Message:  err.Error(),
-					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
-				}}
-			}
 			if _, _, err := r.Run(ctx, "docker info"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
-					Fix:      &Fix{Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL},
+					Fix:      &Fix{Description: "Ensure Docker is running and the current user can run docker commands. See " + containerEngineInstallURL},
 				}}
 			}
-			return DependencyCheckResult{SuccessValue: "docker"}
+			return DependencyCheckResult{SuccessValue: "reachable"}
 		},
 	}
 }
@@ -169,7 +162,7 @@ func NewDependencyOnRemoteDocker(target ssh.Destination, probeInfo func(context.
 					Fix:      &Fix{Description: "Ensure docker is installed and running on the target. See " + containerEngineInstallURL},
 				}}
 			}
-			return DependencyCheckResult{SuccessValue: "docker"}
+			return DependencyCheckResult{SuccessValue: "reachable"}
 		},
 	}
 }
