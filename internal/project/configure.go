@@ -16,7 +16,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-func AppearsToUseLegacyParameters(composeFilePath string) (bool, error) {
+func UsesLiteralBuildArgConfiguration(composeFilePath string) (bool, error) {
 	project, err := loadProject(composeFilePath)
 	if err != nil {
 		return false, err

@@ -44,12 +44,12 @@ interactive prompts.`,
 			return nil
 		}
 
-		appearsLegacy, err := project.AppearsToUseLegacyParameters(composeFilePath)
+		usesLiteralBuildArgs, err := project.UsesLiteralBuildArgConfiguration(composeFilePath)
 		if err != nil {
 			return err
 		}
-		if appearsLegacy {
-			return fmt.Errorf("this project might use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration")
+		if usesLiteralBuildArgs {
+			return fmt.Errorf("this project appears to use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration")
 		}
 
 		var resolvers []parameter.Resolver

@@ -40,9 +40,9 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
 		return err
 	}
-	appearsLegacy, err := AppearsToUseLegacyParameters(composeFilePath)
-	if err == nil && appearsLegacy {
-		err = fmt.Errorf("this project might use the parameter format from Topo versions older than 14.0.0. Try cloning again with '--migrate-to-env'")
+	usesLiteralBuildArgs, err := UsesLiteralBuildArgConfiguration(composeFilePath)
+	if err == nil && usesLiteralBuildArgs {
+		err = fmt.Errorf("this project appears to use the parameter format from Topo versions older than 14.0.0. Try cloning again with '--migrate-to-env'")
 	}
 	if err == nil {
 		err = Configure(composeFilePath, resolver)

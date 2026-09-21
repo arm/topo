@@ -13,15 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAppearsToUseLegacyParameters(t *testing.T) {
+func TestUsesLiteralBuildArgConfiguration(t *testing.T) {
 	t.Run("detects legacy build argument values without migrating the project", func(t *testing.T) {
 		path := writeGreetingComposeFile(t, "World")
 		original := testutil.RequireReadFile(t, path)
 
-		appearsLegacy, err := project.AppearsToUseLegacyParameters(path)
+		usesLiteralBuildArgs, err := project.UsesLiteralBuildArgConfiguration(path)
 
 		require.NoError(t, err)
-		assert.True(t, appearsLegacy)
+		assert.True(t, usesLiteralBuildArgs)
 		assert.Equal(t, original, testutil.RequireReadFile(t, path))
 		assert.NoFileExists(t, filepath.Join(filepath.Dir(path), env.DefaultFilename))
 	})
@@ -29,19 +29,19 @@ func TestAppearsToUseLegacyParameters(t *testing.T) {
 	t.Run("does not classify environment-backed build arguments as legacy", func(t *testing.T) {
 		path := writeGreetingComposeFile(t, "${GREETING_NAME?configured via topo}")
 
-		appearsLegacy, err := project.AppearsToUseLegacyParameters(path)
+		usesLiteralBuildArgs, err := project.UsesLiteralBuildArgConfiguration(path)
 
 		require.NoError(t, err)
-		assert.False(t, appearsLegacy)
+		assert.False(t, usesLiteralBuildArgs)
 	})
 
 	t.Run("propagates inspection errors", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "missing.yaml")
 
-		appearsLegacy, err := project.AppearsToUseLegacyParameters(path)
+		usesLiteralBuildArgs, err := project.UsesLiteralBuildArgConfiguration(path)
 
 		require.Error(t, err)
-		assert.False(t, appearsLegacy)
+		assert.False(t, usesLiteralBuildArgs)
 	})
 }
 
