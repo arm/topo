@@ -16,12 +16,10 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-var ErrLegacyParameterFormat = errors.New("project appears to use legacy build-argument parameterization")
-
-func CheckEnvCompatibility(composeFilePath string) error {
+func AppearsToUseLegacyParameters(composeFilePath string) (bool, error) {
 	project, err := loadProject(composeFilePath)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	buildArgs := make(map[string]any)
@@ -32,16 +30,13 @@ func CheckEnvCompatibility(composeFilePath string) error {
 	hasParameterValues := false
 	for _, param := range project.Metadata.Parameters {
 		if _, referenced := references[param.Name]; referenced {
-			return nil
+			return false, nil
 		}
 		if len(project.currentParameterValues[param.Name]) > 0 {
 			hasParameterValues = true
 		}
 	}
-	if hasParameterValues {
-		return ErrLegacyParameterFormat
-	}
-	return nil
+	return hasParameterValues, nil
 }
 
 func Configure(composeFilePath string, resolver parameter.Resolver) error {

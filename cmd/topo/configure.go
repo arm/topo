@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -45,11 +44,12 @@ interactive prompts.`,
 			return nil
 		}
 
-		if err := project.CheckEnvCompatibility(composeFilePath); err != nil {
-			if errors.Is(err, project.ErrLegacyParameterFormat) {
-				return fmt.Errorf("%w; this project might use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration", err)
-			}
+		appearsLegacy, err := project.AppearsToUseLegacyParameters(composeFilePath)
+		if err != nil {
 			return err
+		}
+		if appearsLegacy {
+			return fmt.Errorf("this project might use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration")
 		}
 
 		var resolvers []parameter.Resolver

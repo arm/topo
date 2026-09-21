@@ -124,7 +124,7 @@ x-topo:
 
 		err := project.Clone(t.Output(), destDir, source, parameter.NewStrictResolverChain(), false)
 
-		require.ErrorIs(t, err, project.ErrLegacyParameterFormat)
+		require.Error(t, err)
 		assert.ErrorContains(t, err, "Try cloning again with '--migrate-to-env'")
 		assert.NotContains(t, err.Error(), "topo configure")
 		assert.NoDirExists(t, destDir)
