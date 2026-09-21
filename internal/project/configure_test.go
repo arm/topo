@@ -120,7 +120,7 @@ x-topo:
 
 		err := project.MigrateToEnv(path)
 
-		require.EqualError(t, err, "no parameter values to migrate")
+		require.EqualError(t, err, "no parameter values to migrate; only projects with referenced parameters can be migrated")
 		assert.NoFileExists(t, filepath.Join(root, env.DefaultFilename))
 		assert.Equal(t, contents, testutil.RequireReadFile(t, path))
 	})

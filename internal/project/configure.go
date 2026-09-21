@@ -62,7 +62,7 @@ func MigrateToEnv(composeFilePath string) error {
 
 	_, err := os.Stat(envFilePath)
 	if !os.IsNotExist(err) {
-		return fmt.Errorf("env file already exists: %s", envFilePath)
+		return fmt.Errorf("env file already exists: %s; consider removing it before migrating", envFilePath)
 	}
 
 	project, err := loadProject(composeFilePath)
@@ -86,7 +86,7 @@ func MigrateToEnv(composeFilePath string) error {
 	}
 
 	if len(values) == 0 {
-		return fmt.Errorf("no parameter values to migrate")
+		return fmt.Errorf("no parameter values to migrate; only projects with referenced parameters can be migrated")
 	}
 
 	err = env.WriteFile(envFilePath, values)
