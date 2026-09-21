@@ -18,6 +18,7 @@ func TestDependencyRegistry(t *testing.T) {
 			foreignRef := otherRegistry.Register(
 				health.Dependency{Check: passingCheck},
 				health.DependencyRequirements{},
+				health.DependencyScopeHost,
 			)
 
 			for name, reference := range map[string]*health.DependencyNode{
@@ -35,6 +36,7 @@ func TestDependencyRegistry(t *testing.T) {
 							health.DependencyRequirements{
 								Prerequisites: []*health.DependencyNode{reference},
 							},
+							health.DependencyScopeHost,
 						)
 					})
 					assert.Panics(t, func() {
@@ -43,6 +45,7 @@ func TestDependencyRegistry(t *testing.T) {
 							health.DependencyRequirements{
 								Conditions: []*health.DependencyNode{reference},
 							},
+							health.DependencyScopeHost,
 						)
 					})
 				})
@@ -61,7 +64,7 @@ func TestDependencyRegistry(t *testing.T) {
 			pizzaRef := registry.Register(pizza, health.DependencyRequirements{
 				Conditions:    []*health.DependencyNode{hungry},
 				Prerequisites: []*health.DependencyNode{oven},
-			})
+			}, health.DependencyScopeHost)
 
 			got := registry.Check(context.Background(), pizzaRef)
 
@@ -90,7 +93,7 @@ func TestDependencyRegistry(t *testing.T) {
 					}
 					subjectRef := registry.Register(subject, health.DependencyRequirements{
 						Prerequisites: []*health.DependencyNode{blocker},
-					})
+					}, health.DependencyScopeHost)
 
 					got := registry.Check(context.Background(), subjectRef)
 
@@ -114,6 +117,7 @@ func TestDependencyRegistry(t *testing.T) {
 					return health.DependencyCheckResult{}
 				}},
 				health.DependencyRequirements{},
+				health.DependencyScopeHost,
 			)
 			evaluated := false
 			subject := registry.Register(
@@ -124,7 +128,7 @@ func TestDependencyRegistry(t *testing.T) {
 				health.DependencyRequirements{
 					Conditions:    []*health.DependencyNode{failed},
 					Prerequisites: []*health.DependencyNode{prerequisite},
-				})
+				}, health.DependencyScopeHost)
 
 			got := registry.Check(context.Background(), subject)
 
@@ -144,7 +148,7 @@ func TestDependencyRegistry(t *testing.T) {
 					subject := health.Dependency{Check: passingCheck}
 					subjectRef := registry.Register(subject, health.DependencyRequirements{
 						Conditions: []*health.DependencyNode{condition},
-					})
+					}, health.DependencyScopeHost)
 
 					got := registry.Check(context.Background(), subjectRef)
 
@@ -159,10 +163,12 @@ func TestDependencyRegistry(t *testing.T) {
 			dough := registry.Register(
 				health.Dependency{Check: passingCheck},
 				health.DependencyRequirements{Prerequisites: []*health.DependencyNode{flour}},
+				health.DependencyScopeHost,
 			)
 			pizza := registry.Register(
 				health.Dependency{Check: passingCheck},
 				health.DependencyRequirements{Prerequisites: []*health.DependencyNode{dough}},
+				health.DependencyScopeHost,
 			)
 
 			pizzaEval := registry.Check(context.Background(), pizza)
@@ -188,6 +194,7 @@ func TestDependencyRegistry(t *testing.T) {
 				health.DependencyRequirements{
 					Prerequisites: []*health.DependencyNode{cheese, pineapple},
 				},
+				health.DependencyScopeHost,
 			)
 
 			got := registry.Check(context.Background(), pizza)
@@ -208,6 +215,7 @@ func TestDependencyRegistry(t *testing.T) {
 					return health.DependencyCheckResult{SuccessValue: "ready"}
 				}},
 				health.DependencyRequirements{},
+				health.DependencyScopeHost,
 			)
 			var results [2]health.DependencyEvaluation
 			var waitGroup sync.WaitGroup
@@ -238,6 +246,7 @@ func registerPassingDependency(registry *health.DependencyRegistry) *health.Depe
 	return registry.Register(
 		health.Dependency{Check: passingCheck},
 		health.DependencyRequirements{},
+		health.DependencyScopeHost,
 	)
 }
 
@@ -245,6 +254,7 @@ func registerFailedDependency(registry *health.DependencyRegistry) *health.Depen
 	return registry.Register(
 		health.Dependency{Check: failingCheck},
 		health.DependencyRequirements{},
+		health.DependencyScopeHost,
 	)
 }
 
@@ -253,6 +263,7 @@ func registerBlockedDependency(registry *health.DependencyRegistry) *health.Depe
 	return registry.Register(
 		health.Dependency{Check: passingCheck},
 		health.DependencyRequirements{Prerequisites: []*health.DependencyNode{failed}},
+		health.DependencyScopeHost,
 	)
 }
 
@@ -261,5 +272,6 @@ func registerOmittedDependency(registry *health.DependencyRegistry) *health.Depe
 	return registry.Register(
 		health.Dependency{Check: passingCheck},
 		health.DependencyRequirements{Conditions: []*health.DependencyNode{failed}},
+		health.DependencyScopeHost,
 	)
 }
