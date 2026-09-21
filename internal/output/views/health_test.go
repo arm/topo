@@ -15,7 +15,7 @@ func TestHealthReport(t *testing.T) {
 	t.Run("AsPlain", func(t *testing.T) {
 		t.Run("renders deployment and project management sections", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				TargetDetails: health.TargetDetails{},
+				TargetDetails: &health.TargetDetails{},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{
 						{Name: "Computer", Status: health.CheckStatusWarning},
@@ -61,11 +61,10 @@ func TestHealthReport(t *testing.T) {
 		t.Run("renders a warning-only report as ready", func(t *testing.T) {
 			toPrint := views.HealthReport{
 				ProjectDiscovery: health.ReadinessReport{
-					Target: []health.DependencyReport{{
-						Name:   "Connectivity",
+					TargetStatus: &health.TargetStatus{
 						Status: health.CheckStatusWarning,
-						Value:  "target not specified; cannot calculate project compatibility",
-					}},
+						Fix:    &health.Fix{Description: "provide --target"},
+					},
 				},
 			}
 			var out bytes.Buffer
@@ -74,13 +73,14 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Project management: ready (! 1)")
+			assert.Contains(t, out.String(), "! Target\n   Fix:\n     provide --target")
 		})
 	})
 
 	t.Run("AsJSON", func(t *testing.T) {
 		t.Run("preserves the legacy combined target dependencies", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
+				TargetDetails: &health.TargetDetails{Destination: "ssh://user@my-target"},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{{Name: "Topo", Status: health.CheckStatusOK}},
 					Target: []health.DependencyReport{

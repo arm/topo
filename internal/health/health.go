@@ -25,12 +25,18 @@ type TargetDetails struct {
 }
 
 type ReadinessReport struct {
-	Host   []DependencyReport
-	Target []DependencyReport
+	Host         []DependencyReport
+	Target       []DependencyReport
+	TargetStatus *TargetStatus
+}
+
+type TargetStatus struct {
+	Status CheckStatus
+	Fix    *Fix
 }
 
 type HealthReport struct {
-	TargetDetails    TargetDetails
+	TargetDetails    *TargetDetails
 	Deployment       ReadinessReport
 	ProjectDiscovery ReadinessReport
 }
@@ -38,18 +44,36 @@ type HealthReport struct {
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	healthCheck := NewHealthCheck(options)
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
+	return evaluatedHealthCheck.Report(targetDetails(options), options.MissingTargetFixMessage)
+}
+
+func (h EvaluatedHealthCheck) Report(target *TargetDetails, missingTargetFixMessage string) HealthReport {
+	deployment := toReadinessReport(h.Deployment)
+	discovery := toReadinessReport(h.ProjectDiscovery)
+	if target == nil {
+		deployment.TargetStatus = missingTargetStatus(CheckStatusError, missingTargetFixMessage)
+		discovery.TargetStatus = missingTargetStatus(CheckStatusWarning, missingTargetFixMessage)
+	}
 	return HealthReport{
-		TargetDetails:    targetDetails(options),
-		Deployment:       toReadinessReport(evaluatedHealthCheck.Deployment),
-		ProjectDiscovery: toReadinessReport(evaluatedHealthCheck.ProjectDiscovery),
+		TargetDetails:    target,
+		Deployment:       deployment,
+		ProjectDiscovery: discovery,
 	}
 }
 
-func targetDetails(options HealthCheckOptions) TargetDetails {
-	if options.Target == nil {
-		return TargetDetails{}
+func missingTargetStatus(status CheckStatus, fixMessage string) *TargetStatus {
+	targetStatus := &TargetStatus{Status: status}
+	if fixMessage != "" {
+		targetStatus.Fix = &Fix{Description: fixMessage}
 	}
-	return TargetDetails{
+	return targetStatus
+}
+
+func targetDetails(options HealthCheckOptions) *TargetDetails {
+	if options.Target == nil {
+		return nil
+	}
+	return &TargetDetails{
 		Destination: options.Target.String(),
 		IsLocalhost: options.Target.IsPlainLocalhost(),
 	}

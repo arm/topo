@@ -7,15 +7,46 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestEvaluatedHealthCheck(t *testing.T) {
+	t.Run("Report", func(t *testing.T) {
+		t.Run("reports a missing target without assembling target checks", func(t *testing.T) {
+			healthCheck := health.EvaluatedHealthCheck{}
+
+			got := healthCheck.Report(nil, "Choose a target")
+
+			assert.Nil(t, got.TargetDetails)
+			assert.Empty(t, got.Deployment.Target)
+			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusError, Fix: &health.Fix{Description: "Choose a target"}}, got.Deployment.TargetStatus)
+			assert.Empty(t, got.ProjectDiscovery.Target)
+			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusWarning, Fix: &health.Fix{Description: "Choose a target"}}, got.ProjectDiscovery.TargetStatus)
+		})
+
+		t.Run("retains remote access results", func(t *testing.T) {
+			healthCheck := health.EvaluatedHealthCheck{
+				Deployment: health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{
+					{ID: health.DependencyIDConnectivity, Label: "Target access", Result: health.DependencyCheckResult{SuccessValue: "user@example.com"}},
+				}},
+			}
+
+			target := health.TargetDetails{Destination: "user@example.com"}
+			got := healthCheck.Report(&target, "")
+
+			assert.Equal(t, []health.DependencyReport{{
+				ID: health.DependencyIDConnectivity, Name: "Target access", Status: health.CheckStatusOK, Value: "user@example.com",
+			}}, got.Deployment.Target)
+		})
+	})
+}
+
 func TestToDependencyReport(t *testing.T) {
 	t.Run("returns successful dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
 			ID:     "docker",
 			Label:  "Container Engine",
 			Result: health.DependencyCheckResult{SuccessValue: "docker"},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
 			ID:     "docker",
@@ -27,7 +58,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns error dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
 			Label: "Rube Goldberg",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityError,
@@ -35,7 +66,7 @@ func TestToDependencyReport(t *testing.T) {
 			}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
 			Name:   "Rube Goldberg",
@@ -46,7 +77,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns warning dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
 			Label: "Remoteproc Runtime",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
@@ -54,7 +85,7 @@ func TestToDependencyReport(t *testing.T) {
 			}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
 			Name:   "Remoteproc Runtime",
@@ -65,7 +96,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns informational dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
 			Label: "Remoteproc Runtime",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityInfo,
@@ -73,7 +104,7 @@ func TestToDependencyReport(t *testing.T) {
 			}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
 			Name:   "Remoteproc Runtime",
@@ -84,7 +115,7 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("propagates fix from failed dependency", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
 			Label: "Food",
 			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
@@ -96,7 +127,7 @@ func TestToDependencyReport(t *testing.T) {
 			}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
 			Name:   "Food",

@@ -30,14 +30,12 @@ type HostChecks struct {
 }
 
 type TargetChecks struct {
-	Docker                     Dependency
-	Connectivity               Dependency
-	MissingForDeployment       Dependency
-	MissingForProjectDiscovery Dependency
-	Hardware                   Dependency
-	Remoteproc                 Dependency
-	RemoteprocRuntime          Dependency
-	RemoteprocRuntimeShim      Dependency
+	Connectivity          Dependency
+	Docker                Dependency
+	Hardware              Dependency
+	Remoteproc            Dependency
+	RemoteprocRuntime     Dependency
+	RemoteprocRuntimeShim Dependency
 }
 
 type HealthCheck struct {
@@ -46,7 +44,7 @@ type HealthCheck struct {
 }
 
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
-	return AssembleHealthCheck(options.Target, newProductionChecks(options))
+	return AssembleHealthCheck(options.Target, newChecks(options))
 }
 
 func AssembleHealthCheck(target *ssh.Destination, checks Checks) HealthCheck {
@@ -117,55 +115,41 @@ type EvaluatedDependency struct {
 	Result DependencyCheckResult
 }
 
-func newProductionChecks(options HealthCheckOptions) Checks {
+func newChecks(options HealthCheckOptions) Checks {
 	localRunner := runner.NewLocal()
-	checks := Checks{
-		Host: HostChecks{
-			Topo:          NewDependencyOnTopo(options.SkipVersionChecks),
-			SSH:           NewDependencyOnSSH(localRunner),
-			Docker:        NewDependencyOnDocker(localRunner),
-			DockerCompose: NewDependencyOnDockerCompose(localRunner),
-		},
-		Target: TargetChecks{
-			MissingForDeployment: NewMissingTargetDependency(MissingTargetOptions{
-				Message:    "target not specified",
-				Severity:   SeverityError,
-				FixMessage: options.MissingTargetFixMessage,
-			}),
-			MissingForProjectDiscovery: NewMissingTargetDependency(MissingTargetOptions{
-				Message:    "target not specified; cannot calculate project compatibility",
-				Severity:   SeverityWarning,
-				FixMessage: options.MissingTargetFixMessage,
-			}),
-		},
-	}
+	checks := Checks{Host: HostChecks{
+		Topo:          NewDependencyOnTopo(options.SkipVersionChecks),
+		SSH:           NewDependencyOnSSH(localRunner),
+		Docker:        NewDependencyOnDocker(localRunner),
+		DockerCompose: NewDependencyOnDockerCompose(localRunner),
+	}}
 	if options.Target == nil {
 		return checks
 	}
 
 	target := *options.Target
 	targetRunner := runner.For(target)
-	host := docker.NewHostFromDestination(target)
-	checks.Target.Docker = NewDependencyOnRemoteDocker(localRunner, func(ctx context.Context) error {
-		return docker.RunCommand(ctx, io.Discard, host, "info")
-	})
-	sshRunner := runner.NewSSH(target)
-	checks.Target.Connectivity = NewConnectivityDependency(target, ConnectivityOperations{
-		Authenticate: func(ctx context.Context) error {
-			return probe.SSHAuthentication(ctx, sshRunner, options.AcceptHostKeys)
-		},
-		KnownHostsEntry: func() (string, error) {
-			config, err := ssh.LoadConfig(target)
-			if err != nil {
-				return "", err
-			}
-			return config.AsKnownHostsEntry(), nil
-		},
-	})
-	checks.Target.Hardware = NewDependencyOnLscpu(targetRunner)
-	checks.Target.Remoteproc = NewDependencyOnRemoteproc(targetRunner)
-	checks.Target.RemoteprocRuntime = NewDependencyOnRemoteprocRuntime(target, targetRunner)
-	checks.Target.RemoteprocRuntimeShim = NewDependencyOnRemoteprocRuntimeShim(target, targetRunner)
+	checks.Target = TargetChecks{
+		Connectivity: NewConnectivityDependency(target, ConnectivityOperations{
+			Authenticate: func(ctx context.Context, target ssh.Destination) error {
+				return probe.SSHAuthentication(ctx, runner.NewSSH(target), options.AcceptHostKeys)
+			},
+			KnownHostsEntry: func(target ssh.Destination) (string, error) {
+				config, err := ssh.LoadConfig(target)
+				if err != nil {
+					return "", err
+				}
+				return config.AsKnownHostsEntry(), nil
+			},
+		}),
+		Docker: NewDependencyOnRemoteDocker(target, localRunner, func(ctx context.Context, target ssh.Destination) error {
+			return docker.RunCommand(ctx, io.Discard, docker.NewHostFromDestination(target), "info")
+		}),
+		Hardware:              NewDependencyOnLscpu(targetRunner),
+		Remoteproc:            NewDependencyOnRemoteproc(targetRunner),
+		RemoteprocRuntime:     NewDependencyOnRemoteprocRuntime(target, targetRunner),
+		RemoteprocRuntimeShim: NewDependencyOnRemoteprocRuntimeShim(target, targetRunner),
+	}
 	return checks
 }
 
@@ -193,24 +177,21 @@ type targetNodes struct {
 
 func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination, checks TargetChecks) targetNodes {
 	if target == nil {
-		return targetNodes{
-			deployment: []*DependencyNode{registry.Register(checks.MissingForDeployment)},
-			discovery:  []*DependencyNode{registry.Register(checks.MissingForProjectDiscovery)},
-		}
+		return targetNodes{}
 	}
 
 	prerequisites := []*DependencyNode(nil)
 	nodes := targetNodes{}
 	if !target.IsPlainLocalhost() {
-		connectivity := registry.Register(checks.Connectivity)
-		prerequisites = []*DependencyNode{connectivity}
-		nodes.deployment = append(nodes.deployment, connectivity)
-		nodes.discovery = append(nodes.discovery, connectivity)
+		access := registry.Register(checks.Connectivity)
+		prerequisites = []*DependencyNode{access}
+		nodes.deployment = append(nodes.deployment, access)
+		nodes.discovery = append(nodes.discovery, access)
 	}
 
 	hardware := registry.Register(checks.Hardware, prerequisites...)
-	nodes.discovery = append(nodes.discovery, hardware)
 	nodes.deployment = append(nodes.deployment, registerTargetContainerEngineChecks(registry, checks, prerequisites...)...)
+	nodes.discovery = append(nodes.discovery, hardware)
 	return nodes
 }
 

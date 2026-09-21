@@ -142,7 +142,7 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnRemoteDocker(hostRunner runner.Runner, probeInfo func(context.Context) error) Dependency {
+func NewDependencyOnRemoteDocker(target ssh.Destination, hostRunner runner.Runner, probeInfo func(context.Context, ssh.Destination) error) Dependency {
 	return Dependency{
 		Label: "Container Engine",
 		Check: func(ctx context.Context) DependencyCheckResult {
@@ -153,7 +153,7 @@ func NewDependencyOnRemoteDocker(hostRunner runner.Runner, probeInfo func(contex
 					Fix:      &Fix{Description: "Install a supported container engine on the host. See " + containerEngineInstallURL},
 				}}
 			}
-			if err := probeInfo(ctx); err != nil {
+			if err := probeInfo(ctx, target); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
@@ -198,29 +198,9 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-type MissingTargetOptions struct {
-	Message    string
-	Severity   CheckSeverity
-	FixMessage string
-}
-
-func NewMissingTargetDependency(options MissingTargetOptions) Dependency {
-	return Dependency{
-		ID:    DependencyIDConnectivity,
-		Label: "Connectivity",
-		Check: func(context.Context) DependencyCheckResult {
-			failure := &DependencyCheckFailure{Severity: options.Severity, Message: options.Message}
-			if options.FixMessage != "" {
-				failure.Fix = &Fix{Description: options.FixMessage}
-			}
-			return DependencyCheckResult{Failure: failure}
-		},
-	}
-}
-
 type ConnectivityOperations struct {
-	Authenticate    func(context.Context) error
-	KnownHostsEntry func() (string, error)
+	Authenticate    func(context.Context, ssh.Destination) error
+	KnownHostsEntry func(ssh.Destination) (string, error)
 }
 
 func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOperations) Dependency {
@@ -228,7 +208,7 @@ func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOp
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			err := operations.Authenticate(ctx)
+			err := operations.Authenticate(ctx, target)
 			if err == nil {
 				return DependencyCheckResult{SuccessValue: target.String()}
 			}
@@ -246,7 +226,7 @@ func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOp
 					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", target),
 				}
 			case errors.Is(err, ssh.ErrHostKeyChanged):
-				knownHostsEntry, configErr := operations.KnownHostsEntry()
+				knownHostsEntry, configErr := operations.KnownHostsEntry(target)
 				fixCommand := ""
 				if configErr == nil {
 					fixCommand = fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(knownHostsEntry))

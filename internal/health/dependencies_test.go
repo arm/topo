@@ -12,31 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMissingTargetDependency(t *testing.T) {
-	t.Run("reports the configured severity and fix", func(t *testing.T) {
-		dependency := health.NewMissingTargetDependency(health.MissingTargetOptions{
-			Message:    "target not specified",
-			Severity:   health.SeverityInfo,
-			FixMessage: "Specify a target",
-		})
-
-		got := dependency.Check(context.Background())
-
-		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-			Severity: health.SeverityInfo,
-			Message:  "target not specified",
-			Fix:      &health.Fix{Description: "Specify a target"},
-		}}
-		assert.Equal(t, want, got)
-	})
-}
-
 func TestNewConnectivityDependency(t *testing.T) {
 	t.Run("uses injected known hosts entry for changed host keys", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
 		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
-			Authenticate:    func(context.Context) error { return ssh.ErrHostKeyChanged },
-			KnownHostsEntry: func() (string, error) { return "[example.com]:2222", nil },
+			Authenticate:    func(context.Context, ssh.Destination) error { return ssh.ErrHostKeyChanged },
+			KnownHostsEntry: func(ssh.Destination) (string, error) { return "[example.com]:2222", nil },
 		})
 
 		got := dependency.Check(context.Background())
@@ -55,8 +36,8 @@ func TestNewConnectivityDependency(t *testing.T) {
 	t.Run("omits the removal command when the known hosts entry cannot be resolved", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
 		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
-			Authenticate:    func(context.Context) error { return ssh.ErrHostKeyChanged },
-			KnownHostsEntry: func() (string, error) { return "", errors.New("cannot load SSH config") },
+			Authenticate:    func(context.Context, ssh.Destination) error { return ssh.ErrHostKeyChanged },
+			KnownHostsEntry: func(ssh.Destination) (string, error) { return "", errors.New("cannot load SSH config") },
 		})
 
 		got := dependency.Check(context.Background())
@@ -74,7 +55,7 @@ func TestNewConnectivityDependency(t *testing.T) {
 	t.Run("returns setup keys advice for authentication failures", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
 		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
-			Authenticate: func(context.Context) error { return ssh.ErrAuthFailed },
+			Authenticate: func(context.Context, ssh.Destination) error { return ssh.ErrAuthFailed },
 		})
 
 		got := dependency.Check(context.Background())
@@ -93,7 +74,7 @@ func TestNewConnectivityDependency(t *testing.T) {
 	t.Run("returns setup keys advice for too many authentication failures", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
 		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
-			Authenticate: func(context.Context) error { return ssh.ErrTooManyAuthFails },
+			Authenticate: func(context.Context, ssh.Destination) error { return ssh.ErrTooManyAuthFails },
 		})
 
 		got := dependency.Check(context.Background())
@@ -112,7 +93,7 @@ func TestNewConnectivityDependency(t *testing.T) {
 	t.Run("returns host key trust advice for unknown host keys", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
 		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
-			Authenticate: func(context.Context) error { return ssh.ErrHostKeyUnknown },
+			Authenticate: func(context.Context, ssh.Destination) error { return ssh.ErrHostKeyUnknown },
 		})
 
 		got := dependency.Check(context.Background())
@@ -132,7 +113,8 @@ func TestNewConnectivityDependency(t *testing.T) {
 func TestNewDependencyOnRemoteDocker(t *testing.T) {
 	t.Run("does not probe the target when Docker is missing on the host", func(t *testing.T) {
 		probeCalled := false
-		dependency := health.NewDependencyOnRemoteDocker(&runner.Fake{}, func(context.Context) error {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewDependencyOnRemoteDocker(target, &runner.Fake{}, func(context.Context, ssh.Destination) error {
 			probeCalled = true
 			return nil
 		})
@@ -273,7 +255,8 @@ func TestRemoteprocDependency(t *testing.T) {
 
 func TestRemoteprocRuntimeDependency(t *testing.T) {
 	t.Run("includes an install fix with the target", func(t *testing.T) {
-		dependency := health.NewDependencyOnRemoteprocRuntime(ssh.NewDestination("user@my-target"), &runner.Fake{})
+		target := ssh.NewDestination("user@my-target")
+		dependency := health.NewDependencyOnRemoteprocRuntime(target, &runner.Fake{})
 
 		result := dependency.Check(context.Background())
 
@@ -285,5 +268,23 @@ func TestRemoteprocRuntimeDependency(t *testing.T) {
 				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
 			},
 		}, result.Failure)
+	})
+}
+
+func TestRemoteprocRuntimeShimDependency(t *testing.T) {
+	t.Run("includes an install fix with the target", func(t *testing.T) {
+		target := ssh.NewDestination("user@my-target")
+		dependency := health.NewDependencyOnRemoteprocRuntimeShim(target, &runner.Fake{})
+
+		got := dependency.Check(context.Background())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityWarning,
+			Message:  `"containerd-shim-remoteproc-v1" not found in $PATH`,
+			Fix: &health.Fix{
+				Description: "Install the Remoteproc Runtime",
+				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+			},
+		}}, got)
 	})
 }
