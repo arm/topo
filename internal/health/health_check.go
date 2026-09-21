@@ -50,8 +50,9 @@ func NewHealthCheck(options HealthCheckOptions) HealthCheck {
 
 func AssembleHealthCheck(target *ssh.Destination, checks Checks) HealthCheck {
 	registry := NewDependencyRegistry()
-	hostNodes := registerHostChecks(registry, checks.Host)
-	targetNodes := registerTargetChecks(registry, target, checks.Target, hostNodes.dockerCLI)
+	isLocalTarget := target != nil && target.IsPlainLocalhost()
+	hostNodes := registerHostChecks(registry, checks.Host, isLocalTarget)
+	targetNodes := registerTargetChecks(registry, target, checks.Target, hostNodes)
 
 	return HealthCheck{
 		Deployment: ReadinessCheck{
@@ -152,13 +153,13 @@ func newChecks(options HealthCheckOptions) Checks {
 
 type hostNodes struct {
 	dockerCLI  *DependencyNode
+	docker     *DependencyNode
 	deployment []*DependencyNode
 	discovery  []*DependencyNode
 }
 
-func registerHostChecks(registry *DependencyRegistry, checks HostChecks) hostNodes {
+func registerHostChecks(registry *DependencyRegistry, checks HostChecks, isLocalTarget bool) hostNodes {
 	topo := registry.Register(checks.Topo, DependencyRequirements{}, DependencyScopeHost)
-	ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
 	dockerCLI := registry.Register(checks.DockerCLI, DependencyRequirements{}, DependencyScopeHost)
 	docker := registry.Register(checks.Docker, DependencyRequirements{Prerequisites: []*DependencyNode{dockerCLI}}, DependencyScopeHost)
 	compose := registry.Register(
@@ -167,11 +168,19 @@ func registerHostChecks(registry *DependencyRegistry, checks HostChecks) hostNod
 		DependencyScopeHost,
 	)
 
-	return hostNodes{
+	nodes := hostNodes{
 		dockerCLI:  dockerCLI,
-		deployment: []*DependencyNode{topo, ssh, dockerCLI, docker, compose},
-		discovery:  []*DependencyNode{ssh},
+		docker:     docker,
+		deployment: []*DependencyNode{topo, dockerCLI, docker, compose},
 	}
+	if isLocalTarget {
+		return nodes
+	}
+
+	ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
+	nodes.deployment = append(nodes.deployment, ssh)
+	nodes.discovery = []*DependencyNode{ssh}
+	return nodes
 }
 
 type targetNodes struct {
@@ -179,28 +188,46 @@ type targetNodes struct {
 	discovery  []*DependencyNode
 }
 
-func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination, checks TargetChecks, dockerCLI *DependencyNode) targetNodes {
-	if target == nil {
+func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination, checks TargetChecks, host hostNodes) targetNodes {
+	switch {
+	case target == nil:
 		return targetNodes{}
+	case target.IsPlainLocalhost():
+		return registerLocalTargetChecks(registry, checks, host.docker)
+	default:
+		return registerRemoteTargetChecks(registry, checks, host.dockerCLI)
 	}
+}
 
-	prerequisites := []*DependencyNode(nil)
-	nodes := targetNodes{}
-	if !target.IsPlainLocalhost() {
-		access := registry.Register(checks.Connectivity, DependencyRequirements{}, DependencyScopeTarget)
-		prerequisites = []*DependencyNode{access}
-		nodes.deployment = append(nodes.deployment, access)
-		nodes.discovery = append(nodes.discovery, access)
-	}
-
+func registerRemoteTargetChecks(registry *DependencyRegistry, checks TargetChecks, dockerCLI *DependencyNode) targetNodes {
+	access := registry.Register(checks.Connectivity, DependencyRequirements{}, DependencyScopeTarget)
 	hardware := registry.Register(
 		checks.Hardware,
-		DependencyRequirements{Prerequisites: prerequisites},
+		DependencyRequirements{Prerequisites: []*DependencyNode{access}},
 		DependencyScopeTarget,
 	)
-	nodes.deployment = append(nodes.deployment, registerTargetContainerEngineChecks(registry, checks, dockerCLI, prerequisites...)...)
-	nodes.discovery = append(nodes.discovery, hardware)
-	return nodes
+	containerEngineChecks := registerTargetContainerEngineChecks(registry, checks, dockerCLI, access)
+
+	return targetNodes{
+		deployment: append([]*DependencyNode{access}, containerEngineChecks...),
+		discovery:  []*DependencyNode{access, hardware},
+	}
+}
+
+func registerLocalTargetChecks(registry *DependencyRegistry, checks TargetChecks, docker *DependencyNode) targetNodes {
+	remoteproc := registry.Register(checks.Remoteproc, DependencyRequirements{}, DependencyScopeTarget)
+	runtimeRequirements := DependencyRequirements{
+		Conditions:    []*DependencyNode{remoteproc},
+		Prerequisites: []*DependencyNode{docker},
+	}
+	runtime := registry.Register(checks.RemoteprocRuntime, runtimeRequirements, DependencyScopeTarget)
+	shim := registry.Register(checks.RemoteprocRuntimeShim, runtimeRequirements, DependencyScopeTarget)
+	hardware := registry.Register(checks.Hardware, DependencyRequirements{}, DependencyScopeTarget)
+
+	return targetNodes{
+		deployment: []*DependencyNode{remoteproc, runtime, shim},
+		discovery:  []*DependencyNode{hardware},
+	}
 }
 
 func registerTargetContainerEngineChecks(registry *DependencyRegistry, checks TargetChecks, dockerCLI *DependencyNode, prerequisites ...*DependencyNode) []*DependencyNode {

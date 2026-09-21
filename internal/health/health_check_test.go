@@ -139,7 +139,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
 	})
 
-	t.Run("does not report connectivity for a plain localhost target", func(t *testing.T) {
+	t.Run("does not report connectivity nor docker engine for a plain localhost target", func(t *testing.T) {
 		checks := newPassingChecks()
 		localhost := ssh.NewDestination("localhost")
 		healthCheck := health.AssembleHealthCheck(&localhost, checks)
@@ -147,7 +147,6 @@ func TestAssembleHealthCheck(t *testing.T) {
 		got := healthCheck.Evaluate(context.Background())
 
 		wantDeploymentDependencies := []evaluatedDependencyExpectation{
-			{Dependency: checks.Target.Docker, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
@@ -157,6 +156,46 @@ func TestAssembleHealthCheck(t *testing.T) {
 		}
 		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
 		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
+	})
+
+	t.Run("reports host capabilities without SSH or target Docker for a plain localhost target", func(t *testing.T) {
+		checks := newPassingChecks()
+		localhost := ssh.NewDestination("localhost")
+		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantDeploymentDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Host.Topo, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCLI, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.Docker, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCompose, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
+		}
+		wantDiscoveryDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Hardware, State: health.EvaluationExecuted},
+		}
+		assertEvaluatedDependencies(t, wantDeploymentDependencies, got.Deployment.Dependencies)
+		assertEvaluatedDependencies(t, wantDiscoveryDependencies, got.ProjectDiscovery.Dependencies)
+	})
+
+	t.Run("blocks local runtime checks when the host Docker engine fails", func(t *testing.T) {
+		checks := newPassingChecks()
+		localhost := ssh.NewDestination("localhost")
+		checks.Host.Docker.Check = failingCheck
+		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		dependencies := targetDependencies(got.Deployment.Dependencies)
+		want := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationBlocked},
+			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationBlocked},
+		}
+		assertEvaluatedDependencies(t, want, dependencies)
 	})
 
 	t.Run("shares connectivity and suppresses its dependent target checks", func(t *testing.T) {
