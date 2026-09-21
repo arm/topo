@@ -21,22 +21,6 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusWarning, Fix: &health.Fix{Description: "Choose a target"}}, got.ProjectDiscovery.TargetStatus)
 		})
 
-		t.Run("hides successful selection and local access", func(t *testing.T) {
-			healthCheck := health.EvaluatedHealthCheck{
-				Deployment: health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{
-					{ID: health.DependencyIDConnectivity, Label: "Target access"},
-					{Label: "Hardware Info", Result: health.DependencyCheckResult{SuccessValue: "lscpu"}},
-				}},
-			}
-
-			target := health.TargetDetails{Destination: "localhost", IsLocalhost: true}
-			got := healthCheck.Report(&target, "")
-
-			assert.Equal(t, []health.DependencyReport{{
-				Name: "Hardware Info", Status: health.CheckStatusOK, Value: "lscpu",
-			}}, got.Deployment.Target)
-		})
-
 		t.Run("retains remote access results", func(t *testing.T) {
 			healthCheck := health.EvaluatedHealthCheck{
 				Deployment: health.EvaluatedReadinessCheck{Target: []health.EvaluatedDependency{

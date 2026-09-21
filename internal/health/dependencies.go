@@ -208,9 +208,6 @@ func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOp
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if target.IsPlainLocalhost() {
-				return DependencyCheckResult{SuccessValue: "local"}
-			}
 			err := operations.Authenticate(ctx, target)
 			if err == nil {
 				return DependencyCheckResult{SuccessValue: target.String()}

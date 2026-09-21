@@ -13,22 +13,6 @@ import (
 )
 
 func TestNewConnectivityDependency(t *testing.T) {
-	t.Run("does not authenticate plain localhost", func(t *testing.T) {
-		target := ssh.NewDestination("localhost")
-		calls := 0
-		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
-			Authenticate: func(context.Context, ssh.Destination) error {
-				calls++
-				return nil
-			},
-		})
-
-		got := dependency.Check(context.Background())
-
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "local"}, got)
-		assert.Zero(t, calls)
-	})
-
 	t.Run("uses injected known hosts entry for changed host keys", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
 		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{

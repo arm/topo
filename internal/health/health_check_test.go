@@ -96,6 +96,26 @@ func TestAssembleHealthCheck(t *testing.T) {
 		assertEvaluatedDependencies(t, wantDiscoveryDependencies, got.ProjectDiscovery.Target)
 	})
 
+	t.Run("does not report connectivity for a plain localhost target", func(t *testing.T) {
+		checks := newPassingChecks()
+		localhost := ssh.NewDestination("localhost")
+		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantDeploymentDependencies := []health.Dependency{
+			checks.Target.Docker,
+			checks.Target.Remoteproc,
+			checks.Target.RemoteprocRuntime,
+			checks.Target.RemoteprocRuntimeShim,
+		}
+		wantDiscoveryDependencies := []health.Dependency{
+			checks.Target.Hardware,
+		}
+		assertEvaluatedDependencies(t, wantDeploymentDependencies, got.Deployment.Target)
+		assertEvaluatedDependencies(t, wantDiscoveryDependencies, got.ProjectDiscovery.Target)
+	})
+
 	t.Run("shares connectivity and suppresses its dependent target checks", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Connectivity.Check = failingCheck

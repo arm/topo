@@ -180,13 +180,19 @@ func registerTargetChecks(registry *DependencyRegistry, target *ssh.Destination,
 		return targetNodes{}
 	}
 
-	access := registry.Register(checks.Connectivity)
-	hardware := registry.Register(checks.Hardware, access)
-
-	return targetNodes{
-		deployment: append([]*DependencyNode{access}, registerTargetContainerEngineChecks(registry, checks, access)...),
-		discovery:  []*DependencyNode{access, hardware},
+	prerequisites := []*DependencyNode(nil)
+	nodes := targetNodes{}
+	if !target.IsPlainLocalhost() {
+		access := registry.Register(checks.Connectivity)
+		prerequisites = []*DependencyNode{access}
+		nodes.deployment = append(nodes.deployment, access)
+		nodes.discovery = append(nodes.discovery, access)
 	}
+
+	hardware := registry.Register(checks.Hardware, prerequisites...)
+	nodes.deployment = append(nodes.deployment, registerTargetContainerEngineChecks(registry, checks, prerequisites...)...)
+	nodes.discovery = append(nodes.discovery, hardware)
+	return nodes
 }
 
 func registerTargetContainerEngineChecks(registry *DependencyRegistry, checks TargetChecks, prerequisites ...*DependencyNode) []*DependencyNode {

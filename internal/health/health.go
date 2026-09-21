@@ -1,9 +1,6 @@
 package health
 
-import (
-	"context"
-	"slices"
-)
+import "context"
 
 type CheckStatus string
 
@@ -56,9 +53,6 @@ func (h EvaluatedHealthCheck) Report(target *TargetDetails, missingTargetFixMess
 	if target == nil {
 		deployment.TargetStatus = missingTargetStatus(CheckStatusError, missingTargetFixMessage)
 		discovery.TargetStatus = missingTargetStatus(CheckStatusWarning, missingTargetFixMessage)
-	} else {
-		deployment.Target = removeSuccessfulLocalhostConnectivityReports(deployment.Target, target)
-		discovery.Target = removeSuccessfulLocalhostConnectivityReports(discovery.Target, target)
 	}
 	return HealthReport{
 		TargetDetails:    target,
@@ -73,12 +67,6 @@ func missingTargetStatus(status CheckStatus, fixMessage string) *TargetStatus {
 		targetStatus.Fix = &Fix{Description: fixMessage}
 	}
 	return targetStatus
-}
-
-func removeSuccessfulLocalhostConnectivityReports(reports []DependencyReport, target *TargetDetails) []DependencyReport {
-	return slices.DeleteFunc(reports, func(report DependencyReport) bool {
-		return report.Status == CheckStatusOK && report.ID == DependencyIDConnectivity && target.IsLocalhost
-	})
 }
 
 func targetDetails(options HealthCheckOptions) *TargetDetails {
