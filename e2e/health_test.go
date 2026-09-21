@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func replaceNonDeterministicDestination(out, destination string) string {
+	return strings.ReplaceAll(out, destination, "TARGET_DESTINATION")
+}
+
 func TestHealthCheck(t *testing.T) {
 	container := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
@@ -45,7 +49,7 @@ func TestHealthCheck(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Contains(t, out, container.SSHDestination)
-		out = strings.ReplaceAll(out, container.SSHDestination, "TARGET_DESTINATION")
+		out = replaceNonDeterministicDestination(out, container.SSHDestination)
 		testutil.AssertJsonGoldenFile(t, out, "testdata/TestHealthCheckJson.golden")
 	})
 }
