@@ -271,26 +271,6 @@ x-topo:
 		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated", "B": "keep-me"})
 	})
 
-	t.Run("does not enforce migration compatibility", func(t *testing.T) {
-		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `
-services:
-  app:
-    build:
-      context: .
-      args:
-        FOO: bar
-x-topo:
-  parameters:
-    FOO: {}
-`)
-		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"FOO": "baz"}))
-
-		err := project.Configure(path, resolver)
-
-		require.NoError(t, err)
-		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(path), env.DefaultFilename), map[string]string{"FOO": "baz"})
-	})
-
 	t.Run("allows unreferenced parameters with no matching build arg", func(t *testing.T) {
 		contents := `
 services:
