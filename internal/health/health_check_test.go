@@ -159,6 +159,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 		got := healthCheck.Evaluate(context.Background())
 
 		wantDeploymentDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Docker, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
