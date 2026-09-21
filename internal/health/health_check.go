@@ -178,7 +178,7 @@ func registerHostChecks(registry *DependencyRegistry, checks HostChecks, isLocal
 	}
 
 	ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
-	nodes.deployment = append(nodes.deployment, ssh)
+	nodes.deployment = []*DependencyNode{topo, ssh, dockerCLI, docker, compose}
 	nodes.discovery = []*DependencyNode{ssh}
 	return nodes
 }

@@ -118,25 +118,37 @@ func TestAssembleHealthCheck(t *testing.T) {
 		assert.Equal(t, 1, targetDockerChecks)
 	})
 
-	t.Run("runs target checks after their prerequisites succeed", func(t *testing.T) {
+	t.Run("reports dependencies in display order", func(t *testing.T) {
 		checks := newPassingChecks()
 		healthCheck := health.AssembleHealthCheck(&target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
-		wantDeploymentDependencies := []evaluatedDependencyExpectation{
+		wantDeploymentHostDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Host.Topo, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.SSH, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCLI, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.Docker, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.DockerCompose, State: health.EvaluationExecuted},
+		}
+		wantDeploymentTargetDependencies := []evaluatedDependencyExpectation{
 			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.Docker, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
 		}
-		wantDiscoveryDependencies := []evaluatedDependencyExpectation{
+		wantDiscoveryHostDependencies := []evaluatedDependencyExpectation{
+			{Dependency: checks.Host.SSH, State: health.EvaluationExecuted},
+		}
+		wantDiscoveryTargetDependencies := []evaluatedDependencyExpectation{
 			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.Hardware, State: health.EvaluationExecuted},
 		}
-		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
-		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
+		assertEvaluatedDependencies(t, wantDeploymentHostDependencies, hostDependencies(got.Deployment.Dependencies))
+		assertEvaluatedDependencies(t, wantDeploymentTargetDependencies, targetDependencies(got.Deployment.Dependencies))
+		assertEvaluatedDependencies(t, wantDiscoveryHostDependencies, hostDependencies(got.ProjectDiscovery.Dependencies))
+		assertEvaluatedDependencies(t, wantDiscoveryTargetDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
 	})
 
 	t.Run("does not report connectivity nor docker engine for a plain localhost target", func(t *testing.T) {
@@ -256,16 +268,6 @@ func TestAssembleHealthCheck(t *testing.T) {
 	})
 }
 
-func targetDependencies(dependencies []health.EvaluatedDependency) []health.EvaluatedDependency {
-	targets := make([]health.EvaluatedDependency, 0, len(dependencies))
-	for _, dependency := range dependencies {
-		if dependency.Scope == health.DependencyScopeTarget {
-			targets = append(targets, dependency)
-		}
-	}
-	return targets
-}
-
 func TestReadinessCheck(t *testing.T) {
 	t.Run("Evaluate", func(t *testing.T) {
 		t.Run("reports successful dependencies in the group", func(t *testing.T) {
@@ -340,4 +342,24 @@ func assertEvaluatedDependencies(t *testing.T, want []evaluatedDependencyExpecta
 			assert.Equal(t, expected.Dependency.Check(context.Background()), got[i].Evaluation.Result)
 		}
 	}
+}
+
+func targetDependencies(dependencies []health.EvaluatedDependency) []health.EvaluatedDependency {
+	targets := make([]health.EvaluatedDependency, 0, len(dependencies))
+	for _, dependency := range dependencies {
+		if dependency.Scope == health.DependencyScopeTarget {
+			targets = append(targets, dependency)
+		}
+	}
+	return targets
+}
+
+func hostDependencies(dependencies []health.EvaluatedDependency) []health.EvaluatedDependency {
+	hosts := make([]health.EvaluatedDependency, 0, len(dependencies))
+	for _, dependency := range dependencies {
+		if dependency.Scope == health.DependencyScopeHost {
+			hosts = append(hosts, dependency)
+		}
+	}
+	return hosts
 }
