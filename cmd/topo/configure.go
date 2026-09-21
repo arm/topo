@@ -30,17 +30,17 @@ interactive prompts.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		composeFile, err := getComposeFileName(cmd)
+		composeFilePath, err := resolveComposeFilePath(cmd)
 		if err != nil {
 			return err
 		}
 
 		if migrateToEnv(cmd) {
-			err := project.MigrateToEnv(composeFile)
+			err := project.MigrateToEnv(composeFilePath)
 			if err != nil {
 				return err
 			}
-			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", composeFile, env.DefaultFilename))
+			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", composeFilePath, env.DefaultFilename))
 			return nil
 		}
 
@@ -58,7 +58,7 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.Configure(composeFile, resolver)
+		return project.Configure(composeFilePath, resolver)
 	},
 }
 
