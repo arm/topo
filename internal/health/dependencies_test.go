@@ -110,7 +110,7 @@ func TestNewConnectivityDependency(t *testing.T) {
 	})
 }
 
-func TestNewDependencyOnRemoteDocker(t *testing.T) {
+func TestNewDependencyOnRemoteDockerDaemon(t *testing.T) {
 	t.Run("reports a reachable daemon", func(t *testing.T) {
 		target := ssh.NewDestination("user@example.com")
 		dependency := health.NewDependencyOnRemoteDockerDaemon(target, func(context.Context, ssh.Destination) error {
