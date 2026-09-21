@@ -23,7 +23,7 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return fmt.Errorf("failed to load current environment values: %w", err)
 	}
 
-	definitions, err := LoadParameterDefinitions(composeFilePath, currentValues)
+	definitions, err := LoadParameterDefinitions(composeFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to load parameter definitions: %w", err)
 	}
@@ -36,7 +36,7 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return err
 	}
 
-	values, err := resolver.Resolve(definitions)
+	values, err := resolver.Resolve(definitions, currentValues)
 	if err != nil {
 		return fmt.Errorf("failed to collect parameter values: %w", err)
 	}

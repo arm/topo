@@ -1,28 +1,14 @@
 package parameter
 
-import (
-	"encoding/json"
-	"fmt"
-)
-
 type Definition struct {
-	Name          string
-	Description   string
-	Required      bool
-	Example       string
-	CurrentValues []string
+	Name        string
+	Description string
+	Required    bool
+	Example     string
 }
 
 type Values map[string]string
 
 type Resolver interface {
-	Resolve(definitions []Definition) (Values, error)
-}
-
-func formatCurrentValues(values []string) string {
-	formatted, err := json.Marshal(values)
-	if err != nil {
-		return fmt.Sprintf("%q", values)
-	}
-	return string(formatted)
+	Resolve(definitions []Definition, currentValues Values) (Values, error)
 }

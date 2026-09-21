@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func LoadParameterDefinitions(composeFilePath string, currentValues map[string]string) ([]parameter.Definition, error) {
+func LoadParameterDefinitions(composeFilePath string) ([]parameter.Definition, error) {
 	reader, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open compose file: %w", err)
@@ -29,16 +29,11 @@ func LoadParameterDefinitions(composeFilePath string, currentValues map[string]s
 
 	definitions := make([]parameter.Definition, 0, len(raw.Metadata.Parameters))
 	for name, param := range raw.Metadata.Parameters {
-		values := []string{}
-		if val, ok := currentValues[name]; ok {
-			values = append(values, val)
-		}
 		definitions = append(definitions, parameter.Definition{
-			Name:          name,
-			Description:   param.Description,
-			Required:      param.Required,
-			Example:       param.Example,
-			CurrentValues: values,
+			Name:        name,
+			Description: param.Description,
+			Required:    param.Required,
+			Example:     param.Example,
 		})
 	}
 
