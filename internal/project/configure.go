@@ -42,7 +42,9 @@ func UsesLiteralBuildArgConfiguration(composeFilePath string) (bool, error) {
 func Configure(composeFilePath string, resolver parameter.Resolver) error {
 	envFile := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
 	currentValues, err := env.ReadFile(envFile)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	if errors.Is(err, os.ErrNotExist) {
+		currentValues = make(map[string]string)
+	} else if err != nil {
 		return fmt.Errorf("failed to load current environment values: %w", err)
 	}
 
