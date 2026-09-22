@@ -387,7 +387,7 @@ func NewDependencyOnRemotePodmanAPI(check func(context.Context) probe.RemotePodm
 			case probe.RemotePodmanSocketResolutionFailed:
 				failure.Fix = &Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL}
 			case probe.RemotePodmanForwardingFailed:
-				failure.Fix = &Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."}
+				failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the target SSH server permits local TCP forwarding to the target Podman API socket at %s.", result.SocketPath)}
 			case probe.RemotePodmanAPIRequestFailed:
 				failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the Podman API socket at %s is functional and accessible to the SSH user.", result.SocketPath)}
 			case probe.RemotePodmanCleanupFailed:

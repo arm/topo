@@ -404,7 +404,7 @@ func TestNewDependencyOnRemotePodmanAPI(t *testing.T) {
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
 			Message:  "forwarding denied",
-			Fix:      &health.Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."},
+			Fix:      &health.Fix{Description: "Ensure the target SSH server permits local TCP forwarding to the target Podman API socket at /run/podman.sock."},
 		}}, got)
 	})
 
