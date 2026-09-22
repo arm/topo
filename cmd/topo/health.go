@@ -34,6 +34,10 @@ var healthCmd = &cobra.Command{
 		}
 
 		skipVersionCheck := resolveSkipVersionChecks(cmd)
+		selectedEngine, err := getSelectedEngine(cmd)
+		if err != nil {
+			return err
+		}
 
 		var spinner *term.Spinner
 		if outputFormat == term.Plain {
@@ -49,6 +53,7 @@ var healthCmd = &cobra.Command{
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 		report := health.Check(ctx, health.HealthCheckOptions{
+			Engine:                  health.Engine(selectedEngine),
 			Target:                  target,
 			MissingTargetFixMessage: "provide --target or set TOPO_TARGET to check target health",
 			SkipVersionChecks:       skipVersionCheck,
@@ -66,6 +71,9 @@ var healthCmd = &cobra.Command{
 func init() {
 	addTargetFlag(healthCmd)
 	addTimeoutFlag(healthCmd, defaultTimeout)
+	if experimentalFeaturesEnabled() {
+		addEngineFlag(healthCmd)
+	}
 	healthCmd.Flags().Bool(acceptNewHostFlag, false, "automatically trust and add new SSH host keys for the target")
 	healthCmd.Flags().Bool(skipVersionChecksFlag, false, fmt.Sprintf("skip version checks for dependencies (can also be set via %s env var)", skipVersionChecksEnvVar))
 	rootCmd.AddCommand(healthCmd)
