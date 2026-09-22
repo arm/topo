@@ -369,46 +369,6 @@ func TestNewDependencyOnDockerComposeForPodman(t *testing.T) {
 	})
 }
 
-func TestNewDependencyOnSSHForwardToPodmanAPI(t *testing.T) {
-	t.Run("reports a successful probe", func(t *testing.T) {
-		dependency := health.NewDependencyOnSSHForwardToPodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
-			return probe.RemotePodmanProbeResult{}
-		})
-
-		got := dependency.Check(t.Context())
-
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "reachable"}, got)
-	})
-
-	t.Run("reports a forwarding failure", func(t *testing.T) {
-		dependency := health.NewDependencyOnSSHForwardToPodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
-			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanForwardingFailed, Err: errors.New("forwarding denied")}
-		})
-
-		got := dependency.Check(t.Context())
-
-		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-			Severity: health.SeverityError,
-			Message:  "forwarding denied",
-			Fix:      &health.Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."},
-		}}
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("reports a cleanup failure without a fix", func(t *testing.T) {
-		dependency := health.NewDependencyOnSSHForwardToPodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
-			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanCleanupFailed, Err: errors.New("close failed")}
-		})
-
-		got := dependency.Check(t.Context())
-
-		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-			Severity: health.SeverityError,
-			Message:  "failed to close remote Podman socket tunnel: close failed",
-		}}, got)
-	})
-}
-
 func TestNewDependencyOnRemotePodmanAPI(t *testing.T) {
 	t.Run("reports a successful probe", func(t *testing.T) {
 		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {

@@ -374,19 +374,6 @@ func NewDependencyOnDockerComposeForPodman(composeVersion func(context.Context) 
 	}
 }
 
-func NewDependencyOnSSHForwardToPodmanAPI(check func(context.Context) probe.RemotePodmanProbeResult) Dependency {
-	return Dependency{
-		Label: "SSH forward to Podman API",
-		Check: func(ctx context.Context) DependencyCheckResult {
-			result := check(ctx)
-			if result.Err == nil {
-				return DependencyCheckResult{SuccessValue: "reachable"}
-			}
-			return podmanProbeFailure(result, "")
-		},
-	}
-}
-
 func NewDependencyOnRemotePodmanAPI(check func(context.Context) probe.RemotePodmanProbeResult) Dependency {
 	return Dependency{
 		Label: "Podman API",
@@ -395,22 +382,18 @@ func NewDependencyOnRemotePodmanAPI(check func(context.Context) probe.RemotePodm
 			if result.Err == nil {
 				return DependencyCheckResult{SuccessValue: result.SocketPath}
 			}
-			return podmanProbeFailure(result, result.SocketPath)
+			failure := &DependencyCheckFailure{Severity: SeverityError, Message: result.Err.Error()}
+			switch result.Failure {
+			case probe.RemotePodmanSocketResolutionFailed:
+				failure.Fix = &Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL}
+			case probe.RemotePodmanForwardingFailed:
+				failure.Fix = &Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."}
+			case probe.RemotePodmanAPIRequestFailed:
+				failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the Podman API socket at %s is functional and accessible to the SSH user.", result.SocketPath)}
+			case probe.RemotePodmanCleanupFailed:
+				failure.Message = fmt.Errorf("failed to close remote Podman socket tunnel: %w", result.Err).Error()
+			}
+			return DependencyCheckResult{Failure: failure}
 		},
 	}
-}
-
-func podmanProbeFailure(result probe.RemotePodmanProbeResult, socketPath string) DependencyCheckResult {
-	failure := &DependencyCheckFailure{Severity: SeverityError, Message: result.Err.Error()}
-	switch result.Failure {
-	case probe.RemotePodmanSocketResolutionFailed:
-		failure.Fix = &Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL}
-	case probe.RemotePodmanForwardingFailed:
-		failure.Fix = &Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."}
-	case probe.RemotePodmanAPIRequestFailed:
-		failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the Podman API socket at %s is functional and accessible to the SSH user.", socketPath)}
-	case probe.RemotePodmanCleanupFailed:
-		failure.Message = fmt.Errorf("failed to close remote Podman socket tunnel: %w", result.Err).Error()
-	}
-	return DependencyCheckResult{Failure: failure}
 }

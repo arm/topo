@@ -48,7 +48,6 @@ type TargetChecks struct {
 	RemoteprocRuntime     Dependency
 	RemoteprocRuntimeShim Dependency
 	PodmanCLI             Dependency
-	SSHForwardToPodmanAPI Dependency
 	RemotePodmanAPI       Dependency
 	Hardware              Dependency
 }
@@ -166,9 +165,6 @@ func newChecks(options HealthCheckOptions) Checks {
 		RemoteprocRuntime:     NewDependencyOnRemoteprocRuntime(target, targetRunner),
 		RemoteprocRuntimeShim: NewDependencyOnRemoteprocRuntimeShim(target, targetRunner),
 		PodmanCLI:             NewDependencyOnPodmanCLI(targetRunner),
-		SSHForwardToPodmanAPI: NewDependencyOnSSHForwardToPodmanAPI(func(ctx context.Context) probe.RemotePodmanProbeResult {
-			return probe.CheckRemotePodmanForwarding(ctx, target)
-		}),
 		RemotePodmanAPI: NewDependencyOnRemotePodmanAPI(func(ctx context.Context) probe.RemotePodmanProbeResult {
 			return probe.CheckRemotePodmanAPI(ctx, target)
 		}),
@@ -267,10 +263,9 @@ func registerRemoteDockerTargetChecks(registry *DependencyRegistry, checks Targe
 func registerRemotePodmanTargetChecks(registry *DependencyRegistry, checks TargetChecks, host hostNodes) targetNodes {
 	access := registry.Register(checks.Connectivity, DependencyRequirements{}, DependencyScopeTarget)
 	podmanCLI := registry.Register(checks.PodmanCLI, DependencyRequirements{Prerequisites: []*DependencyNode{access}}, DependencyScopeTarget)
-	tunnel := registry.Register(checks.SSHForwardToPodmanAPI, DependencyRequirements{Prerequisites: []*DependencyNode{podmanCLI}}, DependencyScopeTarget)
-	remotePodmanAPI := registry.Register(checks.RemotePodmanAPI, DependencyRequirements{Prerequisites: []*DependencyNode{host.podmanCLI, host.podmanCompose, access, podmanCLI, tunnel}}, DependencyScopeTarget)
+	remotePodmanAPI := registry.Register(checks.RemotePodmanAPI, DependencyRequirements{Prerequisites: []*DependencyNode{host.podmanCLI, host.podmanCompose, access, podmanCLI}}, DependencyScopeTarget)
 	hardware := registry.Register(checks.Hardware, DependencyRequirements{Prerequisites: []*DependencyNode{access}}, DependencyScopeTarget)
-	return targetNodes{deployment: []*DependencyNode{access, podmanCLI, tunnel, remotePodmanAPI}, discovery: []*DependencyNode{access, hardware}}
+	return targetNodes{deployment: []*DependencyNode{access, podmanCLI, remotePodmanAPI}, discovery: []*DependencyNode{access, hardware}}
 }
 
 func registerLocalTargetDockerChecks(registry *DependencyRegistry, checks TargetChecks, docker *DependencyNode) targetNodes {

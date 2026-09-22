@@ -67,8 +67,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			Target: health.TargetChecks{
 				Connectivity: passing("Target access"), Docker: passing("Target Docker"),
 				Hardware: passing("Hardware Info"), Remoteproc: passing("Remoteproc"), RemoteprocRuntime: passing("Remoteproc Runtime"),
-				RemoteprocRuntimeShim: passing("Remoteproc Shim"), PodmanCLI: passing("Target Podman CLI"),
-				SSHForwardToPodmanAPI: passing("SSH forward to Podman API"), RemotePodmanAPI: passing("Podman API"),
+				RemoteprocRuntimeShim: passing("Remoteproc Shim"), PodmanCLI: passing("Target Podman CLI"), RemotePodmanAPI: passing("Podman API"),
 			},
 		}
 	}
@@ -285,7 +284,6 @@ func TestAssembleHealthCheck(t *testing.T) {
 		wantTarget := []evaluatedDependencyExpectation{
 			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.PodmanCLI, State: health.EvaluationExecuted},
-			{Dependency: checks.Target.SSHForwardToPodmanAPI, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemotePodmanAPI, State: health.EvaluationExecuted},
 		}
 		assertEvaluatedDependencies(t, wantHost, hostDependencies(got.Deployment.Dependencies))

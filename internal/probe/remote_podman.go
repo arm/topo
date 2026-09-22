@@ -25,18 +25,6 @@ type RemotePodmanProbeResult struct {
 	Err        error
 }
 
-func CheckRemotePodmanForwarding(ctx context.Context, target ssh.Destination) RemotePodmanProbeResult {
-	remoteSocketPath, tunnel, result := openRemotePodmanTunnel(ctx, target)
-	if result.Err != nil {
-		return result
-	}
-
-	if err := tunnel.Close(); err != nil {
-		return RemotePodmanProbeResult{SocketPath: remoteSocketPath, Failure: RemotePodmanCleanupFailed, Err: err}
-	}
-	return RemotePodmanProbeResult{SocketPath: remoteSocketPath}
-}
-
 func CheckRemotePodmanAPI(ctx context.Context, target ssh.Destination) RemotePodmanProbeResult {
 	remoteSocketPath, tunnel, result := openRemotePodmanTunnel(ctx, target)
 	if result.Err != nil {
