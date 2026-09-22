@@ -68,9 +68,6 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return nil
 	}
 
-	if currentValues == nil {
-		currentValues = make(map[string]string)
-	}
 	maps.Copy(currentValues, values)
 	return env.WriteFile(envFile, currentValues)
 }
