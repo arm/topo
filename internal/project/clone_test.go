@@ -109,7 +109,7 @@ x-topo:
 		assert.True(t, os.IsNotExist(statErr))
 	})
 
-	t.Run("rejects unreferenced parameters with clone-specific migration guidance", func(t *testing.T) {
+	t.Run("rejects parameters that require migration", func(t *testing.T) {
 		destDir := filepath.Join(t.TempDir(), "demo")
 		source := mockSourceWithComposeFile(t, `
 services:
@@ -124,9 +124,7 @@ x-topo:
 
 		err := project.Clone(t.Output(), destDir, source, parameter.NewStrictResolverChain(), false)
 
-		require.Error(t, err)
-		assert.ErrorContains(t, err, "Try cloning again with '--migrate-to-env'")
-		assert.NotContains(t, err.Error(), "topo configure")
+		require.ErrorIs(t, err, project.ErrParameterMigrationRequired)
 		assert.NoDirExists(t, destDir)
 	})
 

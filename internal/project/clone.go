@@ -12,6 +12,8 @@ import (
 	"github.com/arm/topo/internal/parameter"
 )
 
+var ErrParameterMigrationRequired = errors.New("this project appears to use the parameter format from Topo versions older than 14.0.0")
+
 func Clone(output io.Writer, path string, src Source, resolver parameter.Resolver, migrateToEnv bool) error {
 	if err := term.PrintFirstHeader(output, "Copy files"); err != nil {
 		return err
@@ -42,7 +44,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 	}
 	usesLiteralBuildArgs, err := UsesLiteralBuildArgConfiguration(composeFilePath)
 	if err == nil && usesLiteralBuildArgs {
-		err = fmt.Errorf("this project appears to use the parameter format from Topo versions older than 14.0.0. Try cloning again with '--migrate-to-env'")
+		err = ErrParameterMigrationRequired
 	}
 	if err == nil {
 		err = Configure(composeFilePath, resolver)

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -77,7 +79,11 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.Clone(os.Stdout, path, projectSource, resolver, migrateToEnv(cmd))
+		err = project.Clone(os.Stdout, path, projectSource, resolver, migrateToEnv(cmd))
+		if errors.Is(err, project.ErrParameterMigrationRequired) {
+			return fmt.Errorf("%w; try cloning again with '--migrate-to-env'", err)
+		}
+		return err
 	},
 }
 
