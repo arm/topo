@@ -50,6 +50,31 @@ services:
 }
 
 func TestApplyParameterValues(t *testing.T) {
+	for _, value := range []string{"30", "1.5", "true"} {
+		t.Run("replaces typed scalar "+value+" with a string reference", func(t *testing.T) {
+			project := yamlToNode(t, `services:
+  app:
+    build:
+      args:
+        VALUE: `+value+`
+`)
+			values := map[string]string{"VALUE": "a string"}
+
+			err := compose.ApplyParameterValues(project, values)
+
+			require.NoError(t, err)
+			got, err := yaml.Marshal(project)
+			require.NoError(t, err)
+			want := `services:
+  app:
+    build:
+      args:
+        VALUE: a string
+`
+			assert.YAMLEq(t, want, string(got))
+		})
+	}
+
 	t.Run("updates all matching services when a parameter matches", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
