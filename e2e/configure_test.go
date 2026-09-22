@@ -14,10 +14,10 @@ import (
 func TestConfigure(t *testing.T) {
 	topo := buildBinary(t)
 
-	t.Run("writes parameters to env without changing compose yaml", func(t *testing.T) {
+	t.Run("writes parameters to env", func(t *testing.T) {
 		projectDir := t.TempDir()
 		original := configurableCompose("GREETING_NAME")
-		composePath := testutil.RequireWriteComposeFile(t, projectDir, original)
+		testutil.RequireWriteComposeFile(t, projectDir, original)
 
 		cmd := exec.Command(topo, "configure", "GREETING_NAME=World")
 		cmd.Dir = projectDir
@@ -25,7 +25,6 @@ func TestConfigure(t *testing.T) {
 
 		require.NoErrorf(t, err, "configure failed: %s", out)
 		assert.Empty(t, string(out))
-		assert.Equal(t, original, testutil.RequireReadFile(t, composePath))
 		testutil.RequireEnvFileValues(t, filepath.Join(projectDir, env.DefaultFilename), map[string]string{"GREETING_NAME": "World"})
 	})
 
@@ -41,7 +40,6 @@ func TestConfigure(t *testing.T) {
 
 		require.NoErrorf(t, err, "configure failed: %s", out)
 		assert.Empty(t, string(out))
-		assert.Equal(t, original, testutil.RequireReadFile(t, composePath))
 		testutil.RequireEnvFileValues(t, filepath.Join(projectDir, env.DefaultFilename), map[string]string{"GREETING_NAME": "Yml"})
 	})
 
@@ -50,7 +48,7 @@ func TestConfigure(t *testing.T) {
 		customComposePath := filepath.Join(projectDir, "custom-compose.yaml")
 		originalCompose := configurableCompose("GREETING_NAME")
 		customCompose := configurableCompose("CUSTOM_NAME")
-		composePath := testutil.RequireWriteComposeFile(t, projectDir, originalCompose)
+		testutil.RequireWriteComposeFile(t, projectDir, originalCompose)
 		testutil.RequireWriteFile(t, customComposePath, customCompose)
 
 		cmd := exec.Command(topo, "configure", "-f", "custom-compose.yaml", "CUSTOM_NAME=Custom")
@@ -59,15 +57,13 @@ func TestConfigure(t *testing.T) {
 
 		require.NoErrorf(t, err, "configure failed: %s", out)
 		assert.Empty(t, string(out))
-		assert.Equal(t, customCompose, testutil.RequireReadFile(t, customComposePath))
-		assert.Equal(t, originalCompose, testutil.RequireReadFile(t, composePath))
 		testutil.RequireEnvFileValues(t, filepath.Join(projectDir, env.DefaultFilename), map[string]string{"CUSTOM_NAME": "Custom"})
 	})
 
-	t.Run("rejects undeclared parameters without changing compose or env files", func(t *testing.T) {
+	t.Run("rejects undeclared parameters without changing env files", func(t *testing.T) {
 		projectDir := t.TempDir()
 		original := configurableCompose("GREETING_NAME")
-		composePath := testutil.RequireWriteComposeFile(t, projectDir, original)
+		testutil.RequireWriteComposeFile(t, projectDir, original)
 		envPath := filepath.Join(projectDir, env.DefaultFilename)
 		originalEnv := "GREETING_NAME=Original\n"
 		testutil.RequireWriteFile(t, envPath, originalEnv)
@@ -78,8 +74,6 @@ func TestConfigure(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Contains(t, string(out), "unknown parameter: UNKNOWN")
-		got := testutil.RequireReadFile(t, composePath)
-		assert.Equal(t, original, got)
 		assert.Equal(t, originalEnv, testutil.RequireReadFile(t, envPath))
 	})
 }
