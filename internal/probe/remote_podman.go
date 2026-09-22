@@ -2,6 +2,8 @@ package probe
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 
@@ -10,18 +12,15 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
-type RemotePodmanFailureStage string
-
-const (
-	RemotePodmanSocketResolutionFailed RemotePodmanFailureStage = "socket resolution"
-	RemotePodmanForwardingFailed       RemotePodmanFailureStage = "forwarding"
-	RemotePodmanAPIRequestFailed       RemotePodmanFailureStage = "API request"
-	RemotePodmanCleanupFailed          RemotePodmanFailureStage = "cleanup"
+var (
+	ErrRemotePodmanSocketResolutionFailed  = errors.New("remote Podman socket resolution failed")
+	ErrRemotePodmanForwardingFailed        = errors.New("remote Podman forwarding failed")
+	ErrRemotePodmanAPIRequestFailed        = errors.New("remote Podman API request failed")
+	ErrRemotePodmanSocketTunnelCloseFailed = errors.New("failed to close remote Podman socket tunnel")
 )
 
 type RemotePodmanProbeResult struct {
 	SocketPath string
-	Failure    RemotePodmanFailureStage
 	Err        error
 }
 
@@ -42,10 +41,16 @@ func CheckRemotePodmanAPI(ctx context.Context, target ssh.Destination) RemotePod
 	}
 	closeErr := tunnel.Close()
 	if probeErr != nil {
-		return RemotePodmanProbeResult{SocketPath: remoteSocketPath, Failure: RemotePodmanAPIRequestFailed, Err: probeErr}
+		return RemotePodmanProbeResult{
+			SocketPath: remoteSocketPath,
+			Err:        fmt.Errorf("%w: %w", ErrRemotePodmanAPIRequestFailed, probeErr),
+		}
 	}
 	if closeErr != nil {
-		return RemotePodmanProbeResult{SocketPath: remoteSocketPath, Failure: RemotePodmanCleanupFailed, Err: closeErr}
+		return RemotePodmanProbeResult{
+			SocketPath: remoteSocketPath,
+			Err:        fmt.Errorf("%w: %w", ErrRemotePodmanSocketTunnelCloseFailed, closeErr),
+		}
 	}
 	return RemotePodmanProbeResult{SocketPath: remoteSocketPath}
 }
@@ -53,11 +58,16 @@ func CheckRemotePodmanAPI(ctx context.Context, target ssh.Destination) RemotePod
 func openRemotePodmanTunnel(ctx context.Context, target ssh.Destination) (string, *ssh.TCPToUnixSocketTunnel, RemotePodmanProbeResult) {
 	remoteSocketPath, err := podman.ResolveRemoteSocketPath(ctx, target)
 	if err != nil {
-		return "", nil, RemotePodmanProbeResult{Failure: RemotePodmanSocketResolutionFailed, Err: err}
+		return "", nil, RemotePodmanProbeResult{
+			Err: fmt.Errorf("%w: %w", ErrRemotePodmanSocketResolutionFailed, err),
+		}
 	}
 	tunnel, err := podman.OpenRemoteSocketTunnel(ctx, io.Discard, target, remoteSocketPath)
 	if err != nil {
-		return "", nil, RemotePodmanProbeResult{SocketPath: remoteSocketPath, Failure: RemotePodmanForwardingFailed, Err: err}
+		return "", nil, RemotePodmanProbeResult{
+			SocketPath: remoteSocketPath,
+			Err:        fmt.Errorf("%w: %w", ErrRemotePodmanForwardingFailed, err),
+		}
 	}
 	return remoteSocketPath, tunnel, RemotePodmanProbeResult{}
 }

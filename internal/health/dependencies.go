@@ -383,15 +383,13 @@ func NewDependencyOnRemotePodmanAPI(check func(context.Context) probe.RemotePodm
 				return DependencyCheckResult{SuccessValue: result.SocketPath}
 			}
 			failure := &DependencyCheckFailure{Severity: SeverityError, Message: result.Err.Error()}
-			switch result.Failure {
-			case probe.RemotePodmanSocketResolutionFailed:
+			switch {
+			case errors.Is(result.Err, probe.ErrRemotePodmanSocketResolutionFailed):
 				failure.Fix = &Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL}
-			case probe.RemotePodmanForwardingFailed:
+			case errors.Is(result.Err, probe.ErrRemotePodmanForwardingFailed):
 				failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the target SSH server permits local TCP forwarding to the target Podman API socket at %s.", result.SocketPath)}
-			case probe.RemotePodmanAPIRequestFailed:
+			case errors.Is(result.Err, probe.ErrRemotePodmanAPIRequestFailed):
 				failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the Podman API socket at %s is functional and accessible to the SSH user.", result.SocketPath)}
-			case probe.RemotePodmanCleanupFailed:
-				failure.Message = fmt.Errorf("failed to close remote Podman socket tunnel: %w", result.Err).Error()
 			}
 			return DependencyCheckResult{Failure: failure}
 		},

@@ -3,6 +3,7 @@ package health_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -381,57 +382,62 @@ func TestNewDependencyOnRemotePodmanAPI(t *testing.T) {
 	})
 
 	t.Run("reports a socket resolution failure", func(t *testing.T) {
-		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
-			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanSocketResolutionFailed, Err: errors.New("no remote socket")}
-		})
+		result := probe.RemotePodmanProbeResult{Err: fmt.Errorf("%w: %w", probe.ErrRemotePodmanSocketResolutionFailed, errors.New("no remote socket"))}
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult { return result })
 
 		got := dependency.Check(t.Context())
 
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
-			Message:  "no remote socket",
+			Message:  result.Err.Error(),
 			Fix:      &health.Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + podmanInstallURL},
 		}}, got)
 	})
 
 	t.Run("reports a forwarding failure", func(t *testing.T) {
-		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
-			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanForwardingFailed, SocketPath: "/run/podman.sock", Err: errors.New("forwarding denied")}
-		})
+		result := probe.RemotePodmanProbeResult{
+			SocketPath: "/run/podman.sock",
+			Err:        fmt.Errorf("%w: %w", probe.ErrRemotePodmanForwardingFailed, errors.New("forwarding denied")),
+		}
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult { return result })
 
 		got := dependency.Check(t.Context())
 
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
-			Message:  "forwarding denied",
+			Message:  result.Err.Error(),
 			Fix:      &health.Fix{Description: "Ensure the target SSH server permits local TCP forwarding to the target Podman API socket at /run/podman.sock."},
 		}}, got)
 	})
 
 	t.Run("reports an API request failure", func(t *testing.T) {
-		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
-			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanAPIRequestFailed, SocketPath: "/run/podman.sock", Err: errors.New("request failed")}
-		})
+		result := probe.RemotePodmanProbeResult{
+			SocketPath: "/run/podman.sock",
+			Err:        fmt.Errorf("%w: %w", probe.ErrRemotePodmanAPIRequestFailed, errors.New("request failed")),
+		}
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult { return result })
 
 		got := dependency.Check(t.Context())
 
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
-			Message:  "request failed",
+			Message:  result.Err.Error(),
 			Fix:      &health.Fix{Description: "Ensure the Podman API socket at /run/podman.sock is functional and accessible to the SSH user."},
 		}}, got)
 	})
 
 	t.Run("reports a cleanup failure without a fix", func(t *testing.T) {
-		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
-			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanCleanupFailed, SocketPath: "/run/podman.sock", Err: errors.New("close failed")}
-		})
+		result := probe.RemotePodmanProbeResult{
+			SocketPath: "/run/podman.sock",
+			Err:        fmt.Errorf("%w: %w", probe.ErrRemotePodmanSocketTunnelCloseFailed, errors.New("close failed")),
+		}
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult { return result })
 
 		got := dependency.Check(t.Context())
 
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
-			Message:  "failed to close remote Podman socket tunnel: close failed",
+			Message:  result.Err.Error(),
 		}}, got)
 	})
 }
