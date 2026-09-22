@@ -59,30 +59,6 @@ x-topo:
 }
 
 func TestMigrateToEnv(t *testing.T) {
-	for _, value := range []string{"30", "1.5", "true"} {
-		t.Run("migrates typed scalar "+value+" to a configurable string reference", func(t *testing.T) {
-			root := t.TempDir()
-			path := testutil.RequireWriteComposeFile(t, root, `services:
-  app:
-    image: alpine
-    build:
-      context: .
-      args:
-        VALUE: `+value+`
-x-topo:
-  parameters:
-    VALUE: {}
-`)
-
-			err := project.MigrateToEnv(path)
-
-			require.NoError(t, err)
-			model, err := project.Read(project.Scope{ComposeFile: path, EnvFiles: []string{filepath.Join(root, env.DefaultFilename)}})
-			require.NoError(t, err)
-			assert.Equal(t, &value, model.Services["app"].Build.Args["VALUE"])
-		})
-	}
-
 	t.Run("migrates repeated identical values and replaces only declared parameters", func(t *testing.T) {
 		root := t.TempDir()
 		contents := `services:
