@@ -55,7 +55,7 @@ services:
 		assert.FileExists(t, composeFilePath)
 	})
 
-	t.Run("preserves current env values and leaves Compose unchanged", func(t *testing.T) {
+	t.Run("preserves current env values and leaves compose file unchanged", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		composeFileContents := `services:

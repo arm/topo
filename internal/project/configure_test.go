@@ -280,7 +280,7 @@ x-topo:
 		require.ErrorContains(t, err, "failed to open compose file")
 	})
 
-	t.Run("writes provided parameters to env and leaves Compose unchanged", func(t *testing.T) {
+	t.Run("writes provided parameters to env and leaves compose file unchanged", func(t *testing.T) {
 		composeFileContents := `
 services:
   app:
