@@ -347,9 +347,9 @@ func TestNewDependencyOnPodmanConnection(t *testing.T) {
 	})
 }
 
-func TestNewDependencyOnPodmanCompose(t *testing.T) {
+func TestNewDependencyOnDockerComposeForPodman(t *testing.T) {
 	t.Run("reports an available Compose provider", func(t *testing.T) {
-		dependency := health.NewDependencyOnPodmanCompose(func(context.Context) error { return nil })
+		dependency := health.NewDependencyOnDockerComposeForPodman(func(context.Context) error { return nil })
 
 		got := dependency.Check(t.Context())
 
@@ -357,7 +357,7 @@ func TestNewDependencyOnPodmanCompose(t *testing.T) {
 	})
 
 	t.Run("reports an unavailable Compose provider", func(t *testing.T) {
-		dependency := health.NewDependencyOnPodmanCompose(func(context.Context) error { return errors.New("version failed") })
+		dependency := health.NewDependencyOnDockerComposeForPodman(func(context.Context) error { return errors.New("version failed") })
 
 		got := dependency.Check(t.Context())
 

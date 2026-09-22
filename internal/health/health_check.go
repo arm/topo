@@ -137,7 +137,7 @@ func newChecks(options HealthCheckOptions) Checks {
 		DockerCompose:    NewDependencyOnDockerCompose(localRunner),
 		PodmanCLI:        NewDependencyOnPodmanCLI(localRunner),
 		PodmanConnection: NewDependencyOnPodmanConnection(localRunner),
-		PodmanCompose:    NewDependencyOnPodmanCompose(probe.CheckPodmanComposeProvider),
+		PodmanCompose:    NewDependencyOnDockerComposeForPodman(probe.CheckPodmanComposeProvider),
 	}}
 	if options.Target == nil {
 		return checks

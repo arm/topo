@@ -358,7 +358,7 @@ func NewDependencyOnPodmanConnection(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnPodmanCompose(composeVersion func(context.Context) error) Dependency {
+func NewDependencyOnDockerComposeForPodman(composeVersion func(context.Context) error) Dependency {
 	return Dependency{
 		Label: "Podman Compose",
 		Check: func(ctx context.Context) DependencyCheckResult {
