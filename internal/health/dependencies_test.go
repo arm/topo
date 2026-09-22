@@ -9,44 +9,141 @@ import (
 	"github.com/arm/topo/internal/health"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
-	"github.com/arm/topo/internal/version"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewDependencyOnTopoCheck(t *testing.T) {
-	t.Run("passes for development builds", func(t *testing.T) {
-		originalVersion := version.Version
-		version.Version = version.Dev
-		t.Cleanup(func() { version.Version = originalVersion })
-
-		dependency := health.NewDependencyOnTopo(false)
-
-		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "topo"}, dependency.Check(context.Background()))
-	})
-}
-
 func TestNewConnectivityDependency(t *testing.T) {
-	t.Run("reports a missing target with its severity and fix", func(t *testing.T) {
-		severityWhenMissing := health.SeverityInfo
-		fixMessage := "Specify a target"
-		dependency := health.NewConnectivityDependency(nil, false, "target not specified", severityWhenMissing, fixMessage)
+	t.Run("uses injected known hosts entry for changed host keys", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate:    func(context.Context, ssh.Destination) error { return ssh.ErrHostKeyChanged },
+			KnownHostsEntry: func(ssh.Destination) (string, error) { return "[example.com]:2222", nil },
+		})
 
 		got := dependency.Check(context.Background())
 
 		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-			Severity: severityWhenMissing,
-			Message:  "target not specified",
-			Fix:      &health.Fix{Description: fixMessage},
+			Severity: health.SeverityError,
+			Message:  "host key has changed",
+			Fix: &health.Fix{
+				Description: "Remove the old SSH host key from known_hosts, then retry",
+				Command:     "ssh-keygen -R '[example.com]:2222'",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("omits the removal command when the known hosts entry cannot be resolved", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate:    func(context.Context, ssh.Destination) error { return ssh.ErrHostKeyChanged },
+			KnownHostsEntry: func(ssh.Destination) (string, error) { return "", errors.New("cannot load SSH config") },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "host key has changed",
+			Fix: &health.Fix{
+				Description: "Remove the old SSH host key from known_hosts, then retry",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns setup keys advice for authentication failures", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate: func(context.Context, ssh.Destination) error { return ssh.ErrAuthFailed },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "authentication failed",
+			Fix: &health.Fix{
+				Description: "Configure SSH keys on remote target",
+				Command:     "topo setup-keys --target ssh://user@example.com",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns setup keys advice for too many authentication failures", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate: func(context.Context, ssh.Destination) error { return ssh.ErrTooManyAuthFails },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "too many authentication failures",
+			Fix: &health.Fix{
+				Description: "Configure SSH keys on remote target",
+				Command:     "topo setup-keys --target ssh://user@example.com",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns host key trust advice for unknown host keys", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewConnectivityDependency(target, health.ConnectivityOperations{
+			Authenticate: func(context.Context, ssh.Destination) error { return ssh.ErrHostKeyUnknown },
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "host key is unknown",
+			Fix: &health.Fix{
+				Description: "Trust the target's SSH host key",
+				Command:     "topo health --target ssh://user@example.com --accept-new-host-keys",
+			},
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
+func TestNewDependencyOnRemoteDockerDaemon(t *testing.T) {
+	t.Run("reports a reachable daemon", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewDependencyOnRemoteDockerDaemon(target, func(context.Context, ssh.Destination) error {
+			return nil
+		})
+
+		got := dependency.Check(context.Background())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "reachable"}, got)
+	})
+
+	t.Run("reports a failed daemon probe", func(t *testing.T) {
+		target := ssh.NewDestination("user@example.com")
+		dependency := health.NewDependencyOnRemoteDockerDaemon(target, func(context.Context, ssh.Destination) error {
+			return errors.New("Boom!")
+		})
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "Boom!",
+			Fix:      &health.Fix{Description: "Ensure docker is installed and running on the target. See https://github.com/arm/topo#install-a-container-engine"},
 		}}
 		assert.Equal(t, want, got)
 	})
 }
 
 func TestNewDependencyOnSSHCheck(t *testing.T) {
-	buildRunner := func(result runner.FakeResult) runner.Runner {
+	buildRunner := func(sshVResult runner.FakeResult) runner.Runner {
 		return &runner.Fake{
 			Binaries: []string{"ssh"},
-			Commands: map[string]runner.FakeResult{"ssh -V": result},
+			Commands: map[string]runner.FakeResult{"ssh -V": sshVResult},
 		}
 	}
 
@@ -117,83 +214,86 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 }
 
 func TestRemoteprocDependency(t *testing.T) {
-	t.Run("Check", func(t *testing.T) {
-		buildRunnerWithRemoteProcs := func(names []string) runner.Runner {
-			return &runner.Fake{Commands: map[string]runner.FakeResult{
-				"cat /sys/class/remoteproc/*/name": {Output: strings.Join(names, "\n")},
-			}}
+	buildRunnerWithRemoteProcs := func(names []string) runner.Runner {
+		return &runner.Fake{Commands: map[string]runner.FakeResult{
+			"cat /sys/class/remoteproc/*/name": {Output: strings.Join(names, "\n")},
+		}}
+	}
+
+	t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
+		r := buildRunnerWithRemoteProcs(nil)
+		dependency := health.NewDependencyOnRemoteproc(r)
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{
+			Failure: &health.DependencyCheckFailure{
+				Severity: health.SeverityInfo,
+				Message:  "no remoteproc devices found",
+			},
 		}
+		assert.Equal(t, want, got)
+	})
 
-		t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
-			r := buildRunnerWithRemoteProcs(nil)
-			d := health.NewDependencyOnRemoteproc(r)
+	t.Run("fails when remoteproc probe fails", func(t *testing.T) {
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
+		}}
+		dependency := health.NewDependencyOnRemoteproc(r)
 
-			got := d.Check(context.Background())
+		got := dependency.Check(context.Background())
 
-			want := health.DependencyCheckResult{
-				Failure: &health.DependencyCheckFailure{
-					Severity: health.SeverityInfo,
-					Message:  "no remoteproc devices found",
-				},
-			}
-			assert.Equal(t, want, got)
-		})
+		want := health.DependencyCheckResult{
+			Failure: &health.DependencyCheckFailure{
+				Severity: health.SeverityError,
+				Message:  "timed out",
+			},
+		}
+		assert.Equal(t, want, got)
+	})
 
-		t.Run("fails when remoteproc probe fails", func(t *testing.T) {
-			r := &runner.Fake{Commands: map[string]runner.FakeResult{
-				"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
-			}}
-			d := health.NewDependencyOnRemoteproc(r)
+	t.Run("reports remoteproc device names", func(t *testing.T) {
+		r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
+		dependency := health.NewDependencyOnRemoteproc(r)
 
-			got := d.Check(context.Background())
+		got := dependency.Check(context.Background())
 
-			want := health.DependencyCheckResult{
-				Failure: &health.DependencyCheckFailure{
-					Severity: health.SeverityError,
-					Message:  "timed out",
-				},
-			}
-			assert.Equal(t, want, got)
-		})
-
-		t.Run("reports remoteproc device names", func(t *testing.T) {
-			r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
-			d := health.NewDependencyOnRemoteproc(r)
-
-			got := d.Check(context.Background())
-
-			assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
-		})
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "m4_0, m4_1"}, got)
 	})
 }
 
 func TestRemoteprocRuntimeDependency(t *testing.T) {
-	t.Run("Check", func(t *testing.T) {
-		t.Run("includes an install fix with the target", func(t *testing.T) {
-			dep := health.NewDependencyOnRemoteprocRuntime(ssh.NewDestination("user@my-target"), &runner.Fake{})
+	t.Run("includes an install fix with the target", func(t *testing.T) {
+		target := ssh.NewDestination("user@my-target")
+		dependency := health.NewDependencyOnRemoteprocRuntime(target, &runner.Fake{})
 
-			result := dep.Check(context.Background())
+		result := dependency.Check(context.Background())
 
-			assert.Equal(t, &health.DependencyCheckFailure{
-				Severity: health.SeverityWarning,
-				Message:  `"remoteproc-runtime" not found in $PATH`,
-				Fix: &health.Fix{
-					Description: "Install the Remoteproc Runtime",
-					Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
-				},
-			}, result.Failure)
-		})
+		assert.Equal(t, &health.DependencyCheckFailure{
+			Severity: health.SeverityWarning,
+			Message:  `"remoteproc-runtime" not found in $PATH`,
+			Fix: &health.Fix{
+				Description: "Install the Remoteproc Runtime",
+				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+			},
+		}, result.Failure)
 	})
 }
 
-func passingCheck(_ context.Context) health.DependencyCheckResult {
-	return health.DependencyCheckResult{SuccessValue: "passed"}
-}
+func TestRemoteprocRuntimeShimDependency(t *testing.T) {
+	t.Run("includes an install fix with the target", func(t *testing.T) {
+		target := ssh.NewDestination("user@my-target")
+		dependency := health.NewDependencyOnRemoteprocRuntimeShim(target, &runner.Fake{})
 
-func failingCheck(_ context.Context) health.DependencyCheckResult {
-	return health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
-		Severity: health.SeverityError,
-		Message:  "very broken",
-		Fix:      &health.Fix{Description: "fix me please", Command: "echo fixed"},
-	}}
+		got := dependency.Check(context.Background())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityWarning,
+			Message:  `"containerd-shim-remoteproc-v1" not found in $PATH`,
+			Fix: &health.Fix{
+				Description: "Install the Remoteproc Runtime",
+				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
+			},
+		}}, got)
+	})
 }

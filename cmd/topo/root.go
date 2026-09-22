@@ -64,25 +64,28 @@ func addComposeFileFlag(cmd *cobra.Command) {
 	)
 }
 
-func getComposeFileName(cmd *cobra.Command) (string, error) {
+func resolveComposeFilePath(cmd *cobra.Command) (string, error) {
 	flag := cmd.Flag(composeFileFlag)
 	if flag == nil {
 		panic(fmt.Sprintf("internal error: compose file flag not registered: %s", composeFileFlag))
 	}
 
 	if flag.Changed {
-		composeFile := strings.TrimSpace(flag.Value.String())
-		if composeFile == "" {
+		composeFileArg := strings.TrimSpace(flag.Value.String())
+		if composeFileArg == "" {
 			return "", fmt.Errorf("compose file path must not be empty")
 		}
-		return compose.RequireFile(composeFile)
+		composeFilePath, err := filepath.Abs(composeFileArg)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve compose file path: %w", err)
+		}
+		return compose.RequireFile(composeFilePath)
 	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("failed to get current working directory: %w", err)
 	}
-
 	return compose.FindDefaultFile(cwd)
 }
 

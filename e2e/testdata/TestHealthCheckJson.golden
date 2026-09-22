@@ -12,9 +12,14 @@
         "value": "ssh"
       },
       {
-        "name": "Container Engine",
+        "name": "Docker CLI",
         "status": "ok",
         "value": "docker"
+      },
+      {
+        "name": "Docker daemon",
+        "status": "ok",
+        "value": "reachable"
       },
       {
         "name": "Docker Compose",
@@ -31,9 +36,9 @@
     },
     "dependencies": [
       {
-        "name": "Container Engine",
+        "name": "Docker daemon",
         "status": "ok",
-        "value": "docker"
+        "value": "reachable"
       },
       {
         "name": "Hardware Info",

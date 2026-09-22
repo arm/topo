@@ -5,18 +5,26 @@ import "context"
 type CheckStatus string
 
 const (
-	CheckStatusOK      CheckStatus = "ok"
-	CheckStatusWarning CheckStatus = "warning"
-	CheckStatusError   CheckStatus = "error"
-	CheckStatusInfo    CheckStatus = "info"
+	CheckStatusOK           CheckStatus = "ok"
+	CheckStatusWarning      CheckStatus = "warning"
+	CheckStatusError        CheckStatus = "error"
+	CheckStatusInfo         CheckStatus = "info"
+	CheckStatusUndetermined CheckStatus = "undetermined"
 )
 
 type DependencyReport struct {
-	ID     DependencyID
-	Name   string
-	Status CheckStatus
-	Value  string
-	Fix    *Fix
+	Scope     DependencyScope
+	ID        DependencyID
+	Name      string
+	Status    CheckStatus
+	Value     string
+	Fix       *Fix
+	BlockedBy []DependencyBlocker
+}
+
+type DependencyBlocker struct {
+	Scope DependencyScope
+	Name  string
 }
 
 type TargetDetails struct {
@@ -25,12 +33,18 @@ type TargetDetails struct {
 }
 
 type ReadinessReport struct {
-	Host   []DependencyReport
-	Target []DependencyReport
+	Host         []DependencyReport
+	Target       []DependencyReport
+	TargetStatus *TargetStatus
+}
+
+type TargetStatus struct {
+	Status CheckStatus
+	Fix    *Fix
 }
 
 type HealthReport struct {
-	TargetDetails    TargetDetails
+	TargetDetails    *TargetDetails
 	Deployment       ReadinessReport
 	ProjectDiscovery ReadinessReport
 }
@@ -38,42 +52,92 @@ type HealthReport struct {
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 	healthCheck := NewHealthCheck(options)
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
+	return evaluatedHealthCheck.Report(targetDetails(options), options.MissingTargetFixMessage)
+}
+
+func (h EvaluatedHealthCheck) Report(target *TargetDetails, missingTargetFixMessage string) HealthReport {
+	deployment := toReadinessReport(h.Deployment)
+	discovery := toReadinessReport(h.ProjectDiscovery)
+	if target == nil {
+		deployment.TargetStatus = missingTargetStatus(CheckStatusError, missingTargetFixMessage)
+		discovery.TargetStatus = missingTargetStatus(CheckStatusWarning, missingTargetFixMessage)
+	}
 	return HealthReport{
-		TargetDetails:    targetDetails(options),
-		Deployment:       toReadinessReport(evaluatedHealthCheck.Deployment),
-		ProjectDiscovery: toReadinessReport(evaluatedHealthCheck.ProjectDiscovery),
+		TargetDetails:    target,
+		Deployment:       deployment,
+		ProjectDiscovery: discovery,
 	}
 }
 
-func targetDetails(options HealthCheckOptions) TargetDetails {
-	if options.Target == nil {
-		return TargetDetails{}
+func missingTargetStatus(status CheckStatus, fixMessage string) *TargetStatus {
+	targetStatus := &TargetStatus{Status: status}
+	if fixMessage != "" {
+		targetStatus.Fix = &Fix{Description: fixMessage}
 	}
-	return TargetDetails{
+	return targetStatus
+}
+
+func targetDetails(options HealthCheckOptions) *TargetDetails {
+	if options.Target == nil {
+		return nil
+	}
+	return &TargetDetails{
 		Destination: options.Target.String(),
 		IsLocalhost: options.Target.IsPlainLocalhost(),
 	}
 }
 
-func toReadinessReport(evaluatedHealthCheck EvaluatedReadinessCheck) ReadinessReport {
-	return ReadinessReport{
-		Host:   toDependencyReports(evaluatedHealthCheck.Host),
-		Target: toDependencyReports(evaluatedHealthCheck.Target),
+func toReadinessReport(evaluatedReadinessCheck EvaluatedReadinessCheck) ReadinessReport {
+	report := ReadinessReport{}
+	for _, dependency := range toDependencyReports(evaluatedReadinessCheck.Dependencies) {
+		switch dependency.Scope {
+		case DependencyScopeHost:
+			report.Host = append(report.Host, dependency)
+		case DependencyScopeTarget:
+			report.Target = append(report.Target, dependency)
+		default:
+			panic("health dependency has an unknown scope")
+		}
 	}
+	return report
 }
 
-func ToDependencyReport(status EvaluatedDependency) DependencyReport {
-	report := DependencyReport{ID: status.ID, Name: status.Label}
-	if status.Result.Failure == nil {
+func ToDependencyReport(dependency EvaluatedDependency) DependencyReport {
+	report := DependencyReport{Scope: dependency.Scope, ID: dependency.ID, Name: dependency.Label}
+	switch dependency.Evaluation.State {
+	case EvaluationBlocked:
+		report.Status = CheckStatusUndetermined
+		report.BlockedBy = dependencyBlockers(dependency.Evaluation.BlockedBy)
+		return report
+	case EvaluationOmitted:
+		panic("cannot report an omitted health dependency")
+	case EvaluationExecuted:
+	default:
+		panic("unknown health dependency evaluation state")
+	}
+
+	result := dependency.Evaluation.Result
+	if result.Failure == nil {
 		report.Status = CheckStatusOK
-		report.Value = status.Result.SuccessValue
+		report.Value = result.SuccessValue
 		return report
 	}
 
-	report.Status = checkStatusFromSeverity(status.Result.Failure.Severity)
-	report.Value = status.Result.Failure.Message
-	report.Fix = status.Result.Failure.Fix
+	report.Status = checkStatusFromSeverity(result.Failure.Severity)
+	report.Value = result.Failure.Message
+	report.Fix = result.Failure.Fix
 	return report
+}
+
+func dependencyBlockers(blockers []*DependencyNode) []DependencyBlocker {
+	references := make([]DependencyBlocker, len(blockers))
+	for i, blocker := range blockers {
+		references[i] = DependencyBlocker{
+			Scope: blocker.Scope(),
+			Name:  blocker.Dependency().Label,
+		}
+	}
+	return references
 }
 
 func checkStatusFromSeverity(severity CheckSeverity) CheckStatus {

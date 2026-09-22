@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/podman"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
@@ -53,27 +54,32 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		composeFile, err := getComposeFileName(cmd)
+		composeFilePath, err := resolveComposeFilePath(cmd)
 		if err != nil {
 			return err
 		}
-		envFiles, err := getEnvFiles(cmd, composeFile)
+		envFiles, err := getEnvFiles(cmd, composeFilePath)
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFile, targetArg, envFiles)
+		scope, err := project.BuildScope(composeFilePath, targetArg, envFiles)
 		if err != nil {
 			return err
 		}
 
+		composeFileFlagValue := cmd.Flag(composeFileFlag)
+		defaultSuccessMessage := buildDefaultSuccessMessage(
+			strings.TrimSpace(composeFileFlagValue.Value.String()),
+			composeFileFlagValue.Changed,
+		)
 		if selectedEngine == containerEnginePodman {
-			return deployWithPodman(cmd, scope, targetArg)
+			return deployWithPodman(cmd, scope, targetArg, defaultSuccessMessage)
 		}
-		return deployWithDocker(cmd, scope, targetArg)
+		return deployWithDocker(cmd, scope, targetArg, defaultSuccessMessage)
 	},
 }
 
-func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg string) error {
+func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg, defaultSuccessMessage string) error {
 	if cmd.Flags().Changed("registry-port") && noRegistry {
 		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 	}
@@ -91,7 +97,7 @@ func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg string)
 	}
 
 	targetHost := ssh.NewDestination(targetArg)
-	options := podman.DeployOptions{TargetHost: targetHost}
+	options := podman.DeployOptions{TargetHost: targetHost, DefaultSuccessMessage: defaultSuccessMessage}
 	if !noRegistry {
 		options.Registry = &podman.RegistryConfig{
 			Port:                resolvedPort,
@@ -110,7 +116,7 @@ func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg string)
 	})
 }
 
-func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg string) error {
+func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg, defaultSuccessMessage string) error {
 	if cmd.Flags().Changed("registry-port") && noRegistry {
 		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 	}
@@ -127,7 +133,7 @@ func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg string)
 		return err
 	}
 
-	deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination(targetArg)}
+	deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination(targetArg), DefaultSuccessMessage: defaultSuccessMessage}
 	if !noRegistry {
 		deployOpts.Registry = &docker.RegistryConfig{
 			Port:                resolvedPort,
@@ -144,6 +150,14 @@ func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg string)
 	return executeDeployment(cmd, func(ctx context.Context) error {
 		return docker.Deploy(ctx, os.Stdout, scope, deployOpts)
 	})
+}
+
+func buildDefaultSuccessMessage(composeFilePath string, explicitComposeFile bool) string {
+	psCommand := "topo ps"
+	if explicitComposeFile {
+		psCommand += " -f " + cmdtext.QuoteArg(composeFilePath)
+	}
+	return fmt.Sprintf("Run `%s` to see deployed containers", psCommand)
 }
 
 func ensureProjectIsReady(scope project.Scope) error {

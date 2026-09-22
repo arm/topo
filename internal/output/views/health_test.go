@@ -15,7 +15,7 @@ func TestHealthReport(t *testing.T) {
 	t.Run("AsPlain", func(t *testing.T) {
 		t.Run("renders deployment and project management sections", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				TargetDetails: health.TargetDetails{},
+				TargetDetails: &health.TargetDetails{},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{
 						{Name: "Computer", Status: health.CheckStatusWarning},
@@ -55,17 +55,49 @@ func TestHealthReport(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, want, out.String())
 		})
+
+		t.Run("formats blocker references", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Target: []health.DependencyReport{{
+				Scope:  health.DependencyScopeTarget,
+				Name:   "Docker daemon",
+				Status: health.CheckStatusUndetermined,
+				BlockedBy: []health.DependencyBlocker{{
+					Scope: health.DependencyScopeHost,
+					Name:  "Docker CLI",
+				}},
+			}}}}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "Deployment: undetermined (? 1)")
+			assert.Contains(t, out.String(), " ? Docker daemon (not checked: requires host's Docker CLI)")
+		})
+
+		t.Run("gives errors precedence over undetermined checks", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Host: []health.DependencyReport{
+				{Scope: health.DependencyScopeHost, Name: "Docker CLI", Status: health.CheckStatusError},
+			}, Target: []health.DependencyReport{
+				{Scope: health.DependencyScopeTarget, Name: "Docker daemon", Status: health.CheckStatusUndetermined},
+			}}}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), "Deployment: not ready (✗ 1 ? 1)")
+		})
 	})
 
 	t.Run("AsPlain", func(t *testing.T) {
 		t.Run("renders a warning-only report as ready", func(t *testing.T) {
 			toPrint := views.HealthReport{
 				ProjectDiscovery: health.ReadinessReport{
-					Target: []health.DependencyReport{{
-						Name:   "Connectivity",
+					TargetStatus: &health.TargetStatus{
 						Status: health.CheckStatusWarning,
-						Value:  "target not specified; cannot calculate project compatibility",
-					}},
+						Fix:    &health.Fix{Description: "provide --target"},
+					},
 				},
 			}
 			var out bytes.Buffer
@@ -74,13 +106,14 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Project management: ready (! 1)")
+			assert.Contains(t, out.String(), "! Target\n   Fix:\n     provide --target")
 		})
 	})
 
 	t.Run("AsJSON", func(t *testing.T) {
 		t.Run("preserves the legacy combined target dependencies", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				TargetDetails: health.TargetDetails{Destination: "ssh://user@my-target"},
+				TargetDetails: &health.TargetDetails{Destination: "ssh://user@my-target"},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{{Name: "Topo", Status: health.CheckStatusOK}},
 					Target: []health.DependencyReport{
@@ -112,6 +145,32 @@ func TestHealthReport(t *testing.T) {
 					],
 					"processingDomainDriver":{"name":"Processing Domain Driver (remoteproc)","status":"","value":""}
 				}
+			}`, out.String())
+		})
+	})
+
+	t.Run("AsJSON", func(t *testing.T) {
+		t.Run("formats blocker references in the value", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Host: []health.DependencyReport{{
+				Scope:  health.DependencyScopeHost,
+				Name:   "Docker daemon",
+				Status: health.CheckStatusUndetermined,
+				BlockedBy: []health.DependencyBlocker{{
+					Scope: health.DependencyScopeHost,
+					Name:  "Docker CLI",
+				}},
+			}}}}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.JSON)
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"host":{"dependencies":[{
+					"name":"Docker daemon",
+					"status":"undetermined",
+					"value":"not checked: requires host's Docker CLI"
+				}]}
 			}`, out.String())
 		})
 	})

@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
@@ -121,9 +119,9 @@ func NewDependencyOnTopo(skipVersionChecks bool) Dependency {
 	}
 }
 
-func NewDependencyOnDocker(r runner.Runner) Dependency {
+func NewDependencyOnDockerCLI(r runner.Runner) Dependency {
 	return Dependency{
-		Label: "Container Engine",
+		Label: "Docker CLI",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			if err := r.BinaryExists(ctx, "docker"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
@@ -132,33 +130,39 @@ func NewDependencyOnDocker(r runner.Runner) Dependency {
 					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
 				}}
 			}
-			if _, _, err := r.Run(ctx, "docker info"); err != nil {
-				return DependencyCheckResult{Failure: &DependencyCheckFailure{
-					Severity: SeverityError,
-					Message:  err.Error(),
-					Fix:      &Fix{Description: "Ensure current user can run docker commands. See " + containerEngineInstallURL},
-				}}
-			}
 			return DependencyCheckResult{SuccessValue: "docker"}
 		},
 	}
 }
 
-func NewDependencyOnRemoteDocker(dest ssh.Destination) Dependency {
+func NewDependencyOnDockerDaemon(r runner.Runner) Dependency {
 	return Dependency{
-		Label: "Container Engine",
+		Label: "Docker daemon",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			host := docker.NewHostFromDestination(dest)
-			if err := docker.RunCommand(ctx, io.Discard, host, "info"); err != nil {
-				return DependencyCheckResult{
-					Failure: &DependencyCheckFailure{
-						Severity: SeverityError,
-						Message:  err.Error(),
-						Fix:      &Fix{Description: "Ensure docker is installed and running on the target. See " + containerEngineInstallURL},
-					},
-				}
+			if _, _, err := r.Run(ctx, "docker info"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+					Fix:      &Fix{Description: "Ensure Docker is running and the current user can run docker commands. See " + containerEngineInstallURL},
+				}}
 			}
-			return DependencyCheckResult{SuccessValue: "docker"}
+			return DependencyCheckResult{SuccessValue: "reachable"}
+		},
+	}
+}
+
+func NewDependencyOnRemoteDockerDaemon(target ssh.Destination, probeInfo func(context.Context, ssh.Destination) error) Dependency {
+	return Dependency{
+		Label: "Docker daemon",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := probeInfo(ctx, target); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+					Fix:      &Fix{Description: "Ensure docker is installed and running on the target. See " + containerEngineInstallURL},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "reachable"}
 		},
 	}
 }
@@ -196,21 +200,17 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
-func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, missingTargetMessage string, missingTargetSeverity CheckSeverity, missingTargetFixMessage string) Dependency {
+type ConnectivityOperations struct {
+	Authenticate    func(context.Context, ssh.Destination) error
+	KnownHostsEntry func(ssh.Destination) (string, error)
+}
+
+func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOperations) Dependency {
 	return Dependency{
 		ID:    DependencyIDConnectivity,
 		Label: "Connectivity",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if target == nil {
-				failure := &DependencyCheckFailure{Severity: missingTargetSeverity, Message: missingTargetMessage}
-				if missingTargetFixMessage != "" {
-					failure.Fix = &Fix{Description: missingTargetFixMessage}
-				}
-				return DependencyCheckResult{Failure: failure}
-			}
-
-			sshRunner := runner.NewSSH(*target)
-			err := probe.SSHAuthentication(ctx, sshRunner, acceptNewHostKeys)
+			err := operations.Authenticate(ctx, target)
 			if err == nil {
 				return DependencyCheckResult{SuccessValue: target.String()}
 			}
@@ -220,18 +220,18 @@ func NewConnectivityDependency(target *ssh.Destination, acceptNewHostKeys bool, 
 			case errors.Is(err, ssh.ErrAuthFailed), errors.Is(err, ssh.ErrTooManyAuthFails):
 				failure.Fix = &Fix{
 					Description: "Configure SSH keys on remote target",
-					Command:     fmt.Sprintf("topo setup-keys --target %s", *target),
+					Command:     fmt.Sprintf("topo setup-keys --target %s", target),
 				}
 			case errors.Is(err, ssh.ErrHostKeyUnknown):
 				failure.Fix = &Fix{
 					Description: "Trust the target's SSH host key",
-					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", *target),
+					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", target),
 				}
 			case errors.Is(err, ssh.ErrHostKeyChanged):
-				sshConfig, configErr := ssh.LoadConfig(*target)
+				knownHostsEntry, configErr := operations.KnownHostsEntry(target)
 				fixCommand := ""
 				if configErr == nil {
-					fixCommand = fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(sshConfig.AsKnownHostsEntry()))
+					fixCommand = fmt.Sprintf("ssh-keygen -R %s", command.QuoteArg(knownHostsEntry))
 				}
 				failure.Fix = &Fix{
 					Description: "Remove the old SSH host key from known_hosts, then retry",
