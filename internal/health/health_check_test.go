@@ -291,7 +291,6 @@ func TestAssembleHealthCheck(t *testing.T) {
 		assertEvaluatedDependencies(t, wantHost, hostDependencies(got.Deployment.Dependencies))
 		assertEvaluatedDependencies(t, wantTarget, targetDependencies(got.Deployment.Dependencies))
 	})
-
 }
 
 func TestReadinessCheck(t *testing.T) {
