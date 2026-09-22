@@ -35,8 +35,28 @@ func ComposeCommand(ctx context.Context, socket Socket, scope project.Scope, arg
 		composeArgs = append(composeArgs, "--env-file", envFile)
 	}
 	composeArgs = append(composeArgs, args...)
-	cmd := exec.CommandContext(ctx, "podman", composeArgs...)
-	cmd.Env = append(os.Environ(), scope.Env...)
+	return composeCommand(ctx, socket, scope.Env, composeArgs...)
+}
+
+// ComposeRawCommand creates a project-independent Compose command without endpoint configuration.
+func ComposeRawCommand(ctx context.Context, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "podman", append([]string{"compose"}, args...)...)
+	cmd.Env = append(os.Environ(),
+		"PODMAN_COMPOSE_PROVIDER="+composeProvider,
+		"PODMAN_COMPOSE_WARNING_LOGS=false",
+	)
+	return cmd
+}
+
+// ComposeSocketRawCommand creates a project-independent Compose command using
+// the same provider and endpoint configuration as deployment.
+func ComposeSocketRawCommand(ctx context.Context, socket Socket, args ...string) (*exec.Cmd, error) {
+	return composeCommand(ctx, socket, nil, append([]string{"compose"}, args...)...)
+}
+
+func composeCommand(ctx context.Context, socket Socket, environment []string, args ...string) (*exec.Cmd, error) {
+	cmd := exec.CommandContext(ctx, "podman", args...)
+	cmd.Env = append(os.Environ(), environment...)
 	cmd.Env = append(cmd.Env,
 		"PODMAN_COMPOSE_PROVIDER="+composeProvider,
 		"PODMAN_COMPOSE_WARNING_LOGS=false",

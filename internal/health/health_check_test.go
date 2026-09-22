@@ -62,11 +62,13 @@ func TestAssembleHealthCheck(t *testing.T) {
 			Host: health.HostChecks{
 				Topo: passing("Topo"), SSH: passing("OpenSSH"), DockerCLI: passing("Docker CLI"),
 				Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
+				PodmanCLI: passing("Podman CLI"), PodmanConnection: passing("Podman connection"), PodmanCompose: passing("Podman Compose"),
 			},
 			Target: health.TargetChecks{
 				Connectivity: passing("Target access"), Docker: passing("Target Docker"),
 				Hardware: passing("Hardware Info"), Remoteproc: passing("Remoteproc"), RemoteprocRuntime: passing("Remoteproc Runtime"),
-				RemoteprocRuntimeShim: passing("Remoteproc Shim"),
+				RemoteprocRuntimeShim: passing("Remoteproc Shim"), PodmanCLI: passing("Target Podman CLI"),
+				SSHForwardToPodmanAPI: passing("SSH forward to Podman API"), RemotePodmanAPI: passing("Podman API"),
 			},
 		}
 	}
@@ -74,7 +76,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 	t.Run("does not register target checks when target is not specified", func(t *testing.T) {
 		checks := newPassingChecks()
-		healthCheck := health.AssembleHealthCheck(nil, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, nil, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -90,7 +92,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			targetDockerChecks++
 			return passingCheck(context.Background())
 		}
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &target, checks)
 
 		healthCheck.Evaluate(context.Background())
 
@@ -110,7 +112,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			targetDockerChecks++
 			return passingCheck(context.Background())
 		}
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &target, checks)
 
 		healthCheck.Evaluate(context.Background())
 
@@ -120,7 +122,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 
 	t.Run("reports dependencies in display order", func(t *testing.T) {
 		checks := newPassingChecks()
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -154,7 +156,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("does not report connectivity nor docker engine for a plain localhost target", func(t *testing.T) {
 		checks := newPassingChecks()
 		localhost := ssh.NewDestination("localhost")
-		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &localhost, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -173,7 +175,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("reports host capabilities without SSH or target Docker for a plain localhost target", func(t *testing.T) {
 		checks := newPassingChecks()
 		localhost := ssh.NewDestination("localhost")
-		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &localhost, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -197,7 +199,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 		checks := newPassingChecks()
 		localhost := ssh.NewDestination("localhost")
 		checks.Host.Docker.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(&localhost, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &localhost, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -213,7 +215,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("shares connectivity and suppresses its dependent target checks", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Connectivity.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -233,7 +235,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("suppresses runtime checks when remoteproc fails", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Remoteproc.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -248,7 +250,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 	t.Run("keeps hardware discovery independent from container engine readiness", func(t *testing.T) {
 		checks := newPassingChecks()
 		checks.Target.Docker.Check = failingCheck
-		healthCheck := health.AssembleHealthCheck(&target, checks)
+		healthCheck := health.AssembleHealthCheck(health.EngineDocker, &target, checks)
 
 		got := healthCheck.Evaluate(context.Background())
 
@@ -266,6 +268,30 @@ func TestAssembleHealthCheck(t *testing.T) {
 		assertEvaluatedDependencies(t, wantDeploymentDependencies, targetDependencies(got.Deployment.Dependencies))
 		assertEvaluatedDependencies(t, wantDiscoveryDependencies, targetDependencies(got.ProjectDiscovery.Dependencies))
 	})
+
+	t.Run("assembles Podman checks for a remote target", func(t *testing.T) {
+		checks := newPassingChecks()
+		healthCheck := health.AssembleHealthCheck(health.EnginePodman, &target, checks)
+
+		got := healthCheck.Evaluate(context.Background())
+
+		wantHost := []evaluatedDependencyExpectation{
+			{Dependency: checks.Host.Topo, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.SSH, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.PodmanCLI, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.PodmanConnection, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.PodmanCompose, State: health.EvaluationExecuted},
+		}
+		wantTarget := []evaluatedDependencyExpectation{
+			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.PodmanCLI, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.SSHForwardToPodmanAPI, State: health.EvaluationExecuted},
+			{Dependency: checks.Target.RemotePodmanAPI, State: health.EvaluationExecuted},
+		}
+		assertEvaluatedDependencies(t, wantHost, hostDependencies(got.Deployment.Dependencies))
+		assertEvaluatedDependencies(t, wantTarget, targetDependencies(got.Deployment.Dependencies))
+	})
+
 }
 
 func TestReadinessCheck(t *testing.T) {

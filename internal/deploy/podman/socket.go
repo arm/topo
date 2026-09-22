@@ -123,6 +123,10 @@ func TunnelRemoteSocketPath(ctx context.Context, w io.Writer, target ssh.Destina
 	if err != nil {
 		return nil, err
 	}
+	return OpenRemoteSocketTunnel(ctx, w, target, remoteSocketPath)
+}
+
+func OpenRemoteSocketTunnel(ctx context.Context, w io.Writer, target ssh.Destination, remoteSocketPath string) (*ssh.TCPToUnixSocketTunnel, error) {
 	logger.Info(fmt.Sprintf("discovered remote Podman socket path: %s", remoteSocketPath))
 	tunnel, err := ssh.OpenTCPToUnixSocketTunnel(ctx, w, target, remoteSocketPath)
 	if err != nil {

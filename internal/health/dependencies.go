@@ -325,3 +325,92 @@ func NewDependencyOnLscpu(r runner.Runner) Dependency {
 		},
 	}
 }
+
+func NewDependencyOnPodmanCLI(r runner.Runner) Dependency {
+	return Dependency{
+		Label: "Podman CLI",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := r.BinaryExists(ctx, "podman"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+					Fix:      &Fix{Description: "Install Podman. See " + containerEngineInstallURL},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "podman"}
+		},
+	}
+}
+
+func NewDependencyOnPodmanConnection(r runner.Runner) Dependency {
+	return Dependency{
+		Label: "Podman connection",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if _, _, err := r.Run(ctx, "podman info"); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+					Fix:      &Fix{Description: "Start a Podman machine or configure an active Podman system connection, then ensure the current user can run Podman commands. See " + containerEngineInstallURL},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "reachable"}
+		},
+	}
+}
+
+func NewDependencyOnPodmanCompose(composeVersion func(context.Context) error) Dependency {
+	return Dependency{
+		Label: "Podman Compose",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			if err := composeVersion(ctx); err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+					Fix:      &Fix{Description: "Ensure the docker-compose provider is available. See " + containerEngineInstallURL},
+				}}
+			}
+			return DependencyCheckResult{SuccessValue: "docker-compose"}
+		},
+	}
+}
+
+func NewDependencyOnSSHForwardToPodmanAPI(check func(context.Context) probe.RemotePodmanProbeResult) Dependency {
+	return Dependency{
+		Label: "SSH forward to Podman API",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			result := check(ctx)
+			if result.Err == nil {
+				return DependencyCheckResult{SuccessValue: "reachable"}
+			}
+			return podmanProbeFailure(result, "")
+		},
+	}
+}
+
+func NewDependencyOnRemotePodmanAPI(check func(context.Context) probe.RemotePodmanProbeResult) Dependency {
+	return Dependency{
+		Label: "Podman API",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			result := check(ctx)
+			if result.Err == nil {
+				return DependencyCheckResult{SuccessValue: result.SocketPath}
+			}
+			return podmanProbeFailure(result, result.SocketPath)
+		},
+	}
+}
+
+func podmanProbeFailure(result probe.RemotePodmanProbeResult, socketPath string) DependencyCheckResult {
+	failure := &DependencyCheckFailure{Severity: SeverityError, Message: result.Err.Error()}
+	switch result.Failure {
+	case probe.RemotePodmanSocketResolutionFailed:
+		failure.Fix = &Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL}
+	case probe.RemotePodmanForwardingFailed:
+		failure.Fix = &Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."}
+	case probe.RemotePodmanAPIRequestFailed:
+		failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the Podman API socket at %s is functional and accessible to the SSH user.", socketPath)}
+	case probe.RemotePodmanCleanupFailed:
+		failure.Message = fmt.Errorf("failed to close remote Podman socket tunnel: %w", result.Err).Error()
+	}
+	return DependencyCheckResult{Failure: failure}
+}

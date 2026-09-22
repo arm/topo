@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
@@ -294,6 +295,183 @@ func TestRemoteprocRuntimeShimDependency(t *testing.T) {
 				Description: "Install the Remoteproc Runtime",
 				Command:     "topo install remoteproc-runtime --target ssh://user@my-target",
 			},
+		}}, got)
+	})
+}
+
+const podmanInstallURL = "https://github.com/arm/topo#install-a-container-engine"
+
+func TestNewDependencyOnPodmanCLI(t *testing.T) {
+	t.Run("reports an available Podman binary", func(t *testing.T) {
+		dependency := health.NewDependencyOnPodmanCLI(&runner.Fake{Binaries: []string{"podman"}})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "podman"}, got)
+	})
+
+	t.Run("reports a missing Podman binary", func(t *testing.T) {
+		dependency := health.NewDependencyOnPodmanCLI(&runner.Fake{})
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  `"podman" not found in $PATH`,
+			Fix:      &health.Fix{Description: "Install Podman. See " + podmanInstallURL},
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
+func TestNewDependencyOnPodmanConnection(t *testing.T) {
+	t.Run("reports a reachable Podman connection", func(t *testing.T) {
+		dependency := health.NewDependencyOnPodmanConnection(&runner.Fake{Commands: map[string]runner.FakeResult{"podman info": {}}})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "reachable"}, got)
+	})
+
+	t.Run("reports an unavailable Podman connection", func(t *testing.T) {
+		dependency := health.NewDependencyOnPodmanConnection(&runner.Fake{Commands: map[string]runner.FakeResult{"podman info": {Err: errors.New("permission denied")}}})
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "permission denied",
+			Fix:      &health.Fix{Description: "Start a Podman machine or configure an active Podman system connection, then ensure the current user can run Podman commands. See " + podmanInstallURL},
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
+func TestNewDependencyOnPodmanCompose(t *testing.T) {
+	t.Run("reports an available Compose provider", func(t *testing.T) {
+		dependency := health.NewDependencyOnPodmanCompose(func(context.Context) error { return nil })
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
+	})
+
+	t.Run("reports an unavailable Compose provider", func(t *testing.T) {
+		dependency := health.NewDependencyOnPodmanCompose(func(context.Context) error { return errors.New("version failed") })
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "version failed",
+			Fix:      &health.Fix{Description: "Ensure the docker-compose provider is available. See " + podmanInstallURL},
+		}}, got)
+	})
+}
+
+func TestNewDependencyOnSSHForwardToPodmanAPI(t *testing.T) {
+	t.Run("reports a successful probe", func(t *testing.T) {
+		dependency := health.NewDependencyOnSSHForwardToPodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{}
+		})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "reachable"}, got)
+	})
+
+	t.Run("reports a forwarding failure", func(t *testing.T) {
+		dependency := health.NewDependencyOnSSHForwardToPodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanForwardingFailed, Err: errors.New("forwarding denied")}
+		})
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "forwarding denied",
+			Fix:      &health.Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("reports a cleanup failure without a fix", func(t *testing.T) {
+		dependency := health.NewDependencyOnSSHForwardToPodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanCleanupFailed, Err: errors.New("close failed")}
+		})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "failed to close remote Podman socket tunnel: close failed",
+		}}, got)
+	})
+}
+
+func TestNewDependencyOnRemotePodmanAPI(t *testing.T) {
+	t.Run("reports a successful probe", func(t *testing.T) {
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{SocketPath: "/run/podman.sock"}
+		})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "/run/podman.sock"}, got)
+	})
+
+	t.Run("reports a socket resolution failure", func(t *testing.T) {
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanSocketResolutionFailed, Err: errors.New("no remote socket")}
+		})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "no remote socket",
+			Fix:      &health.Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + podmanInstallURL},
+		}}, got)
+	})
+
+	t.Run("reports a forwarding failure", func(t *testing.T) {
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanForwardingFailed, SocketPath: "/run/podman.sock", Err: errors.New("forwarding denied")}
+		})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "forwarding denied",
+			Fix:      &health.Fix{Description: "Ensure SSH permits local forwarding to the target Podman API socket."},
+		}}, got)
+	})
+
+	t.Run("reports an API request failure", func(t *testing.T) {
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanAPIRequestFailed, SocketPath: "/run/podman.sock", Err: errors.New("request failed")}
+		})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "request failed",
+			Fix:      &health.Fix{Description: "Ensure the Podman API socket at /run/podman.sock is functional and accessible to the SSH user."},
+		}}, got)
+	})
+
+	t.Run("reports a cleanup failure without a fix", func(t *testing.T) {
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult {
+			return probe.RemotePodmanProbeResult{Failure: probe.RemotePodmanCleanupFailed, SocketPath: "/run/podman.sock", Err: errors.New("close failed")}
+		})
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "failed to close remote Podman socket tunnel: close failed",
 		}}, got)
 	})
 }
