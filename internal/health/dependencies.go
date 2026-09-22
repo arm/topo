@@ -366,7 +366,7 @@ func NewDependencyOnDockerComposeForPodman(composeVersion func(context.Context) 
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
-					Fix:      &Fix{Description: "Ensure the docker-compose provider is available. See " + containerEngineInstallURL},
+					Fix:      &Fix{Description: "Ensure docker-compose is on the $PATH. See " + containerEngineInstallURL},
 				}}
 			}
 			return DependencyCheckResult{SuccessValue: "docker-compose"}

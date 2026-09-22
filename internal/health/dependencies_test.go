@@ -364,7 +364,7 @@ func TestNewDependencyOnDockerComposeForPodman(t *testing.T) {
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
 			Message:  "version failed",
-			Fix:      &health.Fix{Description: "Ensure the docker-compose provider is available. See " + podmanInstallURL},
+			Fix:      &health.Fix{Description: "Ensure docker-compose is on the $PATH. See " + podmanInstallURL},
 		}}, got)
 	})
 }
