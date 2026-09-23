@@ -162,18 +162,7 @@ jobs:
           cat "$RUNNER_TEMP/podman-system-service.log" >&2 || true
           exit 1
 
-      - name: Verify Podman test prerequisites (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          podman version
-          podman info
-          docker-compose version
-          podman compose version
-
-      - name: Verify test prerequisites (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Verify test prerequisites
         run: |
           docker version
           podman version
