@@ -8,6 +8,7 @@ import (
 
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 )
@@ -31,7 +32,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 		if err := term.PrintNthHeader(output, "Migrate to dotenv-based configuration"); err != nil {
 			return err
 		}
-		if err := migrate(output, composeFilePath); err != nil {
+		if err := migrateProject(output, composeFilePath); err != nil {
 			if rmErr := os.RemoveAll(path); rmErr != nil {
 				return errors.Join(err, rmErr)
 			}
@@ -42,7 +43,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
 		return err
 	}
-	usesLiteralBuildArgs, err := UsesLiteralBuildArgConfiguration(composeFilePath)
+	usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
 	if err == nil && usesLiteralBuildArgs {
 		err = ErrParameterMigrationRequired
 	}
@@ -62,8 +63,8 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 	return printSummary(output, path)
 }
 
-func migrate(output io.Writer, composeFilePath string) error {
-	if err := MigrateToEnv(composeFilePath); err != nil {
+func migrateProject(output io.Writer, composeFilePath string) error {
+	if err := migrate.ToEnv(composeFilePath); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintf(output, "successfully migrated %q to be parameterized from %q\n", composeFilePath, env.DefaultFilename)

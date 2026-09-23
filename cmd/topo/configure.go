@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
@@ -36,7 +37,7 @@ interactive prompts.`,
 		}
 
 		if migrateToEnv(cmd) {
-			err := project.MigrateToEnv(composeFilePath)
+			err := migrate.ToEnv(composeFilePath)
 			if err != nil {
 				return err
 			}
@@ -44,7 +45,7 @@ interactive prompts.`,
 			return nil
 		}
 
-		usesLiteralBuildArgs, err := project.UsesLiteralBuildArgConfiguration(composeFilePath)
+		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
 		if err != nil {
 			return err
 		}
