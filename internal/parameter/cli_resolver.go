@@ -23,7 +23,7 @@ func NewCLIResolver(cliArgs []string) (*CLIResolver, error) {
 	return &CLIResolver{input: parsed}, nil
 }
 
-func (r *CLIResolver) Resolve(definitions []Definition) (Values, error) {
+func (r *CLIResolver) Resolve(definitions []Definition, _ Values) (Values, error) {
 	values := Values{}
 	seen := make(map[string]bool, len(r.input))
 

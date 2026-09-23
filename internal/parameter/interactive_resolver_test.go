@@ -18,11 +18,10 @@ func TestInteractiveResolver(t *testing.T) {
 
 		definitions := []parameter.Definition{
 			{
-				Name:          "GREETING",
-				Description:   "The greeting message",
-				Required:      true,
-				Example:       "Hello",
-				CurrentValues: []string{"CURRENT GREETING HELLO!"},
+				Name:        "GREETING",
+				Description: "The greeting message",
+				Required:    true,
+				Example:     "Hello",
 			},
 			{
 				Name:        "PORT",
@@ -31,7 +30,7 @@ func TestInteractiveResolver(t *testing.T) {
 			},
 		}
 
-		got, err := resolver.Resolve(definitions)
+		got, err := resolver.Resolve(definitions, parameter.Values{"GREETING": "CURRENT GREETING HELLO!"})
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -49,7 +48,7 @@ func TestInteractiveResolver(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(input, output)
 
-		got, err := resolver.Resolve([]parameter.Definition{{Name: "OPTIONAL"}})
+		got, err := resolver.Resolve([]parameter.Definition{{Name: "OPTIONAL"}}, nil)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -60,14 +59,25 @@ func TestInteractiveResolver(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(input, output)
 		definitions := []parameter.Definition{{
-			Name:          "GREETING",
-			CurrentValues: []string{"Hello", ""},
+			Name: "GREETING",
 		}}
 
-		got, err := resolver.Resolve(definitions)
+		got, err := resolver.Resolve(definitions, parameter.Values{"GREETING": "Hello"})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
-		assert.Contains(t, output.String(), `Current: ["Hello",""]`)
+		assert.Contains(t, output.String(), `Current: "Hello"`)
+	})
+
+	t.Run("shows an explicitly empty current value", func(t *testing.T) {
+		output := &bytes.Buffer{}
+		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), output)
+		currentValues := parameter.Values{"GREETING": ""}
+
+		got, err := resolver.Resolve([]parameter.Definition{{Name: "GREETING"}}, currentValues)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+		assert.Contains(t, output.String(), `Current: ""`)
 	})
 }

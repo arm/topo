@@ -13,7 +13,7 @@ import (
 )
 
 func TestLoadParameterDefinitions(t *testing.T) {
-	t.Run("loads metadata and matches current values by name", func(t *testing.T) {
+	t.Run("loads parameter metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `x-topo:
   parameters:
     PORT:
@@ -23,15 +23,14 @@ func TestLoadParameterDefinitions(t *testing.T) {
     EMPTY: {}
     UNSET: {}
 `)
-		currentValues := map[string]string{"PORT": "9000", "EMPTY": "", "UNKNOWN": "ignored"}
 
-		got, err := project.LoadParameterDefinitions(path, currentValues)
+		got, err := project.LoadParameterDefinitions(path)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Definition{
-			{Name: "PORT", Description: "HTTP port", Required: true, Example: "8080", CurrentValues: []string{"9000"}},
-			{Name: "EMPTY", CurrentValues: []string{""}},
-			{Name: "UNSET", CurrentValues: []string{}},
+			{Name: "PORT", Description: "HTTP port", Required: true, Example: "8080"},
+			{Name: "EMPTY"},
+			{Name: "UNSET"},
 		}, got)
 	})
 
@@ -41,10 +40,10 @@ func TestLoadParameterDefinitions(t *testing.T) {
     PORT: {}
 `)
 
-		got, err := project.LoadParameterDefinitions(path, map[string]string{"PORT": "9000"})
+		got, err := project.LoadParameterDefinitions(path)
 
 		require.NoError(t, err)
-		assert.Equal(t, []parameter.Definition{{Name: "PORT", CurrentValues: []string{"9000"}}}, got)
+		assert.Equal(t, []parameter.Definition{{Name: "PORT"}}, got)
 	})
 
 	t.Run("prefers parameters over legacy args", func(t *testing.T) {
@@ -55,10 +54,10 @@ func TestLoadParameterDefinitions(t *testing.T) {
     LEGACY: {}
 `)
 
-		got, err := project.LoadParameterDefinitions(path, nil)
+		got, err := project.LoadParameterDefinitions(path)
 
 		require.NoError(t, err)
-		assert.Equal(t, []parameter.Definition{{Name: "PORT", CurrentValues: []string{}}}, got)
+		assert.Equal(t, []parameter.Definition{{Name: "PORT"}}, got)
 	})
 
 	t.Run("resolves aliases and merge keys with explicit overrides", func(t *testing.T) {
@@ -74,19 +73,19 @@ x-topo:
       example: "9000"
 `)
 
-		got, err := project.LoadParameterDefinitions(path, nil)
+		got, err := project.LoadParameterDefinitions(path)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Definition{
-			{Name: "ORIGINAL", Description: "HTTP port", Required: true, Example: "8080", CurrentValues: []string{}},
-			{Name: "OVERRIDE", Description: "HTTP port", Required: true, Example: "9000", CurrentValues: []string{}},
+			{Name: "ORIGINAL", Description: "HTTP port", Required: true, Example: "8080"},
+			{Name: "OVERRIDE", Description: "HTTP port", Required: true, Example: "9000"},
 		}, got)
 	})
 
 	t.Run("returns no definitions without metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
-		got, err := project.LoadParameterDefinitions(path, nil)
+		got, err := project.LoadParameterDefinitions(path)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -95,7 +94,7 @@ x-topo:
 	t.Run("reports missing files", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "missing.yaml")
 
-		got, err := project.LoadParameterDefinitions(path, nil)
+		got, err := project.LoadParameterDefinitions(path)
 
 		assert.ErrorIs(t, err, os.ErrNotExist)
 		assert.Nil(t, got)
@@ -104,7 +103,7 @@ x-topo:
 	t.Run("reports invalid YAML", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
 
-		got, err := project.LoadParameterDefinitions(path, nil)
+		got, err := project.LoadParameterDefinitions(path)
 
 		assert.ErrorContains(t, err, "failed to decode project metadata")
 		assert.Nil(t, got)
