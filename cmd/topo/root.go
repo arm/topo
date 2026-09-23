@@ -243,6 +243,9 @@ func resolveOutputEnvFile(cmd *cobra.Command, defaultDirectory, relativeDirector
 	if !cmd.Flags().Changed(outputEnvFileFlag) {
 		return filepath.Abs(filepath.Join(defaultDirectory, env.DefaultFilename))
 	}
+	if path == "" {
+		return "", fmt.Errorf("--%s must not be empty", outputEnvFileFlag)
+	}
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(relativeDirectory, path)
 	}
