@@ -12,10 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	acceptNewHostFlag     = "accept-new-host-keys"
-	skipVersionChecksFlag = "skip-version-checks"
-)
+const skipVersionChecksFlag = "skip-version-checks"
 
 const skipVersionChecksEnvVar = "TOPO_SKIP_VERSION_CHECKS"
 
@@ -27,11 +24,6 @@ var healthCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
-
-		acceptNewHostKeys, err := cmd.Flags().GetBool(acceptNewHostFlag)
-		if err != nil {
-			panic(fmt.Sprintf("internal error: %s flag not registered: %v", acceptNewHostFlag, err))
-		}
 
 		skipVersionCheck := resolveSkipVersionChecks(cmd)
 		selectedEngine, err := getSelectedEngine(cmd)
@@ -57,7 +49,6 @@ var healthCmd = &cobra.Command{
 			Target:                  target,
 			MissingTargetFixMessage: "provide --target or set TOPO_TARGET to check target health",
 			SkipVersionChecks:       skipVersionCheck,
-			AcceptHostKeys:          acceptNewHostKeys,
 		})
 
 		if spinner != nil {
@@ -74,7 +65,6 @@ func init() {
 	if experimentalFeaturesEnabled() {
 		addEngineFlag(healthCmd)
 	}
-	healthCmd.Flags().Bool(acceptNewHostFlag, false, "automatically trust and add new SSH host keys for the target")
 	healthCmd.Flags().Bool(skipVersionChecksFlag, false, fmt.Sprintf("skip version checks for dependencies (can also be set via %s env var)", skipVersionChecksEnvVar))
 	rootCmd.AddCommand(healthCmd)
 }
