@@ -34,7 +34,7 @@ var setupKeysCmd = &cobra.Command{
 		if isLegacyDir, err := ssh.IsLegacyTopoConfigDirectory(sshDir); err != nil {
 			return err
 		} else if isLegacyDir {
-			return fmt.Errorf("legacy topo ssh config entries found; run 'topo migrate-ssh' to migrate to the new single-file format")
+			return fmt.Errorf("legacy topo ssh config entries found; downgrade to Topo 13.0.0 or below and run 'topo migrate-ssh' to migrate to the new single-file format")
 		}
 
 		dest := ssh.NewDestination(targetArg)

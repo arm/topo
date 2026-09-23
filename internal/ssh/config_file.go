@@ -52,28 +52,6 @@ func (d EnsureConfigDirective) Apply(host *sshconfig.Host) {
 	host.Nodes = append(host.Nodes, &d)
 }
 
-type RemoveConfigDirective struct {
-	sshconfig.KV
-}
-
-func NewRemoveConfigDirectivePath(key, value string) RemoveConfigDirective {
-	return RemoveConfigDirective{
-		KV: sshconfig.KV{
-			Key:   key,
-			Value: filepath.ToSlash(value),
-		},
-	}
-}
-
-func (d RemoveConfigDirective) Apply(host *sshconfig.Host) {
-	for i, node := range host.Nodes {
-		if directiveMatches(node, d.KV) {
-			host.Nodes = append(host.Nodes[:i], host.Nodes[i+1:]...)
-			return
-		}
-	}
-}
-
 func readConfigFile(path string) (*sshconfig.Config, error) {
 	cfgFile, err := os.Open(path)
 	if err != nil && !os.IsNotExist(err) {
