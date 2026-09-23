@@ -2,7 +2,6 @@ package project_test
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +18,7 @@ import (
 )
 
 func TestClone(t *testing.T) {
-	t.Run("prints summary with next steps", func(t *testing.T) {
+	t.Run("prints the supplied project ready message", func(t *testing.T) {
 		dir := t.TempDir()
 		destDir := filepath.Join(dir, "demo")
 		mockSource := mockSourceWithComposeFile(t, `
@@ -29,14 +28,33 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
+		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain(), project.CloneOptions{
+			ProjectReadyMessage: "Custom next steps for this project.",
+		})
 
 		require.NoError(t, err)
 		out := output.String()
 		assert.Contains(t, out, "Project ready")
-		assert.Contains(t, out, fmt.Sprintf("Created in '%s'", destDir))
-		assert.Contains(t, out, "cd "+destDir)
-		assert.Contains(t, out, "topo deploy")
+		assert.Contains(t, out, "Custom next steps for this project.\n")
+	})
+
+	t.Run("uses the default env file when omitted", func(t *testing.T) {
+		destDir := filepath.Join(t.TempDir(), "demo")
+		source := mockSourceWithComposeFile(t, `services:
+  app:
+    build:
+      args:
+        GREETING: ${GREETING}
+x-topo:
+  parameters:
+    GREETING: {}
+`)
+		resolver := parameter.NewStaticResolver(parameter.Values{"GREETING": "Hello"})
+
+		err := project.Clone(t.Output(), destDir, source, resolver, project.CloneOptions{})
+
+		require.NoError(t, err)
+		testutil.RequireEnvFileValues(t, filepath.Join(destDir, env.DefaultFilename), map[string]string{"GREETING": "Hello"})
 	})
 
 	t.Run("clones source into destination directory", func(t *testing.T) {
@@ -48,7 +66,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), project.CloneOptions{})
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -78,7 +96,7 @@ x-topo:
 		})
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver), filepath.Join(destDir, env.DefaultFilename), false)
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver), project.CloneOptions{})
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -102,7 +120,7 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), project.CloneOptions{})
 
 		require.ErrorContains(t, err, "missing value(s) for required parameters")
 		_, statErr := os.Stat(destDir)
@@ -122,7 +140,7 @@ x-topo:
     GREETING: {}
 `)
 
-		err := project.Clone(t.Output(), destDir, source, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
+		err := project.Clone(t.Output(), destDir, source, parameter.NewStrictResolverChain(), project.CloneOptions{})
 
 		require.ErrorIs(t, err, project.ErrParameterMigrationRequired)
 		assert.NoDirExists(t, destDir)
@@ -144,7 +162,9 @@ x-topo:
 		resolver := parameter.NewStaticResolver(parameter.Values{"GREETING": "configured"})
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(resolver), filepath.Join(destDir, env.DefaultFilename), true)
+		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(resolver), project.CloneOptions{
+			MigrateToEnv: true,
+		})
 
 		require.NoError(t, err)
 		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(destDir, env.DefaultFilename)), "\nGREETING=\"configured\"\n")
@@ -159,7 +179,9 @@ x-topo:
 		})
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), true)
+		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(), project.CloneOptions{
+			MigrateToEnv: true,
+		})
 
 		require.ErrorContains(t, err, "migration failed: env file already exists")
 		assert.NoDirExists(t, destDir)
@@ -185,7 +207,7 @@ x-topo:
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
 			"GREETING": "a-value",
-		}), filepath.Join(destDir, env.DefaultFilename), false)
+		}), project.CloneOptions{})
 
 		require.NoError(t, err)
 	})

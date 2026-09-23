@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
@@ -84,12 +86,44 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		err = project.Clone(os.Stdout, path, projectSource, resolver, outputEnvFile, migrateToEnv(cmd))
+		message, err := cloneProjectReadyMessage(cmd, path, outputEnvFile)
+		if err != nil {
+			return err
+		}
+		err = project.Clone(os.Stdout, path, projectSource, resolver, project.CloneOptions{
+			MigrateToEnv:        migrateToEnv(cmd),
+			OutputEnvFile:       outputEnvFile,
+			ProjectReadyMessage: message,
+		})
 		if errors.Is(err, project.ErrParameterMigrationRequired) {
 			return fmt.Errorf("%w; try cloning again with '--migrate-to-env'", err)
 		}
 		return err
 	},
+}
+
+func cloneProjectReadyMessage(cmd *cobra.Command, path, outputEnvFile string) (string, error) {
+	quotedPath := command.QuoteArg(path)
+	deployCommand := "topo deploy"
+	if cmd.Flags().Changed(outputEnvFileFlag) {
+		projectDirectory, err := filepath.Abs(path)
+		if err != nil {
+			return "", err
+		}
+		relativeEnvFile, err := filepath.Rel(projectDirectory, outputEnvFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve env file path for deploy instructions: %w", err)
+		}
+		deployCommand += fmt.Sprintf(" --%s %s", envFileFlag, command.QuoteArg(relativeEnvFile))
+	}
+
+	return fmt.Sprintf(`Created in %s
+
+Now run:
+  cd %s
+  %s
+
+A deployment target is required. Provide --target or set TOPO_TARGET.`, quotedPath, quotedPath, deployCommand), nil
 }
 
 func init() {
