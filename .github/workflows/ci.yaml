@@ -171,14 +171,17 @@ jobs:
           docker-compose version
           podman compose version
 
-      - name: Verify Podman test prerequisites (Windows)
+      - name: Verify test prerequisites (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          docker version
           podman version
           podman info
+          docker info
           docker-compose version
           podman compose version
+          docker compose version
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -197,4 +200,4 @@ jobs:
           DOCKER_HOST: ${{ matrix.docker_host }}
           SETUP_TEST_SSH: '1'
         run: |
-          docker info && go test ./... -v -covermode=atomic -coverprofile=coverage.out
+          go test ./... -v -covermode=atomic -coverprofile=coverage.out
