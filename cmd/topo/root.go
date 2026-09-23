@@ -251,6 +251,7 @@ func resolveOutputEnvFile(cmd *cobra.Command, defaultDirectory, relativeDirector
 	}
 	return filepath.Abs(path)
 }
+
 func experimentalFeaturesEnabled() bool {
 	const experimentalFeaturesEnvVar = "TOPO_EXPERIMENTAL_FEATURES"
 	return env.IsVarTruthy(experimentalFeaturesEnvVar)
