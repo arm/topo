@@ -11,13 +11,9 @@ import (
 
 const registryImage = "registry:2"
 
-// EnsureRegistryRunning pulls the registry image and starts the existing local
-// registry container, or creates it when it does not yet exist.
+// EnsureRegistryRunning starts the existing local registry container, or creates
+// it when it does not yet exist.
 func EnsureRegistryRunning(ctx context.Context, output io.Writer, containerName, port string) error {
-	if err := RunCommand(ctx, output, LocalSocket, "pull", registryImage); err != nil {
-		return err
-	}
-
 	if registryContainerExists(ctx, containerName) {
 		if err := validateRegistryPort(ctx, containerName, port); err != nil {
 			return err
@@ -82,6 +78,7 @@ func runRegistryContainer(ctx context.Context, containerName, port string, outpu
 		combinedOutput,
 		LocalSocket,
 		"run",
+		"--pull=missing",
 		"-d",
 		"--restart", "always",
 		"-p", fmt.Sprintf("127.0.0.1:%s:5000", port),
