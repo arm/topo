@@ -1,4 +1,4 @@
-package compose
+package migrate
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ReadNode(composeFile io.Reader) (*yaml.Node, error) {
+func ReadComposeNode(composeFile io.Reader) (*yaml.Node, error) {
 	fileData, err := io.ReadAll(composeFile)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func ReadNode(composeFile io.Reader) (*yaml.Node, error) {
 	return doc, nil
 }
 
-func ApplyParameterValues(root *yaml.Node, values map[string]string) error {
+func ApplyParameterValuesToCompose(root *yaml.Node, values map[string]string) error {
 	if len(values) == 0 {
 		logger.Info("no parameter values to apply")
 		return nil
@@ -73,7 +73,7 @@ func ApplyParameterValues(root *yaml.Node, values map[string]string) error {
 	return nil
 }
 
-func WriteNode(project *yaml.Node, target io.Writer) error {
+func WriteComposeNode(project *yaml.Node, target io.Writer) error {
 	buf := &bytes.Buffer{}
 	enc := yaml.NewEncoder(buf)
 	enc.SetIndent(2)
