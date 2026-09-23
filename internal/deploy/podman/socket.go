@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
 )
 
@@ -123,7 +122,10 @@ func TunnelRemoteSocketPath(ctx context.Context, w io.Writer, target ssh.Destina
 	if err != nil {
 		return nil, err
 	}
-	logger.Info(fmt.Sprintf("discovered remote Podman socket path: %s", remoteSocketPath))
+	return OpenRemoteSocketTunnel(ctx, w, target, remoteSocketPath)
+}
+
+func OpenRemoteSocketTunnel(ctx context.Context, w io.Writer, target ssh.Destination, remoteSocketPath string) (*ssh.TCPToUnixSocketTunnel, error) {
 	tunnel, err := ssh.OpenTCPToUnixSocketTunnel(ctx, w, target, remoteSocketPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open remote Podman socket tunnel: %w", err)
