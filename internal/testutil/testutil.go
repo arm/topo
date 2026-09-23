@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/env"
 	"github.com/stretchr/testify/require"
 )
 
@@ -97,6 +98,13 @@ func RequireReadFile(t testing.TB, path string) string {
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	return string(data)
+}
+
+func RequireEnvFileValues(t testing.TB, path string, want map[string]string) {
+	t.Helper()
+	got, err := env.ReadFile(path)
+	require.NoError(t, err, "failed to load env file %s", path)
+	require.Equal(t, want, got, "env file %s", path)
 }
 
 func AssertFileContents(t *testing.T, wantContents string, path string) {

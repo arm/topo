@@ -2,7 +2,6 @@ package docker_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -15,24 +14,10 @@ import (
 func TestTransferImagesViaRegistry(t *testing.T) {
 	requireLinuxDockerEngine(t)
 	host := docker.LocalHost
-	const (
-		registryContainerName = "topo-test-registry"
-		registryPort          = "12738"
-	)
+	const registryContainerName = "topo-test-registry"
 	scope, imageName := buildTransferTestImage(t, host)
 
-	removeRegistry := docker.Command(t.Context(), host, "rm", "-f", registryContainerName)
-	removeOutput, removeErr := removeRegistry.CombinedOutput()
-	if removeErr != nil {
-		t.Logf("registry container cleanup (expected if not running): %s", string(removeOutput))
-	}
-
-	startRegistry := docker.Command(t.Context(), host, "run", "-d", "--restart=always", "-p", fmt.Sprintf("%s:5000", registryPort), "--name", registryContainerName, "registry:2")
-	startOutput, err := startRegistry.CombinedOutput()
-	require.NoError(t, err, "could not start registry for test: %s", string(startOutput))
-	t.Cleanup(func() {
-		_ = docker.Command(context.Background(), host, "rm", "-f", registryContainerName).Run()
-	})
+	registryPort := startTestRegistry(t, registryContainerName)
 
 	destinationContainer := startContainer(t, dinDContainer)
 	destination := ssh.NewDestination(destinationContainer.SSHDestination)

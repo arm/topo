@@ -44,6 +44,14 @@ interactive prompts.`,
 			return nil
 		}
 
+		usesLiteralBuildArgs, err := project.UsesLiteralBuildArgConfiguration(composeFilePath)
+		if err != nil {
+			return err
+		}
+		if usesLiteralBuildArgs {
+			return fmt.Errorf("this project appears to use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration")
+		}
+
 		var resolvers []parameter.Resolver
 		if len(args) > 0 {
 			cliResolver, err := parameter.NewCLIResolver(args)
@@ -64,8 +72,6 @@ interactive prompts.`,
 
 func init() {
 	addComposeFileFlag(configureCmd)
-	if experimentalFeaturesEnabled() {
-		addMigrateToEnvFlag(configureCmd)
-	}
+	addMigrateToEnvFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
 }
