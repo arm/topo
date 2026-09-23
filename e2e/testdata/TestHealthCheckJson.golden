@@ -1,57 +1,27 @@
 {
-  "host": {
-    "dependencies": [
-      {
-        "name": "Topo",
-        "status": "ok",
-        "value": "topo"
-      },
-      {
-        "name": "OpenSSH",
-        "status": "ok",
-        "value": "ssh"
-      },
-      {
-        "name": "Docker CLI",
-        "status": "ok",
-        "value": "docker"
-      },
-      {
-        "name": "Docker daemon",
-        "status": "ok",
-        "value": "reachable"
-      },
-      {
-        "name": "Docker Compose",
-        "status": "ok",
-        "value": "docker compose"
-      }
-    ]
-  },
-  "target": {
-    "connectivity": {
-      "name": "Connectivity",
+  "capabilities": [
+    {
+      "name": "Deployment",
       "status": "ok",
-      "value": "TARGET_DESTINATION"
+      "checks": [
+        {"name": "Topo", "location": "host", "status": "ok", "value": "topo"},
+        {"name": "OpenSSH", "location": "host", "status": "ok", "value": "ssh"},
+        {"name": "Docker CLI", "location": "host", "status": "ok", "value": "docker"},
+        {"name": "Docker daemon", "location": "host", "status": "ok", "value": "reachable"},
+        {"name": "Docker Compose", "location": "host", "status": "ok", "value": "docker compose"},
+        {"name": "Connectivity", "location": "target", "status": "ok", "value": "TARGET_DESTINATION"},
+        {"name": "Docker daemon", "location": "target", "status": "ok", "value": "reachable"},
+        {"name": "Processing Domain Driver (remoteproc)", "location": "target", "status": "info", "value": "no remoteproc devices found"}
+      ]
     },
-    "dependencies": [
-      {
-        "name": "Docker daemon",
-        "status": "ok",
-        "value": "reachable"
-      },
-      {
-        "name": "Hardware Info",
-        "status": "ok",
-        "value": "lscpu"
-      }
-    ],
-    "destination": "TARGET_DESTINATION",
-    "isLocalhost": false,
-    "processingDomainDriver": {
-      "name": "Processing Domain Driver (remoteproc)",
-      "status": "info",
-      "value": "no remoteproc devices found"
+    {
+      "name": "Project management",
+      "status": "ok",
+      "checks": [
+        {"name": "OpenSSH", "location": "host", "status": "ok", "value": "ssh"},
+        {"name": "Connectivity", "location": "target", "status": "ok", "value": "TARGET_DESTINATION"},
+        {"name": "Hardware Info", "location": "target", "status": "ok", "value": "lscpu"}
+      ]
     }
-  }
+  ]
 }

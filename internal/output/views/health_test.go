@@ -2,6 +2,7 @@ package views_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -111,20 +112,163 @@ func TestHealthReport(t *testing.T) {
 	})
 
 	t.Run("AsJSON", func(t *testing.T) {
-		t.Run("preserves the legacy combined target dependencies", func(t *testing.T) {
+		t.Run("omits capabilities without checks or issues", func(t *testing.T) {
+			toPrint := views.HealthReport{}
+
+			got, err := toPrint.AsJSON()
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"capabilities": []
+			}`, got)
+		})
+
+		t.Run("retains an empty capability with a warning but no fix", func(t *testing.T) {
+			toPrint := views.HealthReport{ProjectDiscovery: health.ReadinessReport{
+				TargetStatus: &health.TargetStatus{Status: health.CheckStatusWarning},
+			}}
+
+			got, err := toPrint.AsJSON()
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"capabilities": [
+					{
+						"name": "Project management",
+						"status": "warning",
+						"checks": []
+					}
+				]
+			}`, got)
+		})
+
+		t.Run("retains an empty capability with a fix", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{
+				TargetStatus: &health.TargetStatus{
+					Status: health.CheckStatusOK,
+					Fix:    &health.Fix{Description: "provide --target"},
+				},
+			}}
+
+			got, err := toPrint.AsJSON()
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"capabilities": [
+					{
+						"name": "Deployment",
+						"status": "ok",
+						"fix": {
+							"description": "provide --target"
+						},
+						"checks": []
+					}
+				]
+			}`, got)
+		})
+
+		t.Run("reports missing target fixes on each capability", func(t *testing.T) {
+			report := (health.EvaluatedHealthCheck{}).Report(nil, "provide --target or set TOPO_TARGET to check target health")
+			toPrint := views.HealthReport{Deployment: report.Deployment, ProjectDiscovery: report.ProjectDiscovery}
+
+			got, err := toPrint.AsJSON()
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"capabilities": [
+					{
+						"name": "Deployment",
+						"status": "error",
+						"fix": {
+							"description": "provide --target or set TOPO_TARGET to check target health"
+						},
+						"checks": []
+					},
+					{
+						"name": "Project management",
+						"status": "warning",
+						"fix": {
+							"description": "provide --target or set TOPO_TARGET to check target health"
+						},
+						"checks": []
+					}
+				]
+			}`, got)
+		})
+
+		t.Run("preserves failure messages and fixes", func(t *testing.T) {
+			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Host: []health.DependencyReport{{
+				Name: "Docker CLI", Status: health.CheckStatusError, Value: "docker not found",
+				Fix: &health.Fix{Description: "Install Docker", Command: "install-docker"},
+			}}}}
+
+			got, err := toPrint.AsJSON()
+
+			require.NoError(t, err)
+			assert.JSONEq(t, `{
+				"capabilities": [
+					{
+						"name": "Deployment",
+						"status": "error",
+						"checks": [
+							{
+								"name": "Docker CLI",
+								"location": "host",
+								"status": "error",
+								"value": "docker not found",
+								"fix": {
+									"description": "Install Docker",
+									"command": "install-docker"
+								}
+							}
+						]
+					}
+				]
+			}`, got)
+		})
+
+		t.Run("aggregates capability status", func(t *testing.T) {
+			for _, scenario := range []struct {
+				name   string
+				host   health.CheckStatus
+				target health.CheckStatus
+				want   health.CheckStatus
+			}{
+				{"errors override blocked checks", health.CheckStatusUndetermined, health.CheckStatusError, health.CheckStatusError},
+				{"blocked checks override warnings", health.CheckStatusWarning, health.CheckStatusUndetermined, health.CheckStatusUndetermined},
+				{"warnings remain visible", health.CheckStatusOK, health.CheckStatusWarning, health.CheckStatusWarning},
+				{"information does not reduce readiness", health.CheckStatusOK, health.CheckStatusInfo, health.CheckStatusOK},
+			} {
+				t.Run(scenario.name, func(t *testing.T) {
+					toPrint := views.HealthReport{Deployment: health.ReadinessReport{
+						Host:   []health.DependencyReport{{Status: scenario.host}},
+						Target: []health.DependencyReport{{Status: scenario.target}},
+					}}
+
+					got, err := toPrint.AsJSON()
+
+					require.NoError(t, err)
+					var report struct {
+						Capabilities []struct{ Status health.CheckStatus }
+					}
+					require.NoError(t, json.Unmarshal([]byte(got), &report))
+					require.Len(t, report.Capabilities, 1)
+					assert.Equal(t, scenario.want, report.Capabilities[0].Status)
+				})
+			}
+		})
+
+		t.Run("groups host and target checks by capability", func(t *testing.T) {
 			toPrint := views.HealthReport{
-				TargetDetails: &health.TargetDetails{Destination: "ssh://user@my-target"},
 				Deployment: health.ReadinessReport{
 					Host: []health.DependencyReport{{Name: "Topo", Status: health.CheckStatusOK}},
 					Target: []health.DependencyReport{
 						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
-						{Name: "Container Engine", Status: health.CheckStatusOK},
 					},
 				},
 				ProjectDiscovery: health.ReadinessReport{
 					Target: []health.DependencyReport{
 						{ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
-						{Name: "Hardware Info", Status: health.CheckStatusOK},
 					},
 				},
 			}
@@ -134,22 +278,41 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.JSONEq(t, `{
-				"host":{"dependencies":[{"name":"Topo","status":"ok","value":""}]},
-				"target":{
-					"destination":"ssh://user@my-target",
-					"isLocalhost":false,
-					"connectivity":{"name":"Connectivity","status":"ok","value":""},
-					"dependencies":[
-						{"name":"Container Engine","status":"ok","value":""},
-						{"name":"Hardware Info","status":"ok","value":""}
-					],
-					"processingDomainDriver":{"name":"Processing Domain Driver (remoteproc)","status":"","value":""}
-				}
+				"capabilities": [
+					{
+						"name": "Deployment",
+						"status": "ok",
+						"checks": [
+							{
+								"name": "Topo",
+								"location": "host",
+								"status": "ok",
+								"value": ""
+							},
+							{
+								"name": "Connectivity",
+								"location": "target",
+								"status": "ok",
+								"value": ""
+							}
+						]
+					},
+					{
+						"name": "Project management",
+						"status": "ok",
+						"checks": [
+							{
+								"name": "Connectivity",
+								"location": "target",
+								"status": "ok",
+								"value": ""
+							}
+						]
+					}
+				]
 			}`, out.String())
 		})
-	})
 
-	t.Run("AsJSON", func(t *testing.T) {
 		t.Run("formats blocker references in the value", func(t *testing.T) {
 			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Host: []health.DependencyReport{{
 				Scope:  health.DependencyScopeHost,
@@ -166,11 +329,20 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.JSONEq(t, `{
-				"host":{"dependencies":[{
-					"name":"Docker daemon",
-					"status":"undetermined",
-					"value":"not checked: requires host's Docker CLI"
-				}]}
+				"capabilities": [
+					{
+						"name": "Deployment",
+						"status": "undetermined",
+						"checks": [
+							{
+								"name": "Docker daemon",
+								"location": "host",
+								"status": "undetermined",
+								"value": "not checked: requires host's Docker CLI"
+							}
+						]
+					}
+				]
 			}`, out.String())
 		})
 	})

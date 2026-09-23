@@ -81,28 +81,17 @@ func (r HealthReport) AsPlain(palette term.Palette) (string, error) {
 }
 
 func (r HealthReport) AsJSON() (string, error) {
-	targetDependencies := legacyTargetDependencies(r.Deployment.Target, r.ProjectDiscovery.Target)
-	return asJSON(toJSONHealthReport(legacyHealthReport{
-		HostDependencies:   r.Deployment.Host,
-		TargetDependencies: targetDependencies,
-		TargetDetails:      r.TargetDetails,
-	}))
-}
-
-type legacyHealthReport struct {
-	HostDependencies   []health.DependencyReport
-	TargetDependencies []health.DependencyReport
-	TargetDetails      *health.TargetDetails
-}
-
-func legacyTargetDependencies(deployment, projectDiscovery []health.DependencyReport) []health.DependencyReport {
-	targetDependencies := append([]health.DependencyReport(nil), deployment...)
-	for _, dependency := range projectDiscovery {
-		if dependency.ID != health.DependencyIDConnectivity {
-			targetDependencies = append(targetDependencies, dependency)
+	report := jsonHealthReport{Capabilities: make([]jsonCapabilityReport, 0, 2)}
+	for _, capability := range []jsonCapabilityReport{
+		toJSONCapabilityReport("Deployment", r.Deployment),
+		toJSONCapabilityReport("Project management", r.ProjectDiscovery),
+	} {
+		if len(capability.Checks) == 0 && capability.Status == health.CheckStatusOK && capability.Fix == nil {
+			continue
 		}
+		report.Capabilities = append(report.Capabilities, capability)
 	}
-	return targetDependencies
+	return asJSON(report)
 }
 
 func functionalityHeading(name string, report health.ReadinessReport, palette term.Palette) string {
@@ -239,27 +228,22 @@ func healthStatusFormatter(palette term.Palette) func(health.CheckStatus) string
 }
 
 type jsonHealthReport struct {
-	Host   jsonHostReport    `json:"host"`
-	Target *jsonTargetReport `json:"target,omitempty"`
+	Capabilities []jsonCapabilityReport `json:"capabilities"`
 }
 
-type jsonHostReport struct {
-	Dependencies []jsonDependencyReport `json:"dependencies"`
-}
-
-type jsonTargetReport struct {
-	Destination            string                 `json:"destination"`
-	IsLocalhost            bool                   `json:"isLocalhost"`
-	Connectivity           jsonDependencyReport   `json:"connectivity"`
-	Dependencies           []jsonDependencyReport `json:"dependencies"`
-	ProcessingDomainDriver jsonDependencyReport   `json:"processingDomainDriver"`
+type jsonCapabilityReport struct {
+	Name   string                 `json:"name"`
+	Status health.CheckStatus     `json:"status"`
+	Fix    *jsonFix               `json:"fix,omitempty"`
+	Checks []jsonDependencyReport `json:"checks"`
 }
 
 type jsonDependencyReport struct {
-	Name   string             `json:"name"`
-	Status health.CheckStatus `json:"status"`
-	Value  string             `json:"value"`
-	Fix    *jsonFix           `json:"fix,omitempty"`
+	Name     string             `json:"name"`
+	Location string             `json:"location"`
+	Status   health.CheckStatus `json:"status"`
+	Value    string             `json:"value"`
+	Fix      *jsonFix           `json:"fix,omitempty"`
 }
 
 type jsonFix struct {
@@ -267,50 +251,46 @@ type jsonFix struct {
 	Command     string `json:"command,omitempty"`
 }
 
-func toJSONHealthReport(report legacyHealthReport) jsonHealthReport {
-	jsonReport := jsonHealthReport{
-		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.HostDependencies)},
+func toJSONCapabilityReport(name string, report health.ReadinessReport) jsonCapabilityReport {
+	capability := jsonCapabilityReport{
+		Name:   name,
+		Status: health.CheckStatusOK,
+		Checks: make([]jsonDependencyReport, 0, len(report.Host)+len(report.Target)),
 	}
-	if report.TargetDetails != nil {
-		jsonTarget := toJSONTargetReport(report.TargetDependencies, *report.TargetDetails)
-		jsonReport.Target = &jsonTarget
+	counts := countStatuses(report)
+	switch {
+	case counts.errors > 0:
+		capability.Status = health.CheckStatusError
+	case counts.undetermined > 0:
+		capability.Status = health.CheckStatusUndetermined
+	case counts.warnings > 0:
+		capability.Status = health.CheckStatusWarning
 	}
-	return jsonReport
+	if report.TargetStatus != nil {
+		capability.Fix = toJSONFix(report.TargetStatus.Fix)
+	}
+	for _, check := range report.Host {
+		capability.Checks = append(capability.Checks, toJSONDependencyReport(check, "host"))
+	}
+	for _, check := range report.Target {
+		capability.Checks = append(capability.Checks, toJSONDependencyReport(check, "target"))
+	}
+	return capability
 }
 
-func toJSONTargetReport(dependencies []health.DependencyReport, details health.TargetDetails) jsonTargetReport {
-	jsonTarget := jsonTargetReport{
-		Destination:            details.Destination,
-		IsLocalhost:            details.IsLocalhost,
-		Dependencies:           make([]jsonDependencyReport, 0, len(dependencies)),
-		ProcessingDomainDriver: jsonDependencyReport{Name: "Processing Domain Driver (remoteproc)"},
+func toJSONDependencyReport(check health.DependencyReport, location string) jsonDependencyReport {
+	return jsonDependencyReport{
+		Name:     check.Name,
+		Location: location,
+		Status:   check.Status,
+		Value:    dependencyValue(check),
+		Fix:      toJSONFix(check.Fix),
 	}
-	for _, check := range dependencies {
-		jsonCheck := toJSONDependencyReport(check)
-		switch check.ID {
-		case health.DependencyIDConnectivity:
-			jsonTarget.Connectivity = jsonCheck
-		case health.DependencyIDRemoteproc:
-			jsonTarget.ProcessingDomainDriver = jsonCheck
-		default:
-			jsonTarget.Dependencies = append(jsonTarget.Dependencies, jsonCheck)
-		}
-	}
-	return jsonTarget
 }
 
-func toJSONDependencyReports(checks []health.DependencyReport) []jsonDependencyReport {
-	jsonChecks := make([]jsonDependencyReport, len(checks))
-	for index, check := range checks {
-		jsonChecks[index] = toJSONDependencyReport(check)
+func toJSONFix(fix *health.Fix) *jsonFix {
+	if fix == nil {
+		return nil
 	}
-	return jsonChecks
-}
-
-func toJSONDependencyReport(check health.DependencyReport) jsonDependencyReport {
-	jsonCheck := jsonDependencyReport{Name: check.Name, Status: check.Status, Value: dependencyValue(check)}
-	if check.Fix != nil {
-		jsonCheck.Fix = &jsonFix{Description: check.Fix.Description, Command: check.Fix.Command}
-	}
-	return jsonCheck
+	return &jsonFix{Description: fix.Description, Command: fix.Command}
 }
