@@ -384,6 +384,9 @@ func NewDependencyOnRemotePodmanAPI(check func(context.Context) probe.RemotePodm
 			}
 			failure := &DependencyCheckFailure{Severity: SeverityError, Message: result.Err.Error()}
 			switch {
+			case errors.Is(result.Err, context.DeadlineExceeded):
+				failure.Message = "health check timed out"
+				failure.Fix = &Fix{Description: "Retry the health check with a longer timeout."}
 			case errors.Is(result.Err, probe.ErrRemotePodmanSocketResolutionFailed):
 				failure.Fix = &Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL}
 			case errors.Is(result.Err, probe.ErrRemotePodmanForwardingFailed):

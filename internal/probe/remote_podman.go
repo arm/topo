@@ -30,13 +30,13 @@ func CheckRemotePodmanAPI(ctx context.Context, target ssh.Destination) RemotePod
 		return result
 	}
 
-	probeErr := runCommand(podman.Command(ctx, podman.NewSocket(tunnel.SocketURL()), "info"))
+	probeErr := runCommand(ctx, podman.Command(ctx, podman.NewSocket(tunnel.SocketURL()), "info"))
 	if probeErr == nil {
 		composeCommand, err := podman.ComposeSocketRawCommand(ctx, podman.NewSocket(tunnel.SocketURL()), "ls")
 		if err != nil {
 			probeErr = err
 		} else {
-			probeErr = runCommand(composeCommand)
+			probeErr = runCommand(ctx, composeCommand)
 		}
 	}
 	closeErr := tunnel.Close()
@@ -73,11 +73,14 @@ func openRemotePodmanTunnel(ctx context.Context, target ssh.Destination) (string
 }
 
 func CheckPodmanComposeProvider(ctx context.Context) error {
-	return runCommand(podman.ComposeRawCommand(ctx, "version"))
+	return runCommand(ctx, podman.ComposeRawCommand(ctx, "version"))
 }
 
-func runCommand(cmd *exec.Cmd) error {
+func runCommand(ctx context.Context, cmd *exec.Cmd) error {
 	if err := cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		return command.NewError(cmd, err)
 	}
 	return nil

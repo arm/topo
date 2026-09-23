@@ -381,6 +381,21 @@ func TestNewDependencyOnRemotePodmanAPI(t *testing.T) {
 		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "/run/podman.sock"}, got)
 	})
 
+	t.Run("reports a timeout", func(t *testing.T) {
+		result := probe.RemotePodmanProbeResult{Err: fmt.Errorf("%w: %w", probe.ErrRemotePodmanSocketResolutionFailed, context.DeadlineExceeded)}
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult { return result })
+		ctx, cancel := context.WithTimeout(t.Context(), 0)
+		defer cancel()
+
+		got := dependency.Check(ctx)
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "health check timed out",
+			Fix:      &health.Fix{Description: "Retry the health check with a longer timeout."},
+		}}, got)
+	})
+
 	t.Run("reports a socket resolution failure", func(t *testing.T) {
 		result := probe.RemotePodmanProbeResult{Err: fmt.Errorf("%w: %w", probe.ErrRemotePodmanSocketResolutionFailed, errors.New("no remote socket"))}
 		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult { return result })
