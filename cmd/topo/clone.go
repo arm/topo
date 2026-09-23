@@ -65,6 +65,11 @@ interactive prompts.`,
 			cliArgs = args[1:]
 		}
 
+		outputEnvFile, err := resolveOutputEnvFile(cmd, path, path)
+		if err != nil {
+			return err
+		}
+
 		var resolvers []parameter.Resolver
 		if len(cliArgs) > 0 {
 			cliResolver, err := parameter.NewCLIResolver(cliArgs)
@@ -79,7 +84,7 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		err = project.Clone(os.Stdout, path, projectSource, resolver, migrateToEnv(cmd))
+		err = project.Clone(os.Stdout, path, projectSource, resolver, outputEnvFile, migrateToEnv(cmd))
 		if errors.Is(err, project.ErrParameterMigrationRequired) {
 			return fmt.Errorf("%w; try cloning again with '--migrate-to-env'", err)
 		}
@@ -89,5 +94,6 @@ interactive prompts.`,
 
 func init() {
 	addMigrateToEnvFlag(topoCloneCmd)
+	addOutputEnvFileFlag(topoCloneCmd, "the cloned project directory")
 	rootCmd.AddCommand(topoCloneCmd)
 }

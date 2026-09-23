@@ -88,7 +88,7 @@ x-topo:
     FOO: {}
 `
 
-		err := migrate.ToEnv(path)
+		err := migrate.ToEnv(path, filepath.Join(filepath.Dir(path), env.DefaultFilename))
 
 		require.NoError(t, err)
 		envContents := testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename))
@@ -119,7 +119,7 @@ x-topo:
     FOO: {}
 `
 
-		err := migrate.ToEnv(path)
+		err := migrate.ToEnv(path, filepath.Join(filepath.Dir(path), env.DefaultFilename))
 
 		require.NoError(t, err)
 		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename)), "\nFOO=\"${FOO}\"\n")
@@ -139,7 +139,7 @@ x-topo:
 `
 		path := testutil.RequireWriteComposeFile(t, root, contents)
 
-		err := migrate.ToEnv(path)
+		err := migrate.ToEnv(path, filepath.Join(filepath.Dir(path), env.DefaultFilename))
 
 		require.EqualError(t, err, "no parameter values to migrate; only projects with referenced parameters can be migrated")
 		assert.NoFileExists(t, filepath.Join(root, env.DefaultFilename))
@@ -161,7 +161,7 @@ x-topo:
 		envPath := filepath.Join(root, env.DefaultFilename)
 		testutil.RequireWriteFile(t, envPath, "FOO=existing\n")
 
-		err := migrate.ToEnv(path)
+		err := migrate.ToEnv(path, filepath.Join(filepath.Dir(path), env.DefaultFilename))
 
 		require.ErrorContains(t, err, "env file already exists")
 		assert.Equal(t, "FOO=existing\n", testutil.RequireReadFile(t, envPath))
@@ -192,7 +192,7 @@ x-topo:
     PRESENT: {}
 `
 
-		err := migrate.ToEnv(path)
+		err := migrate.ToEnv(path, filepath.Join(filepath.Dir(path), env.DefaultFilename))
 
 		require.NoError(t, err)
 		envContents := testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename))
@@ -218,7 +218,7 @@ x-topo:
 `
 		path := testutil.RequireWriteComposeFile(t, root, contents)
 
-		err := migrate.ToEnv(path)
+		err := migrate.ToEnv(path, filepath.Join(filepath.Dir(path), env.DefaultFilename))
 
 		require.ErrorContains(t, err, "parameter FOO has more than one current value")
 		assert.NoFileExists(t, filepath.Join(root, env.DefaultFilename))

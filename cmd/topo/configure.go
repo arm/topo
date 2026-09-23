@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
-	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
@@ -36,12 +36,17 @@ interactive prompts.`,
 			return err
 		}
 
+		outputEnvFile, err := resolveOutputEnvFile(cmd, filepath.Dir(composeFilePath), ".")
+		if err != nil {
+			return err
+		}
+
 		if migrateToEnv(cmd) {
-			err := migrate.ToEnv(composeFilePath)
+			err := migrate.ToEnv(composeFilePath, outputEnvFile)
 			if err != nil {
 				return err
 			}
-			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", composeFilePath, env.DefaultFilename))
+			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", composeFilePath, outputEnvFile))
 			return nil
 		}
 
@@ -67,12 +72,13 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.Configure(composeFilePath, resolver)
+		return project.Configure(composeFilePath, outputEnvFile, resolver)
 	},
 }
 
 func init() {
 	addComposeFileFlag(configureCmd)
 	addMigrateToEnvFlag(configureCmd)
+	addOutputEnvFileFlag(configureCmd, "the current working directory")
 	rootCmd.AddCommand(configureCmd)
 }

@@ -215,7 +215,7 @@ func getEnvFiles(cmd *cobra.Command, composeFilePath string) ([]string, error) {
 const migrateToEnvFlag = "migrate-to-env"
 
 func addMigrateToEnvFlag(cmd *cobra.Command) {
-	cmd.Flags().Bool(migrateToEnvFlag, false, fmt.Sprintf("move parameter values from the compose file to %q, updating the compose file accordingly", env.DefaultFilename))
+	cmd.Flags().Bool(migrateToEnvFlag, false, fmt.Sprintf("move parameter values from the compose file to the output env file (default: %s), updating the compose file accordingly", env.DefaultFilename))
 }
 
 func migrateToEnv(cmd *cobra.Command) bool {
@@ -229,6 +229,25 @@ func migrateToEnv(cmd *cobra.Command) bool {
 	return enabled
 }
 
+const outputEnvFileFlag = "output-env-file"
+
+func addOutputEnvFileFlag(cmd *cobra.Command, relativeTo string) {
+	cmd.Flags().String(outputEnvFileFlag, "", fmt.Sprintf("path to env file to write parameter values to, relative to %s (default: %s beside the compose file)", relativeTo, env.DefaultFilename))
+}
+
+func resolveOutputEnvFile(cmd *cobra.Command, defaultDirectory, relativeDirectory string) (string, error) {
+	path, err := cmd.Flags().GetString(outputEnvFileFlag)
+	if err != nil {
+		return "", err
+	}
+	if !cmd.Flags().Changed(outputEnvFileFlag) {
+		return filepath.Abs(filepath.Join(defaultDirectory, env.DefaultFilename))
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(relativeDirectory, path)
+	}
+	return filepath.Abs(path)
+}
 func experimentalFeaturesEnabled() bool {
 	const experimentalFeaturesEnvVar = "TOPO_EXPERIMENTAL_FEATURES"
 	return env.IsVarTruthy(experimentalFeaturesEnvVar)

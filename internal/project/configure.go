@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"github.com/arm/topo/internal/env"
@@ -14,9 +13,8 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-func Configure(composeFilePath string, resolver parameter.Resolver) error {
-	envFile := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
-	currentValues, err := env.ReadFile(envFile)
+func Configure(composeFilePath, envFilePath string, resolver parameter.Resolver) error {
+	currentValues, err := env.ReadFile(envFilePath)
 	if errors.Is(err, os.ErrNotExist) {
 		currentValues = make(map[string]string)
 	} else if err != nil {
@@ -46,7 +44,7 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 	}
 
 	maps.Copy(currentValues, values)
-	return env.WriteFile(envFile, currentValues)
+	return env.WriteFile(envFilePath, currentValues)
 }
 
 func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Definition) error {

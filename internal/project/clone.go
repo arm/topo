@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/compose"
-	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
@@ -15,7 +14,7 @@ import (
 
 var ErrParameterMigrationRequired = errors.New("this project appears to use the parameter format from Topo versions older than 14.0.0")
 
-func Clone(output io.Writer, path string, src Source, resolver parameter.Resolver, migrateToEnv bool) error {
+func Clone(output io.Writer, path string, src Source, resolver parameter.Resolver, outputEnvFilePath string, migrateToEnv bool) error {
 	if err := term.PrintFirstHeader(output, "Copy files"); err != nil {
 		return err
 	}
@@ -32,7 +31,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 		if err := term.PrintNthHeader(output, "Migrate to dotenv-based configuration"); err != nil {
 			return err
 		}
-		if err := migrateProject(output, composeFilePath); err != nil {
+		if err := migrateProject(output, composeFilePath, outputEnvFilePath); err != nil {
 			if rmErr := os.RemoveAll(path); rmErr != nil {
 				return errors.Join(err, rmErr)
 			}
@@ -48,7 +47,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 		err = ErrParameterMigrationRequired
 	}
 	if err == nil {
-		err = Configure(composeFilePath, resolver)
+		err = Configure(composeFilePath, outputEnvFilePath, resolver)
 	}
 	if err != nil {
 		if rmErr := os.RemoveAll(path); rmErr != nil {
@@ -63,11 +62,11 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 	return printSummary(output, path)
 }
 
-func migrateProject(output io.Writer, composeFilePath string) error {
-	if err := migrate.ToEnv(composeFilePath); err != nil {
+func migrateProject(output io.Writer, composeFilePath, outputEnvFilePath string) error {
+	if err := migrate.ToEnv(composeFilePath, outputEnvFilePath); err != nil {
 		return err
 	}
-	_, err := fmt.Fprintf(output, "successfully migrated %q to be parameterized from %q\n", composeFilePath, env.DefaultFilename)
+	_, err := fmt.Fprintf(output, "successfully migrated %q to be parameterized from %q\n", composeFilePath, outputEnvFilePath)
 	if err != nil {
 		return err
 	}

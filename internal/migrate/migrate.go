@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/arm/topo/internal/env"
@@ -34,10 +33,7 @@ func UsesLiteralBuildArgConfiguration(composeFilePath string) (bool, error) {
 	return hasParameterValues, nil
 }
 
-func ToEnv(composeFilePath string) error {
-	projectDir := filepath.Dir(composeFilePath)
-	envFilePath := filepath.Join(projectDir, env.DefaultFilename)
-
+func ToEnv(composeFilePath, envFilePath string) error {
 	_, err := os.Stat(envFilePath)
 	if !os.IsNotExist(err) {
 		return fmt.Errorf("env file already exists: %s; consider removing it before migrating", envFilePath)

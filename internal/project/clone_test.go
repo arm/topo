@@ -29,7 +29,7 @@ services:
 `)
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain(), false)
+		err := project.Clone(&output, destDir, mockSource, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
 
 		require.NoError(t, err)
 		out := output.String()
@@ -48,7 +48,7 @@ services:
     image: nginx:alpine
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), false)
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -78,7 +78,7 @@ x-topo:
 		})
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver), false)
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver), filepath.Join(destDir, env.DefaultFilename), false)
 
 		require.NoError(t, err)
 		composeFilePath := filepath.Join(destDir, compose.DefaultFileName())
@@ -102,7 +102,7 @@ x-topo:
       required: true
 `)
 
-		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), false)
+		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
 
 		require.ErrorContains(t, err, "missing value(s) for required parameters")
 		_, statErr := os.Stat(destDir)
@@ -122,7 +122,7 @@ x-topo:
     GREETING: {}
 `)
 
-		err := project.Clone(t.Output(), destDir, source, parameter.NewStrictResolverChain(), false)
+		err := project.Clone(t.Output(), destDir, source, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), false)
 
 		require.ErrorIs(t, err, project.ErrParameterMigrationRequired)
 		assert.NoDirExists(t, destDir)
@@ -144,7 +144,7 @@ x-topo:
 		resolver := parameter.NewStaticResolver(parameter.Values{"GREETING": "configured"})
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(resolver), true)
+		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(resolver), filepath.Join(destDir, env.DefaultFilename), true)
 
 		require.NoError(t, err)
 		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(destDir, env.DefaultFilename)), "\nGREETING=\"configured\"\n")
@@ -159,7 +159,7 @@ x-topo:
 		})
 		var output bytes.Buffer
 
-		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(), true)
+		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(), filepath.Join(destDir, env.DefaultFilename), true)
 
 		require.ErrorContains(t, err, "migration failed: env file already exists")
 		assert.NoDirExists(t, destDir)
@@ -185,7 +185,7 @@ x-topo:
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStaticResolver(parameter.Values{
 			"GREETING": "a-value",
-		}), false)
+		}), filepath.Join(destDir, env.DefaultFilename), false)
 
 		require.NoError(t, err)
 	})
