@@ -105,8 +105,8 @@ func TestNewConnectivityDependency(t *testing.T) {
 			Severity: health.SeverityError,
 			Message:  "host key is unknown",
 			Fix: &health.Fix{
-				Description: "Trust the target's SSH host key",
-				Command:     "topo health --target ssh://user@example.com --accept-new-host-keys",
+				Description: "Verify and trust the target's SSH host key",
+				Command:     "ssh -o StrictHostKeyChecking=ask 'ssh://user@example.com'",
 			},
 		}}
 		assert.Equal(t, want, got)

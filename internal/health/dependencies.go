@@ -225,8 +225,8 @@ func NewConnectivityDependency(target ssh.Destination, operations ConnectivityOp
 				}
 			case errors.Is(err, ssh.ErrHostKeyUnknown):
 				failure.Fix = &Fix{
-					Description: "Trust the target's SSH host key",
-					Command:     fmt.Sprintf("topo health --target %s --accept-new-host-keys", target),
+					Description: "Verify and trust the target's SSH host key",
+					Command:     fmt.Sprintf("ssh -o StrictHostKeyChecking=ask %s", command.QuoteArg(target.String())),
 				}
 			case errors.Is(err, ssh.ErrHostKeyChanged):
 				knownHostsEntry, configErr := operations.KnownHostsEntry(target)

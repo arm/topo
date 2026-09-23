@@ -22,7 +22,6 @@ type HealthCheckOptions struct {
 	Target                  *ssh.Destination
 	MissingTargetFixMessage string
 	SkipVersionChecks       bool
-	AcceptHostKeys          bool
 }
 
 type Checks struct {
@@ -147,7 +146,7 @@ func newChecks(options HealthCheckOptions) Checks {
 	checks.Target = TargetChecks{
 		Connectivity: NewConnectivityDependency(target, ConnectivityOperations{
 			Authenticate: func(ctx context.Context, target ssh.Destination) error {
-				return probe.SSHAuthentication(ctx, runner.NewSSH(target), options.AcceptHostKeys)
+				return probe.SSHAuthentication(ctx, runner.NewSSH(target))
 			},
 			KnownHostsEntry: func(target ssh.Destination) (string, error) {
 				config, err := ssh.LoadConfig(target)
