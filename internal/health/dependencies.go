@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/arm/topo/internal/command"
@@ -382,19 +383,59 @@ func NewDependencyOnRemotePodmanAPI(check func(context.Context) probe.RemotePodm
 			if result.Err == nil {
 				return DependencyCheckResult{SuccessValue: result.SocketPath}
 			}
-			failure := &DependencyCheckFailure{Severity: SeverityError, Message: result.Err.Error()}
 			switch {
 			case errors.Is(result.Err, context.DeadlineExceeded):
-				failure.Message = "health check timed out"
-				failure.Fix = &Fix{Description: "Retry the health check with a longer timeout."}
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  "health check timed out",
+					Fix:      &Fix{Description: "Retry the health check with a longer timeout."},
+				}}
 			case errors.Is(result.Err, probe.ErrRemotePodmanSocketResolutionFailed):
-				failure.Fix = &Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL}
+				return remotePodmanFailure(
+					result.Err,
+					"could not discover the Podman API socket on the target",
+					&Fix{Description: "Start the Podman API socket and ensure the SSH user can access it. See " + containerEngineInstallURL},
+				)
 			case errors.Is(result.Err, probe.ErrRemotePodmanForwardingFailed):
-				failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the target SSH server permits local TCP forwarding to the target Podman API socket at %s.", result.SocketPath)}
+				return remotePodmanFailure(
+					result.Err,
+					"could not open topo’s temporary SSH tunnel to the target Podman API",
+					&Fix{Description: fmt.Sprintf("Ensure the target SSH server permits local TCP forwarding to the target Podman API socket at %s.", result.SocketPath)},
+				)
 			case errors.Is(result.Err, probe.ErrRemotePodmanAPIRequestFailed):
-				failure.Fix = &Fix{Description: fmt.Sprintf("Ensure the Podman API socket at %s is functional and accessible to the SSH user.", result.SocketPath)}
+				return remotePodmanFailure(
+					result.Err,
+					"host-side Podman could not query the target API through topo’s temporary SSH tunnel",
+					&Fix{Description: fmt.Sprintf("Ensure the Podman API socket at %s is functional and accessible to the SSH user.", result.SocketPath)},
+				)
+			case errors.Is(result.Err, probe.ErrRemotePodmanSocketTunnelCloseFailed):
+				return remotePodmanFailure(
+					result.Err,
+					"could not close topo’s temporary SSH tunnel to the target Podman API",
+					nil,
+				)
+			default:
+				return remotePodmanFailure(
+					result.Err,
+					"",
+					nil,
+				)
 			}
-			return DependencyCheckResult{Failure: failure}
 		},
 	}
+}
+
+// remotePodmanFailure hides exit statuses from topo's internal commands. The
+// commands use a temporary SSH tunnel and environment, so users cannot rerun
+// them as shown to investigate the failure.
+func remotePodmanFailure(err error, messageUnlessActionableError string, fix *Fix) DependencyCheckResult {
+	message := err.Error()
+	if _, ok := errors.AsType[*exec.ExitError](err); ok && messageUnlessActionableError != "" {
+		message = messageUnlessActionableError
+	}
+	return DependencyCheckResult{Failure: &DependencyCheckFailure{
+		Severity: SeverityError,
+		Message:  message,
+		Fix:      fix,
+	}}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -437,6 +438,22 @@ func TestNewDependencyOnRemotePodmanAPI(t *testing.T) {
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
 			Message:  result.Err.Error(),
+			Fix:      &health.Fix{Description: "Ensure the Podman API socket at /run/podman.sock is functional and accessible to the SSH user."},
+		}}, got)
+	})
+
+	t.Run("hides an API request exit status", func(t *testing.T) {
+		result := probe.RemotePodmanProbeResult{
+			SocketPath: "/run/podman.sock",
+			Err:        fmt.Errorf("%w: %w", probe.ErrRemotePodmanAPIRequestFailed, &exec.ExitError{}),
+		}
+		dependency := health.NewDependencyOnRemotePodmanAPI(func(context.Context) probe.RemotePodmanProbeResult { return result })
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "host-side Podman could not query the target API through topo’s temporary SSH tunnel",
 			Fix:      &health.Fix{Description: "Ensure the Podman API socket at /run/podman.sock is functional and accessible to the SSH user."},
 		}}, got)
 	})
