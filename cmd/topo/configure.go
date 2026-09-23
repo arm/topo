@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
@@ -36,12 +37,20 @@ interactive prompts.`,
 		}
 
 		if migrateToEnv(cmd) {
-			err := project.MigrateToEnv(composeFilePath)
+			err := migrate.ToEnv(composeFilePath)
 			if err != nil {
 				return err
 			}
 			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", composeFilePath, env.DefaultFilename))
 			return nil
+		}
+
+		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
+		if err != nil {
+			return err
+		}
+		if usesLiteralBuildArgs {
+			return fmt.Errorf("this project appears to use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration")
 		}
 
 		var resolvers []parameter.Resolver
@@ -64,8 +73,6 @@ interactive prompts.`,
 
 func init() {
 	addComposeFileFlag(configureCmd)
-	if experimentalFeaturesEnabled() {
-		addMigrateToEnvFlag(configureCmd)
-	}
+	addMigrateToEnvFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
 }

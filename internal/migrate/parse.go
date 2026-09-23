@@ -1,4 +1,4 @@
-package project
+package migrate
 
 import (
 	"fmt"
@@ -10,27 +10,27 @@ import (
 )
 
 type Project struct {
-	Metadata               Metadata
+	Metadata               ProjectMetadata
 	currentParameterValues map[string][]string
 }
 
-type Metadata struct {
+type ProjectMetadata struct {
 	Name        string
 	Description string
 	Features    []string
-	Parameters  []Parameter
+	Parameters  []ProjectParameter
 }
 
-type Parameter struct {
+type ProjectParameter struct {
 	Name        string
 	Description string
 	Required    bool
 	Example     string
 }
 
-func FromContent(reader io.Reader) (Project, error) {
+func ParseProject(reader io.Reader) (Project, error) {
 	type composeFile struct {
-		XTopo Metadata `yaml:"x-topo"`
+		XTopo ProjectMetadata `yaml:"x-topo"`
 	}
 
 	var document yaml.Node
@@ -67,7 +67,7 @@ type rawParameter struct {
 	Example     string `yaml:"example,omitempty"`
 }
 
-func (t *Metadata) UnmarshalYAML(node *yaml.Node) error {
+func (t *ProjectMetadata) UnmarshalYAML(node *yaml.Node) error {
 	var raw rawMetadata
 	if err := node.Decode(&raw); err != nil {
 		return err
@@ -134,8 +134,8 @@ func parseCurrentParameterValues(root *yaml.Node) map[string][]string {
 	return values
 }
 
-func parseParametersInOrder(parametersNode *yaml.Node, parametersMap map[string]rawParameter) []Parameter {
-	var result []Parameter
+func parseParametersInOrder(parametersNode *yaml.Node, parametersMap map[string]rawParameter) []ProjectParameter {
+	var result []ProjectParameter
 	if parametersNode == nil {
 		return result
 	}
@@ -143,7 +143,7 @@ func parseParametersInOrder(parametersNode *yaml.Node, parametersMap map[string]
 	for i := 0; i < len(parametersNode.Content); i += 2 {
 		name := parametersNode.Content[i].Value
 		if metadata, ok := parametersMap[name]; ok {
-			result = append(result, Parameter{
+			result = append(result, ProjectParameter{
 				Name:        name,
 				Description: metadata.Description,
 				Required:    metadata.Required,
