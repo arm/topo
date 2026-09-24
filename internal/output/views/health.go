@@ -30,41 +30,69 @@ const functionalityHealthReportTemplate = `
 {{- end -}}
 
 {{- define "functionality" -}}
-{{ functionalityHeading .Name .Report }}
-{{ status (dependencyGroupStatus .Report.Host) }}Host
-{{- range .Report.Host }}
+{{ functionalityHeading .Name .StatusCounts }}
+{{ status (dependencyGroupStatus .HostChecks) }}Host
+{{- range .HostChecks }}
 {{ template "checkRow" . }}
 {{- end }}
-{{ status (targetStatus .Report) }}Target
-{{- if .Report.TargetStatus }}
-{{- if .Report.TargetStatus.Fix }}
+{{ status (targetStatus .TargetStatus .TargetChecks) }}Target
+{{- if .TargetStatus }}
+{{- if .TargetStatus.Fix }}
 {{ "   " }}Fix:
-{{ "     " }}{{ .Report.TargetStatus.Fix.Description }}
+{{ "     " }}{{ .TargetStatus.Fix.Description }}
 {{- end }}
 {{- end }}
-{{- range .Report.Target }}
+{{- range .TargetChecks }}
 {{ template "checkRow" . }}
 {{- end }}
 {{- end -}}
 
-{{ template "functionality" (buildFunctionalityTemplateData "Deployment" .Deployment) }}
+{{ template "functionality" .Deployment }}
 
-{{ template "functionality" (buildFunctionalityTemplateData "Project management" .ProjectDiscovery) }}
+{{ template "functionality" .ProjectDiscovery }}
 `
 
 type functionalityTemplateData struct {
-	Name   string
-	Report health.ReadinessReport
+	Name         string
+	StatusCounts statusCounts
+	HostChecks   []health.DependencyReport
+	TargetChecks []health.DependencyReport
+	TargetStatus *health.TargetStatus
 }
 
-func (r HealthReport) AsPlain(isTTY bool) (string, error) {
-	funcMap := getFuncMap(isTTY)
-	funcMap["status"] = healthStatusFormatter(isTTY)
-	funcMap["buildFunctionalityTemplateData"] = func(name string, report health.ReadinessReport) functionalityTemplateData {
-		return functionalityTemplateData{Name: name, Report: report}
+type statusCounts struct {
+	errors       uint
+	warnings     uint
+	undetermined uint
+}
+
+func buildFunctionalityTemplateData(name string, report health.ReadinessReport) functionalityTemplateData {
+	data := functionalityTemplateData{
+		Name:         name,
+		HostChecks:   make([]health.DependencyReport, 0, len(report.Checks)),
+		TargetChecks: make([]health.DependencyReport, 0, len(report.Checks)),
+		TargetStatus: report.TargetStatus,
 	}
-	funcMap["functionalityHeading"] = func(name string, report health.ReadinessReport) string {
-		return functionalityHeading(name, report, isTTY)
+	for _, check := range report.Checks {
+		data.StatusCounts.addCheckStatus(check.Status)
+		switch check.Scope {
+		case health.DependencyScopeHost:
+			data.HostChecks = append(data.HostChecks, check)
+		case health.DependencyScopeTarget:
+			data.TargetChecks = append(data.TargetChecks, check)
+		default:
+			panic("health check has an unknown scope")
+		}
+	}
+	data.StatusCounts.addTargetStatus(report.TargetStatus)
+	return data
+}
+
+func (r HealthReport) AsPlain(palette term.Palette) (string, error) {
+	funcMap := getFuncMap(palette)
+	funcMap["status"] = healthStatusFormatter(palette)
+	funcMap["functionalityHeading"] = func(name string, statusCounts statusCounts) string {
+		return functionalityHeading(name, statusCounts, palette)
 	}
 	funcMap["dependencyGroupStatus"] = dependencyGroupStatus
 	funcMap["targetStatus"] = targetStatus
@@ -73,42 +101,37 @@ func (r HealthReport) AsPlain(isTTY bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	data := struct {
+		Deployment       functionalityTemplateData
+		ProjectDiscovery functionalityTemplateData
+	}{
+		Deployment:       buildFunctionalityTemplateData("Deployment", r.Deployment),
+		ProjectDiscovery: buildFunctionalityTemplateData("Project management", r.ProjectDiscovery),
+	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, r); err != nil {
+	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
 }
 
 func (r HealthReport) AsJSON() (string, error) {
-	targetDependencies := legacyTargetDependencies(r.Deployment.Target, r.ProjectDiscovery.Target)
-	return asJSON(toJSONHealthReport(legacyHealthReport{
-		HostDependencies:   r.Deployment.Host,
-		TargetDependencies: targetDependencies,
-		TargetDetails:      r.TargetDetails,
-	}))
-}
-
-type legacyHealthReport struct {
-	HostDependencies   []health.DependencyReport
-	TargetDependencies []health.DependencyReport
-	TargetDetails      *health.TargetDetails
-}
-
-func legacyTargetDependencies(deployment, projectDiscovery []health.DependencyReport) []health.DependencyReport {
-	targetDependencies := append([]health.DependencyReport(nil), deployment...)
-	for _, dependency := range projectDiscovery {
-		if dependency.ID != health.DependencyIDConnectivity {
-			targetDependencies = append(targetDependencies, dependency)
+	report := jsonHealthReport{Capabilities: make([]jsonCapabilityReport, 0, 2)}
+	for _, capability := range []jsonCapabilityReport{
+		toJSONCapabilityReport("Deployment", r.Deployment),
+		toJSONCapabilityReport("Project management", r.ProjectDiscovery),
+	} {
+		if len(capability.Checks) == 0 && capability.Status == health.CheckStatusOK && capability.Fix == nil {
+			continue
 		}
+		report.Capabilities = append(report.Capabilities, capability)
 	}
-	return targetDependencies
+	return asJSON(report)
 }
 
-func functionalityHeading(name string, report health.ReadinessReport, isTTY bool) string {
-	statusCount := countStatuses(report)
+func functionalityHeading(name string, statusCount statusCounts, palette term.Palette) string {
 	if statusCount.errors == 0 && statusCount.undetermined == 0 && statusCount.warnings == 0 {
-		return sectionHeading(name+": ready", isTTY)
+		return sectionHeading(name+": ready", palette)
 	}
 
 	readiness := "ready"
@@ -120,56 +143,55 @@ func functionalityHeading(name string, report health.ReadinessReport, isTTY bool
 
 	indicators := make([]string, 0, 3)
 	if statusCount.errors > 0 {
-		indicators = append(indicators, statusIndicator("✗", term.Red, statusCount.errors, isTTY))
+		indicators = append(indicators, statusIndicator("✗", term.Red, statusCount.errors, palette))
 	}
 	if statusCount.warnings > 0 {
-		indicators = append(indicators, statusIndicator("!", term.Yellow, statusCount.warnings, isTTY))
+		indicators = append(indicators, statusIndicator("!", term.Yellow, statusCount.warnings, palette))
 	}
 	if statusCount.undetermined > 0 {
-		indicators = append(indicators, statusIndicator("?", term.Gray, statusCount.undetermined, isTTY))
+		indicators = append(indicators, statusIndicator("?", term.Gray, statusCount.undetermined, palette))
 	}
 
 	heading := fmt.Sprintf("%s: %s (%s)", name, readiness, strings.Join(indicators, " "))
-	return sectionHeading(heading, isTTY)
+	return sectionHeading(heading, palette)
 }
 
-func statusIndicator(symbol, color string, count uint, isTTY bool) string {
-	if isTTY {
-		symbol = term.Color(color, symbol)
-	}
-	return fmt.Sprintf("%s %d", symbol, count)
+func statusIndicator(symbol, color string, count uint, palette term.Palette) string {
+	return fmt.Sprintf("%s %d", palette.Color(color, symbol), count)
 }
 
-func countStatuses(report health.ReadinessReport) (statusCount struct{ errors, warnings, undetermined uint }) {
-	dependencies := append([]health.DependencyReport(nil), report.Host...)
-	dependencies = append(dependencies, report.Target...)
-	for _, dependency := range dependencies {
-		switch dependency.Status {
-		case health.CheckStatusError:
-			statusCount.errors++
-		case health.CheckStatusWarning:
-			statusCount.warnings++
-		case health.CheckStatusUndetermined:
-			statusCount.undetermined++
-		}
+func countStatuses(checks []health.DependencyReport, targetStatus *health.TargetStatus) statusCounts {
+	counts := statusCounts{}
+	for _, check := range checks {
+		counts.addCheckStatus(check.Status)
 	}
-	if report.TargetStatus == nil {
+	counts.addTargetStatus(targetStatus)
+	return counts
+}
+
+func (counts *statusCounts) addCheckStatus(status health.CheckStatus) {
+	switch status {
+	case health.CheckStatusError:
+		counts.errors++
+	case health.CheckStatusWarning:
+		counts.warnings++
+	case health.CheckStatusUndetermined:
+		counts.undetermined++
+	}
+}
+
+func (counts *statusCounts) addTargetStatus(status *health.TargetStatus) {
+	if status == nil {
 		return
 	}
-	switch report.TargetStatus.Status {
-	case health.CheckStatusWarning:
-		statusCount.warnings++
-	case health.CheckStatusError:
-		statusCount.errors++
-	}
-	return
+	counts.addCheckStatus(status.Status)
 }
 
-func targetStatus(report health.ReadinessReport) health.CheckStatus {
-	if report.TargetStatus != nil {
-		return report.TargetStatus.Status
+func targetStatus(status *health.TargetStatus, checks []health.DependencyReport) health.CheckStatus {
+	if status != nil {
+		return status.Status
 	}
-	return dependencyGroupStatus(report.Target)
+	return dependencyGroupStatus(checks)
 }
 
 func dependencyValue(report health.DependencyReport) string {
@@ -220,11 +242,11 @@ func dependencyGroupStatus(dependencies []health.DependencyReport) health.CheckS
 	return status
 }
 
-func sectionHeading(heading string, isTTY bool) string {
-	return term.Header(heading, isTTY)
+func sectionHeading(heading string, palette term.Palette) string {
+	return term.Header(heading, palette)
 }
 
-func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
+func healthStatusFormatter(palette term.Palette) func(health.CheckStatus) string {
 	return func(status health.CheckStatus) string {
 		label, color := " ✗ ", term.Red
 		switch status {
@@ -237,35 +259,27 @@ func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
 		case health.CheckStatusUndetermined:
 			label, color = " ? ", term.Gray
 		}
-		if !isTTY {
-			return label
-		}
-		return term.Color(color, label)
+		return palette.Color(color, label)
 	}
 }
 
 type jsonHealthReport struct {
-	Host   jsonHostReport    `json:"host"`
-	Target *jsonTargetReport `json:"target,omitempty"`
+	Capabilities []jsonCapabilityReport `json:"capabilities"`
 }
 
-type jsonHostReport struct {
-	Dependencies []jsonDependencyReport `json:"dependencies"`
-}
-
-type jsonTargetReport struct {
-	Destination            string                 `json:"destination"`
-	IsLocalhost            bool                   `json:"isLocalhost"`
-	Connectivity           jsonDependencyReport   `json:"connectivity"`
-	Dependencies           []jsonDependencyReport `json:"dependencies"`
-	ProcessingDomainDriver jsonDependencyReport   `json:"processingDomainDriver"`
+type jsonCapabilityReport struct {
+	Name   string                 `json:"name"`
+	Status health.CheckStatus     `json:"status"`
+	Fix    *jsonFix               `json:"fix,omitempty"`
+	Checks []jsonDependencyReport `json:"checks"`
 }
 
 type jsonDependencyReport struct {
-	Name   string             `json:"name"`
-	Status health.CheckStatus `json:"status"`
-	Value  string             `json:"value"`
-	Fix    *jsonFix           `json:"fix,omitempty"`
+	Name     string             `json:"name"`
+	Location string             `json:"location"`
+	Status   health.CheckStatus `json:"status"`
+	Value    string             `json:"value"`
+	Fix      *jsonFix           `json:"fix,omitempty"`
 }
 
 type jsonFix struct {
@@ -273,50 +287,50 @@ type jsonFix struct {
 	Command     string `json:"command,omitempty"`
 }
 
-func toJSONHealthReport(report legacyHealthReport) jsonHealthReport {
-	jsonReport := jsonHealthReport{
-		Host: jsonHostReport{Dependencies: toJSONDependencyReports(report.HostDependencies)},
+func toJSONCapabilityReport(name string, report health.ReadinessReport) jsonCapabilityReport {
+	capability := jsonCapabilityReport{
+		Name:   name,
+		Status: health.CheckStatusOK,
+		Checks: make([]jsonDependencyReport, 0, len(report.Checks)),
 	}
-	if report.TargetDetails != nil {
-		jsonTarget := toJSONTargetReport(report.TargetDependencies, *report.TargetDetails)
-		jsonReport.Target = &jsonTarget
+	counts := countStatuses(report.Checks, report.TargetStatus)
+	switch {
+	case counts.errors > 0:
+		capability.Status = health.CheckStatusError
+	case counts.undetermined > 0:
+		capability.Status = health.CheckStatusUndetermined
+	case counts.warnings > 0:
+		capability.Status = health.CheckStatusWarning
 	}
-	return jsonReport
-}
-
-func toJSONTargetReport(dependencies []health.DependencyReport, details health.TargetDetails) jsonTargetReport {
-	jsonTarget := jsonTargetReport{
-		Destination:            details.Destination,
-		IsLocalhost:            details.IsLocalhost,
-		Dependencies:           make([]jsonDependencyReport, 0, len(dependencies)),
-		ProcessingDomainDriver: jsonDependencyReport{Name: "Processing Domain Driver (remoteproc)"},
+	if report.TargetStatus != nil {
+		capability.Fix = toJSONFix(report.TargetStatus.Fix)
 	}
-	for _, check := range dependencies {
-		jsonCheck := toJSONDependencyReport(check)
-		switch check.ID {
-		case health.DependencyIDConnectivity:
-			jsonTarget.Connectivity = jsonCheck
-		case health.DependencyIDRemoteproc:
-			jsonTarget.ProcessingDomainDriver = jsonCheck
-		default:
-			jsonTarget.Dependencies = append(jsonTarget.Dependencies, jsonCheck)
-		}
+	for _, check := range report.Checks {
+		capability.Checks = append(capability.Checks, toJSONDependencyReport(check))
 	}
-	return jsonTarget
-}
-
-func toJSONDependencyReports(checks []health.DependencyReport) []jsonDependencyReport {
-	jsonChecks := make([]jsonDependencyReport, len(checks))
-	for index, check := range checks {
-		jsonChecks[index] = toJSONDependencyReport(check)
-	}
-	return jsonChecks
+	return capability
 }
 
 func toJSONDependencyReport(check health.DependencyReport) jsonDependencyReport {
-	jsonCheck := jsonDependencyReport{Name: check.Name, Status: check.Status, Value: dependencyValue(check)}
-	if check.Fix != nil {
-		jsonCheck.Fix = &jsonFix{Description: check.Fix.Description, Command: check.Fix.Command}
+	return jsonDependencyReport{
+		Name:     check.Name,
+		Location: dependencyLocation(check.Scope),
+		Status:   check.Status,
+		Value:    dependencyValue(check),
+		Fix:      toJSONFix(check.Fix),
 	}
-	return jsonCheck
+}
+
+func dependencyLocation(scope health.DependencyScope) string {
+	if scope == health.DependencyScopeTarget {
+		return "target"
+	}
+	return "host"
+}
+
+func toJSONFix(fix *health.Fix) *jsonFix {
+	if fix == nil {
+		return nil
+	}
+	return &jsonFix{Description: fix.Description, Command: fix.Command}
 }

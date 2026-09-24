@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/probe"
 	"go.yaml.in/yaml/v4"
 )
@@ -13,7 +14,7 @@ type TargetDescription struct {
 	probe.HardwareProfile
 }
 
-func (d TargetDescription) AsPlain(_ bool) (string, error) {
+func (d TargetDescription) AsPlain(_ term.Palette) (string, error) {
 	var buf bytes.Buffer
 	if err := yaml.NewEncoder(&buf).Encode(d.HardwareProfile); err != nil {
 		return "", fmt.Errorf("encode target description as yaml: %w", err)
