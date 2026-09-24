@@ -139,63 +139,6 @@ func TestCheckForLegacyConfigEntries(t *testing.T) {
 	})
 }
 
-func TestMigrateLegacyConfig(t *testing.T) {
-	t.Run("returns error when no legacy topo config directory exists", func(t *testing.T) {
-		sshDir := mustCreateSshDirectory(t)
-
-		err := ssh.MigrateLegacyTopoConfig(sshDir)
-
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "nothing to migrate")
-	})
-
-	t.Run("concatenates conf files into unified config and removes directory", func(t *testing.T) {
-		sshDir := mustCreateSshDirectory(t)
-		legacyDir := filepath.Join(sshDir, ssh.TopoConfigFileName)
-		legacyDirSlash := filepath.ToSlash(legacyDir)
-		board1Conf := `Host board1
-  IdentityFile ~/.ssh/key1
-`
-		board2Conf := `Host board2
-  IdentityFile ~/.ssh/key2
-`
-		sshConf := "Include " + legacyDirSlash + `/*.conf
-
-Host *
-`
-		testutil.RequireMkdirAll(t, legacyDir)
-		testutil.RequireWriteFile(t, filepath.Join(legacyDir, "topo_board1.conf"), board1Conf)
-		testutil.RequireWriteFile(t, filepath.Join(legacyDir, "topo_board2.conf"), board2Conf)
-		testutil.RequireWriteFile(t, filepath.Join(sshDir, ssh.DefaultConfigFileName), sshConf)
-
-		require.NoError(t, ssh.MigrateLegacyTopoConfig(sshDir))
-
-		mergedFile := legacyDirSlash
-		wantSshConfAfterMigration := fmt.Sprintf(`
-Include %s
-Host *
-`, mergedFile)
-		testutil.AssertFileContents(t, board1Conf+board2Conf, mergedFile)
-		testutil.AssertFileContents(t, wantSshConfAfterMigration, filepath.Join(sshDir, ssh.DefaultConfigFileName))
-	})
-
-	t.Run("adds include directive if ssh config does not exist", func(t *testing.T) {
-		sshDir := mustCreateSshDirectory(t)
-		legacyDir := filepath.Join(sshDir, ssh.TopoConfigFileName)
-		testutil.RequireMkdirAll(t, legacyDir)
-		testutil.RequireWriteFile(t, filepath.Join(legacyDir, "topo_board1.conf"), `Host board1
-  IdentityFile ~/.ssh/key1
-`)
-
-		err := ssh.MigrateLegacyTopoConfig(sshDir)
-
-		wantConfig := fmt.Sprintf(`Include %s
-`, filepath.ToSlash(legacyDir))
-		require.NoError(t, err)
-		testutil.AssertFileContents(t, wantConfig, filepath.Join(sshDir, ssh.DefaultConfigFileName))
-	})
-}
-
 func TestGetConfigDirectory(t *testing.T) {
 	t.Run("returns path to .ssh directory in user's home directory", func(t *testing.T) {
 		homeDir, err := os.UserHomeDir()

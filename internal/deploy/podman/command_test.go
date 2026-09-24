@@ -28,6 +28,34 @@ func TestCommand(t *testing.T) {
 	})
 }
 
+func TestComposeRawCommand(t *testing.T) {
+	t.Run("uses the deployment Compose provider without overriding the socket", func(t *testing.T) {
+		t.Setenv("DOCKER_HOST", "unix:///stale-docker.sock")
+		t.Setenv("PODMAN_COMPOSE_PROVIDER", "yolo-swag")
+
+		command := podman.ComposeRawCommand(t.Context(), "version")
+
+		assert.Equal(t, []string{"podman", "compose", "version"}, command.Args)
+		assert.Contains(t, command.Env, "PODMAN_COMPOSE_PROVIDER=docker-compose")
+		assert.Contains(t, command.Env, "DOCKER_HOST=unix:///stale-docker.sock")
+	})
+}
+
+func TestComposeSocketRawCommand(t *testing.T) {
+	t.Run("uses the deployment Compose provider and socket configuration", func(t *testing.T) {
+		t.Setenv("DOCKER_HOST", "unix:///stale-docker.sock")
+		t.Setenv("PODMAN_COMPOSE_PROVIDER", "yolo-swag")
+		socket := podman.NewSocket("tcp://127.0.0.1:12345")
+
+		command, err := podman.ComposeSocketRawCommand(t.Context(), socket, "version")
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"podman", "compose", "version"}, command.Args)
+		assert.Contains(t, command.Env, "PODMAN_COMPOSE_PROVIDER=docker-compose")
+		assert.Contains(t, command.Env, "DOCKER_HOST=tcp://127.0.0.1:12345")
+	})
+}
+
 func TestComposeCommand(t *testing.T) {
 	t.Run("sets args", func(t *testing.T) {
 		scope := project.Scope{ComposeFile: "compose.yaml"}

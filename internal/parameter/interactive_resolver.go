@@ -17,7 +17,7 @@ func NewInteractiveResolver(in io.Reader, out io.Writer) *InteractiveResolver {
 	return &InteractiveResolver{input: in, output: out}
 }
 
-func (r *InteractiveResolver) Resolve(definitions []Definition) (Values, error) {
+func (r *InteractiveResolver) Resolve(definitions []Definition, currentValues Values) (Values, error) {
 	values := Values{}
 	scanner := bufio.NewScanner(r.input)
 
@@ -40,8 +40,9 @@ func (r *InteractiveResolver) Resolve(definitions []Definition) (Values, error) 
 			}
 		}
 
-		if len(definition.CurrentValues) > 0 {
-			_, err := fmt.Fprintf(r.output, "Current: %s\n", formatCurrentValues(definition.CurrentValues))
+		currentValue, hasCurrentValue := currentValues[definition.Name]
+		if hasCurrentValue {
+			_, err := fmt.Fprintf(r.output, "Current: %q\n", currentValue)
 			if err != nil {
 				return nil, err
 			}
@@ -51,7 +52,7 @@ func (r *InteractiveResolver) Resolve(definitions []Definition) (Values, error) 
 		if definition.Required {
 			label = "required"
 		}
-		if len(definition.CurrentValues) > 0 {
+		if hasCurrentValue {
 			label += ", leave blank to keep current"
 		}
 

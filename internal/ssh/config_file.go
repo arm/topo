@@ -52,28 +52,6 @@ func (d EnsureConfigDirective) Apply(host *sshconfig.Host) {
 	host.Nodes = append(host.Nodes, &d)
 }
 
-type RemoveConfigDirective struct {
-	sshconfig.KV
-}
-
-func NewRemoveConfigDirectivePath(key, value string) RemoveConfigDirective {
-	return RemoveConfigDirective{
-		KV: sshconfig.KV{
-			Key:   key,
-			Value: filepath.ToSlash(value),
-		},
-	}
-}
-
-func (d RemoveConfigDirective) Apply(host *sshconfig.Host) {
-	for i, node := range host.Nodes {
-		if directiveMatches(node, d.KV) {
-			host.Nodes = append(host.Nodes[:i], host.Nodes[i+1:]...)
-			return
-		}
-	}
-}
-
 func readConfigFile(path string) (*sshconfig.Config, error) {
 	cfgFile, err := os.Open(path)
 	if err != nil && !os.IsNotExist(err) {
@@ -188,48 +166,4 @@ func IsLegacyTopoConfigDirectory(sshDir string) (bool, error) {
 	}
 
 	return info.IsDir(), nil
-}
-
-func MigrateLegacyTopoConfig(sshDir string) error {
-	legacyDir := filepath.Join(sshDir, TopoConfigFileName)
-	if isLegacyDir, err := IsLegacyTopoConfigDirectory(sshDir); err != nil {
-		return err
-	} else if !isLegacyDir {
-		return fmt.Errorf("legacy topo ssh config directory not found at %s; nothing to migrate", legacyDir)
-	}
-
-	legacyGlob := filepath.Join(legacyDir, "*.conf")
-	confFiles, err := filepath.Glob(legacyGlob)
-	if err != nil {
-		return fmt.Errorf("failed to list config files in %s: %w", legacyDir, err)
-	}
-
-	var combined []byte
-	for _, confFile := range confFiles {
-		content, err := os.ReadFile(confFile)
-		if err != nil {
-			return fmt.Errorf("failed to read %s: %w", confFile, err)
-		}
-		combined = append(combined, content...)
-	}
-
-	unifiedPath := legacyDir + ".new"
-	// #nosec G703 -- ssh config is always stored in the user's home directory
-	if err := os.WriteFile(unifiedPath, combined, 0o600); err != nil {
-		return fmt.Errorf("failed to write unified config to %s: %w", unifiedPath, err)
-	}
-
-	if err := os.RemoveAll(legacyDir); err != nil {
-		return fmt.Errorf("failed to remove legacy config directory %s: %w", legacyDir, err)
-	}
-
-	if err := os.Rename(unifiedPath, legacyDir); err != nil {
-		return fmt.Errorf("failed to move migrated config to %s: %w", legacyDir, err)
-	}
-
-	defaultConfigPath := filepath.Join(sshDir, DefaultConfigFileName)
-	return updateConfigFile(defaultConfigPath, "", []ConfigDirectiveModifier{
-		NewRemoveConfigDirectivePath("Include", legacyGlob),
-		NewEnsureConfigDirectivePath("Include", legacyDir),
-	})
 }
