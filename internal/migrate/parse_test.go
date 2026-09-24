@@ -1,18 +1,18 @@
-package project_test
+package migrate_test
 
 import (
 	"bytes"
 	"strings"
 	"testing"
 
+	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/project"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestFromContent(t *testing.T) {
+func TestParseProject(t *testing.T) {
 	t.Run("parses x-topo metadata", func(t *testing.T) {
 		composeFileContents := `
   x-topo:
@@ -22,11 +22,11 @@ func TestFromContent(t *testing.T) {
       - "SME"
       - "NEON"
 `
-		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		p, err := migrate.ParseProject(strings.NewReader(composeFileContents))
 		got := p.Metadata
 
 		require.NoError(t, err)
-		want := project.Metadata{
+		want := migrate.ProjectMetadata{
 			Name:        "test-service",
 			Description: "Test service",
 			Features:    []string{"SME", "NEON"},
@@ -46,11 +46,11 @@ func TestFromContent(t *testing.T) {
         description: "Port number"
         required: false
   `
-		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		p, err := migrate.ParseProject(strings.NewReader(composeFileContents))
 		got := p.Metadata.Parameters
 
 		require.NoError(t, err)
-		want := []project.Parameter{
+		want := []migrate.ProjectParameter{
 			{
 				Name:        "GREETING",
 				Description: "The greeting message to display",
@@ -84,12 +84,12 @@ func TestFromContent(t *testing.T) {
 			logger.SetOptions(logger.Options{})
 		})
 
-		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		p, err := migrate.ParseProject(strings.NewReader(composeFileContents))
 		got := p.Metadata.Parameters
 
 		require.NoError(t, err)
 		assert.Contains(t, logOutput.String(), "x-topo.args is deprecated; use x-topo.parameters instead")
-		want := []project.Parameter{
+		want := []migrate.ProjectParameter{
 			{
 				Name:        "GREETING",
 				Description: "The greeting message to display",
@@ -124,12 +124,12 @@ func TestFromContent(t *testing.T) {
 			logger.SetOptions(logger.Options{})
 		})
 
-		p, err := project.FromContent(strings.NewReader(composeFileContents))
+		p, err := migrate.ParseProject(strings.NewReader(composeFileContents))
 		got := p.Metadata.Parameters
 
 		require.NoError(t, err)
 		assert.Empty(t, logOutput.String())
-		want := []project.Parameter{
+		want := []migrate.ProjectParameter{
 			{
 				Name:        "GREETING",
 				Description: "The greeting message to display",

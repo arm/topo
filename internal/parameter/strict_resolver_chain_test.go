@@ -14,8 +14,8 @@ type mockResolver struct {
 	mock.Mock
 }
 
-func (m *mockResolver) Resolve(definitions []parameter.Definition) (parameter.Values, error) {
-	call := m.Called(definitions)
+func (m *mockResolver) Resolve(definitions []parameter.Definition, currentValues parameter.Values) (parameter.Values, error) {
+	call := m.Called(definitions, currentValues)
 	if call.Get(0) == nil {
 		return nil, call.Error(1)
 	}
@@ -28,10 +28,10 @@ func TestStrictResolverChain(t *testing.T) {
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 		}
-		resolver.On("Resolve", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		resolver.On("Resolve", definitions, parameter.Values(nil)).Return(parameter.Values{"GREETING": "Hello"}, nil)
 		chain := parameter.NewStrictResolverChain(resolver)
 
-		got, err := chain.Resolve(definitions)
+		got, err := chain.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{"GREETING": "Hello"}
@@ -46,10 +46,10 @@ func TestStrictResolverChain(t *testing.T) {
 			missing,
 			{Name: "PORT", Required: false},
 		}
-		resolver.On("Resolve", definitions).Return(parameter.Values{"PORT": "8080"}, nil)
+		resolver.On("Resolve", definitions, parameter.Values(nil)).Return(parameter.Values{"PORT": "8080"}, nil)
 		chain := parameter.NewStrictResolverChain(resolver)
 
-		_, err := chain.Resolve(definitions)
+		_, err := chain.Resolve(definitions, nil)
 
 		assert.Equal(t, parameter.MissingParametersError{missing}, err)
 		resolver.AssertExpectations(t)
@@ -61,10 +61,10 @@ func TestStrictResolverChain(t *testing.T) {
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		resolver.On("Resolve", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		resolver.On("Resolve", definitions, parameter.Values(nil)).Return(parameter.Values{"GREETING": "Hello"}, nil)
 		chain := parameter.NewStrictResolverChain(resolver)
 
-		got, err := chain.Resolve(definitions)
+		got, err := chain.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{"GREETING": "Hello"}
@@ -77,10 +77,10 @@ func TestStrictResolverChain(t *testing.T) {
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 		}
-		resolver.On("Resolve", mock.Anything).Return(nil, errors.New("big bang"))
+		resolver.On("Resolve", mock.Anything, parameter.Values(nil)).Return(nil, errors.New("big bang"))
 		chain := parameter.NewStrictResolverChain(resolver)
 
-		_, err := chain.Resolve(definitions)
+		_, err := chain.Resolve(definitions, nil)
 
 		require.Error(t, err)
 		assert.EqualError(t, err, "big bang")
@@ -94,10 +94,10 @@ func TestStrictResolverChain(t *testing.T) {
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		resolver1.On("Resolve", definitions).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		resolver1.On("Resolve", definitions, parameter.Values(nil)).Return(parameter.Values{"GREETING": "Hello"}, nil)
 		chain := parameter.NewStrictResolverChain(resolver1, resolver2)
 
-		got, err := chain.Resolve(definitions)
+		got, err := chain.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{"GREETING": "Hello"}
@@ -118,11 +118,12 @@ func TestStrictResolverChain(t *testing.T) {
 			{Name: "NAME", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		resolver1.On("Resolve", all).Return(parameter.Values{"GREETING": "Hello"}, nil)
-		resolver2.On("Resolve", remaining).Return(parameter.Values{"NAME": "World"}, nil)
+		currentValues := parameter.Values{"PORT": "8080"}
+		resolver1.On("Resolve", all, currentValues).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		resolver2.On("Resolve", remaining, currentValues).Return(parameter.Values{"NAME": "World"}, nil)
 		chain := parameter.NewStrictResolverChain(resolver1, resolver2)
 
-		got, err := chain.Resolve(all)
+		got, err := chain.Resolve(all, currentValues)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -149,7 +150,7 @@ func TestStrictResolverChain(t *testing.T) {
 			{Name: "PORT", Required: true},
 		}
 
-		got, err := chain.Resolve(definitions)
+		got, err := chain.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -161,32 +162,31 @@ func TestStrictResolverChain(t *testing.T) {
 	})
 
 	t.Run("allows required parameters with non-empty current values", func(t *testing.T) {
-		resolver := parameter.NewStaticResolver(nil)
-		chain := parameter.NewStrictResolverChain(resolver)
-		definitions := []parameter.Definition{{
-			Name:          "CINNAMON",
-			Required:      true,
-			CurrentValues: []string{"current", "${CINNAMON}"},
-		}}
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
+		definitions := []parameter.Definition{{Name: "PORT", Required: true}}
 
-		got, err := chain.Resolve(definitions)
+		got, err := chain.Resolve(definitions, parameter.Values{"PORT": "8080"})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
 	})
 
-	t.Run("errors when any current value is empty", func(t *testing.T) {
-		resolver := parameter.NewStaticResolver(nil)
-		chain := parameter.NewStrictResolverChain(resolver)
-		definition := parameter.Definition{
-			Name:          "CINNAMON",
-			Required:      true,
-			CurrentValues: []string{"current", ""},
-		}
+	t.Run("errors when the current value is empty", func(t *testing.T) {
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
+		definitions := []parameter.Definition{{Name: "PORT", Required: true}}
 
-		_, err := chain.Resolve([]parameter.Definition{definition})
+		_, err := chain.Resolve(definitions, parameter.Values{"PORT": ""})
 
-		assert.Equal(t, parameter.MissingParametersError{definition}, err)
+		assert.Equal(t, parameter.MissingParametersError(definitions), err)
+	})
+
+	t.Run("empty update overrides a non-empty current value", func(t *testing.T) {
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"PORT": ""}))
+		definitions := []parameter.Definition{{Name: "PORT", Required: true}}
+
+		_, err := chain.Resolve(definitions, parameter.Values{"PORT": "8080"})
+
+		assert.Equal(t, parameter.MissingParametersError(definitions), err)
 	})
 
 	t.Run("does not resolve omitted optional parameters", func(t *testing.T) {
@@ -199,7 +199,7 @@ func TestStrictResolverChain(t *testing.T) {
 			},
 		}
 
-		got, err := chain.Resolve(definitions)
+		got, err := chain.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{}
@@ -216,9 +216,8 @@ func TestMissingParametersError(t *testing.T) {
 				Example:     "Hello",
 			},
 			{
-				Name:          "PORT",
-				Description:   "Port number",
-				CurrentValues: []string{"8080", ""},
+				Name:        "PORT",
+				Description: "Port number",
 			},
 		}
 
@@ -230,7 +229,6 @@ func TestMissingParametersError(t *testing.T) {
     example: Hello
   PORT:
     description: Port number
-    # current: ["8080",""]
 `
 		assert.Equal(t, want, got)
 	})

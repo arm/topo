@@ -18,7 +18,7 @@ func TestCLIResolver(t *testing.T) {
 			{Name: "PORT", Required: false},
 		}
 
-		got, err := resolver.Resolve(definitions)
+		got, err := resolver.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -36,7 +36,7 @@ func TestCLIResolver(t *testing.T) {
 			{Name: "CONNECTION_STRING", Required: true},
 		}
 
-		got, err := resolver.Resolve(definitions)
+		got, err := resolver.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -60,7 +60,7 @@ func TestCLIResolver(t *testing.T) {
 			{Name: "GREETING", Required: true},
 		}
 
-		_, err = resolver.Resolve(definitions)
+		_, err = resolver.Resolve(definitions, nil)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unknown parameter: UNKNOWN")
@@ -76,7 +76,7 @@ func TestCLIResolver(t *testing.T) {
 			{Name: "PORT", Required: true},
 		}
 
-		got, err := resolver.Resolve(definitions)
+		got, err := resolver.Resolve(definitions, nil)
 
 		require.NoError(t, err)
 		want := parameter.Values{

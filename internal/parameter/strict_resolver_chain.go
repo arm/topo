@@ -3,7 +3,6 @@ package parameter
 import (
 	"fmt"
 	"maps"
-	"slices"
 	"strings"
 )
 
@@ -17,8 +16,8 @@ func NewStrictResolverChain(resolvers ...Resolver) *StrictResolverChain {
 	return &StrictResolverChain{resolvers: resolvers}
 }
 
-func (r *StrictResolverChain) Resolve(definitions []Definition) (Values, error) {
-	values := Values{}
+func (r *StrictResolverChain) Resolve(definitions []Definition, currentValues Values) (Values, error) {
+	updates := Values{}
 	remaining := definitions
 
 	for _, resolver := range r.resolvers {
@@ -26,24 +25,24 @@ func (r *StrictResolverChain) Resolve(definitions []Definition) (Values, error) 
 			break
 		}
 
-		newValues, err := resolver.Resolve(remaining)
+		newValues, err := resolver.Resolve(remaining, currentValues)
 		if err != nil {
 			return nil, err
 		}
 
-		maps.Copy(values, newValues)
-		remaining = withoutValues(remaining, values)
+		maps.Copy(updates, newValues)
+		remaining = withoutValues(remaining, updates)
 
-		if allRequiredHaveValues(definitions, values) {
+		if allRequiredHaveValues(definitions, updates, currentValues) {
 			break
 		}
 	}
 
-	if err := validateRequiredValues(definitions, values); err != nil {
+	if err := validateRequiredValues(definitions, updates, currentValues); err != nil {
 		return nil, err
 	}
 
-	return values, nil
+	return updates, nil
 }
 
 type MissingParametersError []Definition
@@ -56,9 +55,6 @@ func (e MissingParametersError) Error() string {
 		fmt.Fprintf(&msg, "    description: %s\n", definition.Description)
 		if definition.Example != "" {
 			fmt.Fprintf(&msg, "    example: %s\n", definition.Example)
-		}
-		if len(definition.CurrentValues) > 0 {
-			fmt.Fprintf(&msg, "    # current: %s\n", formatCurrentValues(definition.CurrentValues))
 		}
 	}
 	return msg.String()
@@ -74,29 +70,27 @@ func withoutValues(definitions []Definition, values Values) []Definition {
 	return remaining
 }
 
-func allRequiredHaveValues(definitions []Definition, values Values) bool {
+func allRequiredHaveValues(definitions []Definition, updates, currentValues Values) bool {
 	for _, definition := range definitions {
-		if definition.Required && !hasValue(definition, values) {
+		if definition.Required && !hasValue(definition.Name, updates, currentValues) {
 			return false
 		}
 	}
 	return true
 }
 
-func hasValue(definition Definition, values Values) bool {
-	if value, exists := values[definition.Name]; exists {
-		return value != ""
+func hasValue(name string, updates, currentValues Values) bool {
+	value, supplied := updates[name]
+	if !supplied {
+		value = currentValues[name]
 	}
-	if len(definition.CurrentValues) == 0 {
-		return false
-	}
-	return !slices.Contains(definition.CurrentValues, "")
+	return value != ""
 }
 
-func validateRequiredValues(definitions []Definition, values Values) error {
+func validateRequiredValues(definitions []Definition, updates, currentValues Values) error {
 	var missing []Definition
 	for _, definition := range definitions {
-		if definition.Required && !hasValue(definition, values) {
+		if definition.Required && !hasValue(definition.Name, updates, currentValues) {
 			missing = append(missing, definition)
 		}
 	}
