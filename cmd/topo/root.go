@@ -140,30 +140,34 @@ func addTargetFlag(cmd *cobra.Command) {
 	)
 }
 
-func lookupTarget(cmd *cobra.Command) (string, bool) {
+type targetSelection struct {
+	value    string
+	explicit bool
+}
+
+func lookupTarget(cmd *cobra.Command) (targetSelection, bool) {
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
 		panic(fmt.Sprintf("internal error: target flag not registered: %v", err))
 	}
 
-	if strings.TrimSpace(flagValue) == "" {
-		flagValue = os.Getenv(targetEnvVar)
+	if value := strings.TrimSpace(flagValue); value != "" {
+		return targetSelection{value: value, explicit: cmd.Flags().Changed("target")}, true
 	}
 
-	v := strings.TrimSpace(flagValue)
-	if v == "" {
-		return "", false
+	value := strings.TrimSpace(os.Getenv(targetEnvVar))
+	if value == "" {
+		return targetSelection{}, false
 	}
-
-	return v, true
+	return targetSelection{value: value}, true
 }
 
-func requireTarget(cmd *cobra.Command) (string, error) {
-	t, exists := lookupTarget(cmd)
+func requireTarget(cmd *cobra.Command) (targetSelection, error) {
+	target, exists := lookupTarget(cmd)
 	if !exists {
-		return "", fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
+		return targetSelection{}, fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
 	}
-	return t, nil
+	return target, nil
 }
 
 const defaultTimeout = 5 * time.Second

@@ -50,7 +50,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		targetArg, err := requireTarget(cmd)
+		target, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, targetArg, envFiles)
+		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
 		if err != nil {
 			return err
 		}
@@ -82,12 +82,13 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		composeFileFlagValue := cmd.Flag(composeFileFlag)
 		defaultSuccessMessage := buildDefaultSuccessMessage(
 			engine,
+			target,
 			strings.TrimSpace(composeFileFlagValue.Value.String()),
 			composeFileFlagValue.Changed,
 		)
 
 		options := deploy.Options{
-			TargetHost:            ssh.NewDestination(targetArg),
+			TargetHost:            ssh.NewDestination(target.value),
 			DefaultSuccessMessage: defaultSuccessMessage,
 		}
 		if !noRegistry {
@@ -118,23 +119,34 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		healthCommand := "topo health"
-		if engine.explicit {
-			healthCommand += fmt.Sprintf(" --engine %s", engine.value)
-		}
+		healthCommand := buildHealthCommand(engine, target)
 		return fmt.Errorf("deployment failed; ensure `%s` is passing: %w", healthCommand, deploymentErr)
 	},
 }
 
-func buildDefaultSuccessMessage(engine engineSelection, composeFilePath string, explicitComposeFile bool) string {
+func buildDefaultSuccessMessage(engine engineSelection, target targetSelection, composeFilePath string, explicitComposeFile bool) string {
 	psCommand := "topo ps"
 	if engine.explicit {
 		psCommand += fmt.Sprintf(" --engine %s", engine.value)
+	}
+	if target.explicit {
+		psCommand += " --target " + cmdtext.QuoteArg(target.value)
 	}
 	if explicitComposeFile {
 		psCommand += " -f " + cmdtext.QuoteArg(composeFilePath)
 	}
 	return fmt.Sprintf("Run `%s` to see deployed containers", psCommand)
+}
+
+func buildHealthCommand(engine engineSelection, target targetSelection) string {
+	healthCommand := "topo health"
+	if engine.explicit {
+		healthCommand += fmt.Sprintf(" --engine %s", engine.value)
+	}
+	if target.explicit {
+		healthCommand += " --target " + cmdtext.QuoteArg(target.value)
+	}
+	return healthCommand
 }
 
 func ensureProjectIsReady(scope project.Scope) error {
