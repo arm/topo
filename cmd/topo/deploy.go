@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	cmdtext "github.com/arm/topo/internal/command"
-	deployment "github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/podman"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
@@ -73,49 +73,45 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			strings.TrimSpace(composeFileFlagValue.Value.String()),
 			composeFileFlagValue.Changed,
 		)
-		return deploy(cmd, scope, targetArg, selectedEngine, defaultSuccessMessage)
+		if cmd.Flags().Changed("registry-port") && noRegistry {
+			logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
+		}
+		if err := ensureProjectIsReady(scope); err != nil {
+			return err
+		}
+
+		resolvedPort, err := resolvePort(cmd, registryPort)
+		if err != nil {
+			return err
+		}
+		if err := validatePort(resolvedPort); err != nil {
+			return err
+		}
+
+		options := deploy.Options{
+			TargetHost:            ssh.NewDestination(targetArg),
+			DefaultSuccessMessage: defaultSuccessMessage,
+		}
+		if !noRegistry {
+			options.Registry = &deploy.RegistryConfig{
+				Port:                resolvedPort,
+				SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+			}
+		}
+		switch {
+		case forceRecreate:
+			options.RecreateMode = deploy.RecreateModeForce
+		case noRecreate:
+			options.RecreateMode = deploy.RecreateModeNone
+		}
+
+		return executeDeployment(cmd, func(ctx context.Context) error {
+			if selectedEngine == containerEnginePodman {
+				return podman.Deploy(ctx, os.Stdout, scope, options)
+			}
+			return docker.Deploy(ctx, os.Stdout, scope, options)
+		})
 	},
-}
-
-func deploy(cmd *cobra.Command, scope project.Scope, targetArg string, selectedEngine containerEngine, defaultSuccessMessage string) error {
-	if cmd.Flags().Changed("registry-port") && noRegistry {
-		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
-	}
-	if err := ensureProjectIsReady(scope); err != nil {
-		return err
-	}
-
-	resolvedPort, err := resolvePort(cmd, registryPort)
-	if err != nil {
-		return err
-	}
-	if err := validatePort(resolvedPort); err != nil {
-		return err
-	}
-
-	options := deployment.Options{
-		TargetHost:            ssh.NewDestination(targetArg),
-		DefaultSuccessMessage: defaultSuccessMessage,
-	}
-	if !noRegistry {
-		options.Registry = &deployment.RegistryConfig{
-			Port:                resolvedPort,
-			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-		}
-	}
-	switch {
-	case forceRecreate:
-		options.RecreateMode = deployment.RecreateModeForce
-	case noRecreate:
-		options.RecreateMode = deployment.RecreateModeNone
-	}
-
-	return executeDeployment(cmd, func(ctx context.Context) error {
-		if selectedEngine == containerEnginePodman {
-			return podman.Deploy(ctx, os.Stdout, scope, options)
-		}
-		return docker.Deploy(ctx, os.Stdout, scope, options)
-	})
 }
 
 func buildDefaultSuccessMessage(composeFilePath string, explicitComposeFile bool) string {
