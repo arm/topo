@@ -15,9 +15,9 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 			got := healthCheck.Report(nil, "Choose a target")
 
 			assert.Nil(t, got.TargetDetails)
-			assert.Empty(t, got.Deployment.Target)
+			assert.Empty(t, got.Deployment.Checks)
 			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusError, Fix: &health.Fix{Description: "Choose a target"}}, got.Deployment.TargetStatus)
-			assert.Empty(t, got.ProjectDiscovery.Target)
+			assert.Empty(t, got.ProjectDiscovery.Checks)
 			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusWarning, Fix: &health.Fix{Description: "Choose a target"}}, got.ProjectDiscovery.TargetStatus)
 		})
 
@@ -33,7 +33,7 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 
 			assert.Equal(t, []health.DependencyReport{{
 				Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Name: "Target access", Status: health.CheckStatusOK, Value: "user@example.com",
-			}}, got.Deployment.Target)
+			}}, got.Deployment.Checks)
 		})
 	})
 }
@@ -41,6 +41,7 @@ func TestEvaluatedHealthCheck(t *testing.T) {
 func TestToDependencyReport(t *testing.T) {
 	t.Run("returns successful dependency result", func(t *testing.T) {
 		dependency := health.EvaluatedDependency{
+			Scope:      health.DependencyScopeHost,
 			ID:         "docker",
 			Label:      "Container Engine",
 			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{SuccessValue: "docker"}},
@@ -49,6 +50,7 @@ func TestToDependencyReport(t *testing.T) {
 		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			ID:     "docker",
 			Name:   "Container Engine",
 			Status: health.CheckStatusOK,
@@ -59,6 +61,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("returns error dependency result", func(t *testing.T) {
 		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Rube Goldberg",
 			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityError,
@@ -69,6 +72,7 @@ func TestToDependencyReport(t *testing.T) {
 		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Rube Goldberg",
 			Status: health.CheckStatusError,
 			Value:  "whatever not found on path",
@@ -78,6 +82,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("returns warning dependency result", func(t *testing.T) {
 		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Remoteproc Runtime",
 			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
@@ -88,6 +93,7 @@ func TestToDependencyReport(t *testing.T) {
 		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Remoteproc Runtime",
 			Status: health.CheckStatusWarning,
 			Value:  "remoteproc-runtime not found on path",
@@ -97,6 +103,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("returns informational dependency result", func(t *testing.T) {
 		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Remoteproc Runtime",
 			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityInfo,
@@ -107,6 +114,7 @@ func TestToDependencyReport(t *testing.T) {
 		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Remoteproc Runtime",
 			Status: health.CheckStatusInfo,
 			Value:  "no remoteproc devices found",
@@ -116,6 +124,7 @@ func TestToDependencyReport(t *testing.T) {
 
 	t.Run("propagates fix from failed dependency", func(t *testing.T) {
 		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Food",
 			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
@@ -130,6 +139,7 @@ func TestToDependencyReport(t *testing.T) {
 		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Food",
 			Status: health.CheckStatusWarning,
 			Value:  "not enough pineapple",
