@@ -13,7 +13,7 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
-	t.Run("preserves existing values when updating one parameter", func(t *testing.T) {
+	t.Run("uses inherited values without copying them to the output file", func(t *testing.T) {
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:
   app:
@@ -29,6 +29,26 @@ x-topo:
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"A": "updated"}))
 
 		err := project.Configure(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}}, resolver)
+
+		require.NoError(t, err)
+		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated"})
+		assert.Equal(t, "B=keep-me\n", testutil.RequireReadFile(t, basePath))
+	})
+
+	t.Run("preserves output entries even when the output file is not an input", func(t *testing.T) {
+		root := t.TempDir()
+		path := testutil.RequireWriteComposeFile(t, root, `services:
+  app:
+    image: alpine
+    environment: {A: "${A}"}
+x-topo:
+  parameters: {A: {}}
+`)
+		envPath := filepath.Join(root, env.DefaultFilename)
+		testutil.RequireWriteFile(t, envPath, "A=original\nB=keep-me\n")
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"A": "updated"}))
+
+		err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
 		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated", "B": "keep-me"})

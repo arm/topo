@@ -40,9 +40,17 @@ func Configure(scope Scope, resolver parameter.Resolver) error {
 		return nil
 	}
 
-	outputEnvFile := filepath.Join(filepath.Dir(scope.ComposeFile), env.DefaultFilename)
-	maps.Copy(currentValues, values)
-	return env.WriteFile(outputEnvFile, currentValues)
+	root := filepath.Dir(scope.ComposeFile)
+	outputFiles, err := env.ResolveFiles(root, []string{env.DefaultFilename}, true)
+	if err != nil {
+		return fmt.Errorf("failed to resolve output environment file: %w", err)
+	}
+	outputValues, err := env.ReadFiles(outputFiles)
+	if err != nil {
+		return fmt.Errorf("failed to load output environment values: %w", err)
+	}
+	maps.Copy(outputValues, values)
+	return env.WriteFile(filepath.Join(root, env.DefaultFilename), outputValues)
 }
 
 func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Definition) error {
