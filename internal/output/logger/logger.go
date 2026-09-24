@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/arm/topo/internal/output/colors"
 	"github.com/arm/topo/internal/output/term"
 )
 
@@ -30,21 +29,21 @@ func (l Level) String() string {
 	}
 }
 
-func (l Level) Color() colors.Role {
+func (l Level) Color() string {
 	switch l {
 	case LevelInfo:
-		return colors.Information
+		return term.Blue
 	case LevelWarn:
-		return colors.Warning
+		return term.Yellow
 	default:
-		return colors.Failure
+		return term.Red
 	}
 }
 
 type Logger struct {
 	output  io.Writer
 	format  term.Format
-	palette colors.Palette
+	palette term.Palette
 }
 
 type Options struct {
@@ -66,7 +65,7 @@ func New(opts Options) *Logger {
 	return &Logger{
 		output:  opts.Output,
 		format:  opts.Format,
-		palette: colors.NewPalette(term.IsTTY(opts.Output)),
+		palette: term.NewPaletteFor(opts.Output),
 	}
 }
 
@@ -75,7 +74,7 @@ func (l *Logger) Log(level Level, msg string) {
 	_, _ = fmt.Fprintln(l.output, formattedMsg)
 }
 
-func formatMessage(format term.Format, palette colors.Palette, level Level, msg string) string {
+func formatMessage(format term.Format, palette term.Palette, level Level, msg string) string {
 	timestamp := time.Now().Format(time.TimeOnly)
 	if format == term.JSON {
 		entry := jsonEntry{
@@ -87,7 +86,7 @@ func formatMessage(format term.Format, palette colors.Palette, level Level, msg 
 		return string(formattedMsg)
 	}
 
-	timestampStr := palette.Apply(colors.Muted, timestamp)
-	levelStr := palette.Apply(level.Color(), level.String())
+	timestampStr := palette.Color(term.Dim, timestamp)
+	levelStr := palette.Color(level.Color(), level.String())
 	return fmt.Sprintf("%s %s %s", timestampStr, levelStr, msg)
 }

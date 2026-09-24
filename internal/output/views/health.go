@@ -57,14 +57,14 @@ type functionalityTemplateData struct {
 	Report health.ReadinessReport
 }
 
-func (r HealthReport) AsPlain(isTTY bool) (string, error) {
-	funcMap := getFuncMap(isTTY)
-	funcMap["status"] = healthStatusFormatter(isTTY)
+func (r HealthReport) AsPlain(palette term.Palette) (string, error) {
+	funcMap := getFuncMap(palette)
+	funcMap["status"] = healthStatusFormatter(palette)
 	funcMap["buildFunctionalityTemplateData"] = func(name string, report health.ReadinessReport) functionalityTemplateData {
 		return functionalityTemplateData{Name: name, Report: report}
 	}
 	funcMap["functionalityHeading"] = func(name string, report health.ReadinessReport) string {
-		return functionalityHeading(name, report, isTTY)
+		return functionalityHeading(name, report, palette)
 	}
 	funcMap["dependencyGroupStatus"] = dependencyGroupStatus
 	funcMap["targetStatus"] = targetStatus
@@ -105,10 +105,10 @@ func legacyTargetDependencies(deployment, projectDiscovery []health.DependencyRe
 	return targetDependencies
 }
 
-func functionalityHeading(name string, report health.ReadinessReport, isTTY bool) string {
+func functionalityHeading(name string, report health.ReadinessReport, palette term.Palette) string {
 	statusCount := countStatuses(report)
 	if statusCount.errors == 0 && statusCount.undetermined == 0 && statusCount.warnings == 0 {
-		return sectionHeading(name+": ready", isTTY)
+		return sectionHeading(name+": ready", palette)
 	}
 
 	readiness := "ready"
@@ -120,24 +120,21 @@ func functionalityHeading(name string, report health.ReadinessReport, isTTY bool
 
 	indicators := make([]string, 0, 3)
 	if statusCount.errors > 0 {
-		indicators = append(indicators, statusIndicator("✗", term.Red, statusCount.errors, isTTY))
+		indicators = append(indicators, statusIndicator("✗", term.Red, statusCount.errors, palette))
 	}
 	if statusCount.warnings > 0 {
-		indicators = append(indicators, statusIndicator("!", term.Yellow, statusCount.warnings, isTTY))
+		indicators = append(indicators, statusIndicator("!", term.Yellow, statusCount.warnings, palette))
 	}
 	if statusCount.undetermined > 0 {
-		indicators = append(indicators, statusIndicator("?", term.Gray, statusCount.undetermined, isTTY))
+		indicators = append(indicators, statusIndicator("?", term.Gray, statusCount.undetermined, palette))
 	}
 
 	heading := fmt.Sprintf("%s: %s (%s)", name, readiness, strings.Join(indicators, " "))
-	return sectionHeading(heading, isTTY)
+	return sectionHeading(heading, palette)
 }
 
-func statusIndicator(symbol, color string, count uint, isTTY bool) string {
-	if isTTY {
-		symbol = term.Color(color, symbol)
-	}
-	return fmt.Sprintf("%s %d", symbol, count)
+func statusIndicator(symbol, color string, count uint, palette term.Palette) string {
+	return fmt.Sprintf("%s %d", palette.Color(color, symbol), count)
 }
 
 func countStatuses(report health.ReadinessReport) (statusCount struct{ errors, warnings, undetermined uint }) {
@@ -220,11 +217,11 @@ func dependencyGroupStatus(dependencies []health.DependencyReport) health.CheckS
 	return status
 }
 
-func sectionHeading(heading string, isTTY bool) string {
-	return term.Header(heading, isTTY)
+func sectionHeading(heading string, palette term.Palette) string {
+	return term.Header(heading, palette)
 }
 
-func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
+func healthStatusFormatter(palette term.Palette) func(health.CheckStatus) string {
 	return func(status health.CheckStatus) string {
 		label, color := " ✗ ", term.Red
 		switch status {
@@ -237,10 +234,7 @@ func healthStatusFormatter(isTTY bool) func(health.CheckStatus) string {
 		case health.CheckStatusUndetermined:
 			label, color = " ? ", term.Gray
 		}
-		if !isTTY {
-			return label
-		}
-		return term.Color(color, label)
+		return palette.Color(color, label)
 	}
 }
 

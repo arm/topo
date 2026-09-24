@@ -10,7 +10,7 @@ import (
 
 type View interface {
 	AsJSON() (string, error)
-	AsPlain(isTTY bool) (string, error)
+	AsPlain(palette term.Palette) (string, error)
 }
 
 func Print(p View, w io.Writer, f term.Format) error {
@@ -23,7 +23,7 @@ func Print(p View, w io.Writer, f term.Format) error {
 			return fmt.Errorf("render view as JSON: %w", err)
 		}
 	} else {
-		out, err = p.AsPlain(term.IsTTY(w))
+		out, err = p.AsPlain(term.NewPaletteFor(w))
 		if err != nil {
 			return fmt.Errorf("render view as plain text: %w", err)
 		}
