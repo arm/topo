@@ -46,7 +46,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		selectedEngine, err := getSelectedEngine(cmd)
+		engine, err := getEngineSelection(cmd)
 		if err != nil {
 			return err
 		}
@@ -81,6 +81,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 
 		composeFileFlagValue := cmd.Flag(composeFileFlag)
 		defaultSuccessMessage := buildDefaultSuccessMessage(
+			engine,
 			strings.TrimSpace(composeFileFlagValue.Value.String()),
 			composeFileFlagValue.Changed,
 		)
@@ -106,7 +107,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		defer stop()
 
 		var deploymentErr error
-		if selectedEngine == containerEnginePodman {
+		if engine.value == containerEnginePodman {
 			deploymentErr = podman.Deploy(ctx, os.Stdout, scope, options)
 		} else {
 			deploymentErr = docker.Deploy(ctx, os.Stdout, scope, options)
@@ -117,12 +118,19 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return fmt.Errorf("deployment failed; ensure topo health is passing: %w", deploymentErr)
+		healthCommand := "topo health"
+		if engine.explicit {
+			healthCommand += fmt.Sprintf(" --engine %s", engine.value)
+		}
+		return fmt.Errorf("deployment failed; ensure `%s` is passing: %w", healthCommand, deploymentErr)
 	},
 }
 
-func buildDefaultSuccessMessage(composeFilePath string, explicitComposeFile bool) string {
+func buildDefaultSuccessMessage(engine engineSelection, composeFilePath string, explicitComposeFile bool) string {
 	psCommand := "topo ps"
+	if engine.explicit {
+		psCommand += fmt.Sprintf(" --engine %s", engine.value)
+	}
 	if explicitComposeFile {
 		psCommand += " -f " + cmdtext.QuoteArg(composeFilePath)
 	}
