@@ -103,13 +103,16 @@ const (
 	containerEnginePodman containerEngine = "podman"
 )
 
-const containerEngineFlag = "engine"
+const (
+	containerEngineFlag   = "engine"
+	containerEngineEnvVar = "TOPO_ENGINE"
+)
 
 func addEngineFlag(cmd *cobra.Command) {
 	cmd.Flags().String(
 		containerEngineFlag,
 		string(containerEngineDocker),
-		"container engine to use (docker or podman)",
+		fmt.Sprintf("container engine to use (docker or podman; can also be set via %s)", containerEngineEnvVar),
 	)
 }
 
@@ -123,14 +126,18 @@ func getEngineSelection(cmd *cobra.Command) (engineSelection, error) {
 		panic(fmt.Sprintf("internal error: container engine flag is not a string: %v", err))
 	}
 
+	explicit := cmd.Flags().Changed(containerEngineFlag)
+	if !explicit {
+		if envValue := strings.TrimSpace(os.Getenv(containerEngineEnvVar)); envValue != "" {
+			value = envValue
+		}
+	}
+
 	selectedEngine := containerEngine(value)
 	if selectedEngine != containerEngineDocker && selectedEngine != containerEnginePodman {
 		return engineSelection{}, fmt.Errorf("invalid engine %q: must be docker or podman", value)
 	}
-	return engineSelection{
-		value:    selectedEngine,
-		explicit: cmd.Flags().Changed(containerEngineFlag),
-	}, nil
+	return engineSelection{value: selectedEngine, explicit: explicit}, nil
 }
 
 func addTargetFlag(cmd *cobra.Command) {
