@@ -23,7 +23,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
 
-		selectedEngine, err := getSelectedEngine(cmd)
+		engine, err := getEngineSelection(cmd)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			panic("internal error: all flag not registered: " + err.Error())
 		}
 
-		if selectedEngine == containerEnginePodman {
+		if engine.value == containerEnginePodman {
 			containers, err := podman.ListContainers(scope, dest, hostname, allContainers)
 			if err != nil {
 				return err

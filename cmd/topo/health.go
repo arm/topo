@@ -26,7 +26,7 @@ var healthCmd = &cobra.Command{
 		outputFormat := resolveOutput(cmd)
 
 		skipVersionCheck := resolveSkipVersionChecks(cmd)
-		selectedEngine, err := getSelectedEngine(cmd)
+		engine, err := getEngineSelection(cmd)
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ var healthCmd = &cobra.Command{
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 		report := health.Check(ctx, health.HealthCheckOptions{
-			Engine:                  health.Engine(selectedEngine),
+			Engine:                  health.Engine(engine.value),
 			Target:                  target,
 			MissingTargetFixMessage: "provide --target or set TOPO_TARGET to check target health",
 			SkipVersionChecks:       skipVersionCheck,

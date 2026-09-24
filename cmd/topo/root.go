@@ -93,6 +93,11 @@ const targetEnvVar = env.TargetVariable
 
 type containerEngine string
 
+type engineSelection struct {
+	value    containerEngine
+	explicit bool
+}
+
 const (
 	containerEngineDocker containerEngine = "docker"
 	containerEnginePodman containerEngine = "podman"
@@ -108,9 +113,9 @@ func addEngineFlag(cmd *cobra.Command) {
 	)
 }
 
-func getSelectedEngine(cmd *cobra.Command) (containerEngine, error) {
+func getEngineSelection(cmd *cobra.Command) (engineSelection, error) {
 	if cmd.Flags().Lookup(containerEngineFlag) == nil {
-		return containerEngineDocker, nil
+		return engineSelection{value: containerEngineDocker}, nil
 	}
 
 	value, err := cmd.Flags().GetString(containerEngineFlag)
@@ -120,9 +125,12 @@ func getSelectedEngine(cmd *cobra.Command) (containerEngine, error) {
 
 	selectedEngine := containerEngine(value)
 	if selectedEngine != containerEngineDocker && selectedEngine != containerEnginePodman {
-		return "", fmt.Errorf("invalid engine %q: must be docker or podman", value)
+		return engineSelection{}, fmt.Errorf("invalid engine %q: must be docker or podman", value)
 	}
-	return selectedEngine, nil
+	return engineSelection{
+		value:    selectedEngine,
+		explicit: cmd.Flags().Changed(containerEngineFlag),
+	}, nil
 }
 
 func addTargetFlag(cmd *cobra.Command) {
