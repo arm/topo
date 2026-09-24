@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -103,12 +102,22 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			options.RecreateMode = deploy.RecreateModeNone
 		}
 
-		return executeDeployment(cmd, func(ctx context.Context) error {
-			if selectedEngine == containerEnginePodman {
-				return podman.Deploy(ctx, os.Stdout, scope, options)
-			}
-			return docker.Deploy(ctx, os.Stdout, scope, options)
-		})
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+
+		var deploymentErr error
+		if selectedEngine == containerEnginePodman {
+			deploymentErr = podman.Deploy(ctx, os.Stdout, scope, options)
+		} else {
+			deploymentErr = docker.Deploy(ctx, os.Stdout, scope, options)
+		}
+		if deploymentErr == nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return fmt.Errorf("deployment failed; ensure topo health is passing: %w", deploymentErr)
 	},
 }
 
@@ -125,19 +134,6 @@ func ensureProjectIsReady(scope project.Scope) error {
 		return nil
 	}
 	return checks.EnsureProjectIsLinuxArm64Ready(scope)
-}
-
-func executeDeployment(cmd *cobra.Command, deployment func(context.Context) error) error {
-	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := deployment(ctx); err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
-	}
-	return nil
 }
 
 const (
