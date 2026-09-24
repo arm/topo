@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -37,7 +38,7 @@ services:
 `, testProjectName(t)))
 	scope := project.Scope{ComposeFile: composeFilePath}
 	t.Cleanup(func() { forceComposeDown(t, scope) })
-	deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
+	deployOptions := deploy.Options{TargetHost: remoteDockerHost}
 	require.NoError(t, docker.Deploy(t.Context(), io.Discard, scope, deployOptions))
 	assertContainersRunning(t, remoteDockerHost, scope)
 
