@@ -3,6 +3,7 @@ package env
 import (
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"path/filepath"
@@ -52,12 +53,30 @@ func ReadFiles(paths []string) (map[string]string, error) {
 	return content, nil
 }
 
-func WriteFile(path string, values map[string]string) error {
-	content, err := encodeFile(values)
+func UpdateFile(path string, values map[string]string) error {
+	merged, err := dotenv.ReadFile(path, nil)
+	if errors.Is(err, os.ErrNotExist) {
+		merged = make(map[string]string)
+	} else if err != nil {
+		return fmt.Errorf("failed to read env file: %w", err)
+	}
+	maps.Copy(merged, values)
+	content, err := encodeFile(merged)
 	if err != nil {
 		return fmt.Errorf("failed to encode env file content: %w", err)
 	}
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		return fmt.Errorf("failed to write env file: %w", err)
+	}
+	return nil
+}
+
+func WriteFile(output io.Writer, values map[string]string) error {
+	content, err := encodeFile(values)
+	if err != nil {
+		return fmt.Errorf("failed to encode env file content: %w", err)
+	}
+	if _, err := io.WriteString(output, content); err != nil {
 		return fmt.Errorf("failed to write env file: %w", err)
 	}
 	return nil

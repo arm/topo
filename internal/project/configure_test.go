@@ -15,7 +15,7 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
-	t.Run("process values satisfy required parameters without being persisted", func(t *testing.T) {
+	t.Run("process values satisfy required parameters without returning updates", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_PARAMETER", "shell=value")
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:
@@ -26,13 +26,14 @@ x-topo:
   parameters: {TOPO_TEST_PARAMETER: {required: true}}
 `)
 
-		err := project.Configure(project.Scope{ComposeFile: path}, parameter.NewStrictResolverChain())
+		values, err := project.Configure(project.Scope{ComposeFile: path}, parameter.NewStrictResolverChain())
 
 		require.NoError(t, err)
+		assert.Nil(t, values)
 		assert.NoFileExists(t, filepath.Join(root, env.DefaultFilename))
 	})
 
-	t.Run("interactive current values prefer process values without persisting them", func(t *testing.T) {
+	t.Run("interactive current values prefer process values without returning updates", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_PARAMETER", "shell=value")
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:
@@ -50,14 +51,15 @@ x-topo:
 		output := &bytes.Buffer{}
 		resolver := parameter.NewStrictResolverChain(parameter.NewInteractiveResolver(strings.NewReader("\n"), output))
 
-		err := project.Configure(scope, resolver)
+		values, err := project.Configure(scope, resolver)
 
 		require.NoError(t, err)
+		assert.Nil(t, values)
 		assert.Contains(t, output.String(), `Current: "shell=value"`)
 		testutil.RequireEnvFileValues(t, envPath, map[string]string{"TOPO_TEST_PARAMETER": "topo"})
 	})
 
-	t.Run("uses inherited values without copying them to the output file", func(t *testing.T) {
+	t.Run("uses inherited values without returning them as updates", func(t *testing.T) {
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:
   app:
@@ -72,14 +74,13 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "B=keep-me\n")
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"A": "updated"}))
 
-		err := project.Configure(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}}, resolver)
+		values, err := project.Configure(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}}, resolver)
 
 		require.NoError(t, err)
-		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated"})
-		assert.Equal(t, "B=keep-me\n", testutil.RequireReadFile(t, basePath))
+		assert.Equal(t, map[string]string{"A": "updated"}, values)
 	})
 
-	t.Run("preserves output entries even when the output file is not an input", func(t *testing.T) {
+	t.Run("does not read env files outside the input scope", func(t *testing.T) {
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:
   app:
@@ -89,13 +90,13 @@ x-topo:
   parameters: {A: {}}
 `)
 		envPath := filepath.Join(root, env.DefaultFilename)
-		testutil.RequireWriteFile(t, envPath, "A=original\nB=keep-me\n")
+		testutil.RequireWriteFile(t, envPath, "invalid=\"unterminated\n")
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"A": "updated"}))
 
-		err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		values, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
-		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated", "B": "keep-me"})
+		assert.Equal(t, map[string]string{"A": "updated"}, values)
 	})
 
 	t.Run("allows unreferenced parameters with no matching build arg", func(t *testing.T) {
@@ -115,23 +116,23 @@ x-topo:
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"FOO": "baz"}))
 
-		err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		values, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
-		assert.Equal(t, contents, testutil.RequireReadFile(t, path))
-		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(path), env.DefaultFilename), map[string]string{"FOO": "baz"})
+		assert.Equal(t, map[string]string{"FOO": "baz"}, values)
 	})
 
 	t.Run("fails due to an nonexistent compose file", func(t *testing.T) {
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
 		resolver := parameter.NewStrictResolverChain()
 
-		err := project.Configure(project.Scope{ComposeFile: invalidPath}, resolver)
+		values, err := project.Configure(project.Scope{ComposeFile: invalidPath}, resolver)
 
 		require.ErrorContains(t, err, "failed to open compose file")
+		assert.Nil(t, values)
 	})
 
-	t.Run("writes provided parameters to env and leaves Compose unchanged", func(t *testing.T) {
+	t.Run("returns provided parameters overriding process values and leaves Compose unchanged", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_PARAMETER", "shell")
 		composeFileContents := `
 services:
@@ -153,10 +154,10 @@ x-topo:
 		static := parameter.NewStaticResolver(parameter.Values{"TOPO_TEST_PARAMETER": "baz"})
 		resolver := parameter.NewStrictResolverChain(static)
 
-		err := project.Configure(project.Scope{ComposeFile: composeFilePath}, resolver)
+		values, err := project.Configure(project.Scope{ComposeFile: composeFilePath}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
-		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename), map[string]string{"TOPO_TEST_PARAMETER": "baz"})
+		assert.Equal(t, map[string]string{"TOPO_TEST_PARAMETER": "baz"}, values)
 	})
 }
