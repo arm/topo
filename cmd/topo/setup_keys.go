@@ -21,7 +21,7 @@ var setupKeysCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		targetArg, err := requireTarget(cmd)
+		target, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ var setupKeysCmd = &cobra.Command{
 			return fmt.Errorf("legacy topo ssh config entries found; downgrade to Topo 13.0.0 (https://github.com/arm/topo/blob/v13.0.0/docs/introduction/install.mdx#install-a-specific-version-or-use-a-custom-directory) or below and run 'topo migrate-ssh' to migrate to the new single-file format")
 		}
 
-		dest := ssh.NewDestination(targetArg)
+		dest := ssh.NewDestination(target.value)
 		user, err := ssh.GetUserFromConfig(dest)
 		if err != nil {
 			return fmt.Errorf("%w; note: a per user ssh config entry should be created when setting up keys", err)

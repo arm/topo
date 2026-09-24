@@ -37,8 +37,8 @@ var healthCmd = &cobra.Command{
 		}
 
 		var target *ssh.Destination
-		if targetArg, ok := lookupTarget(cmd); ok {
-			destination := ssh.NewDestination(targetArg)
+		if targetSelection, ok := lookupTarget(cmd); ok {
+			destination := ssh.NewDestination(targetSelection.value)
 			target = &destination
 		}
 

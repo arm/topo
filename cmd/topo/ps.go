@@ -27,7 +27,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		targetArg, err := requireTarget(cmd)
+		target, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -39,12 +39,12 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, targetArg, envFiles)
+		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
 		if err != nil {
 			return err
 		}
 
-		dest := ssh.NewDestination(targetArg)
+		dest := ssh.NewDestination(target.value)
 		hostname, err := ssh.ResolveHostname(dest)
 		if err != nil {
 			return err
