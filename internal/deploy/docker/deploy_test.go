@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -20,7 +21,7 @@ func TestDeployment(t *testing.T) {
 		scope, imageName := deploymentFixture(t)
 		t.Cleanup(func() { forceComposeDown(t, scope) })
 		requireImageDoesNotExist(t, docker.LocalHost, imageName)
-		deployOptions := docker.DeployOptions{TargetHost: ssh.PlainLocalhost}
+		deployOptions := deploy.Options{TargetHost: ssh.PlainLocalhost}
 
 		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
@@ -34,7 +35,7 @@ func TestDeployment(t *testing.T) {
 		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 		scope, imageName := deploymentFixture(t)
 		requireImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
-		deployOptions := docker.DeployOptions{TargetHost: remoteDockerHost}
+		deployOptions := deploy.Options{TargetHost: remoteDockerHost}
 
 		err := docker.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
@@ -51,9 +52,9 @@ func TestDeployment(t *testing.T) {
 		remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
 		scope, imageName := deploymentFixture(t)
 		requireImageDoesNotExist(t, remoteCommandHost, imageName)
-		deployOptions := docker.DeployOptions{
+		deployOptions := deploy.Options{
 			TargetHost: remoteDockerHost,
-			Registry: &docker.RegistryConfig{
+			Registry: &deploy.RegistryConfig{
 				ContainerName:       registryContainerName,
 				Port:                registryPort,
 				SkipRemotePortCheck: true,

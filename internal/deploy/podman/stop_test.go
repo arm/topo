@@ -5,6 +5,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,7 @@ func TestStop(t *testing.T) {
 	t.Run("stops services on localhost", func(t *testing.T) {
 		scope, projectName := deploymentFixture(t)
 		t.Cleanup(func() { cleanupComposeProject(t, scope) })
-		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
+		options := deploy.Options{TargetHost: ssh.PlainLocalhost}
 		require.NoError(t, podman.Deploy(t.Context(), t.Output(), scope, options))
 
 		err := podman.Stop(t.Context(), t.Output(), scope, ssh.PlainLocalhost)
@@ -29,7 +30,7 @@ func TestStop(t *testing.T) {
 		podmanContainer := startPodmanInContainer(t)
 		scope, projectName := deploymentFixture(t)
 		target := ssh.NewDestination(podmanContainer.SSHDestination)
-		require.NoError(t, podman.Deploy(t.Context(), t.Output(), scope, podman.DeployOptions{TargetHost: target}))
+		require.NoError(t, podman.Deploy(t.Context(), t.Output(), scope, deploy.Options{TargetHost: target}))
 
 		err := podman.Stop(t.Context(), t.Output(), scope, target)
 

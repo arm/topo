@@ -4,15 +4,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/project"
-)
-
-type RecreateMode int
-
-const (
-	RecreateModeDefault RecreateMode = iota
-	RecreateModeForce
-	RecreateModeNone
 )
 
 func BuildImages(ctx context.Context, output io.Writer, socket Socket, scope project.Scope) error {
@@ -32,12 +25,12 @@ func PullImages(ctx context.Context, output io.Writer, socket Socket, scope proj
 	return RunComposeCommand(ctx, output, socket, scope, args...)
 }
 
-func StartServices(ctx context.Context, output io.Writer, socket Socket, scope project.Scope, mode RecreateMode) error {
+func StartServices(ctx context.Context, output io.Writer, socket Socket, scope project.Scope, mode deploy.RecreateMode) error {
 	args := []string{"up", "-d", "--no-build", "--pull", "never"}
 	switch mode {
-	case RecreateModeForce:
+	case deploy.RecreateModeForce:
 		args = append(args, "--force-recreate")
-	case RecreateModeNone:
+	case deploy.RecreateModeNone:
 		args = append(args, "--no-recreate")
 	}
 	return RunComposeCommand(ctx, output, socket, scope, args...)

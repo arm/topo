@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	cmdtext "github.com/arm/topo/internal/command"
+	deployment "github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/podman"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
@@ -92,42 +93,26 @@ func deploy(cmd *cobra.Command, scope project.Scope, targetArg string, selectedE
 		return err
 	}
 
+	options := deployment.Options{
+		TargetHost:            ssh.NewDestination(targetArg),
+		DefaultSuccessMessage: defaultSuccessMessage,
+	}
+	if !noRegistry {
+		options.Registry = &deployment.RegistryConfig{
+			Port:                resolvedPort,
+			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+		}
+	}
+	switch {
+	case forceRecreate:
+		options.RecreateMode = deployment.RecreateModeForce
+	case noRecreate:
+		options.RecreateMode = deployment.RecreateModeNone
+	}
+
 	return executeDeployment(cmd, func(ctx context.Context) error {
 		if selectedEngine == containerEnginePodman {
-			options := podman.DeployOptions{
-				TargetHost:            ssh.NewDestination(targetArg),
-				DefaultSuccessMessage: defaultSuccessMessage,
-			}
-			if !noRegistry {
-				options.Registry = &podman.RegistryConfig{
-					Port:                resolvedPort,
-					SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-				}
-			}
-			switch {
-			case forceRecreate:
-				options.RecreateMode = podman.RecreateModeForce
-			case noRecreate:
-				options.RecreateMode = podman.RecreateModeNone
-			}
 			return podman.Deploy(ctx, os.Stdout, scope, options)
-		}
-
-		options := docker.DeployOptions{
-			TargetHost:            ssh.NewDestination(targetArg),
-			DefaultSuccessMessage: defaultSuccessMessage,
-		}
-		if !noRegistry {
-			options.Registry = &docker.RegistryConfig{
-				Port:                resolvedPort,
-				SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-			}
-		}
-		switch {
-		case forceRecreate:
-			options.RecreateMode = docker.RecreateModeForce
-		case noRecreate:
-			options.RecreateMode = docker.RecreateModeNone
 		}
 		return docker.Deploy(ctx, os.Stdout, scope, options)
 	})
