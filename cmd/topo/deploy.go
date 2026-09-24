@@ -71,11 +71,8 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if cmd.Flags().Changed("registry-port") && noRegistry {
 			logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 		}
-		resolvedPort, err := resolvePort(cmd, registryPort)
+		resolvedPort, err := resolveValidPort(cmd, registryPort)
 		if err != nil {
-			return err
-		}
-		if err := validatePort(resolvedPort); err != nil {
 			return err
 		}
 
@@ -143,30 +140,27 @@ func executeDeployment(cmd *cobra.Command, deployment func(context.Context) erro
 	return nil
 }
 
-func validatePort(port string) error {
-	portNum, err := strconv.Atoi(port)
-	if err != nil {
-		return fmt.Errorf("invalid port %q: must be a number", port)
-	}
-	if portNum < 1 || portNum > 65535 {
-		return fmt.Errorf("invalid port %d: must be between 1 and 65535", portNum)
-	}
-	return nil
-}
-
 const (
 	portEnvVar                = "TOPO_PORT"
 	skipRemotePortCheckEnvVar = "TOPO_SKIP_REMOTE_PORT_CHECK"
 )
 
-func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
-	if cmd.Flags().Changed("registry-port") {
-		return flagValue, nil
+func resolveValidPort(cmd *cobra.Command, flagValue string) (string, error) {
+	port := flagValue
+	if !cmd.Flags().Changed("registry-port") {
+		if envPort := strings.TrimSpace(os.Getenv(portEnvVar)); envPort != "" {
+			port = envPort
+		}
 	}
-	if env := strings.TrimSpace(os.Getenv(portEnvVar)); env != "" {
-		return env, nil
+
+	portNumber, err := strconv.Atoi(port)
+	if err != nil {
+		return "", fmt.Errorf("invalid port %q: must be a number", port)
 	}
-	return flagValue, nil
+	if portNumber < 1 || portNumber > 65535 {
+		return "", fmt.Errorf("invalid port %d: must be between 1 and 65535", portNumber)
+	}
+	return port, nil
 }
 
 func resolveSkipRemotePortCheck(cmd *cobra.Command) bool {
