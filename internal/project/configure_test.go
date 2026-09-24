@@ -23,10 +23,12 @@ x-topo:
   parameters: {A: {}, B: {required: true}}
 `)
 		envPath := filepath.Join(root, env.DefaultFilename)
-		testutil.RequireWriteFile(t, envPath, "A=original\nB=keep-me\n")
+		basePath := filepath.Join(root, ".env")
+		testutil.RequireWriteFile(t, basePath, "B=keep-me\n")
+		testutil.RequireWriteFile(t, envPath, "A=original\n")
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"A": "updated"}))
 
-		err := project.Configure(path, resolver)
+		err := project.Configure(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}}, resolver)
 
 		require.NoError(t, err)
 		testutil.RequireEnvFileValues(t, envPath, map[string]string{"A": "updated", "B": "keep-me"})
@@ -49,7 +51,7 @@ x-topo:
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"FOO": "baz"}))
 
-		err := project.Configure(path, resolver)
+		err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, contents, testutil.RequireReadFile(t, path))
@@ -60,7 +62,7 @@ x-topo:
 		invalidPath := filepath.Join(t.TempDir(), "nonexistent", "compose.yaml")
 		resolver := parameter.NewStrictResolverChain()
 
-		err := project.Configure(invalidPath, resolver)
+		err := project.Configure(project.Scope{ComposeFile: invalidPath}, resolver)
 
 		require.ErrorContains(t, err, "failed to open compose file")
 	})
@@ -86,7 +88,7 @@ x-topo:
 		static := parameter.NewStaticResolver(parameter.Values{"FOO": "baz"})
 		resolver := parameter.NewStrictResolverChain(static)
 
-		err := project.Configure(composeFilePath, resolver)
+		err := project.Configure(project.Scope{ComposeFile: composeFilePath}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))

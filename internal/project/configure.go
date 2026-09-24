@@ -1,10 +1,8 @@
 package project
 
 import (
-	"errors"
 	"fmt"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 
@@ -14,16 +12,13 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-func Configure(composeFilePath string, resolver parameter.Resolver) error {
-	envFile := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
-	currentValues, err := env.ReadFile(envFile)
-	if errors.Is(err, os.ErrNotExist) {
-		currentValues = make(map[string]string)
-	} else if err != nil {
+func Configure(scope Scope, resolver parameter.Resolver) error {
+	currentValues, err := env.ReadFiles(scope.EnvFiles)
+	if err != nil {
 		return fmt.Errorf("failed to load current environment values: %w", err)
 	}
 
-	definitions, err := LoadParameterDefinitions(composeFilePath)
+	definitions, err := LoadParameterDefinitions(scope.ComposeFile)
 	if err != nil {
 		return fmt.Errorf("failed to load parameter definitions: %w", err)
 	}
@@ -32,7 +27,7 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return nil
 	}
 
-	if err := warnUnreferencedParameters(composeFilePath, definitions); err != nil {
+	if err := warnUnreferencedParameters(scope.ComposeFile, definitions); err != nil {
 		return err
 	}
 
@@ -45,8 +40,9 @@ func Configure(composeFilePath string, resolver parameter.Resolver) error {
 		return nil
 	}
 
+	outputEnvFile := filepath.Join(filepath.Dir(scope.ComposeFile), env.DefaultFilename)
 	maps.Copy(currentValues, values)
-	return env.WriteFile(envFile, currentValues)
+	return env.WriteFile(outputEnvFile, currentValues)
 }
 
 func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Definition) error {

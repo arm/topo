@@ -2,7 +2,6 @@ package env_test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -68,7 +67,7 @@ func TestResolveFiles(t *testing.T) {
 	})
 }
 
-func TestReadFile(t *testing.T) {
+func TestReadFiles(t *testing.T) {
 	for _, test := range []struct {
 		name    string
 		content string
@@ -103,29 +102,40 @@ func TestReadFile(t *testing.T) {
 			path := filepath.Join(t.TempDir(), ".env")
 			testutil.RequireWriteFile(t, path, test.content)
 
-			got, err := env.ReadFile(path)
+			got, err := env.ReadFiles([]string{path})
 
 			require.NoError(t, err)
 			assert.Equal(t, test.want, got)
 		})
 	}
 
-	t.Run("wraps the error when the file does not exist", func(t *testing.T) {
+	t.Run("later files override values and reference earlier files", func(t *testing.T) {
+		root := t.TempDir()
+		first, second := filepath.Join(root, "first.env"), filepath.Join(root, "second.env")
+		testutil.RequireWriteFile(t, first, "TOPO_TEST_NAME=World\nGREETING=old\n")
+		testutil.RequireWriteFile(t, second, "GREETING=Hello ${TOPO_TEST_NAME}\n")
+
+		got, err := env.ReadFiles([]string{first, second})
+
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"TOPO_TEST_NAME": "World", "GREETING": "Hello World"}, got)
+	})
+
+	t.Run("returns an error when the file does not exist", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), ".env")
 
-		got, err := env.ReadFile(path)
+		got, err := env.ReadFiles([]string{path})
 
-		assert.ErrorIs(t, err, os.ErrNotExist)
-		assert.ErrorContains(t, err, "failed to open env file")
+		assert.ErrorContains(t, err, "couldn't find env file")
 		assert.Nil(t, got)
 	})
 
 	t.Run("returns an error when the path is a directory", func(t *testing.T) {
 		path := t.TempDir()
 
-		got, err := env.ReadFile(path)
+		got, err := env.ReadFiles([]string{path})
 
-		assert.ErrorContains(t, err, "failed to read env file")
+		assert.ErrorContains(t, err, "failed to read env files")
 		assert.Nil(t, got)
 	})
 
@@ -135,9 +145,9 @@ func TestReadFile(t *testing.T) {
 GREETING="unterminated
 `)
 
-		got, err := env.ReadFile(path)
+		got, err := env.ReadFiles([]string{path})
 
-		assert.ErrorContains(t, err, "failed to read env file")
+		assert.ErrorContains(t, err, "failed to read env files")
 		assert.Nil(t, got)
 	})
 }

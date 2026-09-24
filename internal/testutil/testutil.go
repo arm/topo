@@ -102,7 +102,7 @@ func RequireReadFile(t testing.TB, path string) string {
 
 func RequireEnvFileValues(t testing.TB, path string, want map[string]string) {
 	t.Helper()
-	got, err := env.ReadFile(path)
+	got, err := env.ReadFiles([]string{path})
 	require.NoError(t, err, "failed to load env file %s", path)
 	require.Equal(t, want, got, "env file %s", path)
 }
