@@ -72,18 +72,14 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			strings.TrimSpace(composeFileFlagValue.Value.String()),
 			composeFileFlagValue.Changed,
 		)
-		if selectedEngine == containerEnginePodman {
-			return deployWithPodman(cmd, scope, targetArg, defaultSuccessMessage)
-		}
-		return deployWithDocker(cmd, scope, targetArg, defaultSuccessMessage)
+		return deploy(cmd, scope, targetArg, selectedEngine, defaultSuccessMessage)
 	},
 }
 
-func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg, defaultSuccessMessage string) error {
+func deploy(cmd *cobra.Command, scope project.Scope, targetArg string, selectedEngine containerEngine, defaultSuccessMessage string) error {
 	if cmd.Flags().Changed("registry-port") && noRegistry {
 		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
 	}
-
 	if err := ensureProjectIsReady(scope); err != nil {
 		return err
 	}
@@ -96,59 +92,44 @@ func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg, defaul
 		return err
 	}
 
-	targetHost := ssh.NewDestination(targetArg)
-	options := podman.DeployOptions{TargetHost: targetHost, DefaultSuccessMessage: defaultSuccessMessage}
-	if !noRegistry {
-		options.Registry = &podman.RegistryConfig{
-			Port:                resolvedPort,
-			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-		}
-	}
-	switch {
-	case forceRecreate:
-		options.RecreateMode = podman.RecreateModeForce
-	case noRecreate:
-		options.RecreateMode = podman.RecreateModeNone
-	}
-
 	return executeDeployment(cmd, func(ctx context.Context) error {
-		return podman.Deploy(ctx, os.Stdout, scope, options)
-	})
-}
-
-func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg, defaultSuccessMessage string) error {
-	if cmd.Flags().Changed("registry-port") && noRegistry {
-		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
-	}
-
-	if err := ensureProjectIsReady(scope); err != nil {
-		return err
-	}
-
-	resolvedPort, err := resolvePort(cmd, registryPort)
-	if err != nil {
-		return err
-	}
-	if err := validatePort(resolvedPort); err != nil {
-		return err
-	}
-
-	deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination(targetArg), DefaultSuccessMessage: defaultSuccessMessage}
-	if !noRegistry {
-		deployOpts.Registry = &docker.RegistryConfig{
-			Port:                resolvedPort,
-			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+		if selectedEngine == containerEnginePodman {
+			options := podman.DeployOptions{
+				TargetHost:            ssh.NewDestination(targetArg),
+				DefaultSuccessMessage: defaultSuccessMessage,
+			}
+			if !noRegistry {
+				options.Registry = &podman.RegistryConfig{
+					Port:                resolvedPort,
+					SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+				}
+			}
+			switch {
+			case forceRecreate:
+				options.RecreateMode = podman.RecreateModeForce
+			case noRecreate:
+				options.RecreateMode = podman.RecreateModeNone
+			}
+			return podman.Deploy(ctx, os.Stdout, scope, options)
 		}
-	}
-	switch {
-	case forceRecreate:
-		deployOpts.RecreateMode = docker.RecreateModeForce
-	case noRecreate:
-		deployOpts.RecreateMode = docker.RecreateModeNone
-	}
 
-	return executeDeployment(cmd, func(ctx context.Context) error {
-		return docker.Deploy(ctx, os.Stdout, scope, deployOpts)
+		options := docker.DeployOptions{
+			TargetHost:            ssh.NewDestination(targetArg),
+			DefaultSuccessMessage: defaultSuccessMessage,
+		}
+		if !noRegistry {
+			options.Registry = &docker.RegistryConfig{
+				Port:                resolvedPort,
+				SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+			}
+		}
+		switch {
+		case forceRecreate:
+			options.RecreateMode = docker.RecreateModeForce
+		case noRecreate:
+			options.RecreateMode = docker.RecreateModeNone
+		}
+		return docker.Deploy(ctx, os.Stdout, scope, options)
 	})
 }
 
