@@ -185,7 +185,6 @@ func TestUpdateFile(t *testing.T) {
 		require.ErrorContains(t, err, "failed to read env file")
 		assert.Equal(t, original, testutil.RequireReadFile(t, path))
 	})
-
 }
 
 func TestWriteFile(t *testing.T) {
