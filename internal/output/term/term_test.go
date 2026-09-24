@@ -128,11 +128,13 @@ func TestPrintHeader(t *testing.T) {
 	})
 
 	t.Run("dims borders for terminal output", func(t *testing.T) {
-		got := term.Header("Hello", true)
+		palette := term.NewPalette(true)
 
-		want := term.Color(term.Dim, "── ") +
+		got := term.Header("Hello", palette)
+
+		want := palette.Color(term.Dim, "── ") +
 			"Hello" +
-			term.Color(term.Dim, " ───────────────────────────────────────────────────")
+			palette.Color(term.Dim, " ───────────────────────────────────────────────────")
 		assert.Equal(t, want, got)
 	})
 }

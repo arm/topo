@@ -16,7 +16,7 @@ func PrintNthHeader(w io.Writer, description string) error {
 }
 
 func printHeader(w io.Writer, description string, prefix string) error {
-	header := Header(description, IsTTY(w))
+	header := Header(description, NewPaletteFor(w))
 	if header == "" {
 		return nil
 	}
@@ -25,7 +25,7 @@ func printHeader(w io.Writer, description string, prefix string) error {
 	return err
 }
 
-func Header(description string, isTTY bool) string {
+func Header(description string, palette Palette) string {
 	if description == "" {
 		return ""
 	}
@@ -38,8 +38,5 @@ func Header(description string, isTTY bool) string {
 	contentWidth := utf8.RuneCountInString(prefix) + descriptionWidth + utf8.RuneCountInString(suffix)
 	barWidth := max(totalWidth-contentWidth, 0)
 	bar := suffix + strings.Repeat("─", barWidth)
-	if !isTTY {
-		return prefix + description + bar
-	}
-	return Color(Dim, prefix) + description + Color(Dim, bar)
+	return palette.Color(Dim, prefix) + description + palette.Color(Dim, bar)
 }
