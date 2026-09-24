@@ -125,28 +125,40 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 }
 
 func buildDefaultSuccessMessage(engine engineSelection, target targetSelection, composeFilePath string, explicitComposeFile bool) string {
-	psCommand := "topo ps"
-	if engine.explicit {
-		psCommand += fmt.Sprintf(" --engine %s", engine.value)
-	}
-	if target.explicit {
-		psCommand += " --target " + cmdtext.QuoteArg(target.value)
-	}
+	composeFileArg := ""
 	if explicitComposeFile {
-		psCommand += " -f " + cmdtext.QuoteArg(composeFilePath)
+		composeFileArg = "-f " + cmdtext.QuoteArg(composeFilePath)
 	}
+	psCommand := joinNonEmpty("topo ps", engine.cliArg(), target.cliArg(), composeFileArg)
 	return fmt.Sprintf("Run `%s` to see deployed containers", psCommand)
 }
 
 func buildHealthCommand(engine engineSelection, target targetSelection) string {
-	healthCommand := "topo health"
-	if engine.explicit {
-		healthCommand += fmt.Sprintf(" --engine %s", engine.value)
+	return joinNonEmpty("topo health", engine.cliArg(), target.cliArg())
+}
+
+func (engine engineSelection) cliArg() string {
+	if !engine.explicit {
+		return ""
 	}
-	if target.explicit {
-		healthCommand += " --target " + cmdtext.QuoteArg(target.value)
+	return "--engine " + string(engine.value)
+}
+
+func (target targetSelection) cliArg() string {
+	if !target.explicit {
+		return ""
 	}
-	return healthCommand
+	return "--target " + cmdtext.QuoteArg(target.value)
+}
+
+func joinNonEmpty(args ...string) string {
+	nonEmptyArgs := make([]string, 0, len(args))
+	for _, arg := range args {
+		if arg != "" {
+			nonEmptyArgs = append(nonEmptyArgs, arg)
+		}
+	}
+	return strings.Join(nonEmptyArgs, " ")
 }
 
 func ensureProjectIsReady(scope project.Scope) error {
