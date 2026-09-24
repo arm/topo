@@ -24,6 +24,20 @@ func TestResolveFiles(t *testing.T) {
 		assert.Equal(t, []string{filepath.Join(root, ".env.second"), filepath.Join(root, ".env.first")}, paths)
 	})
 
+	t.Run("preserves absolute paths alongside relative paths in order", func(t *testing.T) {
+		root := t.TempDir()
+		firstPath := filepath.Join(t.TempDir(), ".env.external")
+		relativeFilename := ".env"
+		secondPath := filepath.Join(root, relativeFilename)
+		testutil.RequireWriteFile(t, firstPath, "")
+		testutil.RequireWriteFile(t, secondPath, "")
+
+		paths, err := env.ResolveFiles(root, []string{firstPath, relativeFilename}, false)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{firstPath, secondPath}, paths)
+	})
+
 	t.Run("skips missing optional files", func(t *testing.T) {
 		root := t.TempDir()
 		testutil.RequireWriteFile(t, filepath.Join(root, ".env"), "")

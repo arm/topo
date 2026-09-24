@@ -27,12 +27,14 @@ var escapes = strings.NewReplacer(
 	"\t", "\\t",
 )
 
-func ResolveFiles(root string, files []string, skipMissing bool) ([]string, error) {
-	var paths []string
-	for _, filename := range files {
-		path := filepath.Join(root, filename)
+func ResolveFiles(root string, paths []string, skipMissing bool) ([]string, error) {
+	var resolvedPaths []string
+	for _, path := range paths {
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(root, path)
+		}
 		if _, err := os.Stat(path); err == nil {
-			paths = append(paths, path)
+			resolvedPaths = append(resolvedPaths, path)
 		} else if errors.Is(err, os.ErrNotExist) {
 			if skipMissing {
 				continue
@@ -42,7 +44,7 @@ func ResolveFiles(root string, files []string, skipMissing bool) ([]string, erro
 			return nil, fmt.Errorf("failed to check env file: %w", err)
 		}
 	}
-	return paths, nil
+	return resolvedPaths, nil
 }
 
 func ReadFile(path string) (map[string]string, error) {
