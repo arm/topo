@@ -33,8 +33,7 @@ type TargetDetails struct {
 }
 
 type ReadinessReport struct {
-	Host         []DependencyReport
-	Target       []DependencyReport
+	Checks       []DependencyReport
 	TargetStatus *TargetStatus
 }
 
@@ -56,8 +55,8 @@ func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
 }
 
 func (h EvaluatedHealthCheck) Report(target *TargetDetails, missingTargetFixMessage string) HealthReport {
-	deployment := toReadinessReport(h.Deployment)
-	discovery := toReadinessReport(h.ProjectDiscovery)
+	deployment := ReadinessReport{Checks: toDependencyReports(h.Deployment.Dependencies)}
+	discovery := ReadinessReport{Checks: toDependencyReports(h.ProjectDiscovery.Dependencies)}
 	if target == nil {
 		deployment.TargetStatus = missingTargetStatus(CheckStatusError, missingTargetFixMessage)
 		discovery.TargetStatus = missingTargetStatus(CheckStatusWarning, missingTargetFixMessage)
@@ -85,21 +84,6 @@ func targetDetails(options HealthCheckOptions) *TargetDetails {
 		Destination: options.Target.String(),
 		IsLocalhost: options.Target.IsPlainLocalhost(),
 	}
-}
-
-func toReadinessReport(evaluatedReadinessCheck EvaluatedReadinessCheck) ReadinessReport {
-	report := ReadinessReport{}
-	for _, dependency := range toDependencyReports(evaluatedReadinessCheck.Dependencies) {
-		switch dependency.Scope {
-		case DependencyScopeHost:
-			report.Host = append(report.Host, dependency)
-		case DependencyScopeTarget:
-			report.Target = append(report.Target, dependency)
-		default:
-			panic("health dependency has an unknown scope")
-		}
-	}
-	return report
 }
 
 func ToDependencyReport(dependency EvaluatedDependency) DependencyReport {
