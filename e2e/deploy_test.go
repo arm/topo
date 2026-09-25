@@ -113,8 +113,8 @@ CMD ["python", "-m", "http.server", "8080", "--directory", "/www"]
 			"deploy",
 			"--engine", "podman",
 			"--target", podmanTarget.SSHDestination,
+			"--registry-port", "12738",
 			"--skip-project-checks",
-			"--no-registry",
 		)
 		deployCmd.Dir = projectDir
 		deployCmd.Env = append(os.Environ(), "TOPO_EXPERIMENTAL_FEATURES=1")
