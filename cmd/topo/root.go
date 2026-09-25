@@ -93,24 +93,32 @@ const targetEnvVar = env.TargetVariable
 
 type containerEngine string
 
+type engineSelection struct {
+	value    containerEngine
+	explicit bool
+}
+
 const (
 	containerEngineDocker containerEngine = "docker"
 	containerEnginePodman containerEngine = "podman"
 )
 
-const containerEngineFlag = "engine"
+const (
+	containerEngineFlag   = "engine"
+	containerEngineEnvVar = "TOPO_ENGINE"
+)
 
 func addEngineFlag(cmd *cobra.Command) {
 	cmd.Flags().String(
 		containerEngineFlag,
 		string(containerEngineDocker),
-		"container engine to use (docker or podman)",
+		fmt.Sprintf("container engine to use (docker or podman; can also be set via %s)", containerEngineEnvVar),
 	)
 }
 
-func getSelectedEngine(cmd *cobra.Command) (containerEngine, error) {
+func getEngineSelection(cmd *cobra.Command) (engineSelection, error) {
 	if cmd.Flags().Lookup(containerEngineFlag) == nil {
-		return containerEngineDocker, nil
+		return engineSelection{value: containerEngineDocker}, nil
 	}
 
 	value, err := cmd.Flags().GetString(containerEngineFlag)
@@ -118,11 +126,18 @@ func getSelectedEngine(cmd *cobra.Command) (containerEngine, error) {
 		panic(fmt.Sprintf("internal error: container engine flag is not a string: %v", err))
 	}
 
+	explicit := cmd.Flags().Changed(containerEngineFlag)
+	if !explicit {
+		if envValue := strings.TrimSpace(os.Getenv(containerEngineEnvVar)); envValue != "" {
+			value = envValue
+		}
+	}
+
 	selectedEngine := containerEngine(value)
 	if selectedEngine != containerEngineDocker && selectedEngine != containerEnginePodman {
-		return "", fmt.Errorf("invalid engine %q: must be docker or podman", value)
+		return engineSelection{}, fmt.Errorf("invalid engine %q: must be docker or podman", value)
 	}
-	return selectedEngine, nil
+	return engineSelection{value: selectedEngine, explicit: explicit}, nil
 }
 
 func addTargetFlag(cmd *cobra.Command) {
@@ -132,30 +147,34 @@ func addTargetFlag(cmd *cobra.Command) {
 	)
 }
 
-func lookupTarget(cmd *cobra.Command) (string, bool) {
+type targetSelection struct {
+	value    string
+	explicit bool
+}
+
+func lookupTarget(cmd *cobra.Command) (targetSelection, bool) {
 	flagValue, err := cmd.Flags().GetString("target")
 	if err != nil {
 		panic(fmt.Sprintf("internal error: target flag not registered: %v", err))
 	}
 
-	if strings.TrimSpace(flagValue) == "" {
-		flagValue = os.Getenv(targetEnvVar)
+	if value := strings.TrimSpace(flagValue); value != "" {
+		return targetSelection{value: value, explicit: cmd.Flags().Changed("target")}, true
 	}
 
-	v := strings.TrimSpace(flagValue)
-	if v == "" {
-		return "", false
+	value := strings.TrimSpace(os.Getenv(targetEnvVar))
+	if value == "" {
+		return targetSelection{}, false
 	}
-
-	return v, true
+	return targetSelection{value: value}, true
 }
 
-func requireTarget(cmd *cobra.Command) (string, error) {
-	t, exists := lookupTarget(cmd)
+func requireTarget(cmd *cobra.Command) (targetSelection, error) {
+	target, exists := lookupTarget(cmd)
 	if !exists {
-		return "", fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
+		return targetSelection{}, fmt.Errorf("target not specified: use --target with an SSH destination (e.g. user@example.local) or set %s", targetEnvVar)
 	}
-	return t, nil
+	return target, nil
 }
 
 const defaultTimeout = 5 * time.Second
