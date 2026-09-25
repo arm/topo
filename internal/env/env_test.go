@@ -12,20 +12,27 @@ import (
 )
 
 func TestCurrentValues(t *testing.T) {
-	t.Run("process values override file values including with an empty value", func(t *testing.T) {
-		for _, value := range []string{"shell=value", ""} {
-			t.Run(fmt.Sprintf("value %q", value), func(t *testing.T) {
-				t.Setenv("TOPO_TEST_PARAMETER", value)
-				path := filepath.Join(t.TempDir(), ".env")
-				testutil.RequireWriteFile(t, path, "TOPO_TEST_PARAMETER=file\n")
+	t.Run("process values override file values", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_PARAMETER", "shell=value")
+		path := filepath.Join(t.TempDir(), ".env")
+		testutil.RequireWriteFile(t, path, "TOPO_TEST_PARAMETER=file\n")
 
-				values, err := env.CurrentValues([]string{path})
+		values, err := env.CurrentValues([]string{path})
 
-				require.NoError(t, err)
-				assert.Contains(t, values, "TOPO_TEST_PARAMETER")
-				assert.Equal(t, value, values["TOPO_TEST_PARAMETER"])
-			})
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "shell=value", values["TOPO_TEST_PARAMETER"])
+	})
+
+	t.Run("empty process values override file values", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_PARAMETER", "")
+		path := filepath.Join(t.TempDir(), ".env")
+		testutil.RequireWriteFile(t, path, "TOPO_TEST_PARAMETER=file\n")
+
+		values, err := env.CurrentValues([]string{path})
+
+		require.NoError(t, err)
+		assert.Contains(t, values, "TOPO_TEST_PARAMETER")
+		assert.Equal(t, "", values["TOPO_TEST_PARAMETER"])
 	})
 
 	t.Run("returns process values without files", func(t *testing.T) {
