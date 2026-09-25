@@ -147,7 +147,7 @@ x-topo:
 		err := project.Clone(&output, destDir, source, parameter.NewStrictResolverChain(resolver), true)
 
 		require.NoError(t, err)
-		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(destDir, env.DefaultFilename)), "\nGREETING=\"configured\"\n")
+		assert.Equal(t, "GREETING=\"configured\"\n", testutil.RequireReadFile(t, filepath.Join(destDir, env.DefaultFilename)))
 		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(destDir, "compose.yml")), "GREETING: ${GREETING?configured via topo}")
 	})
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/migrate"
@@ -45,12 +46,25 @@ interactive prompts.`,
 			return nil
 		}
 
+		envFiles, err := getEnvFiles(cmd, composeFilePath)
+		if err != nil {
+			return err
+		}
+
 		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
 		if err != nil {
 			return err
 		}
 		if usesLiteralBuildArgs {
 			return fmt.Errorf("this project appears to use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration")
+		}
+
+		outputPath, err := cmd.Flags().GetString("output")
+		if err != nil {
+			return err
+		}
+		if !cmd.Flags().Changed("output") {
+			outputPath = filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
 		}
 
 		var resolvers []parameter.Resolver
@@ -61,18 +75,31 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
-		if term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stdout))
+		if term.IsTTY(os.Stderr) && term.IsTTY(os.Stdin) {
+			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stderr))
 		}
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.Configure(composeFilePath, resolver)
+		values, err := project.Configure(project.Scope{
+			ComposeFile: composeFilePath,
+			EnvFiles:    envFiles,
+		}, resolver)
+		if err != nil || values == nil {
+			return err
+		}
+
+		if outputPath == "-" {
+			return env.WriteFile(os.Stdout, values)
+		}
+		return env.UpdateFile(outputPath, values)
 	},
 }
 
 func init() {
+	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
 	addComposeFileFlag(configureCmd)
+	addEnvFileFlag(configureCmd)
 	addMigrateToEnvFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
 }

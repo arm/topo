@@ -1,11 +1,7 @@
 package project
 
 import (
-	"errors"
 	"fmt"
-	"maps"
-	"os"
-	"path/filepath"
 	"slices"
 
 	"github.com/arm/topo/internal/env"
@@ -14,39 +10,35 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-func Configure(composeFilePath string, resolver parameter.Resolver) error {
-	envFile := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
-	currentValues, err := env.ReadFile(envFile)
-	if errors.Is(err, os.ErrNotExist) {
-		currentValues = make(map[string]string)
-	} else if err != nil {
-		return fmt.Errorf("failed to load current environment values: %w", err)
+func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, error) {
+	currentValues, err := env.CurrentValues(scope.EnvFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
 
-	definitions, err := LoadParameterDefinitions(composeFilePath)
+	definitions, err := LoadParameterDefinitions(scope.ComposeFile)
 	if err != nil {
-		return fmt.Errorf("failed to load parameter definitions: %w", err)
+		return nil, fmt.Errorf("failed to load parameter definitions: %w", err)
 	}
 
 	if len(definitions) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	if err := warnUnreferencedParameters(composeFilePath, definitions); err != nil {
-		return err
+	if err := warnUnreferencedParameters(scope.ComposeFile, definitions); err != nil {
+		return nil, err
 	}
 
 	values, err := resolver.Resolve(definitions, currentValues)
 	if err != nil {
-		return fmt.Errorf("failed to collect parameter values: %w", err)
+		return nil, fmt.Errorf("failed to collect parameter values: %w", err)
 	}
 
 	if len(values) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	maps.Copy(currentValues, values)
-	return env.WriteFile(envFile, currentValues)
+	return values, nil
 }
 
 func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Definition) error {
