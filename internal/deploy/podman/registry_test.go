@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEnsureRegistryRunning(t *testing.T) {
-	requireLocalPodman(t)
+	testutil.RequirePodman(t)
 
 	t.Run("creates a registry when its container does not exist", func(t *testing.T) {
 		const containerName = "topo-test-registry-create"

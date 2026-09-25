@@ -13,8 +13,6 @@ RUN passwd -d root
 RUN ssh-keygen -A
 
 EXPOSE 22
-EXPOSE 8080
-
 ENTRYPOINT ["/bin/sh", "-ec", "\
     /usr/sbin/sshd -D & \
     exec /usr/local/bin/dockerd-entrypoint.sh \"$@\" \

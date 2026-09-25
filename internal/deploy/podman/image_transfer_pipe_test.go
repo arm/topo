@@ -6,15 +6,15 @@ import (
 
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
-	gtestutil "github.com/arm/topo/internal/testutil"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransferImagesViaPipe(t *testing.T) {
-	requireLocalPodman(t)
+	testutil.RequirePodman(t)
 	scope, imageName := imageTransferFixture(t)
-	target := gtestutil.StartContainer(t, gtestutil.PodmanContainer)
+	target := testutil.StartContainer(t, testutil.PodmanContainer)
 	targetDestination := ssh.NewDestination(target.SSHDestination)
 	tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
 	require.NoError(t, err)
