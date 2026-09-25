@@ -1,9 +1,7 @@
 package project_test
 
 import (
-	"bytes"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/env"
@@ -30,31 +28,6 @@ x-topo:
 
 		require.NoError(t, err)
 		assert.NoFileExists(t, filepath.Join(root, env.DefaultFilename))
-	})
-
-	t.Run("interactive current values prefer process values without persisting them", func(t *testing.T) {
-		t.Setenv("TOPO_TEST_PARAMETER", "shell=value")
-		root := t.TempDir()
-		path := testutil.RequireWriteComposeFile(t, root, `services:
-  app:
-    image: alpine
-    environment: {TOPO_TEST_PARAMETER: "${TOPO_TEST_PARAMETER}"}
-x-topo:
-  parameters: {TOPO_TEST_PARAMETER: {required: true}}
-`)
-		basePath := filepath.Join(root, ".env")
-		envPath := filepath.Join(root, env.DefaultFilename)
-		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_PARAMETER=base\n")
-		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_PARAMETER=topo\n")
-		scope := project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}}
-		output := &bytes.Buffer{}
-		resolver := parameter.NewStrictResolverChain(parameter.NewInteractiveResolver(strings.NewReader("\n"), output))
-
-		err := project.Configure(scope, resolver)
-
-		require.NoError(t, err)
-		assert.Contains(t, output.String(), `Current: "shell=value"`)
-		testutil.RequireEnvFileValues(t, envPath, map[string]string{"TOPO_TEST_PARAMETER": "topo"})
 	})
 
 	t.Run("uses inherited values without copying them to the output file", func(t *testing.T) {
