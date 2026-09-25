@@ -19,12 +19,12 @@ var describeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		outputFormat := resolveOutput(cmd)
-		targetArg, err := requireTarget(cmd)
+		target, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
 
-		r := runner.For(ssh.NewDestination(targetArg))
+		r := runner.For(ssh.NewDestination(target.value))
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 		hwProfile, err := probe.Hardware(ctx, r)

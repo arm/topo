@@ -33,7 +33,7 @@ var healthCmd = &cobra.Command{
 		if err != nil {
 			panic(fmt.Sprintf("internal error: %s flag not registered: %v", verboseFlag, err))
 		}
-		selectedEngine, err := getSelectedEngine(cmd)
+		engine, err := getEngineSelection(cmd)
 		if err != nil {
 			return err
 		}
@@ -44,15 +44,15 @@ var healthCmd = &cobra.Command{
 		}
 
 		var target *ssh.Destination
-		if targetArg, ok := lookupTarget(cmd); ok {
-			destination := ssh.NewDestination(targetArg)
+		if targetSelection, ok := lookupTarget(cmd); ok {
+			destination := ssh.NewDestination(targetSelection.value)
 			target = &destination
 		}
 
 		ctx, cancel := contextWithTimeout(cmd)
 		defer cancel()
 		report := health.Check(ctx, health.HealthCheckOptions{
-			Engine:                  health.Engine(selectedEngine),
+			Engine:                  health.Engine(engine.value),
 			Target:                  target,
 			MissingTargetFixMessage: "provide --target or set TOPO_TARGET to check target health",
 			SkipVersionChecks:       skipVersionCheck,

@@ -163,6 +163,8 @@ jobs:
           exit 1
 
       - name: Verify test prerequisites
+        env:
+          DOCKER_HOST: ${{ matrix.docker_host }}
         run: |
           docker version
           podman version
