@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -15,54 +16,59 @@ import (
 )
 
 func TestDeploy(t *testing.T) {
-	container := testutil.StartContainer(t, testutil.DinDContainer)
 	topo := buildBinary(t)
 
-	t.Run("Clone, deploy, ps", func(t *testing.T) {
-		baseDir := t.TempDir()
-		cloneDir := filepath.Join(baseDir, "project")
-		composeFile := filepath.Join(cloneDir, "compose.yaml")
-		t.Cleanup(func() {
-			composeDown(t, composeFile, container.SSHDestination)
+	t.Run("Docker", func(t *testing.T) {
+		container := testutil.StartContainer(
+			t,
+			testutil.DinDContainer.WithPublishedPorts("8080"),
+		)
+
+		t.Run("Clone, deploy, ps", func(t *testing.T) {
+			baseDir := t.TempDir()
+			cloneDir := filepath.Join(baseDir, "project")
+			composeFile := filepath.Join(cloneDir, "compose.yaml")
+			t.Cleanup(func() {
+				composeDown(t, composeFile, container.SSHDestination)
+			})
+
+			nameArgValue := "Topo"
+			requireClone(t, topo, baseDir, cloneDir, "testdata/services/hello-server", fmt.Sprintf("NAME=%s", nameArgValue))
+			requireDeploy(t, topo, cloneDir, container.SSHDestination)
+			expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
+			port, err := testutil.GetContainerPublicPort(container.Name, "8080")
+			require.NoError(t, err)
+			assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
+
+			requirePS(t, topo, cloneDir, container.SSHDestination, nil, "hello-server", "8080")
+			requirePrintenv(t, container.SSHDestination, composeFile, "hello-server", "STATE", "California\n")
 		})
 
-		nameArgValue := "Topo"
-		requireClone(t, topo, baseDir, cloneDir, "testdata/services/hello-server", fmt.Sprintf("NAME=%s", nameArgValue))
-		requireDeploy(t, topo, cloneDir, container.SSHDestination)
-		expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
-		port, err := testutil.GetContainerPublicPort(container.Name, "8080")
-		require.NoError(t, err)
-		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
-
-		requirePS(t, topo, cloneDir, container.SSHDestination, nil, "hello-server", "8080")
-		requirePrintenv(t, container.SSHDestination, composeFile, "hello-server", "STATE", "California\n")
-	})
-
-	t.Run("ps -a shows stopped containers", func(t *testing.T) {
-		projectDir := t.TempDir()
-		composeFile := testutil.RequireWriteComposeFile(t, projectDir, `services:
+		t.Run("ps -a shows stopped containers", func(t *testing.T) {
+			projectDir := t.TempDir()
+			composeFile := testutil.RequireWriteComposeFile(t, projectDir, `services:
   sleeper:
     image: busybox
     command: ["sleep", "300"]
     stop_grace_period: 1s
 `)
-		t.Cleanup(func() {
-			composeDown(t, composeFile, container.SSHDestination)
+			t.Cleanup(func() {
+				composeDown(t, composeFile, container.SSHDestination)
+			})
+
+			requireDeploy(t, topo, projectDir, container.SSHDestination)
+			requireStop(t, topo, projectDir, container.SSHDestination)
+			psOut := requirePS(t, topo, projectDir, container.SSHDestination, nil)
+			assert.NotContains(t, psOut, "busybox")
+
+			requirePS(t, topo, projectDir, container.SSHDestination, []string{"-a"}, "busybox", "Exited")
 		})
 
-		requireDeploy(t, topo, projectDir, container.SSHDestination)
-		requireStop(t, topo, projectDir, container.SSHDestination)
-		psOut := requirePS(t, topo, projectDir, container.SSHDestination, nil)
-		assert.NotContains(t, psOut, "busybox")
-
-		requirePS(t, topo, projectDir, container.SSHDestination, []string{"-a"}, "busybox", "Exited")
-	})
-
-	t.Run("explicit env files resolve from cwd and ignores default env files", func(t *testing.T) {
-		workingDir, projectDir := t.TempDir(), t.TempDir()
-		testutil.RequireWriteFile(t, filepath.Join(workingDir, ".env.custom"), "TOPO_CUSTOM_ENV_FILE_VAR=.env.custom")
-		testutil.RequireWriteFile(t, filepath.Join(projectDir, ".env"), "TOPO_DEFAULT_ENV_FILE_VAR=.env")
-		composeFile := testutil.RequireWriteComposeFile(t, projectDir, `services:
+		t.Run("explicit env files resolve from cwd and ignores default env files", func(t *testing.T) {
+			workingDir, projectDir := t.TempDir(), t.TempDir()
+			testutil.RequireWriteFile(t, filepath.Join(workingDir, ".env.custom"), "TOPO_CUSTOM_ENV_FILE_VAR=.env.custom")
+			testutil.RequireWriteFile(t, filepath.Join(projectDir, ".env"), "TOPO_DEFAULT_ENV_FILE_VAR=.env")
+			composeFile := testutil.RequireWriteComposeFile(t, projectDir, `services:
   sleeper:
     image: busybox
     command: ["sleep", "300"]
@@ -70,15 +76,83 @@ func TestDeploy(t *testing.T) {
     environment:
       RESULT: "${TOPO_CUSTOM_ENV_FILE_VAR:-omitted},${TOPO_DEFAULT_ENV_FILE_VAR:-omitted}"
 `)
-		t.Cleanup(func() { composeDown(t, composeFile, container.SSHDestination) })
-		cmd := exec.Command(topo, "deploy", "--target", container.SSHDestination, "--skip-project-checks", "-f", composeFile, "--env-file", ".env.custom")
-		cmd.Dir = workingDir
+			t.Cleanup(func() { composeDown(t, composeFile, container.SSHDestination) })
+			cmd := exec.Command(topo, "deploy", "--target", container.SSHDestination, "--skip-project-checks", "-f", composeFile, "--env-file", ".env.custom")
+			cmd.Dir = workingDir
 
-		out, err := cmd.CombinedOutput()
+			out, err := cmd.CombinedOutput()
 
-		require.NoErrorf(t, err, "deploy failed: %s", out)
-		requirePrintenv(t, container.SSHDestination, composeFile, "sleeper", "RESULT", ".env.custom,omitted\n")
+			require.NoErrorf(t, err, "deploy failed: %s", out)
+			requirePrintenv(t, container.SSHDestination, composeFile, "sleeper", "RESULT", ".env.custom,omitted\n")
+		})
 	})
+
+	t.Run("Podman", func(t *testing.T) {
+		requireLocalPodman(t)
+		podmanTarget := testutil.StartContainer(
+			t,
+			testutil.PodmanContainer.WithPublishedPorts("8080"),
+		)
+		projectDir := t.TempDir()
+		testutil.RequireWriteComposeFile(t, projectDir, `services:
+  server:
+    build: .
+    ports:
+      - "8080:8080"
+    oom_score_adj: 200
+`)
+		testutil.RequireWriteFile(t, filepath.Join(projectDir, "Dockerfile"), `
+FROM docker.io/library/python:3.13-alpine
+COPY index.html /www/index.html
+CMD ["python", "-m", "http.server", "8080", "--directory", "/www"]
+`)
+		testutil.RequireWriteFile(t, filepath.Join(projectDir, "index.html"), "Podman e2e\n")
+
+		deployCmd := exec.Command(
+			topo,
+			"deploy",
+			"--engine", "podman",
+			"--target", podmanTarget.SSHDestination,
+			"--skip-project-checks",
+			"--no-registry",
+		)
+		deployCmd.Dir = projectDir
+		deployCmd.Env = append(os.Environ(), "TOPO_EXPERIMENTAL_FEATURES=1")
+
+		deployOut, err := deployCmd.CombinedOutput()
+
+		require.NoErrorf(t, err, "deploy failed: %s", deployOut)
+
+		psCmd := exec.Command(
+			topo,
+			"ps",
+			"--engine", "podman",
+			"--target", podmanTarget.SSHDestination,
+		)
+		psCmd.Dir = projectDir
+		psCmd.Env = append(os.Environ(), "TOPO_EXPERIMENTAL_FEATURES=1")
+
+		psOut, err := psCmd.CombinedOutput()
+
+		require.NoErrorf(t, err, "ps failed: %s", psOut)
+		assert.Contains(t, string(psOut), "server")
+		port, err := testutil.GetContainerPublicPort(podmanTarget.Name, "8080")
+		require.NoError(t, err)
+		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), "Podman e2e\n")
+	})
+}
+
+func requireLocalPodman(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("podman"); err != nil {
+		t.Skip("podman is not installed")
+	}
+	if _, err := exec.LookPath("docker-compose"); err != nil {
+		t.Skip("docker-compose is not installed")
+	}
+	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
+		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
+	}
 }
 
 func requireClone(t *testing.T, topo string, projectDir string, cloneDir string, remoteDir string, extraArgs ...string) {
