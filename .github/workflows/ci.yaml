@@ -50,36 +50,31 @@ jobs:
         if: runner.os == 'Windows'
         uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7
         with:
-          distribution: Ubuntu-24.04
+          distribution: Alpine-3.23
           # Docker and Podman require the Linux kernel and container primitives provided by WSL2.
           wsl-version: 2
+          wsl-shell-command: sh -eu
           additional-packages: |
             openssh-server
-            docker.io
-      
+            docker
+
       - name: Setup SSH (Windows - WSL)
         if: runner.os == 'Windows'
-        shell: wsl-bash {0}
+        shell: wsl-sh {0}
         run: |
-          useradd -G kvm,docker -m -s /bin/bash test
+          adduser -D -G docker -s /bin/sh test
           passwd -d test
+          ssh-keygen -A
+          /usr/sbin/sshd -p 2222 -o PasswordAuthentication=yes -o PermitEmptyPasswords=yes
 
-          cat > /etc/ssh/sshd_config.d/01-passwordless-authentication.conf << 'EOF'
-          PasswordAuthentication yes
-          PermitEmptyPasswords yes
-          UsePAM no
-          Port 2222
-          EOF
-          
-          systemctl daemon-reload
-          systemctl restart ssh
-
-      - name: Add WSL host key (Windows)
+      - name: Start Docker and add WSL host key (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # Keep WSL running
-          wsl --exec dbus-launch true
+          # Foreground dockerd keeps WSL alive
+          Start-Process wsl.exe -ArgumentList '--distribution', 'Alpine-3.23', '--exec', 'dockerd' `
+            -RedirectStandardOutput "$env:RUNNER_TEMP\dockerd.stdout.log" `
+            -RedirectStandardError "$env:RUNNER_TEMP\dockerd.stderr.log"
           #  Windows ssh-keyscan has KexAlgorithm limitations so use ssh to add host key - https://github.com/PowerShell/Win32-OpenSSH/issues/2140
           ssh -p 2222 -o StrictHostKeyChecking=accept-new test@localhost "exit"
 
@@ -167,23 +162,15 @@ jobs:
           cat "$RUNNER_TEMP/podman-system-service.log" >&2 || true
           exit 1
 
-      - name: Verify Podman test prerequisites (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
+      - name: Verify test prerequisites
         run: |
+          docker version
           podman version
           podman info
+          docker info
           docker-compose version
           podman compose version
-
-      - name: Verify Podman test prerequisites (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          podman version
-          podman info
-          docker-compose version
-          podman compose version
+          docker compose version
 
       - name: Set up Go
         uses: actions/setup-go@v7

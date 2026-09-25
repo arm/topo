@@ -15,20 +15,6 @@ const (
 	JSON
 )
 
-const (
-	Reset  = "\033[0m"
-	Dim    = "\033[2;90m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
-	Blue   = "\033[34m"
-	Cyan   = "\033[36m"
-	Red    = "\033[31m"
-)
-
-func Color(col, str string) string {
-	return col + str + Reset
-}
-
 func IsTTY(w io.Writer) bool {
 	f, ok := w.(*os.File)
 	if !ok {

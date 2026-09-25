@@ -2,16 +2,53 @@ package health
 
 import (
 	"context"
+	"io"
 
+	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
 	"github.com/arm/topo/internal/ssh"
 )
 
+type Engine string
+
+const (
+	EngineDocker Engine = "docker"
+	EnginePodman Engine = "podman"
+)
+
 type HealthCheckOptions struct {
+	Engine                  Engine
 	Target                  *ssh.Destination
 	MissingTargetFixMessage string
 	SkipVersionChecks       bool
-	AcceptHostKeys          bool
+}
+
+type Checks struct {
+	Host   HostChecks
+	Target TargetChecks
+}
+
+type HostChecks struct {
+	Topo             Dependency
+	SSH              Dependency
+	DockerCLI        Dependency
+	Docker           Dependency
+	DockerCompose    Dependency
+	PodmanCLI        Dependency
+	PodmanConnection Dependency
+	PodmanCompose    Dependency
+}
+
+type TargetChecks struct {
+	Connectivity          Dependency
+	Docker                Dependency
+	Remoteproc            Dependency
+	RemoteprocRuntime     Dependency
+	RemoteprocRuntimeShim Dependency
+	PodmanCLI             Dependency
+	RemotePodmanAPI       Dependency
+	Hardware              Dependency
 }
 
 type HealthCheck struct {
@@ -19,98 +56,25 @@ type HealthCheck struct {
 	ProjectDiscovery ReadinessCheck
 }
 
-type ReadinessCheck struct {
-	Registry *DependencyRegistry
-	Host     []*DependencyNode
-	Target   []*DependencyNode
-}
-
-type EvaluatedHealthCheck struct {
-	Deployment       EvaluatedReadinessCheck
-	ProjectDiscovery EvaluatedReadinessCheck
-}
-
-type EvaluatedReadinessCheck struct {
-	Host   []EvaluatedDependency
-	Target []EvaluatedDependency
-}
-
-type EvaluatedDependency struct {
-	ID     DependencyID
-	Label  string
-	Result DependencyCheckResult
-}
-
 func NewHealthCheck(options HealthCheckOptions) HealthCheck {
+	return AssembleHealthCheck(options.Engine, options.Target, newChecks(options))
+}
+
+func AssembleHealthCheck(engine Engine, target *ssh.Destination, checks Checks) HealthCheck {
 	registry := NewDependencyRegistry()
-
-	dependencyTopo := registry.Register(NewDependencyOnTopo(options.SkipVersionChecks))
-	localRunner := runner.NewLocal()
-	dependencySSH := registry.Register(NewDependencyOnSSH(localRunner))
-	dependencyDocker := registry.Register(NewDependencyOnDocker(localRunner))
-	dependencyDockerCompose := registry.Register(NewDependencyOnDockerCompose(localRunner), dependencyDocker)
-	deploymentHostDependencies := []*DependencyNode{dependencyTopo, dependencySSH, dependencyDocker, dependencyDockerCompose}
-	projectDiscoveryHostDependencies := []*DependencyNode{dependencySSH}
-
-	targetPrerequisites := []*DependencyNode(nil)
-	deploymentTargetDependencies := []*DependencyNode(nil)
-	projectDiscoveryTargetDependencies := []*DependencyNode(nil)
-	if options.Target == nil {
-		deploymentConnectivity := registry.Register(NewConnectivityDependency(
-			nil,
-			options.AcceptHostKeys,
-			"target not specified",
-			SeverityError,
-			options.MissingTargetFixMessage,
-		))
-		projectDiscoveryConnectivity := registry.Register(NewConnectivityDependency(
-			nil,
-			options.AcceptHostKeys,
-			"target not specified; cannot calculate project compatibility",
-			SeverityWarning,
-			options.MissingTargetFixMessage,
-		))
-		deploymentTargetDependencies = append(deploymentTargetDependencies, deploymentConnectivity)
-		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, projectDiscoveryConnectivity)
-	} else if !options.Target.IsPlainLocalhost() {
-		dependencyConnectivity := registry.Register(NewConnectivityDependency(
-			options.Target,
-			options.AcceptHostKeys,
-			"target not specified",
-			SeverityError,
-			options.MissingTargetFixMessage,
-		))
-		targetPrerequisites = []*DependencyNode{dependencyConnectivity}
-		deploymentTargetDependencies = append(deploymentTargetDependencies, dependencyConnectivity)
-		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyConnectivity)
-	}
-	if options.Target != nil {
-		targetRunner := runner.For(*options.Target)
-		dependencyDocker := registry.Register(NewDependencyOnDocker(targetRunner), targetPrerequisites...)
-		dependencyRemoteproc := registry.Register(NewDependencyOnRemoteproc(targetRunner), targetPrerequisites...)
-		dependencyRemoteprocRuntime := registry.Register(
-			NewDependencyOnRemoteprocRuntime(*options.Target, targetRunner),
-			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
-		)
-		dependencyRemoteprocRuntimeShim := registry.Register(
-			NewDependencyOnRemoteprocRuntimeShim(*options.Target, targetRunner),
-			append([]*DependencyNode{dependencyDocker, dependencyRemoteproc}, targetPrerequisites...)...,
-		)
-		dependencyLscpu := registry.Register(NewDependencyOnLscpu(targetRunner), targetPrerequisites...)
-		deploymentTargetDependencies = append(deploymentTargetDependencies, dependencyDocker, dependencyRemoteproc, dependencyRemoteprocRuntime, dependencyRemoteprocRuntimeShim)
-		projectDiscoveryTargetDependencies = append(projectDiscoveryTargetDependencies, dependencyLscpu)
-	}
+	engine = normalizeEngine(engine)
+	isLocalTarget := target != nil && target.IsPlainLocalhost()
+	hostNodes := registerHostChecks(registry, engine, checks.Host, isLocalTarget)
+	targetNodes := registerTargetChecks(registry, engine, target, checks.Target, hostNodes)
 
 	return HealthCheck{
 		Deployment: ReadinessCheck{
-			Registry: registry,
-			Host:     deploymentHostDependencies,
-			Target:   deploymentTargetDependencies,
+			Registry:     registry,
+			Dependencies: append(hostNodes.deployment, targetNodes.deployment...),
 		},
 		ProjectDiscovery: ReadinessCheck{
-			Registry: registry,
-			Host:     projectDiscoveryHostDependencies,
-			Target:   projectDiscoveryTargetDependencies,
+			Registry:     registry,
+			Dependencies: append(hostNodes.discovery, targetNodes.discovery...),
 		},
 	}
 }
@@ -122,26 +86,197 @@ func (h HealthCheck) Evaluate(ctx context.Context) EvaluatedHealthCheck {
 	}
 }
 
-func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
-	return EvaluatedReadinessCheck{
-		Host:   h.evaluateDependencies(ctx, h.Host),
-		Target: h.evaluateDependencies(ctx, h.Target),
-	}
+type ReadinessCheck struct {
+	Registry     *DependencyRegistry
+	Dependencies []*DependencyNode
 }
 
-func (h ReadinessCheck) evaluateDependencies(ctx context.Context, references []*DependencyNode) []EvaluatedDependency {
-	statuses := make([]EvaluatedDependency, 0, len(references))
-	for _, reference := range references {
-		result, checked := h.Registry.Check(ctx, reference)
-		if !checked {
+func (h ReadinessCheck) Evaluate(ctx context.Context) EvaluatedReadinessCheck {
+	evaluated := EvaluatedReadinessCheck{Dependencies: make([]EvaluatedDependency, 0, len(h.Dependencies))}
+	for _, reference := range h.Dependencies {
+		evaluation := h.Registry.Check(ctx, reference)
+		if evaluation.State == EvaluationOmitted {
 			continue
 		}
 		dependency := reference.Dependency()
-		statuses = append(statuses, EvaluatedDependency{
-			ID:     dependency.ID,
-			Label:  dependency.Label,
-			Result: result,
+		evaluated.Dependencies = append(evaluated.Dependencies, EvaluatedDependency{
+			Scope:      reference.Scope(),
+			ID:         dependency.ID,
+			Label:      dependency.Label,
+			Evaluation: evaluation,
 		})
 	}
-	return statuses
+	return evaluated
+}
+
+type EvaluatedHealthCheck struct {
+	Deployment       EvaluatedReadinessCheck
+	ProjectDiscovery EvaluatedReadinessCheck
+}
+
+type EvaluatedReadinessCheck struct {
+	Dependencies []EvaluatedDependency
+}
+
+type EvaluatedDependency struct {
+	Scope      DependencyScope
+	ID         DependencyID
+	Label      string
+	Evaluation DependencyEvaluation
+}
+
+func newChecks(options HealthCheckOptions) Checks {
+	localRunner := runner.NewLocal()
+	checks := Checks{Host: HostChecks{
+		Topo:             NewDependencyOnTopo(options.SkipVersionChecks),
+		SSH:              NewDependencyOnSSH(localRunner),
+		DockerCLI:        NewDependencyOnDockerCLI(localRunner),
+		Docker:           NewDependencyOnDockerDaemon(localRunner),
+		DockerCompose:    NewDependencyOnDockerCompose(localRunner),
+		PodmanCLI:        NewDependencyOnPodmanCLI(localRunner),
+		PodmanConnection: NewDependencyOnPodmanConnection(localRunner),
+		PodmanCompose:    NewDependencyOnDockerComposeForPodman(probe.CheckPodmanComposeProvider),
+	}}
+	if options.Target == nil {
+		return checks
+	}
+
+	target := *options.Target
+	targetRunner := runner.For(target)
+	checks.Target = TargetChecks{
+		Connectivity: NewConnectivityDependency(target, ConnectivityOperations{
+			Authenticate: func(ctx context.Context, target ssh.Destination) error {
+				return probe.SSHAuthentication(ctx, runner.NewSSH(target))
+			},
+			KnownHostsEntry: func(target ssh.Destination) (string, error) {
+				config, err := ssh.LoadConfig(target)
+				if err != nil {
+					return "", err
+				}
+				return config.AsKnownHostsEntry(), nil
+			},
+		}),
+		Docker: NewDependencyOnRemoteDockerDaemon(target, func(ctx context.Context, target ssh.Destination) error {
+			return docker.RunCommand(ctx, io.Discard, docker.NewHostFromDestination(target), "info")
+		}),
+		Hardware:              NewDependencyOnLscpu(targetRunner),
+		Remoteproc:            NewDependencyOnRemoteproc(targetRunner),
+		RemoteprocRuntime:     NewDependencyOnRemoteprocRuntime(target, targetRunner),
+		RemoteprocRuntimeShim: NewDependencyOnRemoteprocRuntimeShim(target, targetRunner),
+		PodmanCLI:             NewDependencyOnPodmanCLI(targetRunner),
+		RemotePodmanAPI: NewDependencyOnRemotePodmanAPI(func(ctx context.Context) probe.RemotePodmanProbeResult {
+			return probe.CheckRemotePodmanAPI(ctx, target)
+		}),
+	}
+	return checks
+}
+
+func normalizeEngine(engine Engine) Engine {
+	if engine == EnginePodman {
+		return EnginePodman
+	}
+	return EngineDocker
+}
+
+type hostNodes struct {
+	deployment []*DependencyNode
+	discovery  []*DependencyNode
+
+	dockerCLI     *DependencyNode
+	docker        *DependencyNode
+	podmanCLI     *DependencyNode
+	podmanCompose *DependencyNode
+}
+
+func registerHostChecks(registry *DependencyRegistry, engine Engine, checks HostChecks, isLocalTarget bool) hostNodes {
+	topo := registry.Register(checks.Topo, DependencyRequirements{}, DependencyScopeHost)
+	if engine == EnginePodman {
+		return registerPodmanHostChecks(registry, checks, topo, isLocalTarget)
+	}
+	return registerDockerHostChecks(registry, checks, topo, isLocalTarget)
+}
+
+func registerDockerHostChecks(registry *DependencyRegistry, checks HostChecks, topo *DependencyNode, isLocalTarget bool) hostNodes {
+	dockerCLI := registry.Register(checks.DockerCLI, DependencyRequirements{}, DependencyScopeHost)
+	docker := registry.Register(checks.Docker, DependencyRequirements{Prerequisites: []*DependencyNode{dockerCLI}}, DependencyScopeHost)
+	compose := registry.Register(checks.DockerCompose, DependencyRequirements{Prerequisites: []*DependencyNode{dockerCLI}}, DependencyScopeHost)
+	nodes := hostNodes{dockerCLI: dockerCLI, docker: docker}
+	if isLocalTarget {
+		nodes.deployment = []*DependencyNode{topo, dockerCLI, docker, compose}
+	} else {
+		ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
+		nodes.deployment = []*DependencyNode{topo, ssh, dockerCLI, docker, compose}
+		nodes.discovery = []*DependencyNode{ssh}
+	}
+	return nodes
+}
+
+func registerPodmanHostChecks(registry *DependencyRegistry, checks HostChecks, topo *DependencyNode, isLocalTarget bool) hostNodes {
+	podmanCLI := registry.Register(checks.PodmanCLI, DependencyRequirements{}, DependencyScopeHost)
+	connection := registry.Register(checks.PodmanConnection, DependencyRequirements{Prerequisites: []*DependencyNode{podmanCLI}}, DependencyScopeHost)
+	compose := registry.Register(checks.PodmanCompose, DependencyRequirements{Prerequisites: []*DependencyNode{connection, podmanCLI}}, DependencyScopeHost)
+	nodes := hostNodes{podmanCLI: podmanCLI, podmanCompose: compose}
+	if isLocalTarget {
+		nodes.deployment = []*DependencyNode{topo, podmanCLI, connection, compose}
+	} else {
+		ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
+		nodes.deployment = []*DependencyNode{topo, ssh, podmanCLI, connection, compose}
+		nodes.discovery = []*DependencyNode{ssh}
+	}
+	return nodes
+}
+
+type targetNodes struct {
+	deployment []*DependencyNode
+	discovery  []*DependencyNode
+}
+
+func registerTargetChecks(registry *DependencyRegistry, engine Engine, target *ssh.Destination, checks TargetChecks, host hostNodes) targetNodes {
+	switch {
+	case target == nil:
+		return targetNodes{}
+	case target.IsPlainLocalhost() && engine == EnginePodman:
+		return registerLocalTargetPodmanChecks(registry, checks)
+	case target.IsPlainLocalhost() && engine == EngineDocker:
+		return registerLocalTargetDockerChecks(registry, checks, host.docker)
+	case engine == EnginePodman:
+		return registerRemotePodmanTargetChecks(registry, checks, host)
+	case engine == EngineDocker:
+		return registerRemoteDockerTargetChecks(registry, checks, host.dockerCLI)
+	default:
+		return targetNodes{}
+	}
+}
+
+func registerRemoteDockerTargetChecks(registry *DependencyRegistry, checks TargetChecks, dockerCLI *DependencyNode) targetNodes {
+	access := registry.Register(checks.Connectivity, DependencyRequirements{}, DependencyScopeTarget)
+	docker := registry.Register(checks.Docker, DependencyRequirements{Prerequisites: []*DependencyNode{dockerCLI, access}}, DependencyScopeTarget)
+	remoteproc := registry.Register(checks.Remoteproc, DependencyRequirements{Prerequisites: []*DependencyNode{access}}, DependencyScopeTarget)
+	runtimeRequirements := DependencyRequirements{Conditions: []*DependencyNode{remoteproc}, Prerequisites: []*DependencyNode{docker, access}}
+	runtime := registry.Register(checks.RemoteprocRuntime, runtimeRequirements, DependencyScopeTarget)
+	shim := registry.Register(checks.RemoteprocRuntimeShim, runtimeRequirements, DependencyScopeTarget)
+	hardware := registry.Register(checks.Hardware, DependencyRequirements{Prerequisites: []*DependencyNode{access}}, DependencyScopeTarget)
+	return targetNodes{deployment: []*DependencyNode{access, docker, remoteproc, runtime, shim}, discovery: []*DependencyNode{access, hardware}}
+}
+
+func registerRemotePodmanTargetChecks(registry *DependencyRegistry, checks TargetChecks, host hostNodes) targetNodes {
+	access := registry.Register(checks.Connectivity, DependencyRequirements{}, DependencyScopeTarget)
+	podmanCLI := registry.Register(checks.PodmanCLI, DependencyRequirements{Prerequisites: []*DependencyNode{access}}, DependencyScopeTarget)
+	remotePodmanAPI := registry.Register(checks.RemotePodmanAPI, DependencyRequirements{Prerequisites: []*DependencyNode{host.podmanCLI, host.podmanCompose, access, podmanCLI}}, DependencyScopeTarget)
+	hardware := registry.Register(checks.Hardware, DependencyRequirements{Prerequisites: []*DependencyNode{access}}, DependencyScopeTarget)
+	return targetNodes{deployment: []*DependencyNode{access, podmanCLI, remotePodmanAPI}, discovery: []*DependencyNode{access, hardware}}
+}
+
+func registerLocalTargetDockerChecks(registry *DependencyRegistry, checks TargetChecks, docker *DependencyNode) targetNodes {
+	hardware := registry.Register(checks.Hardware, DependencyRequirements{}, DependencyScopeTarget)
+	remoteproc := registry.Register(checks.Remoteproc, DependencyRequirements{}, DependencyScopeTarget)
+	runtimeRequirements := DependencyRequirements{Conditions: []*DependencyNode{remoteproc}, Prerequisites: []*DependencyNode{docker}}
+	runtime := registry.Register(checks.RemoteprocRuntime, runtimeRequirements, DependencyScopeTarget)
+	shim := registry.Register(checks.RemoteprocRuntimeShim, runtimeRequirements, DependencyScopeTarget)
+	return targetNodes{deployment: []*DependencyNode{remoteproc, runtime, shim}, discovery: []*DependencyNode{hardware}}
+}
+
+func registerLocalTargetPodmanChecks(registry *DependencyRegistry, checks TargetChecks) targetNodes {
+	hardware := registry.Register(checks.Hardware, DependencyRequirements{}, DependencyScopeTarget)
+	return targetNodes{discovery: []*DependencyNode{hardware}}
 }

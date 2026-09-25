@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/compose-spec/compose-go/v2/cli"
+	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
@@ -66,4 +67,18 @@ func Read(scope Scope) (*types.Project, error) {
 		return nil, err
 	}
 	return composeProject, nil
+}
+
+func readUninterpolated(composeFilePath string) (map[string]any, error) {
+	options, err := cli.NewProjectOptions([]string{composeFilePath},
+		cli.WithResolvedPaths(false),
+		cli.WithNormalization(false),
+		cli.WithLoadOptions(func(o *loader.Options) {
+			o.SkipInterpolation = true
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return options.LoadModel(context.Background())
 }

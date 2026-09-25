@@ -1,17 +1,17 @@
-package compose_test
+package migrate_test
 
 import (
 	"bytes"
 	"strings"
 	"testing"
 
-	"github.com/arm/topo/internal/compose"
+	"github.com/arm/topo/internal/migrate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-func TestReadNode(t *testing.T) {
+func TestReadComposeNode(t *testing.T) {
 	t.Run("parses compose yaml into nodes", func(t *testing.T) {
 		composeFileContents := `name: test
 services:
@@ -21,7 +21,7 @@ services:
 `
 		composeFileReader := strings.NewReader(composeFileContents)
 
-		got, err := compose.ReadNode(composeFileReader)
+		got, err := migrate.ReadComposeNode(composeFileReader)
 
 		require.NoError(t, err)
 		gotYAML, err := yaml.Marshal(got)
@@ -32,7 +32,7 @@ services:
 	t.Run("returns error when compose file is empty", func(t *testing.T) {
 		composeFileReader := strings.NewReader("")
 
-		got, err := compose.ReadNode(composeFileReader)
+		got, err := migrate.ReadComposeNode(composeFileReader)
 
 		assert.Error(t, err)
 		assert.Nil(t, got)
@@ -42,14 +42,39 @@ services:
 	t.Run("returns error when yaml is invalid", func(t *testing.T) {
 		composeFileReader := strings.NewReader("invalid: yaml: content:")
 
-		got, err := compose.ReadNode(composeFileReader)
+		got, err := migrate.ReadComposeNode(composeFileReader)
 
 		assert.Error(t, err)
 		assert.Nil(t, got)
 	})
 }
 
-func TestApplyParameterValues(t *testing.T) {
+func TestApplyParameterValuesToCompose(t *testing.T) {
+	for _, value := range []string{"30", "1.5", "true"} {
+		t.Run("replaces typed scalar "+value+" with a string reference", func(t *testing.T) {
+			project := yamlToNode(t, `services:
+  app:
+    build:
+      args:
+        VALUE: `+value+`
+`)
+			values := map[string]string{"VALUE": "a string"}
+
+			err := migrate.ApplyParameterValuesToCompose(project, values)
+
+			require.NoError(t, err)
+			got, err := yaml.Marshal(project)
+			require.NoError(t, err)
+			want := `services:
+  app:
+    build:
+      args:
+        VALUE: a string
+`
+			assert.YAMLEq(t, want, string(got))
+		})
+	}
+
 	t.Run("updates all matching services when a parameter matches", func(t *testing.T) {
 		project := yamlToNode(t, `
 services:
@@ -66,7 +91,7 @@ services:
 `)
 		values := map[string]string{"FOO": "baz"}
 
-		err := compose.ApplyParameterValues(project, values)
+		err := migrate.ApplyParameterValuesToCompose(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -103,7 +128,7 @@ services:
 `)
 		values := map[string]string{"FOO": "baz"}
 
-		err := compose.ApplyParameterValues(project, values)
+		err := migrate.ApplyParameterValuesToCompose(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -135,7 +160,7 @@ services:
 `
 		project := yamlToNode(t, yamlContents)
 
-		err := compose.ApplyParameterValues(project, nil)
+		err := migrate.ApplyParameterValuesToCompose(project, nil)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -158,7 +183,7 @@ services:
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyParameterValues(project, values)
+		err := migrate.ApplyParameterValuesToCompose(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -186,7 +211,7 @@ services:
 `)
 		values := map[string]string{"BAR": "baz"}
 
-		err := compose.ApplyParameterValues(project, values)
+		err := migrate.ApplyParameterValuesToCompose(project, values)
 
 		require.NoError(t, err)
 	})
@@ -204,7 +229,7 @@ services:
 `)
 		values := map[string]string{"PLATFORM": "stm32mp257"}
 
-		err := compose.ApplyParameterValues(project, values)
+		err := migrate.ApplyParameterValuesToCompose(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -235,7 +260,7 @@ services:
 			"BAR": "new-bar",
 		}
 
-		err := compose.ApplyParameterValues(project, values)
+		err := migrate.ApplyParameterValuesToCompose(project, values)
 
 		require.NoError(t, err)
 		got, err := yaml.Marshal(project)
@@ -251,7 +276,7 @@ services:
 	})
 }
 
-func TestWriteNode(t *testing.T) {
+func TestWriteComposeNode(t *testing.T) {
 	t.Run("writes YAML node to compose file", func(t *testing.T) {
 		want := `
 name: test
@@ -264,7 +289,7 @@ services:
 		project := yamlToNode(t, want)
 		var buf bytes.Buffer
 
-		err := compose.WriteNode(project, &buf)
+		err := migrate.WriteComposeNode(project, &buf)
 		require.NoError(t, err)
 
 		got := buf.String()
@@ -274,7 +299,7 @@ services:
 
 func yamlToNode(t *testing.T, yamlContents string) *yaml.Node {
 	t.Helper()
-	project, err := compose.ReadNode(strings.NewReader(yamlContents))
+	project, err := migrate.ReadComposeNode(strings.NewReader(yamlContents))
 	require.NoError(t, err)
 	return project
 }

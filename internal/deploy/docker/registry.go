@@ -11,13 +11,9 @@ import (
 
 const registryImage = "registry:2"
 
-// EnsureRegistryRunning pulls the registry image and starts the existing local
-// registry container, or creates it when it does not yet exist.
+// EnsureRegistryRunning starts the existing local registry container, or creates
+// it when it does not yet exist.
 func EnsureRegistryRunning(ctx context.Context, output io.Writer, containerName, port string) error {
-	if err := RunCommand(ctx, output, LocalHost, "pull", registryImage); err != nil {
-		return err
-	}
-
 	if registryContainerExists(ctx, containerName) {
 		if err := validateRegistryPort(ctx, containerName, port); err != nil {
 			return err
@@ -54,9 +50,15 @@ func registryHostPort(inspectOutput []byte) (string, error) {
 		HostPort string `json:"HostPort"`
 	}
 	type containerInspect struct {
+		State struct {
+			Running bool `json:"Running"`
+		} `json:"State"`
 		HostConfig struct {
 			PortBindings map[string][]portBinding `json:"PortBindings"`
 		} `json:"HostConfig"`
+		NetworkSettings struct {
+			Ports map[string][]portBinding `json:"Ports"`
+		} `json:"NetworkSettings"`
 	}
 
 	var containers []containerInspect
@@ -68,6 +70,9 @@ func registryHostPort(inspectOutput []byte) (string, error) {
 	}
 
 	bindings := containers[0].HostConfig.PortBindings["5000/tcp"]
+	if containers[0].State.Running {
+		bindings = containers[0].NetworkSettings.Ports["5000/tcp"]
+	}
 	if len(bindings) == 0 || bindings[0].HostPort == "" {
 		return "", fmt.Errorf("container port 5000 is not published")
 	}
@@ -82,6 +87,7 @@ func runRegistryContainer(ctx context.Context, containerName, port string, outpu
 		combinedOutput,
 		LocalHost,
 		"run",
+		"--pull=missing",
 		"-d",
 		"--restart", "always",
 		"-p", fmt.Sprintf("127.0.0.1:%s:5000", port),

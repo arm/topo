@@ -7,17 +7,50 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestEvaluatedHealthCheck(t *testing.T) {
+	t.Run("Report", func(t *testing.T) {
+		t.Run("reports a missing target without assembling target checks", func(t *testing.T) {
+			healthCheck := health.EvaluatedHealthCheck{}
+
+			got := healthCheck.Report(nil, "Choose a target")
+
+			assert.Nil(t, got.TargetDetails)
+			assert.Empty(t, got.Deployment.Checks)
+			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusError, Fix: &health.Fix{Description: "Choose a target"}}, got.Deployment.TargetStatus)
+			assert.Empty(t, got.ProjectDiscovery.Checks)
+			assert.Equal(t, &health.TargetStatus{Status: health.CheckStatusWarning, Fix: &health.Fix{Description: "Choose a target"}}, got.ProjectDiscovery.TargetStatus)
+		})
+
+		t.Run("retains remote access results", func(t *testing.T) {
+			healthCheck := health.EvaluatedHealthCheck{
+				Deployment: health.EvaluatedReadinessCheck{Dependencies: []health.EvaluatedDependency{
+					{Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Label: "Target access", Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{SuccessValue: "user@example.com"}}},
+				}},
+			}
+
+			target := health.TargetDetails{Destination: "user@example.com"}
+			got := healthCheck.Report(&target, "")
+
+			assert.Equal(t, []health.DependencyReport{{
+				Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Name: "Target access", Status: health.CheckStatusOK, Value: "user@example.com",
+			}}, got.Deployment.Checks)
+		})
+	})
+}
+
 func TestToDependencyReport(t *testing.T) {
 	t.Run("returns successful dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
-			ID:     "docker",
-			Label:  "Container Engine",
-			Result: health.DependencyCheckResult{SuccessValue: "docker"},
+		dependency := health.EvaluatedDependency{
+			Scope:      health.DependencyScopeHost,
+			ID:         "docker",
+			Label:      "Container Engine",
+			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{SuccessValue: "docker"}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			ID:     "docker",
 			Name:   "Container Engine",
 			Status: health.CheckStatusOK,
@@ -27,17 +60,19 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns error dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Rube Goldberg",
-			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityError,
 				Message:  "whatever not found on path",
-			}},
+			}}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Rube Goldberg",
 			Status: health.CheckStatusError,
 			Value:  "whatever not found on path",
@@ -46,17 +81,19 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns warning dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Remoteproc Runtime",
-			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
 				Message:  "remoteproc-runtime not found on path",
-			}},
+			}}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Remoteproc Runtime",
 			Status: health.CheckStatusWarning,
 			Value:  "remoteproc-runtime not found on path",
@@ -65,17 +102,19 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("returns informational dependency result", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Remoteproc Runtime",
-			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityInfo,
 				Message:  "no remoteproc devices found",
-			}},
+			}}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Remoteproc Runtime",
 			Status: health.CheckStatusInfo,
 			Value:  "no remoteproc devices found",
@@ -84,21 +123,23 @@ func TestToDependencyReport(t *testing.T) {
 	})
 
 	t.Run("propagates fix from failed dependency", func(t *testing.T) {
-		status := health.EvaluatedDependency{
+		dependency := health.EvaluatedDependency{
+			Scope: health.DependencyScopeHost,
 			Label: "Food",
-			Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Evaluation: health.DependencyEvaluation{Result: health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 				Severity: health.SeverityWarning,
 				Message:  "not enough pineapple",
 				Fix: &health.Fix{
 					Description: "add more pineapple",
 					Command:     "pizza --pineapple",
 				},
-			}},
+			}}},
 		}
 
-		got := health.ToDependencyReport(status)
+		got := health.ToDependencyReport(dependency)
 
 		want := health.DependencyReport{
+			Scope:  health.DependencyScopeHost,
 			Name:   "Food",
 			Status: health.CheckStatusWarning,
 			Value:  "not enough pineapple",

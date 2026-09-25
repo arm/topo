@@ -17,22 +17,28 @@ func TestSetupKeysJourney(t *testing.T) {
 	container := testutil.StartContainer(t, testutil.PasswordedSSHContainer)
 	topo := buildBinary(t)
 
-	Step(t, "health reports unknown host key and suggests accept-new-host-keys")
+	Step(t, "health reports unknown host key and suggests trusting it through SSH")
 	out := runTopo(t, topo, "health", "--target", container.SSHDestination)
 	assert.Contains(t, out, "✗ Connectivity")
 	assert.Contains(t, out, "host key is unknown")
-	assert.Contains(t, out, "Trust the target's SSH host key")
-	assert.Contains(t, out, fmt.Sprintf("topo health --target %s --accept-new-host-keys", container.SSHDestination))
+	assert.Contains(t, out, "Verify and trust the target's SSH host key")
+	assert.Contains(t, out, fmt.Sprintf("ssh -o StrictHostKeyChecking=ask '%s'", container.SSHDestination))
 
-	Step(t, "health with accept-new-host-keys trusts host and suggests setup-keys")
-	out = runTopo(t, topo, "health", "--target", container.SSHDestination, "--accept-new-host-keys")
+	Step(t, "trust the test host through SSH")
+	askpass := writeAskPassScript(t, sshRootPassword)
+	trustCmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=accept-new", container.SSHDestination, "true")
+	trustCmd.Env = append(os.Environ(), "SSH_ASKPASS="+askpass, "SSH_ASKPASS_REQUIRE=force")
+	trustOut, err := trustCmd.CombinedOutput()
+	require.NoError(t, err, "ssh failed: %s", trustOut)
+
+	Step(t, "health reports authentication failure and suggests setup-keys")
+	out = runTopo(t, topo, "health", "--target", container.SSHDestination)
 	assert.Contains(t, out, "✗ Connectivity")
 	assert.Contains(t, out, "authentication failed")
 	assert.Contains(t, out, "Configure SSH keys on remote target")
 	assert.Contains(t, out, fmt.Sprintf("topo setup-keys --target %s", container.SSHDestination))
 
 	Step(t, "setup-keys generates keys and installs them on the target")
-	askpass := writeAskPassScript(t, sshRootPassword)
 	cmd := exec.Command(topo, "setup-keys", "--target", container.SSHDestination)
 	cmd.Env = append(os.Environ(), []string{
 		"SSH_ASKPASS=" + askpass,

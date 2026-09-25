@@ -14,14 +14,25 @@ const targetDestinationPlaceholder = "TARGET_DESTINATION"
 
 func replaceNonDeterministicDestination(t *testing.T, out string) string {
 	t.Helper()
-	var obj map[string]map[string]any
+	var obj map[string]any
 	err := json.Unmarshal([]byte(out), &obj)
 	require.NoError(t, err)
 
-	obj["target"]["destination"] = targetDestinationPlaceholder
-	connectivity, ok := obj["target"]["connectivity"].(map[string]any)
+	capabilities, ok := obj["capabilities"].([]any)
 	require.True(t, ok)
-	connectivity["value"] = targetDestinationPlaceholder
+	for _, entry := range capabilities {
+		capability, ok := entry.(map[string]any)
+		require.True(t, ok)
+		checks, ok := capability["checks"].([]any)
+		require.True(t, ok)
+		for _, entry := range checks {
+			check, ok := entry.(map[string]any)
+			require.True(t, ok)
+			if check["name"] == "Connectivity" && check["location"] == "target" {
+				check["value"] = targetDestinationPlaceholder
+			}
+		}
+	}
 
 	normalizedOut, err := json.MarshalIndent(obj, "", "  ")
 	require.NoError(t, err)
@@ -44,7 +55,9 @@ func TestHealthCheck(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, out, " ✓ OpenSSH (ssh)")
-		assert.Contains(t, out, " ✓ Container Engine (docker)")
+		assert.Contains(t, out, " ✓ Docker CLI (docker)")
+		assert.Contains(t, out, " ✓ Docker daemon (reachable)")
+		assert.Contains(t, out, " ✓ Docker Compose (docker compose)")
 		assert.Contains(t, out, " ✓ Connectivity")
 	})
 

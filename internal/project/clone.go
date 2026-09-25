@@ -8,9 +8,12 @@ import (
 
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 )
+
+var ErrParameterMigrationRequired = errors.New("this project appears to use the parameter format from Topo versions older than 14.0.0")
 
 func Clone(output io.Writer, path string, src Source, resolver parameter.Resolver, migrateToEnv bool) error {
 	if err := term.PrintFirstHeader(output, "Copy files"); err != nil {
@@ -25,27 +28,33 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 		return err
 	}
 
-	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
-		return err
-	}
-	if err := Configure(composeFilePath, resolver); err != nil {
-		if rmErr := os.RemoveAll(path); rmErr != nil {
-			return errors.Join(err, rmErr)
-		}
-		return fmt.Errorf("configure failed: %w", err)
-	}
-
 	if migrateToEnv {
 		if err := term.PrintNthHeader(output, "Migrate to dotenv-based configuration"); err != nil {
 			return err
 		}
-		if err := migrate(output, composeFilePath); err != nil {
+		if err := migrateProject(output, composeFilePath); err != nil {
 			if rmErr := os.RemoveAll(path); rmErr != nil {
 				return errors.Join(err, rmErr)
 			}
 			return fmt.Errorf("migration failed: %w", err)
 		}
+	}
 
+	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
+		return err
+	}
+	usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
+	if err == nil && usesLiteralBuildArgs {
+		err = ErrParameterMigrationRequired
+	}
+	if err == nil {
+		err = Configure(composeFilePath, resolver)
+	}
+	if err != nil {
+		if rmErr := os.RemoveAll(path); rmErr != nil {
+			return errors.Join(err, rmErr)
+		}
+		return fmt.Errorf("configure failed: %w", err)
 	}
 
 	if err := term.PrintNthHeader(output, "Project ready"); err != nil {
@@ -54,8 +63,8 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 	return printSummary(output, path)
 }
 
-func migrate(output io.Writer, composeFilePath string) error {
-	if err := MigrateToEnv(composeFilePath); err != nil {
+func migrateProject(output io.Writer, composeFilePath string) error {
+	if err := migrate.ToEnv(composeFilePath); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintf(output, "successfully migrated %q to be parameterized from %q\n", composeFilePath, env.DefaultFilename)

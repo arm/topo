@@ -6,6 +6,7 @@ import (
 	"html/template"
 
 	"github.com/arm/topo/internal/install"
+	"github.com/arm/topo/internal/output/term"
 )
 
 type InstallResults []install.InstallResult
@@ -28,8 +29,8 @@ No binaries installed
 {{- end -}}
 `
 
-func (r InstallResults) AsPlain(isTTY bool) (string, error) {
-	funcMap := getFuncMap(isTTY)
+func (r InstallResults) AsPlain(palette term.Palette) (string, error) {
+	funcMap := getFuncMap(palette)
 	funcMap["pathWarnings"] = pathWarnings
 	tmpl, err := template.
 		New("InstallResults").

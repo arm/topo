@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NAME: "World"
+        NAME: ${NAME:-World}
     environment:
       STATE: ${STATE:-Michigan}
     ports:

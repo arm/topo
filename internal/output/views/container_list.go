@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"text/tabwriter"
 	"text/template"
+
+	"github.com/arm/topo/internal/output/term"
 )
 
 type Container struct {
@@ -25,7 +27,7 @@ const containerListTemplate = `Container ID	Names	Image	Status	Processing Domain
 {{.ID}}	{{.Names}}	{{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
 {{- end }}`
 
-func (r ContainerList) AsPlain(isTTY bool) (string, error) {
+func (r ContainerList) AsPlain(_ term.Palette) (string, error) {
 	tmpl, err := template.
 		New("ps").
 		Parse(containerListTemplate)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 
@@ -45,17 +46,26 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		assertRegistryContainerPort(t, containerName, port)
 	})
 
+	t.Run("reuses a running registry with an engine-assigned port", func(t *testing.T) {
+		const containerName = "topo-test-registry-assigned-port"
+		port := startTestRegistry(t, containerName)
+		var output bytes.Buffer
+
+		err := podman.EnsureRegistryRunning(t.Context(), &output, containerName, port)
+
+		require.NoError(t, err, output.String())
+		assertRegistryContainerRunning(t, containerName)
+		assertRegistryContainerPort(t, containerName, port)
+	})
+
 	t.Run("returns an error when an existing registry uses a different port", func(t *testing.T) {
 		const containerName = "topo-test-registry-port-mismatch"
-		requireRegistryContainerAbsent(t, containerName)
-		alreadyRunningOnPort := requireAvailableTCPPort(t)
-		newlyRequestedPort := requireAvailableTCPPort(t)
-		for newlyRequestedPort == alreadyRunningOnPort {
-			newlyRequestedPort = requireAvailableTCPPort(t)
+		alreadyRunningOnPort := startTestRegistry(t, containerName)
+		newlyRequestedPort := "5000"
+		if newlyRequestedPort == alreadyRunningOnPort {
+			newlyRequestedPort = "5001"
 		}
 		var output bytes.Buffer
-		require.NoError(t, podman.EnsureRegistryRunning(t.Context(), &output, containerName, alreadyRunningOnPort), output.String())
-		output.Reset()
 
 		err := podman.EnsureRegistryRunning(t.Context(), &output, containerName, newlyRequestedPort)
 
@@ -68,25 +78,29 @@ func TestEnsureRegistryRunning(t *testing.T) {
 		const containerName = "topo-test-registry-port-conflict"
 		requireRegistryContainerAbsent(t, containerName)
 		const portOwnerContainerName = "topo-test-registry-port-owner"
-		requireRegistryContainerAbsent(t, portOwnerContainerName)
-		port := requireAvailableTCPPort(t)
-		portOwnerOutput, err := podman.Command(
-			t.Context(),
-			podman.LocalSocket,
-			"run",
-			"-d",
-			"-p", fmt.Sprintf("127.0.0.1:%s:5000", port),
-			"--name", portOwnerContainerName,
-			"registry:2",
-		).CombinedOutput()
-		require.NoError(t, err, string(portOwnerOutput))
+		port := startTestRegistry(t, portOwnerContainerName)
 		var output bytes.Buffer
 
-		err = podman.EnsureRegistryRunning(t.Context(), &output, containerName, port)
+		err := podman.EnsureRegistryRunning(t.Context(), &output, containerName, port)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, fmt.Sprintf("port is already in use, this could be an existing %s or another process", containerName))
 	})
+}
+
+func startTestRegistry(t *testing.T, containerName string) string {
+	t.Helper()
+	requireRegistryContainerAbsent(t, containerName)
+	output, err := podman.Command(t.Context(), podman.LocalSocket,
+		"run", "-d", "-p", "127.0.0.1::5000", "--name", containerName, "registry:2",
+	).CombinedOutput()
+	require.NoError(t, err, string(output))
+	output, err = podman.Command(t.Context(), podman.LocalSocket, "port", containerName, "5000").CombinedOutput()
+	require.NoError(t, err, string(output))
+	host, port, err := net.SplitHostPort(strings.TrimSpace(string(output)))
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1", host)
+	return port
 }
 
 func requireRegistryContainerAbsent(t *testing.T, containerName string) {
