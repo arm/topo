@@ -45,7 +45,7 @@ const functionalityHealthReportTemplate = `
 {{- define "functionality" -}}
 {{ functionalityHeading .Name .StatusCounts }}
 {{ status (dependencyGroupStatus .HostChecks) }}Host{{ template "checkSection" (section .HostChecks) }}
-{{ status (targetStatus .TargetStatus .TargetChecks) }}{{ targetHeading }}
+{{ status (targetStatus .TargetStatus .TargetChecks) }}Target
 {{- if .TargetStatus }}
 {{- if .TargetStatus.Fix }}
 {{ "   " }}Fix:
@@ -110,12 +110,6 @@ func (r HealthReportView) AsPlain(palette term.Palette) (string, error) {
 	}
 	funcMap["section"] = func(checks []health.DependencyReport) healthCheckSection {
 		return newHealthCheckSection(checks, r.Verbose)
-	}
-	funcMap["targetHeading"] = func() string {
-		if r.TargetDetails != nil && r.TargetDetails.Destination != "" {
-			return "Target: " + r.TargetDetails.Destination
-		}
-		return "Target"
 	}
 	tmpl, err := template.New("functionality-healthcheck").Funcs(funcMap).Parse(functionalityHealthReportTemplate)
 	if err != nil {

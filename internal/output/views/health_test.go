@@ -16,7 +16,7 @@ func TestHealthReport(t *testing.T) {
 	t.Run("AsPlain", func(t *testing.T) {
 		t.Run("renders deployment and project management sections in verbose mode", func(t *testing.T) {
 			toPrint := views.HealthReportView{Verbose: true, HealthReport: health.HealthReport{
-				TargetDetails: &health.TargetDetails{},
+				TargetDetails: &health.TargetDetails{Destination: "ssh://user@my-target"},
 				Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
 					{Scope: health.DependencyScopeHost, Name: "Computer", Status: health.CheckStatusWarning},
 					{Scope: health.DependencyScopeHost, Name: "Docker Compose", Status: health.CheckStatusError},

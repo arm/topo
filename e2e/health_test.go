@@ -47,7 +47,7 @@ func TestHealthCheck(t *testing.T) {
 		out, err := runCheckHealth(topo, container)
 		require.NoError(t, err)
 
-		assert.Contains(t, out, " ✓ Target: "+container.SSHDestination+"\n   ✓ All checks passed")
+		assert.Contains(t, out, " ✓ Target\n   ✓ All checks passed")
 	})
 
 	t.Run("shows successful checks with ticks in verbose mode", func(t *testing.T) {
