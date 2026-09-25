@@ -1,7 +1,6 @@
 package env_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -155,68 +154,156 @@ GREETING="unterminated
 }
 
 func TestUpdateFile(t *testing.T) {
-	t.Run("creates a missing file", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "custom.env")
+	t.Run("preserves unrelated expressions and assignment formatting", func(t *testing.T) {
+		path := writeEnvFile(t, "# greeting\r\nGREETING=${NAME:?required}\r\n export OTHER : old # keep\r\n")
 
-		err := env.UpdateFile(path, map[string]string{"NAME": "World"})
-
-		require.NoError(t, err)
-		testutil.RequireEnvFileValues(t, path, map[string]string{"NAME": "World"})
-	})
-
-	t.Run("overwrites supplied entries and preserves unrelated entries", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "custom.env")
-		testutil.RequireWriteFile(t, path, "NAME=Original\nOTHER=keep\n")
-		values := map[string]string{"NAME": "World", "NEW": "added"}
-
-		err := env.UpdateFile(path, values)
+		err := env.UpdateFile(path, map[string]string{"OTHER": "updated"}, env.EncodeOptions{})
 
 		require.NoError(t, err)
-		testutil.RequireEnvFileValues(t, path, map[string]string{"NAME": "World", "OTHER": "keep", "NEW": "added"})
+		assert.Equal(t, "# greeting\r\nGREETING=${NAME:?required}\r\n export OTHER : \"updated\" # keep\r\n", testutil.RequireReadFile(t, path))
 	})
 
-	t.Run("leaves malformed files untouched", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "custom.env")
-		original := "NAME=\"unterminated\n"
-		testutil.RequireWriteFile(t, path, original)
+	t.Run("updates every duplicate assignment", func(t *testing.T) {
+		path := writeEnvFile(t, "OTHER=\nCOPY=${OTHER}\nOTHER=last")
 
-		err := env.UpdateFile(path, map[string]string{"NAME": "World"})
+		err := env.UpdateFile(path, map[string]string{"OTHER": "updated"}, env.EncodeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, "OTHER=\"updated\"\nCOPY=${OTHER}\nOTHER=\"updated\"", testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("replaces a whole multiline value including escaped quotes", func(t *testing.T) {
+		path := writeEnvFile(t, `OTHER="one\"two
+three" # keep
+`)
+
+		err := env.UpdateFile(path, map[string]string{"OTHER": "updated"}, env.EncodeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, "OTHER=\"updated\" # keep\n", testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("does not treat multiline contents as assignments", func(t *testing.T) {
+		const text = "TEXT='one\nOTHER=not an assignment\nthree'\n"
+		path := writeEnvFile(t, text+"OTHER=old\n")
+
+		err := env.UpdateFile(path, map[string]string{"OTHER": "updated"}, env.EncodeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, text+"OTHER=\"updated\"\n", testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("separates appended entries from an unterminated final line", func(t *testing.T) {
+		path := writeEnvFile(t, "# comment")
+
+		err := env.UpdateFile(path, map[string]string{"OTHER": "updated"}, env.EncodeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, "# comment\nOTHER=\"updated\"\n", testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("can preserve interpolation in replaced and appended values", func(t *testing.T) {
+		path := writeEnvFile(t, "NAME=World\nGREETING=old\n")
+		updates := map[string]string{"GREETING": "Hello ${NAME}", "FAREWELL": "Bye ${NAME}"}
+
+		err := env.UpdateFile(path, updates, env.EncodeOptions{PreserveInterpolation: true})
+
+		require.NoError(t, err)
+		assert.Equal(t, "NAME=World\nGREETING=\"Hello ${NAME}\"\nFAREWELL=\"Bye ${NAME}\"\n", testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("creates missing files with sorted entries", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+
+		err := env.UpdateFile(path, map[string]string{"B": "two", "A": "one"}, env.EncodeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, "A=\"one\"\nB=\"two\"\n", testutil.RequireReadFile(t, path))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	})
+
+	t.Run("escapes interpolation characters, preserving their literal values", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+		values := map[string]string{"VALUE": "${MISSING:?required} $NAME $$ \\ \" ' \n\r\t #"}
+
+		err := env.UpdateFile(path, values, env.EncodeOptions{})
+
+		require.NoError(t, err)
+		testutil.RequireEnvFileValues(t, path, values)
+	})
+
+	t.Run("leaves the file untouched when a quote is unterminated", func(t *testing.T) {
+		const content = "OTHER=old\nBROKEN='unterminated\n"
+		path := writeEnvFile(t, content)
+
+		err := env.UpdateFile(path, map[string]string{"OTHER": "updated"}, env.EncodeOptions{})
+
+		require.ErrorContains(t, err, "unterminated")
+		assert.Equal(t, content, testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("leaves the file untouched when assignment syntax is unsupported", func(t *testing.T) {
+		const content = "OTHER=old\nINHERITED\n"
+		path := writeEnvFile(t, content)
+
+		err := env.UpdateFile(path, map[string]string{"OTHER": "updated"}, env.EncodeOptions{})
+
+		require.ErrorContains(t, err, "unsupported")
+		assert.Equal(t, content, testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("returns read errors", func(t *testing.T) {
+		err := env.UpdateFile(t.TempDir(), map[string]string{"A": "value"}, env.EncodeOptions{})
 
 		require.ErrorContains(t, err, "failed to read env file")
-		assert.Equal(t, original, testutil.RequireReadFile(t, path))
+	})
+
+	t.Run("returns write errors", func(t *testing.T) {
+		err := env.UpdateFile(filepath.Join(t.TempDir(), "missing", ".env"), map[string]string{"A": "value"}, env.EncodeOptions{})
+
+		require.ErrorContains(t, err, "failed to write env file")
 	})
 }
 
-func TestWriteFile(t *testing.T) {
-	t.Run("writes sorted parameters", func(t *testing.T) {
-		var output bytes.Buffer
-		values := map[string]string{"PORT": "8080", "GREETING": "Hello"}
-
-		err := env.WriteFile(&output, values)
+func TestToString(t *testing.T) {
+	t.Run("returns a string with sorted entries", func(t *testing.T) {
+		content, err := env.ToString(map[string]string{"B": "two", "A": "one"}, env.EncodeOptions{})
 
 		require.NoError(t, err)
-		want := `GREETING="Hello"
-PORT="8080"
-`
-		assert.Equal(t, want, output.String())
+		assert.Equal(t, "A=\"one\"\nB=\"two\"\n", content)
 	})
 
-	t.Run("rejects empty parameter names", func(t *testing.T) {
-		var output bytes.Buffer
+	t.Run("escapes special characters in literal values", func(t *testing.T) {
+		values := map[string]string{"VALUE": "${MISSING:?required} $NAME $$ \\ \" ' \n\r\t #"}
 
-		err := env.WriteFile(&output, map[string]string{"": "Hello"})
+		content, err := env.ToString(values, env.EncodeOptions{})
 
-		assert.ErrorContains(t, err, "env parameter name must not be empty")
-		assert.Empty(t, output.String())
-	})
-
-	t.Run("returns writer errors", func(t *testing.T) {
-		output, err := os.CreateTemp(t.TempDir(), "env")
 		require.NoError(t, err)
-		require.NoError(t, output.Close())
-
-		err = env.WriteFile(output, map[string]string{"GREETING": "Hello"})
-
-		assert.ErrorContains(t, err, "failed to write env file")
+		assert.Equal(t, `VALUE="$${MISSING:?required} $$NAME $$$$ \\ \" ' \n\r\t #"`+"\n", content)
 	})
+
+	t.Run("preserves interpolation when requested", func(t *testing.T) {
+		values := map[string]string{"GREETING": "Hello ${NAME}"}
+
+		content, err := env.ToString(values, env.EncodeOptions{PreserveInterpolation: true})
+
+		require.NoError(t, err)
+		assert.Equal(t, "GREETING=\"Hello ${NAME}\"\n", content)
+	})
+
+	t.Run("returns an empty string for no values", func(t *testing.T) {
+		content, err := env.ToString(nil, env.EncodeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, "", content)
+	})
+}
+
+func writeEnvFile(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), env.DefaultFilename)
+	testutil.RequireWriteFile(t, path, content)
+	return path
 }
