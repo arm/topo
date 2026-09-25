@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -26,7 +27,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		err := podman.Deploy(t.Context(), &bytes.Buffer{}, project.Scope{ComposeFile: composeFile}, podman.DeployOptions{})
+		err := podman.Deploy(t.Context(), &bytes.Buffer{}, project.Scope{ComposeFile: composeFile}, deploy.Options{})
 
 		require.ErrorContains(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments`)
 	})
@@ -35,7 +36,7 @@ services:
 		requireLocalPodman(t)
 		scope, projectName := deploymentFixture(t)
 		t.Cleanup(func() { cleanupComposeProject(t, scope) })
-		options := podman.DeployOptions{TargetHost: ssh.PlainLocalhost}
+		options := deploy.Options{TargetHost: ssh.PlainLocalhost}
 
 		err := podman.Deploy(t.Context(), t.Output(), scope, options)
 
@@ -48,7 +49,7 @@ services:
 		podmanContainer := startPodmanInContainer(t)
 		scope, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
-		options := podman.DeployOptions{TargetHost: targetDestination}
+		options := deploy.Options{TargetHost: targetDestination}
 
 		err := podman.Deploy(t.Context(), t.Output(), scope, options)
 
@@ -68,9 +69,9 @@ services:
 		podmanContainer := startPodmanInContainer(t)
 		scope, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
-		options := podman.DeployOptions{
+		options := deploy.Options{
 			TargetHost: targetDestination,
-			Registry: &podman.RegistryConfig{
+			Registry: &deploy.RegistryConfig{
 				ContainerName: registryContainerName,
 				Port:          registryPort,
 			},

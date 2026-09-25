@@ -20,20 +20,7 @@ const (
 	tunnelCleanupTimeout         = 5 * time.Second
 )
 
-type RegistryConfig struct {
-	ContainerName       string
-	Port                string
-	SkipRemotePortCheck bool
-}
-
-type DeployOptions struct {
-	RecreateMode          RecreateMode
-	TargetHost            ssh.Destination
-	Registry              *RegistryConfig
-	DefaultSuccessMessage string
-}
-
-func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts DeployOptions) error {
+func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts deploy.Options) error {
 	sourceHost := LocalHost
 
 	if err := term.PrintFirstHeader(output, "Build images"); err != nil {
@@ -87,7 +74,7 @@ func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceHost, ta
 	return TransferImagesViaPipe(ctx, output, sourceHost, targetHost, scope)
 }
 
-func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost Host, targetHost ssh.Destination, scope project.Scope, opts RegistryConfig) (transferErr error) {
+func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceHost Host, targetHost ssh.Destination, scope project.Scope, opts deploy.RegistryConfig) (transferErr error) {
 	if err := term.PrintNthHeader(output, "Run registry"); err != nil {
 		return err
 	}

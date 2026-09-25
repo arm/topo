@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,6 +9,7 @@ import (
 	"syscall"
 
 	cmdtext "github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/deploy/podman"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
@@ -67,89 +67,58 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			return err
 		}
 
+		if cmd.Flags().Changed("registry-port") && noRegistry {
+			logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
+		}
+		resolvedPort, err := resolveValidPort(cmd, registryPort)
+		if err != nil {
+			return err
+		}
+
+		if err := ensureProjectIsReady(scope); err != nil {
+			return err
+		}
+
 		composeFileFlagValue := cmd.Flag(composeFileFlag)
 		defaultSuccessMessage := buildDefaultSuccessMessage(
 			strings.TrimSpace(composeFileFlagValue.Value.String()),
 			composeFileFlagValue.Changed,
 		)
+
+		options := deploy.Options{
+			TargetHost:            ssh.NewDestination(targetArg),
+			DefaultSuccessMessage: defaultSuccessMessage,
+		}
+		if !noRegistry {
+			options.Registry = &deploy.RegistryConfig{
+				Port:                resolvedPort,
+				SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
+			}
+		}
+		switch {
+		case forceRecreate:
+			options.RecreateMode = deploy.RecreateModeForce
+		case noRecreate:
+			options.RecreateMode = deploy.RecreateModeNone
+		}
+
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+
+		var deploymentErr error
 		if selectedEngine == containerEnginePodman {
-			return deployWithPodman(cmd, scope, targetArg, defaultSuccessMessage)
+			deploymentErr = podman.Deploy(ctx, os.Stdout, scope, options)
+		} else {
+			deploymentErr = docker.Deploy(ctx, os.Stdout, scope, options)
 		}
-		return deployWithDocker(cmd, scope, targetArg, defaultSuccessMessage)
+		if deploymentErr == nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return fmt.Errorf("deployment failed; ensure topo health is passing: %w", deploymentErr)
 	},
-}
-
-func deployWithPodman(cmd *cobra.Command, scope project.Scope, targetArg, defaultSuccessMessage string) error {
-	if cmd.Flags().Changed("registry-port") && noRegistry {
-		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
-	}
-
-	if err := ensureProjectIsReady(scope); err != nil {
-		return err
-	}
-
-	resolvedPort, err := resolvePort(cmd, registryPort)
-	if err != nil {
-		return err
-	}
-	if err := validatePort(resolvedPort); err != nil {
-		return err
-	}
-
-	targetHost := ssh.NewDestination(targetArg)
-	options := podman.DeployOptions{TargetHost: targetHost, DefaultSuccessMessage: defaultSuccessMessage}
-	if !noRegistry {
-		options.Registry = &podman.RegistryConfig{
-			Port:                resolvedPort,
-			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-		}
-	}
-	switch {
-	case forceRecreate:
-		options.RecreateMode = podman.RecreateModeForce
-	case noRecreate:
-		options.RecreateMode = podman.RecreateModeNone
-	}
-
-	return executeDeployment(cmd, func(ctx context.Context) error {
-		return podman.Deploy(ctx, os.Stdout, scope, options)
-	})
-}
-
-func deployWithDocker(cmd *cobra.Command, scope project.Scope, targetArg, defaultSuccessMessage string) error {
-	if cmd.Flags().Changed("registry-port") && noRegistry {
-		logger.Warn("--registry-port has no effect when --no-registry is set. Define a port in your ssh config instead.")
-	}
-
-	if err := ensureProjectIsReady(scope); err != nil {
-		return err
-	}
-
-	resolvedPort, err := resolvePort(cmd, registryPort)
-	if err != nil {
-		return err
-	}
-	if err := validatePort(resolvedPort); err != nil {
-		return err
-	}
-
-	deployOpts := docker.DeployOptions{TargetHost: ssh.NewDestination(targetArg), DefaultSuccessMessage: defaultSuccessMessage}
-	if !noRegistry {
-		deployOpts.Registry = &docker.RegistryConfig{
-			Port:                resolvedPort,
-			SkipRemotePortCheck: resolveSkipRemotePortCheck(cmd),
-		}
-	}
-	switch {
-	case forceRecreate:
-		deployOpts.RecreateMode = docker.RecreateModeForce
-	case noRecreate:
-		deployOpts.RecreateMode = docker.RecreateModeNone
-	}
-
-	return executeDeployment(cmd, func(ctx context.Context) error {
-		return docker.Deploy(ctx, os.Stdout, scope, deployOpts)
-	})
 }
 
 func buildDefaultSuccessMessage(composeFilePath string, explicitComposeFile bool) string {
@@ -167,43 +136,27 @@ func ensureProjectIsReady(scope project.Scope) error {
 	return checks.EnsureProjectIsLinuxArm64Ready(scope)
 }
 
-func executeDeployment(cmd *cobra.Command, deployment func(context.Context) error) error {
-	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := deployment(ctx); err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		return fmt.Errorf("deployment failed; ensure topo health is passing: %w", err)
-	}
-	return nil
-}
-
-func validatePort(port string) error {
-	portNum, err := strconv.Atoi(port)
-	if err != nil {
-		return fmt.Errorf("invalid port %q: must be a number", port)
-	}
-	if portNum < 1 || portNum > 65535 {
-		return fmt.Errorf("invalid port %d: must be between 1 and 65535", portNum)
-	}
-	return nil
-}
-
 const (
 	portEnvVar                = "TOPO_PORT"
 	skipRemotePortCheckEnvVar = "TOPO_SKIP_REMOTE_PORT_CHECK"
 )
 
-func resolvePort(cmd *cobra.Command, flagValue string) (string, error) {
-	if cmd.Flags().Changed("registry-port") {
-		return flagValue, nil
+func resolveValidPort(cmd *cobra.Command, flagValue string) (string, error) {
+	port := flagValue
+	if !cmd.Flags().Changed("registry-port") {
+		if envPort := strings.TrimSpace(os.Getenv(portEnvVar)); envPort != "" {
+			port = envPort
+		}
 	}
-	if env := strings.TrimSpace(os.Getenv(portEnvVar)); env != "" {
-		return env, nil
+
+	portNumber, err := strconv.Atoi(port)
+	if err != nil {
+		return "", fmt.Errorf("invalid port %q: must be a number", port)
 	}
-	return flagValue, nil
+	if portNumber < 1 || portNumber > 65535 {
+		return "", fmt.Errorf("invalid port %d: must be between 1 and 65535", portNumber)
+	}
+	return port, nil
 }
 
 func resolveSkipRemotePortCheck(cmd *cobra.Command) bool {
