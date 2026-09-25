@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -89,57 +88,46 @@ func TestDeploy(t *testing.T) {
 
 	t.Run("Podman", func(t *testing.T) {
 		testutil.RequirePodman(t)
-		podmanTarget := testutil.StartContainer(
+		t.Setenv("TOPO_EXPERIMENTAL_FEATURES", "1")
+		container := testutil.StartContainer(
 			t,
 			testutil.PodmanContainer.WithPublishedPorts("8080"),
 		)
-		projectDir := t.TempDir()
-		composeFileContents, err := testutil.FixPodmanInDockerQuirk(`services:
-  server:
-    build: .
-    ports:
-      - "8080:8080"
-`)
-		require.NoError(t, err)
-		testutil.RequireWriteComposeFile(t, projectDir, composeFileContents)
-		testutil.RequireWriteFile(t, filepath.Join(projectDir, "Dockerfile"), `
-FROM docker.io/library/python:3.13-alpine
-COPY index.html /www/index.html
-CMD ["python", "-m", "http.server", "8080", "--directory", "/www"]
-`)
-		testutil.RequireWriteFile(t, filepath.Join(projectDir, "index.html"), "Podman e2e\n")
 
-		deployCmd := exec.Command(
-			topo,
-			"deploy",
-			"--engine", "podman",
-			"--target", podmanTarget.SSHDestination,
-			"--registry-port", "12738",
-			"--skip-project-checks",
-		)
-		deployCmd.Dir = projectDir
-		deployCmd.Env = append(os.Environ(), "TOPO_EXPERIMENTAL_FEATURES=1")
+		t.Run("Clone, deploy, ps", func(t *testing.T) {
+			baseDir := t.TempDir()
+			cloneDir := filepath.Join(baseDir, "project")
+			composeFile := filepath.Join(cloneDir, "compose.yaml")
 
-		deployOut, err := deployCmd.CombinedOutput()
+			nameArgValue := "Topo"
+			requireClone(t, topo, baseDir, cloneDir, "testdata/services/hello-server", fmt.Sprintf("NAME=%s", nameArgValue))
+			contents := testutil.RequireReadFile(t, composeFile)
+			updatedContents, err := testutil.FixPodmanInDockerQuirk(contents)
+			require.NoError(t, err)
+			testutil.RequireWriteFile(t, composeFile, updatedContents)
+			requireDeploy(
+				t,
+				topo,
+				cloneDir,
+				container.SSHDestination,
+				"--engine", "podman",
+				"--registry-port", "12738",
+			)
+			expectedResponse := fmt.Sprintf("Hello %s\n", nameArgValue)
+			port, err := testutil.GetContainerPublicPort(container.Name, "8080")
+			require.NoError(t, err)
+			assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), expectedResponse)
 
-		require.NoErrorf(t, err, "deploy failed: %s", deployOut)
-
-		psCmd := exec.Command(
-			topo,
-			"ps",
-			"--engine", "podman",
-			"--target", podmanTarget.SSHDestination,
-		)
-		psCmd.Dir = projectDir
-		psCmd.Env = append(os.Environ(), "TOPO_EXPERIMENTAL_FEATURES=1")
-
-		psOut, err := psCmd.CombinedOutput()
-
-		require.NoErrorf(t, err, "ps failed: %s", psOut)
-		assert.Contains(t, string(psOut), "server")
-		port, err := testutil.GetContainerPublicPort(podmanTarget.Name, "8080")
-		require.NoError(t, err)
-		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), "Podman e2e\n")
+			requirePS(
+				t,
+				topo,
+				cloneDir,
+				container.SSHDestination,
+				[]string{"--engine", "podman"},
+				"hello-server",
+				"8080",
+			)
+		})
 	})
 }
 
