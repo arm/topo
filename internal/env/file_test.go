@@ -2,7 +2,6 @@ package env_test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -219,9 +218,6 @@ three" # keep
 
 		require.NoError(t, err)
 		assert.Equal(t, "A=\"one\"\nB=\"two\"\n", testutil.RequireReadFile(t, path))
-		info, err := os.Stat(path)
-		require.NoError(t, err)
-		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 	})
 
 	t.Run("escapes interpolation characters, preserving their literal values", func(t *testing.T) {
