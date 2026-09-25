@@ -94,13 +94,14 @@ func TestDeploy(t *testing.T) {
 			testutil.PodmanContainer.WithPublishedPorts("8080"),
 		)
 		projectDir := t.TempDir()
-		testutil.RequireWriteComposeFile(t, projectDir, `services:
+		composeFileContents, err := testutil.FixPodmanInDockerQuirk(`services:
   server:
     build: .
     ports:
       - "8080:8080"
-    oom_score_adj: 200
 `)
+		require.NoError(t, err)
+		testutil.RequireWriteComposeFile(t, projectDir, composeFileContents)
 		testutil.RequireWriteFile(t, filepath.Join(projectDir, "Dockerfile"), `
 FROM docker.io/library/python:3.13-alpine
 COPY index.html /www/index.html
