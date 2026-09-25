@@ -97,7 +97,7 @@ interactive prompts.`,
 }
 
 func init() {
-	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print only resolved updates to stdout", env.DefaultFilename))
+	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
 	addComposeFileFlag(configureCmd)
 	addEnvFileFlag(configureCmd)
 	addMigrateToEnvFlag(configureCmd)
