@@ -22,8 +22,9 @@ var configureCmd = &cobra.Command{
 By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.
 
 Some projects require parameters. Supply them on the command line or answer
-interactive prompts.`,
-	Example: `  # Will prompt for required parameters
+the interactive parameter browser. Search for a parameter, stage edits, then
+press Ctrl+S to save. Escape cancels without writing.`,
+	Example: `  # Browse, search, and edit project parameters
   topo configure
 
   # Provide parameters explicitly
@@ -75,8 +76,12 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
-		if term.IsTTY(os.Stderr) && term.IsTTY(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stderr))
+		interactive := term.IsTTY(os.Stderr) && term.IsTTY(os.Stdin)
+		if interactive {
+			resolvers = append(resolvers, &parameter.BrowserResolver{
+				Input: os.Stdin, Output: os.Stderr,
+				EnvFiles: envFiles, Destination: outputPath,
+			})
 		}
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
@@ -85,7 +90,13 @@ interactive prompts.`,
 			ComposeFile: composeFilePath,
 			EnvFiles:    envFiles,
 		}, resolver)
-		if err != nil || values == nil {
+		if err != nil {
+			return err
+		}
+		if values == nil {
+			if interactive {
+				_, err = fmt.Fprintln(os.Stderr, "No changes written.")
+			}
 			return err
 		}
 
@@ -99,7 +110,13 @@ interactive prompts.`,
 			}
 			return nil
 		}
-		return env.UpdateFile(outputPath, values, env.EncodeOptions{})
+		if err := env.UpdateFile(outputPath, values, env.EncodeOptions{}); err != nil {
+			return err
+		}
+		if interactive {
+			_, err = fmt.Fprintf(os.Stderr, "Saved %d parameter(s) to %s.\n", len(values), outputPath)
+		}
+		return err
 	},
 }
 

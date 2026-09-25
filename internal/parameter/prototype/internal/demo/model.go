@@ -16,35 +16,32 @@ type Current struct {
 type Parameter struct {
 	Name        string
 	Description string
+	Example     string
 	Required    bool
 	Current     *Current
 }
 
 type Answer struct {
-	Text  string
-	Empty bool
+	Text string
 }
 
 func Fixtures() []Parameter {
 	return []Parameter{
-		{"GREETING", "Greeting to display", true, &Current{"Hello, World", ".env.topo"}},
-		{"REGION", "Deployment region", false, &Current{"west", "environment"}},
-		{"LABEL", "Required but currently missing. Try Enter, then Ctrl+X.", true, nil},
-		{"NOTE", "Optional note. Enter leaves this missing.", false, nil},
-		{"EMPTY", "Required and already present as an empty string.", true, &Current{"", ".env"}},
+		{"GREETING", "Greeting to display", "Hello from Topo", true, &Current{"Hello, World", ".env.topo"}},
+		{"REGION", "Deployment region", "east", false, &Current{"west", "environment"}},
+		{"LABEL", "Project label", "demo", true, nil},
+		{"NOTE", "Deployment note", "", false, nil},
+		{"EMPTY", "Suffix to append to the greeting", "", true, &Current{"", ".env"}},
 	}
 }
 
-// Resolve returns whether an update is needed, independently of the value's length.
+// Resolve treats a blank draft as no update, including when the current value is empty.
 func Resolve(parameter Parameter, answer Answer) (value string, write bool, err error) {
-	if answer.Empty {
-		return "", true, nil
-	}
 	if answer.Text != "" {
 		return answer.Text, true, nil
 	}
 	if parameter.Required && parameter.Current == nil {
-		return "", false, errors.New("value missing: type a value or use Ctrl+X to set empty")
+		return "", false, errors.New("value missing: enter a value")
 	}
 	return "", false, nil
 }
@@ -55,9 +52,6 @@ func Preview(parameter Parameter, answer Answer) string {
 		return "missing (required)"
 	}
 	if write {
-		if value == "" {
-			return "set empty"
-		}
 		return fmt.Sprintf("set %q", value)
 	}
 	if parameter.Current != nil {
@@ -66,29 +60,30 @@ func Preview(parameter Parameter, answer Answer) string {
 	return "leave missing; no write"
 }
 
-func (p Parameter) Heading() string {
-	requirement := "optional"
+func (p Parameter) Heading(number, total int) string {
+	metadata := "optional"
 	if p.Required {
-		requirement = "required"
+		metadata = "required"
 	}
-	source := "missing"
-	if p.Current != nil {
-		source = "current from " + p.Current.Source
-	}
-	return fmt.Sprintf("%s (%s; %s)", p.Name, requirement, source)
+	return fmt.Sprintf("%d/%d %s (%s)", number, total, p.Name, metadata)
 }
 
-func (p Parameter) Placeholder(answer Answer) string {
-	if answer.Empty {
-		return "<set empty>"
+func (p Parameter) Details() string {
+	if p.Example == "" {
+		return p.Description
 	}
+	return p.Description + "\nExample: " + p.Example
+}
+
+func (p Parameter) Placeholder() string {
 	if p.Current == nil {
 		return ""
 	}
-	if p.Current.Value == "" {
-		return "<empty current value>"
+	value := p.Current.Value
+	if value == "" {
+		value = "<empty string>"
 	}
-	return p.Current.Value
+	return fmt.Sprintf("%s  (from %s)", value, p.Current.Source)
 }
 
 func ValidateText(text string) error {

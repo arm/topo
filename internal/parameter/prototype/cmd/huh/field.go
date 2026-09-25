@@ -1,15 +1,13 @@
 package main
 
 import (
-	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 
 	"github.com/arm/topo/internal/parameter/prototype/internal/demo"
 )
 
-// The stock input only returns a string. This wrapper retains keep versus explicit-empty intent.
-// It delegates editing, validation presentation, focus, and layout to huh.
+// Keep the current value separate from the draft so blank input does not create an update.
 type parameterInput struct {
 	*huh.Input
 	parameter demo.Parameter
@@ -18,12 +16,12 @@ type parameterInput struct {
 	inputErr  error
 }
 
-func newParameterInput(parameter demo.Parameter, answer *demo.Answer) *parameterInput {
+func newParameterInput(parameter demo.Parameter, answer *demo.Answer, number, total int) *parameterInput {
 	field := &parameterInput{parameter: parameter, answer: answer}
-	field.Input = huh.NewInput().Key(parameter.Name).Title(parameter.Heading()).
+	field.Input = huh.NewInput().Key(parameter.Name).Title(parameter.Heading(number, total)).
 		Prompt("> ").Value(&answer.Text).CharLimit(4096).
 		Validate(func(value string) error {
-			_, _, err := demo.Resolve(parameter, demo.Answer{Text: value, Empty: answer.Empty})
+			_, _, err := demo.Resolve(parameter, demo.Answer{Text: value})
 			return err
 		})
 	return field
@@ -35,15 +33,10 @@ func (f *parameterInput) Update(message tea.Msg) (huh.Model, tea.Cmd) {
 		if f.inputErr != nil {
 			return f, nil
 		}
-		f.answer.Empty = false
 	}
 	if pressed, ok := message.(tea.KeyPressMsg); ok {
 		f.inputErr = nil
 		switch pressed.String() {
-		case "ctrl+x":
-			*f.answer = demo.Answer{Empty: true}
-			f.Input.Value(&f.answer.Text)
-			message = tea.KeyPressMsg{Code: tea.KeyEnter}
 		case "ctrl+d":
 			return f, tea.Interrupt
 		case "right":
@@ -55,12 +48,6 @@ func (f *parameterInput) Update(message tea.Msg) (huh.Model, tea.Cmd) {
 		case "ctrl+u":
 			*f.answer = demo.Answer{}
 			f.Input.Value(&f.answer.Text)
-		case "backspace", "delete":
-			f.answer.Empty = false
-		default:
-			if pressed.Text != "" {
-				f.answer.Empty = false
-			}
 		}
 	}
 	_, command := f.Input.Update(message)
@@ -86,20 +73,10 @@ func (f *parameterInput) Error() error {
 }
 
 func (f *parameterInput) View() string {
-	f.Input.Placeholder(f.parameter.Placeholder(*f.answer))
-	description := demo.Preview(f.parameter, *f.answer)
+	f.Input.Placeholder(f.parameter.Placeholder())
+	f.Input.Description("").Prompt("  ")
 	if f.focused {
-		description = f.parameter.Description + "\nOn Enter: " + description
+		f.Input.Description(f.parameter.Details()).Prompt("> ")
 	}
-	f.Input.Description(description)
 	return f.Input.View()
-}
-
-func (f *parameterInput) KeyBinds() []key.Binding {
-	bindings := f.Input.KeyBinds()
-	return append(bindings,
-		key.NewBinding(key.WithKeys("right"), key.WithHelp("→ (blank)", "edit current")),
-		key.NewBinding(key.WithKeys("ctrl+x"), key.WithHelp("ctrl+x", "set empty")),
-		key.NewBinding(key.WithKeys("ctrl+u"), key.WithHelp("ctrl+u", "clear draft")),
-		key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "cancel")))
 }

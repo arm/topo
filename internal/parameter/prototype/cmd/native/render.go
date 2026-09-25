@@ -17,47 +17,57 @@ type frame struct {
 
 func (e *editor) view(width, height int, palette term.Palette) frame {
 	var view frame
+	if e.layout == "sequential" && e.active > 0 {
+		view.lines = append(view.lines, "")
+	}
+	details := strings.Split(e.parameters[e.active].Details(), "\n")
+	activeHeight := len(details) + 2
+	if e.message != "" {
+		activeHeight++
+	}
 	start, end := e.active, e.active+1
 	if e.layout == "form" {
-		visible := max(1, (height-6)/2)
+		visible := 1 + max(0, (height-activeHeight)/3)
 		start = max(0, e.active-visible+1)
 		end = min(len(e.parameters), start+visible)
 	}
 	for i := start; i < end; i++ {
+		if i > start {
+			view.lines = append(view.lines, "")
+		}
 		parameter, answer := e.parameters[i], e.answers[i]
-		heading := clip(parameter.Heading(), width-1)
+		heading := clip(" "+parameter.Heading(i+1, len(e.parameters)), width-1)
 		if i != e.active {
-			view.lines = append(view.lines, heading,
-				palette.Color(term.Dim, clip("  "+demo.Preview(parameter, answer), width-1)))
+			value := answer.Text
+			if value == "" {
+				value = parameter.Placeholder()
+			}
+			view.lines = append(view.lines, heading, clip("   "+value, width-1))
 			continue
 		}
 		view.lines = append(view.lines, palette.Color(term.Cyan, heading))
+		for _, line := range details {
+			view.lines = append(view.lines, clip(" "+line, width-1))
+		}
 		view.row = len(view.lines)
 		input, column := inputLine(parameter, answer, e.cursors[i], width, palette)
 		view.column = column
 		view.lines = append(view.lines, input)
+		if e.message != "" {
+			view.lines = append(view.lines, palette.Color(term.Red, clip(" ! "+e.message, width-1)))
+		}
 	}
-	view.lines = append(view.lines,
-		clip(e.parameters[e.active].Description, width-1),
-		clip("On Enter: "+demo.Preview(e.parameters[e.active], e.answers[e.active]), width-1),
-		palette.Color(term.Dim, clip(demo.Help, width-1)),
-		palette.Color(term.Dim, clip(demo.EditingHelp, width-1)))
-	message := fmt.Sprintf("Field %d/%d | in memory only", e.active+1, len(e.parameters))
-	color := term.Gray
-	if e.message != "" {
-		message, color = "! "+e.message, term.Red
-	}
-	view.lines = append(view.lines, palette.Color(color, clip(message, width-1)))
 	return view
 }
 
 func inputLine(parameter demo.Parameter, answer demo.Answer, cursor, width int, palette term.Palette) (string, int) {
+	const prompt = " > "
 	if answer.Text == "" {
-		return "> " + palette.Color(term.Dim, clip(parameter.Placeholder(answer), width-3)), 2
+		return palette.Color(term.Cyan, prompt) + palette.Color(term.Dim, clip(parameter.Placeholder(), width-len(prompt)-1)), len(prompt)
 	}
 	text := []rune(answer.Text)
-	start := max(0, cursor-max(1, width-4))
-	return "> " + clip(string(text[start:]), width-3), 2 + cursor - start
+	start := max(0, cursor-max(1, width-len(prompt)-2))
+	return palette.Color(term.Cyan, prompt) + clip(string(text[start:]), width-len(prompt)-1), len(prompt) + cursor - start
 }
 
 // This deliberate code-point approximation exposes the cost of omitting a Unicode width library.

@@ -27,18 +27,22 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err := demo.Banner("huh", layout); err != nil {
+	if err := demo.Banner(); err != nil {
 		return err
 	}
 	parameters := demo.Fixtures()
 	answers := make([]demo.Answer, len(parameters))
+	fields := make([]huh.Field, len(parameters))
+	for i, parameter := range parameters {
+		fields[i] = newParameterInput(parameter, &answers[i], i+1, len(parameters))
+	}
 	if layout == "form" {
-		if err := runForm(parameters, answers); err != nil {
+		if err := runForm(fields, false); err != nil {
 			return err
 		}
 	} else {
 		for i := range parameters {
-			if err := runForm(parameters[i:i+1], answers[i:i+1]); err != nil {
+			if err := runForm(fields[i:i+1], i > 0); err != nil {
 				return err
 			}
 			if _, err := fmt.Fprintln(os.Stderr, demo.Transcript(parameters[i], answers[i])); err != nil {
@@ -49,20 +53,16 @@ func run() error {
 	return demo.Report(parameters, answers)
 }
 
-func runForm(parameters []demo.Parameter, answers []demo.Answer) error {
-	fields := make([]huh.Field, len(parameters))
-	for i, parameter := range parameters {
-		fields[i] = newParameterInput(parameter, &answers[i])
-	}
+func runForm(fields []huh.Field, afterAnswers bool) error {
 	keys := huh.NewDefaultKeyMap()
-	keys.Input.Next = key.NewBinding(key.WithKeys("enter", "tab"), key.WithHelp("enter/tab", "accept or keep"))
-	keys.Input.Submit = key.NewBinding(key.WithKeys("enter", "tab"), key.WithHelp("enter/tab", "finish"))
+	keys.Input.Next = key.NewBinding(key.WithKeys("enter", "tab"))
+	keys.Input.Submit = key.NewBinding(key.WithKeys("enter", "tab"))
 	options := []tea.ProgramOption{tea.WithInput(os.Stdin), tea.WithOutput(os.Stderr)}
 	if os.Getenv("NO_COLOR") != "" {
 		options = append(options, tea.WithColorProfile(colorprofile.NoTTY))
 	}
 	form := huh.NewForm(huh.NewGroup(fields...)).
-		WithTheme(topoTheme()).WithKeyMap(keys).WithAccessible(false).
+		WithTheme(topoTheme(afterAnswers)).WithKeyMap(keys).WithAccessible(false).WithShowHelp(false).
 		WithProgramOptions(options...)
 	if err := form.Run(); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
@@ -73,7 +73,7 @@ func runForm(parameters []demo.Parameter, answers []demo.Answer) error {
 	return nil
 }
 
-func topoTheme() huh.Theme {
+func topoTheme(afterAnswers bool) huh.Theme {
 	color := func(code string) lipgloss.Style {
 		style := lipgloss.NewStyle()
 		if os.Getenv("NO_COLOR") == "" {
@@ -82,17 +82,21 @@ func topoTheme() huh.Theme {
 		return style
 	}
 	styles := &huh.Styles{}
-	styles.FieldSeparator = lipgloss.NewStyle().SetString("\n")
+	if afterAnswers {
+		styles.Form.Base = lipgloss.NewStyle().PaddingTop(1)
+	}
+	styles.Group.Base = lipgloss.NewStyle().PaddingLeft(1)
+	styles.FieldSeparator = lipgloss.NewStyle().SetString("\n\n")
+	styles.Focused.Base = lipgloss.NewStyle().PaddingLeft(1)
 	styles.Focused.Title = color("6")
-	styles.Focused.Description = color("8")
+	styles.Focused.Description = lipgloss.NewStyle()
 	styles.Focused.ErrorIndicator = color("1").SetString("!")
 	styles.Focused.ErrorMessage = color("1")
+	styles.Focused.TextInput.Prompt = color("6")
 	styles.Focused.TextInput.Placeholder = color("8")
 	styles.Focused.TextInput.Cursor = color("6")
 	styles.Blurred = styles.Focused
 	styles.Blurred.Title = lipgloss.NewStyle()
-	styles.Help.ShortKey = color("8")
-	styles.Help.ShortDesc = color("8")
-	styles.Help.ShortSeparator = color("8")
+	styles.Blurred.TextInput.Placeholder = lipgloss.NewStyle()
 	return huh.ThemeFunc(func(bool) *huh.Styles { return styles })
 }

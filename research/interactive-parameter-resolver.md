@@ -10,15 +10,15 @@ Two [throwaway prototypes](../internal/parameter/prototype/README.md) now suppor
 
 - Enter accepts typed text. With a blank input, Enter keeps the current value without writing it.
 - A blank optional field without a current value stays missing. A blank required field without a current value cannot advance.
-- Required means present, not non-empty. An explicit empty update and an empty current value both satisfy requiredness.
-- A separate action sets an empty string. The prototype uses Ctrl+X and advances immediately.
+- Required means present, not non-empty. An empty current value satisfies requiredness and appears as `<empty string>`.
+- Explicit-empty entry is deferred. The earlier Ctrl+X action and help bar have been removed. Blank input keeps the current value or leaves an optional parameter missing.
 - Current values appear as ghost text. Right arrow on a blank input copies the current value into the editor. Deleting all typed text restores ghost text.
 - Display the winning source only: an environment file path or the process environment. Keeping an environment value means no write.
 - No special handling for secrets is included in this exploration.
 - No full-screen interface. Preserve Topo colors and its `NO_COLOR` policy.
 - `golang.org/x/term` is acceptable for the non-Charm implementation.
 
-The prototype-specific choices are Ctrl+X, Right arrow, Tab behaving like Enter, cancellation discarding all draft updates, and preservation of leading and trailing spaces. These can change after interaction review.
+The prototype-specific choices are Right arrow, Tab behaving like Enter, cancellation discarding all draft updates, and preservation of leading and trailing spaces. These can change after interaction review.
 
 ## Current production behavior
 
@@ -37,7 +37,7 @@ The existing [`term` package](../internal/output/term/palette.go) supplies color
 | Approach | Benefit | Cost or limitation |
 | --- | --- | --- |
 | Enhance the existing line scanner | Minimal implementation and dependencies | Colors and retry validation are easy. Editable ghost text and immediate action keys need a different input mechanism. Text commands introduce escaping or reserved-input rules. |
-| Use `huh` | Existing input, select, validation, focus, and viewport behavior | Needs explicit keep versus empty state, a theme, and acceptance of its transitive dependencies |
+| Use `huh` | Existing input, select, validation, focus, and viewport behavior | Needs current-value handling, a theme, and acceptance of its transitive dependencies |
 | Custom form on Bubble Tea and Bubbles | Own form semantics without owning terminal event handling | Still adopts the Charm stack. Bubbles text input imports Lip Gloss. |
 | Custom form on `x/term` | Small dependency footprint and direct use of Topo styling | Own editing, escape decoding, rendering, and terminal compatibility |
 | Custom OS terminal support | Full ownership | Adds platform-specific work that `x/term` already handles. Not pursued. |
@@ -52,14 +52,18 @@ The prototype pins `huh` v2.0.3, Bubble Tea v2.0.2, and Bubbles v2.0.0.
 
 - Huh can run on the normal screen. Its [default form setup][huh-form] does not enable the alternate screen. `Input.Inline(true)` means placing the title and input on the same line.
 - A [placeholder][huh-input] is visual, not a value or a keep action. Stock input returns a string and validates it on advancement.
-- The prototype wraps `huh.Input` to track explicit empty intent, fill the editor from the current value, reject multiline paste, and provide action help. It does not fork Huh.
+- The prototype wraps `huh.Input` to fill the editor from the current value and reject multiline paste. It does not fork Huh.
 - [Themes][huh-theme] use Lip Gloss. Matching Topo ANSI colors is practical without removing Lip Gloss or using Charm's default theme.
 - The [accessible string prompt][huh-accessible] trims input and substitutes a default for blank input. The v2.0.3 form's accessible runner also discards field errors. The PoC rejects unsupported terminal operation rather than silently switching to this behavior.
 - [Bubbles input][bubbles-input] supplies editing, paste handling, horizontal scrolling, and Unicode-related rendering machinery that the native implementation must otherwise own or obtain separately.
 
-## Measurements
+## Presentation refinement
 
-Measured on macOS Arm64 with Go 1.26.6. Module and package counts come from each command's imported dependency graph, excluding the standard library and Topo itself. They are not counts of every module declared in the shared prototype `go.mod`. Other target platforms can import different packages.
+The initial prompts exposed too much diagnostic information to compare the layouts fairly. Both prototypes now use a “Configure project parameters” heading and a one-space left margin. The numbered name, description, and example sit above the input. The winning source appears beside the ghost value as a display-only annotation, never part of the editable value. The help bar and explicit-empty action were removed after interaction review. Standard editing controls remain available. Completed sequential answers are indented and separated from the active question by a blank line. The live prompt no longer shows the proposed write operation or an in-memory status line.
+
+## Initial measurements
+
+These measurements describe the initial functional prototypes, before the presentation refinement. Measured on macOS Arm64 with Go 1.26.6. Module and package counts come from each command's imported dependency graph, excluding the standard library and Topo itself. They are not counts of every module declared in the shared prototype `go.mod`. Other target platforms can import different packages.
 
 | Measurement | Native | Huh |
 | --- | ---: | ---: |
@@ -87,7 +91,7 @@ Both variants passed macOS pseudo-terminal checks for all agreed value-state tra
 
 Both variants were built for macOS, Linux, and Windows on Arm64 and x86-64. Linux and Windows interactive behavior remains unverified. Existing production tests for `parameter`, `env`, `project`, and `output/term` pass. The prototype module passes `go vet ./...`.
 
-Native deliberately does not solve grapheme editing or Unicode display widths. It counts code points, so wide characters, combining marks, and emoji can misalign rendering. It also has a bounded escape decoder, clipped help at narrow widths, no suspend/resume support, and no plain-text accessibility fallback. These are real ownership costs, not equivalent functionality obtained for fewer lines.
+Native deliberately does not solve grapheme editing or Unicode display widths. It counts code points, so wide characters, combining marks, and emoji can misalign rendering. It also has a bounded escape decoder, clipped metadata at narrow widths, no suspend/resume support, and no plain-text accessibility fallback. These are real ownership costs, not equivalent functionality obtained for fewer lines.
 
 A production native implementation would need a decision on Unicode support: accept a small maintained width/segmentation dependency, maintain that logic ourselves, or explicitly restrict supported input. A successful ASCII demo does not settle that choice.
 
@@ -104,7 +108,7 @@ Keep requiredness and later type or closed-set validation in Topo logic shared b
 ## Evaluation still needed
 
 - Which layout feels better: a persistent question transcript or backward navigation within an inline form?
-- Are Right arrow and Ctrl+X discoverable enough? Does immediate advancement after setting empty feel correct?
+- Is Right arrow discoverable enough without a help bar?
 - Does seeing ghost text again after deleting a draft clearly communicate keep rather than empty?
 - Is the native editing experience sufficient once its limitations are visible?
 - Which terminal and accessibility guarantees are mandatory before production adoption?

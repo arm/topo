@@ -28,7 +28,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err := demo.Banner("native", layout); err != nil {
+	if err := demo.Banner(); err != nil {
 		return err
 	}
 	editor := newEditor(layout)

@@ -43,7 +43,7 @@ func decodeInput(data []byte, expired bool) (inputEvent, int) {
 	keys := map[byte]string{
 		3: "cancel", 4: "cancel", 9: "next", 10: "next", 13: "next",
 		8: "backspace", 127: "backspace", 1: "home", 5: "end",
-		21: "clear", 24: "empty",
+		21: "clear",
 	}
 	if key, ok := keys[data[0]]; ok {
 		return inputEvent{key: key}, 1

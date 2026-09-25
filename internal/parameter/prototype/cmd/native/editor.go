@@ -38,10 +38,6 @@ func (e *editor) update(event inputEvent) (bool, error) {
 			e.active = max(0, e.active-1)
 		}
 		return false, nil
-	case "empty":
-		*answer = demo.Answer{Empty: true}
-		e.cursors[e.active] = 0
-		return e.advance(), nil
 	case "next":
 		return e.advance(), nil
 	case "right":
@@ -81,20 +77,17 @@ func (e *editor) edit(event inputEvent) error {
 		}
 		text = slices.Insert(text, cursor, []rune(event.text)...)
 		cursor += utf8.RuneCountInString(event.text)
-		answer.Empty = false
 	case "backspace":
 		if cursor > 0 {
 			text = slices.Delete(text, cursor-1, cursor)
 			cursor--
 		}
-		answer.Empty = false
 	case "delete":
 		if cursor < len(text) {
 			text = slices.Delete(text, cursor, cursor+1)
 		}
-		answer.Empty = false
 	case "clear":
-		text, cursor, answer.Empty = nil, 0, false
+		text, cursor = nil, 0
 	case "left":
 		cursor = max(0, cursor-1)
 	case "right":

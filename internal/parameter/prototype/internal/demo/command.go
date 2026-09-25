@@ -11,9 +11,6 @@ import (
 	terminal "golang.org/x/term"
 )
 
-const Help = "Enter/Tab accept or keep   Right (blank) edit current   Ctrl+X set empty"
-const EditingHelp = "Ctrl+U clear draft   Shift+Tab back (form only)   Ctrl+C cancel"
-
 var ErrCanceled = errors.New("canceled; no updates saved")
 
 func Options() (string, error) {
@@ -31,12 +28,12 @@ func Options() (string, error) {
 	return *layout, nil
 }
 
-func Banner(implementation, layout string) error {
-	return term.PrintFirstHeader(os.Stderr, "Parameter prototype: "+implementation+" / "+layout)
+func Banner() error {
+	return term.PrintFirstHeader(os.Stderr, "Configure project parameters")
 }
 
 func Transcript(parameter Parameter, answer Answer) string {
-	return parameter.Name + ": " + Preview(parameter, answer)
+	return " " + parameter.Name + ": " + Preview(parameter, answer)
 }
 
 func Report(parameters []Parameter, answers []Answer) error {
