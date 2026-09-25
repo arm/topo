@@ -3,6 +3,7 @@ package project
 import (
 	"fmt"
 	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/compose-spec/compose-go/v2/template"
+	"github.com/compose-spec/compose-go/v2/utils"
 )
 
 func Configure(scope Scope, resolver parameter.Resolver) error {
@@ -17,6 +19,8 @@ func Configure(scope Scope, resolver parameter.Resolver) error {
 	if err != nil {
 		return fmt.Errorf("failed to load current environment values: %w", err)
 	}
+
+	maps.Copy(currentValues, utils.GetAsEqualsMap(os.Environ()))
 
 	definitions, err := LoadParameterDefinitions(scope.ComposeFile)
 	if err != nil {
