@@ -45,6 +45,11 @@ interactive prompts.`,
 			return nil
 		}
 
+		envFiles, err := getEnvFiles(cmd, composeFilePath)
+		if err != nil {
+			return err
+		}
+
 		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
 		if err != nil {
 			return err
@@ -67,12 +72,16 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		return project.Configure(composeFilePath, resolver)
+		return project.Configure(project.Scope{
+			ComposeFile: composeFilePath,
+			EnvFiles:    envFiles,
+		}, resolver)
 	},
 }
 
 func init() {
 	addComposeFileFlag(configureCmd)
+	addEnvFileFlag(configureCmd)
 	addMigrateToEnvFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
 }

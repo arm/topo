@@ -207,7 +207,7 @@ const envFileFlag = "env-file"
 
 func addEnvFileFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArray(
-		envFileFlag, []string{".env", env.DefaultFilename},
+		envFileFlag, env.DefaultFilenames,
 		"path to env file to source values for compose interpolation",
 	)
 }
