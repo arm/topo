@@ -1,7 +1,9 @@
 package env_test
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -152,33 +154,68 @@ GREETING="unterminated
 	})
 }
 
+func TestUpdateFile(t *testing.T) {
+	t.Run("creates a missing file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "custom.env")
+
+		err := env.UpdateFile(path, map[string]string{"NAME": "World"})
+
+		require.NoError(t, err)
+		testutil.RequireEnvFileValues(t, path, map[string]string{"NAME": "World"})
+	})
+
+	t.Run("overwrites supplied entries and preserves unrelated entries", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "custom.env")
+		testutil.RequireWriteFile(t, path, "NAME=Original\nOTHER=keep\n")
+		values := map[string]string{"NAME": "World", "NEW": "added"}
+
+		err := env.UpdateFile(path, values)
+
+		require.NoError(t, err)
+		testutil.RequireEnvFileValues(t, path, map[string]string{"NAME": "World", "OTHER": "keep", "NEW": "added"})
+	})
+
+	t.Run("leaves malformed files untouched", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "custom.env")
+		original := "NAME=\"unterminated\n"
+		testutil.RequireWriteFile(t, path, original)
+
+		err := env.UpdateFile(path, map[string]string{"NAME": "World"})
+
+		require.ErrorContains(t, err, "failed to read env file")
+		assert.Equal(t, original, testutil.RequireReadFile(t, path))
+	})
+}
+
 func TestWriteFile(t *testing.T) {
-	t.Run("rewrites the file with sorted parameters", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), env.DefaultFilename)
-		testutil.RequireWriteFile(t, path, "OLD=value\n")
+	t.Run("writes sorted parameters", func(t *testing.T) {
+		var output bytes.Buffer
 		values := map[string]string{"PORT": "8080", "GREETING": "Hello"}
 
-		err := env.WriteFile(path, values)
+		err := env.WriteFile(&output, values)
 
 		require.NoError(t, err)
 		want := `GREETING="Hello"
 PORT="8080"
 `
-		assert.Equal(t, want, testutil.RequireReadFile(t, path))
+		assert.Equal(t, want, output.String())
 	})
 
 	t.Run("rejects empty parameter names", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), env.DefaultFilename)
+		var output bytes.Buffer
 
-		err := env.WriteFile(path, map[string]string{"": "Hello"})
+		err := env.WriteFile(&output, map[string]string{"": "Hello"})
 
 		assert.ErrorContains(t, err, "env parameter name must not be empty")
+		assert.Empty(t, output.String())
 	})
 
-	t.Run("returns an error when the destination is a directory", func(t *testing.T) {
-		path := t.TempDir()
+	t.Run("returns writer errors", func(t *testing.T) {
+		output, err := os.CreateTemp(t.TempDir(), "env")
+		require.NoError(t, err)
+		require.NoError(t, output.Close())
 
-		err := env.WriteFile(path, map[string]string{"GREETING": "Hello"})
+		err = env.WriteFile(output, map[string]string{"GREETING": "Hello"})
 
 		assert.ErrorContains(t, err, "failed to write env file")
 	})
