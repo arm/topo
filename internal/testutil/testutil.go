@@ -95,7 +95,7 @@ func FixPodmanInDockerQuirk(contents string) (string, error) {
 	}
 	services, ok := definition["services"].(map[string]any)
 	if !ok {
-		return "", fmt.Errorf("Compose file services must be a mapping")
+		return "", fmt.Errorf("compose file services must be a mapping")
 	}
 	for name, value := range services {
 		service, ok := value.(map[string]any)
