@@ -35,6 +35,19 @@ func RequireLinuxDockerEngine(t testing.TB) {
 	}
 }
 
+func RequirePodman(t testing.TB) {
+	t.Helper()
+	if _, err := exec.LookPath("podman"); err != nil {
+		t.Skip("podman is not installed")
+	}
+	if _, err := exec.LookPath("docker-compose"); err != nil {
+		t.Skip("docker-compose is not installed")
+	}
+	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
+		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
+	}
+}
+
 func RequireOS(t testing.TB, os ...string) {
 	t.Helper()
 	if !slices.Contains(os, runtime.GOOS) {

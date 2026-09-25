@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -33,7 +32,7 @@ services:
 	})
 
 	t.Run("deploys to localhost", func(t *testing.T) {
-		requireLocalPodman(t)
+		testutil.RequirePodman(t)
 		scope, projectName := deploymentFixture(t)
 		t.Cleanup(func() { cleanupComposeProject(t, scope) })
 		options := deploy.Options{TargetHost: ssh.PlainLocalhost}
@@ -45,7 +44,7 @@ services:
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
-		requireLocalPodman(t)
+		testutil.RequirePodman(t)
 		podmanContainer := startPodmanInContainer(t)
 		scope, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
@@ -63,7 +62,7 @@ services:
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
-		requireLocalPodman(t)
+		testutil.RequirePodman(t)
 		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
 		registryPort := startTestRegistry(t, registryContainerName)
 		podmanContainer := startPodmanInContainer(t)
@@ -87,19 +86,6 @@ services:
 		})
 		assertContainersRunning(t, projectName, podman.NewSocket(tunnel.SocketURL()))
 	})
-}
-
-func requireLocalPodman(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("podman"); err != nil {
-		t.Skip("podman is not installed")
-	}
-	if _, err := exec.LookPath("docker-compose"); err != nil {
-		t.Skip("docker-compose is not installed")
-	}
-	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
-		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
-	}
 }
 
 func deploymentFixture(t *testing.T) (project.Scope, string) {

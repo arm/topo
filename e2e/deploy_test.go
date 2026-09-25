@@ -88,7 +88,7 @@ func TestDeploy(t *testing.T) {
 	})
 
 	t.Run("Podman", func(t *testing.T) {
-		requireLocalPodman(t)
+		testutil.RequirePodman(t)
 		podmanTarget := testutil.StartContainer(
 			t,
 			testutil.PodmanContainer.WithPublishedPorts("8080"),
@@ -140,19 +140,6 @@ CMD ["python", "-m", "http.server", "8080", "--directory", "/www"]
 		require.NoError(t, err)
 		assertResponseBody(t, fmt.Sprintf("http://localhost:%s/", port), "Podman e2e\n")
 	})
-}
-
-func requireLocalPodman(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("podman"); err != nil {
-		t.Skip("podman is not installed")
-	}
-	if _, err := exec.LookPath("docker-compose"); err != nil {
-		t.Skip("docker-compose is not installed")
-	}
-	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
-		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
-	}
 }
 
 func requireClone(t *testing.T, topo string, projectDir string, cloneDir string, remoteDir string, extraArgs ...string) {
