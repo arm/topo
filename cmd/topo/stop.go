@@ -23,11 +23,11 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
 
-		selectedEngine, err := getSelectedEngine(cmd)
+		engine, err := getEngineSelection(cmd)
 		if err != nil {
 			return err
 		}
-		targetArg, err := requireTarget(cmd)
+		target, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -39,13 +39,13 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, targetArg, envFiles)
+		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
 		if err != nil {
 			return err
 		}
 
-		dest := ssh.NewDestination(targetArg)
-		if selectedEngine == containerEnginePodman {
+		dest := ssh.NewDestination(target.value)
+		if engine.value == containerEnginePodman {
 			return podman.Stop(cmd.Context(), os.Stdout, scope, dest)
 		}
 		return docker.Stop(cmd.Context(), os.Stdout, scope, dest)

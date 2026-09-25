@@ -46,11 +46,11 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		selectedEngine, err := getSelectedEngine(cmd)
+		engine, err := getEngineSelection(cmd)
 		if err != nil {
 			return err
 		}
-		targetArg, err := requireTarget(cmd)
+		target, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, targetArg, envFiles)
+		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
 		if err != nil {
 			return err
 		}
@@ -81,12 +81,14 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 
 		composeFileFlagValue := cmd.Flag(composeFileFlag)
 		defaultSuccessMessage := buildDefaultSuccessMessage(
+			engine,
+			target,
 			strings.TrimSpace(composeFileFlagValue.Value.String()),
 			composeFileFlagValue.Changed,
 		)
 
 		options := deploy.Options{
-			TargetHost:            ssh.NewDestination(targetArg),
+			TargetHost:            ssh.NewDestination(target.value),
 			DefaultSuccessMessage: defaultSuccessMessage,
 		}
 		if !noRegistry {
@@ -106,7 +108,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		defer stop()
 
 		var deploymentErr error
-		if selectedEngine == containerEnginePodman {
+		if engine.value == containerEnginePodman {
 			deploymentErr = podman.Deploy(ctx, os.Stdout, scope, options)
 		} else {
 			deploymentErr = docker.Deploy(ctx, os.Stdout, scope, options)
@@ -117,16 +119,46 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return fmt.Errorf("deployment failed; ensure topo health is passing: %w", deploymentErr)
+		healthCommand := buildHealthCommand(engine, target)
+		return fmt.Errorf("deployment failed; ensure `%s` is passing: %w", healthCommand, deploymentErr)
 	},
 }
 
-func buildDefaultSuccessMessage(composeFilePath string, explicitComposeFile bool) string {
-	psCommand := "topo ps"
+func buildDefaultSuccessMessage(engine engineSelection, target targetSelection, composeFilePath string, explicitComposeFile bool) string {
+	composeFileArg := ""
 	if explicitComposeFile {
-		psCommand += " -f " + cmdtext.QuoteArg(composeFilePath)
+		composeFileArg = "-f " + cmdtext.QuoteArg(composeFilePath)
 	}
+	psCommand := joinNonEmpty("topo ps", engine.cliArg(), target.cliArg(), composeFileArg)
 	return fmt.Sprintf("Run `%s` to see deployed containers", psCommand)
+}
+
+func buildHealthCommand(engine engineSelection, target targetSelection) string {
+	return joinNonEmpty("topo health", engine.cliArg(), target.cliArg())
+}
+
+func (engine engineSelection) cliArg() string {
+	if !engine.explicit {
+		return ""
+	}
+	return "--engine " + string(engine.value)
+}
+
+func (target targetSelection) cliArg() string {
+	if !target.explicit {
+		return ""
+	}
+	return "--target " + cmdtext.QuoteArg(target.value)
+}
+
+func joinNonEmpty(args ...string) string {
+	nonEmptyArgs := make([]string, 0, len(args))
+	for _, arg := range args {
+		if arg != "" {
+			nonEmptyArgs = append(nonEmptyArgs, arg)
+		}
+	}
+	return strings.Join(nonEmptyArgs, " ")
 }
 
 func ensureProjectIsReady(scope project.Scope) error {

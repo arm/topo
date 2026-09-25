@@ -26,13 +26,13 @@ Falls back to ~/bin if no suitable locations are automatically found.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		targetArg, err := requireTarget(cmd)
+		target, err := requireTarget(cmd)
 		if err != nil {
 			return err
 		}
 
 		outputFormat := resolveOutput(cmd)
-		p, err := installRemoteprocRuntime(cmd.Context(), ssh.NewDestination(targetArg))
+		p, err := installRemoteprocRuntime(cmd.Context(), ssh.NewDestination(target.value))
 		if err != nil {
 			return err
 		}

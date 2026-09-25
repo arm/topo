@@ -37,8 +37,8 @@ var projectsCmd = &cobra.Command{
 		}
 
 		var profile *probe.HardwareProfile
-		if targetArg, exists := lookupTarget(cmd); exists {
-			r := runner.For(ssh.NewDestination(targetArg))
+		if targetSelection, exists := lookupTarget(cmd); exists {
+			r := runner.For(ssh.NewDestination(targetSelection.value))
 			hwProfile, err := probe.Hardware(ctx, r)
 			if err != nil {
 				return err
