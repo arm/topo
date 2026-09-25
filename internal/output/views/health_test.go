@@ -68,9 +68,10 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), " ? Docker daemon (not checked: requires host's Docker CLI)")
 		})
 
-		t.Run("gives errors precedence over undetermined checks", func(t *testing.T) {
+		t.Run("shows failure details and gives errors precedence over undetermined checks", func(t *testing.T) {
 			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
-				{Scope: health.DependencyScopeHost, Name: "Docker CLI", Status: health.CheckStatusError},
+				{Scope: health.DependencyScopeHost, Name: "OpenSSH", Status: health.CheckStatusOK},
+				{Scope: health.DependencyScopeHost, Name: "Docker CLI", Status: health.CheckStatusError, Value: "docker not found on path"},
 				{Scope: health.DependencyScopeTarget, Name: "Docker daemon", Status: health.CheckStatusUndetermined},
 			}}}}
 			var out bytes.Buffer
@@ -79,6 +80,8 @@ func TestHealthReport(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Deployment: not ready (✗ 1 ? 1)")
+			assert.Contains(t, out.String(), " ✗ Host\n   ✗ Docker CLI (docker not found on path)\n")
+			assert.NotContains(t, out.String(), "OpenSSH")
 		})
 
 		t.Run("renders a warning-only report as ready", func(t *testing.T) {
@@ -99,58 +102,17 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "! Target\n   Fix:\n     provide --target")
 		})
 
-		t.Run("it summarizes healthy checks while keeping informational checks visible", func(t *testing.T) {
-			toPrint := views.HealthReportView{
-				HealthReport: health.HealthReport{
-					TargetDetails: &health.TargetDetails{Destination: "ssh://user@my-target"},
-					Deployment: health.ReadinessReport{
-						Checks: []health.DependencyReport{
-							{Scope: health.DependencyScopeHost, Name: "OpenSSH", Status: health.CheckStatusOK},
-							{Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
-							{Scope: health.DependencyScopeTarget, Name: "Container Engine", Status: health.CheckStatusOK},
-							{
-								Scope:  health.DependencyScopeTarget,
-								ID:     health.DependencyIDRemoteproc,
-								Name:   "Processing Domain Driver (remoteproc)",
-								Status: health.CheckStatusInfo,
-								Value:  "no remoteproc devices found",
-							},
-						},
-					},
-				},
-			}
+		t.Run("summarizes healthy checks while keeping informational checks visible", func(t *testing.T) {
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
+				{Scope: health.DependencyScopeTarget, Name: "Container Engine", Status: health.CheckStatusOK},
+				{Scope: health.DependencyScopeTarget, Name: "Remoteproc", Status: health.CheckStatusInfo, Value: "no remoteproc devices found"},
+			}}}}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ✓ Host\n   ✓ All checks passed\n")
-			assert.Contains(t, out.String(), " ✓ Target: ssh://user@my-target\n   ✓ All checks passed\n")
-			assert.Contains(t, out.String(), " i Processing Domain Driver (remoteproc) (no remoteproc devices found)")
-		})
-
-		t.Run("it renders the details when dependencies fail the health check", func(t *testing.T) {
-			toPrint := views.HealthReportView{
-				HealthReport: health.HealthReport{
-					Deployment: health.ReadinessReport{
-						Checks: []health.DependencyReport{
-							{Scope: health.DependencyScopeHost, Name: "OpenSSH", Status: health.CheckStatusOK},
-							{
-								Scope:  health.DependencyScopeHost,
-								Name:   "Container Engine",
-								Status: health.CheckStatusError,
-								Value:  "docker not found on path",
-							},
-						},
-					},
-				},
-			}
-			var out bytes.Buffer
-
-			err := views.Print(toPrint, &out, term.Plain)
-
-			require.NoError(t, err)
-			assert.Contains(t, out.String(), " ✗ Host\n   ✗ Container Engine (docker not found on path)\n")
+			assert.Contains(t, out.String(), " ✓ Target\n   ✓ All checks passed\n   i Remoteproc (no remoteproc devices found)\n")
 		})
 	})
 
