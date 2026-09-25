@@ -67,9 +67,9 @@ x-topo:
   parameters: {A: {}, B: {required: true}}
 `)
 		envPath := filepath.Join(root, env.DefaultFilename)
+		testutil.RequireWriteFile(t, envPath, "A=original\n")
 		basePath := filepath.Join(root, ".env")
 		testutil.RequireWriteFile(t, basePath, "B=keep-me\n")
-		testutil.RequireWriteFile(t, envPath, "A=original\n")
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"A": "updated"}))
 
 		err := project.Configure(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}}, resolver)
