@@ -1,7 +1,9 @@
 package project_test
 
 import (
+	"bytes"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/env"
@@ -13,6 +15,48 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
+	t.Run("process values satisfy required parameters without being persisted", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_PARAMETER", "shell=value")
+		root := t.TempDir()
+		path := testutil.RequireWriteComposeFile(t, root, `services:
+  app:
+    image: alpine
+    environment: {TOPO_TEST_PARAMETER: "${TOPO_TEST_PARAMETER}"}
+x-topo:
+  parameters: {TOPO_TEST_PARAMETER: {required: true}}
+`)
+
+		err := project.Configure(project.Scope{ComposeFile: path}, parameter.NewStrictResolverChain())
+
+		require.NoError(t, err)
+		assert.NoFileExists(t, filepath.Join(root, env.DefaultFilename))
+	})
+
+	t.Run("interactive current values prefer process values without persisting them", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_PARAMETER", "shell=value")
+		root := t.TempDir()
+		path := testutil.RequireWriteComposeFile(t, root, `services:
+  app:
+    image: alpine
+    environment: {TOPO_TEST_PARAMETER: "${TOPO_TEST_PARAMETER}"}
+x-topo:
+  parameters: {TOPO_TEST_PARAMETER: {required: true}}
+`)
+		basePath := filepath.Join(root, ".env")
+		envPath := filepath.Join(root, env.DefaultFilename)
+		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_PARAMETER=base\n")
+		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_PARAMETER=topo\n")
+		scope := project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}}
+		output := &bytes.Buffer{}
+		resolver := parameter.NewStrictResolverChain(parameter.NewInteractiveResolver(strings.NewReader("\n"), output))
+
+		err := project.Configure(scope, resolver)
+
+		require.NoError(t, err)
+		assert.Contains(t, output.String(), `Current: "shell=value"`)
+		testutil.RequireEnvFileValues(t, envPath, map[string]string{"TOPO_TEST_PARAMETER": "topo"})
+	})
+
 	t.Run("uses inherited values without copying them to the output file", func(t *testing.T) {
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:
@@ -88,30 +132,31 @@ x-topo:
 	})
 
 	t.Run("writes provided parameters to env and leaves Compose unchanged", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_PARAMETER", "shell")
 		composeFileContents := `
 services:
   app:
     build:
       context: .
       args:
-        FOO: ${FOO}
+        FOO: ${TOPO_TEST_PARAMETER}
 
 x-topo:
   name: My Project
   parameters:
-    FOO:
+    TOPO_TEST_PARAMETER:
       description: a dummy parameter
       required: true
       example: bar
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), composeFileContents)
-		static := parameter.NewStaticResolver(parameter.Values{"FOO": "baz"})
+		static := parameter.NewStaticResolver(parameter.Values{"TOPO_TEST_PARAMETER": "baz"})
 		resolver := parameter.NewStrictResolverChain(static)
 
 		err := project.Configure(project.Scope{ComposeFile: composeFilePath}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, composeFileContents, testutil.RequireReadFile(t, composeFilePath))
-		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename), map[string]string{"FOO": "baz"})
+		testutil.RequireEnvFileValues(t, filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename), map[string]string{"TOPO_TEST_PARAMETER": "baz"})
 	})
 }
