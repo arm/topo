@@ -10,10 +10,14 @@ import (
 	"github.com/arm/topo/internal/output/term"
 )
 
-type HealthReport struct {
-	TargetDetails    *health.TargetDetails
-	Deployment       health.ReadinessReport
-	ProjectDiscovery health.ReadinessReport
+type HealthReportView struct {
+	health.HealthReport
+	Verbose bool
+}
+
+type healthCheckSection struct {
+	ShowPassedSummary bool
+	Checks            []health.DependencyReport
 }
 
 const functionalityHealthReportTemplate = `
@@ -29,12 +33,18 @@ const functionalityHealthReportTemplate = `
 {{- end -}}
 {{- end -}}
 
+{{- define "checkSection" -}}
+{{- if .ShowPassedSummary }}
+{{ "  " }}{{ successStatus }}All checks passed
+{{- end }}
+{{- range .Checks }}
+{{ template "checkRow" . }}
+{{- end -}}
+{{- end -}}
+
 {{- define "functionality" -}}
 {{ functionalityHeading .Name .StatusCounts }}
-{{ status (dependencyGroupStatus .HostChecks) }}Host
-{{- range .HostChecks }}
-{{ template "checkRow" . }}
-{{- end }}
+{{ status (dependencyGroupStatus .HostChecks) }}Host{{ template "checkSection" (section .HostChecks) }}
 {{ status (targetStatus .TargetStatus .TargetChecks) }}Target
 {{- if .TargetStatus }}
 {{- if .TargetStatus.Fix }}
@@ -42,9 +52,7 @@ const functionalityHealthReportTemplate = `
 {{ "     " }}{{ .TargetStatus.Fix.Description }}
 {{- end }}
 {{- end }}
-{{- range .TargetChecks }}
-{{ template "checkRow" . }}
-{{- end }}
+{{- template "checkSection" (section .TargetChecks) }}
 {{- end -}}
 
 {{ template "functionality" .Deployment }}
@@ -88,7 +96,7 @@ func buildFunctionalityTemplateData(name string, report health.ReadinessReport) 
 	return data
 }
 
-func (r HealthReport) AsPlain(palette term.Palette) (string, error) {
+func (r HealthReportView) AsPlain(palette term.Palette) (string, error) {
 	funcMap := getFuncMap(palette)
 	funcMap["status"] = healthStatusFormatter(palette)
 	funcMap["functionalityHeading"] = func(name string, statusCounts statusCounts) string {
@@ -97,6 +105,12 @@ func (r HealthReport) AsPlain(palette term.Palette) (string, error) {
 	funcMap["dependencyGroupStatus"] = dependencyGroupStatus
 	funcMap["targetStatus"] = targetStatus
 	funcMap["dependencyValue"] = dependencyValue
+	funcMap["successStatus"] = func() string {
+		return healthStatusFormatter(palette)(health.CheckStatusOK)
+	}
+	funcMap["section"] = func(checks []health.DependencyReport) healthCheckSection {
+		return newHealthCheckSection(checks, r.Verbose)
+	}
 	tmpl, err := template.New("functionality-healthcheck").Funcs(funcMap).Parse(functionalityHealthReportTemplate)
 	if err != nil {
 		return "", err
@@ -115,7 +129,7 @@ func (r HealthReport) AsPlain(palette term.Palette) (string, error) {
 	return buf.String(), nil
 }
 
-func (r HealthReport) AsJSON() (string, error) {
+func (r HealthReportView) AsJSON() (string, error) {
 	report := jsonHealthReport{Capabilities: make([]jsonCapabilityReport, 0, 2)}
 	for _, capability := range []jsonCapabilityReport{
 		toJSONCapabilityReport("Deployment", r.Deployment),
@@ -333,4 +347,23 @@ func toJSONFix(fix *health.Fix) *jsonFix {
 		return nil
 	}
 	return &jsonFix{Description: fix.Description, Command: fix.Command}
+}
+
+func newHealthCheckSection(checks []health.DependencyReport, verbose bool) healthCheckSection {
+	section := healthCheckSection{
+		Checks: make([]health.DependencyReport, 0, len(checks)),
+	}
+	allPassed := len(checks) > 0
+
+	for _, check := range checks {
+		if verbose || check.Status != health.CheckStatusOK {
+			section.Checks = append(section.Checks, check)
+		}
+		if check.Status != health.CheckStatusOK && check.Status != health.CheckStatusInfo {
+			allPassed = false
+		}
+	}
+	section.ShowPassedSummary = !verbose && allPassed
+
+	return section
 }

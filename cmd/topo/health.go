@@ -12,7 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const skipVersionChecksFlag = "skip-version-checks"
+const (
+	skipVersionChecksFlag = "skip-version-checks"
+	verboseFlag           = "verbose"
+)
 
 const skipVersionChecksEnvVar = "TOPO_SKIP_VERSION_CHECKS"
 
@@ -26,6 +29,10 @@ var healthCmd = &cobra.Command{
 		outputFormat := resolveOutput(cmd)
 
 		skipVersionCheck := resolveSkipVersionChecks(cmd)
+		verbose, err := cmd.Flags().GetBool(verboseFlag)
+		if err != nil {
+			panic(fmt.Sprintf("internal error: %s flag not registered: %v", verboseFlag, err))
+		}
 		engine, err := getEngineSelection(cmd)
 		if err != nil {
 			return err
@@ -55,7 +62,11 @@ var healthCmd = &cobra.Command{
 			spinner.Stop()
 		}
 
-		return views.Print(views.HealthReport(report), os.Stdout, outputFormat)
+		toPrint := views.HealthReportView{
+			HealthReport: report,
+			Verbose:      verbose,
+		}
+		return views.Print(toPrint, os.Stdout, outputFormat)
 	},
 }
 
@@ -66,6 +77,7 @@ func init() {
 		addEngineFlag(healthCmd)
 	}
 	healthCmd.Flags().Bool(skipVersionChecksFlag, false, fmt.Sprintf("skip version checks for dependencies (can also be set via %s env var)", skipVersionChecksEnvVar))
+	healthCmd.Flags().BoolP(verboseFlag, "v", false, "show all health checks, including successful checks")
 	rootCmd.AddCommand(healthCmd)
 }
 

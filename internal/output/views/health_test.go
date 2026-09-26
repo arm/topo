@@ -14,9 +14,9 @@ import (
 
 func TestHealthReport(t *testing.T) {
 	t.Run("AsPlain", func(t *testing.T) {
-		t.Run("renders deployment and project management sections", func(t *testing.T) {
-			toPrint := views.HealthReport{
-				TargetDetails: &health.TargetDetails{},
+		t.Run("renders deployment and project management sections in verbose mode", func(t *testing.T) {
+			toPrint := views.HealthReportView{Verbose: true, HealthReport: health.HealthReport{
+				TargetDetails: &health.TargetDetails{Destination: "ssh://user@my-target"},
 				Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
 					{Scope: health.DependencyScopeHost, Name: "Computer", Status: health.CheckStatusWarning},
 					{Scope: health.DependencyScopeHost, Name: "Docker Compose", Status: health.CheckStatusError},
@@ -26,7 +26,7 @@ func TestHealthReport(t *testing.T) {
 					{Scope: health.DependencyScopeHost, Name: "OpenSSH", Status: health.CheckStatusOK},
 					{Scope: health.DependencyScopeTarget, Name: "Hardware Info (lscpu)", Status: health.CheckStatusOK},
 				}},
-			}
+			}}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -50,7 +50,7 @@ func TestHealthReport(t *testing.T) {
 		})
 
 		t.Run("formats blocker references", func(t *testing.T) {
-			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{{
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{{
 				Scope:  health.DependencyScopeTarget,
 				Name:   "Docker daemon",
 				Status: health.CheckStatusUndetermined,
@@ -58,7 +58,7 @@ func TestHealthReport(t *testing.T) {
 					Scope: health.DependencyScopeHost,
 					Name:  "Docker CLI",
 				}},
-			}}}}
+			}}}}}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -68,30 +68,31 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), " ? Docker daemon (not checked: requires host's Docker CLI)")
 		})
 
-		t.Run("gives errors precedence over undetermined checks", func(t *testing.T) {
-			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
-				{Scope: health.DependencyScopeHost, Name: "Docker CLI", Status: health.CheckStatusError},
+		t.Run("shows failure details and gives errors precedence over undetermined checks", func(t *testing.T) {
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
+				{Scope: health.DependencyScopeHost, Name: "OpenSSH", Status: health.CheckStatusOK},
+				{Scope: health.DependencyScopeHost, Name: "Docker CLI", Status: health.CheckStatusError, Value: "docker not found on path"},
 				{Scope: health.DependencyScopeTarget, Name: "Docker daemon", Status: health.CheckStatusUndetermined},
-			}}}
+			}}}}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "Deployment: not ready (✗ 1 ? 1)")
+			assert.Contains(t, out.String(), " ✗ Host\n   ✗ Docker CLI (docker not found on path)\n")
+			assert.NotContains(t, out.String(), "OpenSSH")
 		})
-	})
 
-	t.Run("AsPlain", func(t *testing.T) {
 		t.Run("renders a warning-only report as ready", func(t *testing.T) {
-			toPrint := views.HealthReport{
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{
 				ProjectDiscovery: health.ReadinessReport{
 					TargetStatus: &health.TargetStatus{
 						Status: health.CheckStatusWarning,
 						Fix:    &health.Fix{Description: "provide --target"},
 					},
 				},
-			}
+			}}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.Plain)
@@ -100,11 +101,24 @@ func TestHealthReport(t *testing.T) {
 			assert.Contains(t, out.String(), "Project management: ready (! 1)")
 			assert.Contains(t, out.String(), "! Target\n   Fix:\n     provide --target")
 		})
+
+		t.Run("summarizes healthy checks while keeping informational checks visible", func(t *testing.T) {
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
+				{Scope: health.DependencyScopeTarget, Name: "Container Engine", Status: health.CheckStatusOK},
+				{Scope: health.DependencyScopeTarget, Name: "Remoteproc", Status: health.CheckStatusInfo, Value: "no remoteproc devices found"},
+			}}}}
+			var out bytes.Buffer
+
+			err := views.Print(toPrint, &out, term.Plain)
+
+			require.NoError(t, err)
+			assert.Contains(t, out.String(), " ✓ Target\n   ✓ All checks passed\n   i Remoteproc (no remoteproc devices found)\n")
+		})
 	})
 
 	t.Run("AsJSON", func(t *testing.T) {
 		t.Run("omits capabilities without checks or issues", func(t *testing.T) {
-			toPrint := views.HealthReport{}
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{}}
 
 			got, err := toPrint.AsJSON()
 
@@ -115,9 +129,9 @@ func TestHealthReport(t *testing.T) {
 		})
 
 		t.Run("retains an empty capability with a warning but no fix", func(t *testing.T) {
-			toPrint := views.HealthReport{ProjectDiscovery: health.ReadinessReport{
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{ProjectDiscovery: health.ReadinessReport{
 				TargetStatus: &health.TargetStatus{Status: health.CheckStatusWarning},
-			}}
+			}}}
 
 			got, err := toPrint.AsJSON()
 
@@ -134,12 +148,12 @@ func TestHealthReport(t *testing.T) {
 		})
 
 		t.Run("retains an empty capability with a fix", func(t *testing.T) {
-			toPrint := views.HealthReport{Deployment: health.ReadinessReport{
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{
 				TargetStatus: &health.TargetStatus{
 					Status: health.CheckStatusOK,
 					Fix:    &health.Fix{Description: "provide --target"},
 				},
-			}}
+			}}}
 
 			got, err := toPrint.AsJSON()
 
@@ -160,7 +174,7 @@ func TestHealthReport(t *testing.T) {
 
 		t.Run("reports missing target fixes on each capability", func(t *testing.T) {
 			report := (health.EvaluatedHealthCheck{}).Report(nil, "provide --target or set TOPO_TARGET to check target health")
-			toPrint := views.HealthReport{Deployment: report.Deployment, ProjectDiscovery: report.ProjectDiscovery}
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: report.Deployment, ProjectDiscovery: report.ProjectDiscovery}}
 
 			got, err := toPrint.AsJSON()
 
@@ -188,10 +202,10 @@ func TestHealthReport(t *testing.T) {
 		})
 
 		t.Run("preserves failure messages and fixes", func(t *testing.T) {
-			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{{
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{{
 				Scope: health.DependencyScopeHost, Name: "Docker CLI", Status: health.CheckStatusError, Value: "docker not found",
 				Fix: &health.Fix{Description: "Install Docker", Command: "install-docker"},
-			}}}}
+			}}}}}
 
 			got, err := toPrint.AsJSON()
 
@@ -231,10 +245,10 @@ func TestHealthReport(t *testing.T) {
 				{"information does not reduce readiness", health.CheckStatusOK, health.CheckStatusInfo, health.CheckStatusOK},
 			} {
 				t.Run(scenario.name, func(t *testing.T) {
-					toPrint := views.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
+					toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
 						{Scope: health.DependencyScopeHost, Status: scenario.host},
 						{Scope: health.DependencyScopeTarget, Status: scenario.target},
-					}}}
+					}}}}
 
 					got, err := toPrint.AsJSON()
 
@@ -250,7 +264,7 @@ func TestHealthReport(t *testing.T) {
 		})
 
 		t.Run("groups host and target checks by capability", func(t *testing.T) {
-			toPrint := views.HealthReport{
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{
 				Deployment: health.ReadinessReport{Checks: []health.DependencyReport{
 					{Scope: health.DependencyScopeHost, Name: "Topo", Status: health.CheckStatusOK},
 					{Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
@@ -258,7 +272,7 @@ func TestHealthReport(t *testing.T) {
 				ProjectDiscovery: health.ReadinessReport{Checks: []health.DependencyReport{
 					{Scope: health.DependencyScopeTarget, ID: health.DependencyIDConnectivity, Name: "Connectivity", Status: health.CheckStatusOK},
 				}},
-			}
+			}}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.JSON)
@@ -301,7 +315,7 @@ func TestHealthReport(t *testing.T) {
 		})
 
 		t.Run("formats blocker references in the value", func(t *testing.T) {
-			toPrint := views.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{{
+			toPrint := views.HealthReportView{HealthReport: health.HealthReport{Deployment: health.ReadinessReport{Checks: []health.DependencyReport{{
 				Scope:  health.DependencyScopeHost,
 				Name:   "Docker daemon",
 				Status: health.CheckStatusUndetermined,
@@ -309,7 +323,7 @@ func TestHealthReport(t *testing.T) {
 					Scope: health.DependencyScopeHost,
 					Name:  "Docker CLI",
 				}},
-			}}}}
+			}}}}}
 			var out bytes.Buffer
 
 			err := views.Print(toPrint, &out, term.JSON)
