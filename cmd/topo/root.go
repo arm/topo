@@ -238,12 +238,12 @@ func addMigrateToEnvFlag(cmd *cobra.Command) {
 }
 
 func migrateToEnv(cmd *cobra.Command) bool {
-	if cmd.Flags().Lookup(migrateToEnvFlag) == nil {
-		return false
-	}
 	enabled, err := cmd.Flags().GetBool(migrateToEnvFlag)
 	if err != nil {
 		panic(fmt.Sprintf("internal error: migrate-to-env flag not registered: %v", err))
+	}
+	if enabled {
+		logger.Warn(fmt.Sprintf("%s is a temporary migration utility and will be removed in an upcoming release", migrateToEnvFlag))
 	}
 	return enabled
 }
