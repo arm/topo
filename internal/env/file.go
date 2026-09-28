@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/compose-spec/compose-go/v2/dotenv"
 )
@@ -139,31 +140,40 @@ func applyEnvUpdates(content string, updates map[string]string) (string, error) 
 	return result.String(), nil
 }
 
-func valueEnd(content string, start int) (int, error) {
-	if start < len(content) && (content[start] == '\'' || content[start] == '"') {
-		quote := content[start]
-		for i := start + 1; i < len(content); i++ {
-			// Skip escaped characters
-			if content[i] == '\\' {
-				i++
-				continue
-			}
-			if content[i] == quote {
-				return i + 1, nil
-			}
-		}
-		return 0, errors.New("unterminated quoted env value")
+func valueEnd(content string, valueStart int) (int, error) {
+	if valueStart < len(content) && (content[valueStart] == '\'' || content[valueStart] == '"') {
+		return quotedValueEnd(content, valueStart)
 	}
-	end := start
-	for end < len(content) && content[end] != '\n' && content[end] != '\r' {
-		// In unquoted values, a hash starts a comment only at the start or after whitespace.
-		if content[end] == '#' {
-			isCommentStart := end == start || content[end-1] == ' ' || content[end-1] == '\t'
-			if isCommentStart {
-				break
-			}
+
+	return unquotedValueEnd(content, valueStart)
+}
+
+func unquotedValueEnd(content string, valueStart int) (int, error) {
+	valueEnd := valueStart
+	for valueEnd < len(content) {
+		character := content[valueEnd]
+		if character == '\n' || character == '\r' {
+			break
 		}
-		end++
+		valueEnd++
 	}
-	return start + len(strings.TrimRight(content[start:end], " \t")), nil
+	// Remove inline comments
+	value, _, _ := strings.Cut(content[valueStart:valueEnd], " #")
+	value = strings.TrimRightFunc(value, unicode.IsSpace)
+	return valueStart + len(value), nil
+}
+
+func quotedValueEnd(content string, openingQuoteIndex int) (int, error) {
+	quote := content[openingQuoteIndex]
+	for index := openingQuoteIndex + 1; index < len(content); index++ {
+		// An escaped character cannot close the quoted value.
+		if content[index] == '\\' {
+			index++
+			continue
+		}
+		if content[index] == quote {
+			return index + 1, nil
+		}
+	}
+	return 0, errors.New("unterminated quoted env value")
 }
