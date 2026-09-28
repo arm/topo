@@ -90,9 +90,16 @@ interactive prompts.`,
 		}
 
 		if outputPath == "-" {
-			return env.WriteFile(os.Stdout, values)
+			content, err := env.ToString(values, env.EncodeOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to encode env file content: %w", err)
+			}
+			if _, err := fmt.Fprint(os.Stdout, content); err != nil {
+				return fmt.Errorf("failed to write env file: %w", err)
+			}
+			return nil
 		}
-		return env.UpdateFile(outputPath, values)
+		return env.UpdateFile(outputPath, values, env.EncodeOptions{})
 	},
 }
 
