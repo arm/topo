@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,7 +14,6 @@ import (
 	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestDeploy(t *testing.T) {
@@ -33,7 +31,7 @@ services:
 	})
 
 	t.Run("deploys to localhost", func(t *testing.T) {
-		requireLocalPodman(t)
+		testutil.RequirePodman(t)
 		scope, projectName := deploymentFixture(t)
 		t.Cleanup(func() { cleanupComposeProject(t, scope) })
 		options := deploy.Options{TargetHost: ssh.PlainLocalhost}
@@ -45,7 +43,7 @@ services:
 	})
 
 	t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
-		requireLocalPodman(t)
+		testutil.RequirePodman(t)
 		podmanContainer := startPodmanInContainer(t)
 		scope, projectName := deploymentFixture(t)
 		targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
@@ -63,7 +61,7 @@ services:
 	})
 
 	t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
-		requireLocalPodman(t)
+		testutil.RequirePodman(t)
 		registryContainerName := "topo-test-registry-" + sanitiseTestName(t)
 		registryPort := startTestRegistry(t, registryContainerName)
 		podmanContainer := startPodmanInContainer(t)
@@ -89,19 +87,6 @@ services:
 	})
 }
 
-func requireLocalPodman(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("podman"); err != nil {
-		t.Skip("podman is not installed")
-	}
-	if _, err := exec.LookPath("docker-compose"); err != nil {
-		t.Skip("docker-compose is not installed")
-	}
-	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
-		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
-	}
-}
-
 func deploymentFixture(t *testing.T) (project.Scope, string) {
 	t.Helper()
 	tempDir := t.TempDir()
@@ -119,7 +104,7 @@ services:
     command: ["tail", "-f", "/dev/null"]
     stop_grace_period: 1s
 `, "test-project-"+testName, imageName)
-	composeFileContent, err := fixPodmanInDockerQuirk(composeFileContent)
+	composeFileContent, err := testutil.FixPodmanInDockerQuirk(composeFileContent)
 	require.NoError(t, err)
 	composeFile := testutil.RequireWriteComposeFile(t, tempDir, composeFileContent)
 	testutil.RequireWriteFile(t, filepath.Join(tempDir, "Dockerfile"), `
@@ -136,38 +121,6 @@ CMD ["tail", "-f", "/dev/null"]
 		}
 	})
 	return project.Scope{ComposeFile: composeFile}, "test-project-" + testName
-}
-
-// fixPodmanInDockerQuirk avoids a Docker Desktop nested-container restriction.
-// The Podman target inherits oom_score_adj: 200, but Podman otherwise starts
-// each service with oom_score_adj: 0. Docker Desktop rejects that decrease, so
-// this adds oom_score_adj: 200 to each fixture service, for example:
-//
-//	services:
-//	  app:
-//	    oom_score_adj: 200
-func fixPodmanInDockerQuirk(contents string) (string, error) {
-	var definition map[string]any
-	if err := yaml.Unmarshal([]byte(contents), &definition); err != nil {
-		return "", err
-	}
-	services, ok := definition["services"].(map[string]any)
-	if !ok {
-		return "", fmt.Errorf("Compose file services must be a mapping")
-	}
-	for name, value := range services {
-		service, ok := value.(map[string]any)
-		if !ok {
-			return "", fmt.Errorf("service %q must be a mapping", name)
-		}
-		service["oom_score_adj"] = 200
-	}
-
-	updatedContents, err := yaml.Marshal(definition)
-	if err != nil {
-		return "", err
-	}
-	return string(updatedContents), nil
 }
 
 func cleanupComposeProject(t *testing.T, scope project.Scope) {

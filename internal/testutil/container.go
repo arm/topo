@@ -68,6 +68,15 @@ var PodmanContainer = ContainerSpec{
 	},
 }
 
+func (spec ContainerSpec) WithPublishedPorts(ports ...string) ContainerSpec {
+	extended := spec
+	extended.runArgs = append([]string{}, spec.runArgs...)
+	for _, port := range ports {
+		extended.runArgs = append(extended.runArgs, "--publish", port)
+	}
+	return extended
+}
+
 func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	t.Helper()
 	if testing.Short() {

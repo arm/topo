@@ -8,11 +8,12 @@ import (
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 func TestStop(t *testing.T) {
-	requireLocalPodman(t)
+	testutil.RequirePodman(t)
 
 	t.Run("stops services on localhost", func(t *testing.T) {
 		scope, projectName := deploymentFixture(t)

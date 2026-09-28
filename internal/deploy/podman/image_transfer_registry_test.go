@@ -6,12 +6,13 @@ import (
 
 	"github.com/arm/topo/internal/deploy/podman"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransferImagesViaRegistry(t *testing.T) {
-	requireLocalPodman(t)
+	testutil.RequirePodman(t)
 	registryContainerName := "topo-test-registry-transfer-" + sanitiseTestName(t)
 	registryPort := startTestRegistry(t, registryContainerName)
 
