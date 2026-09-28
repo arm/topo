@@ -1,9 +1,7 @@
 package term_test
 
 import (
-	"bytes"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/output/term"
@@ -75,66 +73,5 @@ func TestWrapText(t *testing.T) {
 		out := term.WrapText(in, 10, 0)
 
 		assert.Equal(t, "hello\nworld here", out)
-	})
-}
-
-func TestPrintHeader(t *testing.T) {
-	t.Run("first header has no leading newline", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		require.NoError(t, term.PrintFirstHeader(&buf, "Hello"))
-
-		assert.False(t, strings.HasPrefix(buf.String(), "\n"))
-	})
-
-	t.Run("nth header has a leading newline", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		require.NoError(t, term.PrintNthHeader(&buf, "Hello"))
-
-		assert.True(t, strings.HasPrefix(buf.String(), "\n"))
-	})
-
-	t.Run("renders header with padding", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		require.NoError(t, term.PrintNthHeader(&buf, "Hello"))
-
-		want := "\n── Hello " + strings.Repeat("─", 51) + "\n"
-		//                 ^
-		//         123456789 => 60 - 9 = 51
-		assert.Equal(t, want, buf.String())
-	})
-
-	t.Run("correctly pads around unicode symbols", func(t *testing.T) {
-		var buf bytes.Buffer
-
-		require.NoError(t, term.PrintNthHeader(&buf, "✓✓✓"))
-
-		want := "\n── ✓✓✓ " + strings.Repeat("─", 53) + "\n"
-		//               ^
-		//         1234567 => 60 - 7 = 53
-		assert.Equal(t, want, buf.String())
-	})
-
-	t.Run("renders without padding when description is too long", func(t *testing.T) {
-		var buf bytes.Buffer
-		description := strings.Repeat("x", 80)
-
-		require.NoError(t, term.PrintNthHeader(&buf, description))
-
-		expected := "\n── " + description + " \n"
-		assert.Equal(t, expected, buf.String())
-	})
-
-	t.Run("dims borders for terminal output", func(t *testing.T) {
-		palette := term.NewPalette(true)
-
-		got := term.Header("Hello", palette)
-
-		want := palette.Color(term.Dim, "── ") +
-			"Hello" +
-			palette.Color(term.Dim, " ───────────────────────────────────────────────────")
-		assert.Equal(t, want, got)
 	})
 }

@@ -23,13 +23,14 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 	if err := EnsureNoRuntimeSet(scope); err != nil {
 		return err
 	}
-	if err := term.PrintFirstHeader(output, "Build images"); err != nil {
+	progress := term.NewProgress(output)
+	if err := progress.Header("Build images"); err != nil {
 		return err
 	}
 	if err := BuildImages(ctx, output, LocalSocket, scope); err != nil {
 		return err
 	}
-	if err := term.PrintNthHeader(output, "Pull images"); err != nil {
+	if err := progress.Header("Pull images"); err != nil {
 		return err
 	}
 	if err := PullImages(ctx, output, LocalSocket, scope); err != nil {
@@ -39,7 +40,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 	targetSocket := LocalSocket
 	var tunnel *ssh.TCPToUnixSocketTunnel
 	if !options.TargetHost.IsPlainLocalhost() {
-		if err := term.PrintNthHeader(output, "Open Podman socket SSH tunnel"); err != nil {
+		if err := progress.Header("Open Podman socket SSH tunnel"); err != nil {
 			return err
 		}
 
@@ -56,15 +57,15 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 
 		targetSocket = NewSocket(tunnel.SocketURL())
 		if options.Registry == nil {
-			if err := transferImagesViaPipe(ctx, output, LocalSocket, targetSocket, scope); err != nil {
+			if err := transferImagesViaPipe(ctx, progress, LocalSocket, targetSocket, scope); err != nil {
 				return err
 			}
-		} else if err := transferImagesViaRegistry(ctx, output, LocalSocket, options.TargetHost, targetSocket, scope, *options.Registry); err != nil {
+		} else if err := transferImagesViaRegistry(ctx, progress, LocalSocket, options.TargetHost, targetSocket, scope, *options.Registry); err != nil {
 			return err
 		}
 	}
 
-	if err := term.PrintNthHeader(output, "Start services"); err != nil {
+	if err := progress.Header("Start services"); err != nil {
 		return err
 	}
 	if err := StartServices(ctx, output, targetSocket, scope, options.RecreateMode); err != nil {
@@ -78,7 +79,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		tunnel = nil
 	}
 
-	if err := term.PrintNthHeader(output, "Deployment Success"); err != nil {
+	if err := progress.Header("Deployment Success"); err != nil {
 		return err
 	}
 	return post_deploy.PrintDeploySuccess(
@@ -88,15 +89,16 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 	)
 }
 
-func transferImagesViaPipe(ctx context.Context, output io.Writer, sourceSocket, targetSocket Socket, scope project.Scope) error {
-	if err := term.PrintNthHeader(output, "Transfer images"); err != nil {
+func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceSocket, targetSocket Socket, scope project.Scope) error {
+	if err := progress.Header("Transfer images"); err != nil {
 		return err
 	}
-	return TransferImagesViaPipe(ctx, output, sourceSocket, targetSocket, scope)
+	return TransferImagesViaPipe(ctx, progress.Output(), sourceSocket, targetSocket, scope)
 }
 
-func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSocket Socket, targetDestination ssh.Destination, targetSocket Socket, scope project.Scope, options deploy.RegistryConfig) (transferErr error) {
-	if err := term.PrintNthHeader(output, "Run registry"); err != nil {
+func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sourceSocket Socket, targetDestination ssh.Destination, targetSocket Socket, scope project.Scope, options deploy.RegistryConfig) (transferErr error) {
+	output := progress.Output()
+	if err := progress.Header("Run registry"); err != nil {
 		return err
 	}
 	registryContainerName := options.ContainerName
@@ -107,7 +109,7 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSock
 		return err
 	}
 
-	if err := term.PrintNthHeader(output, "Open registry SSH tunnel"); err != nil {
+	if err := progress.Header("Open registry SSH tunnel"); err != nil {
 		return err
 	}
 	registryTunnel, err := ssh.OpenTunnel(ctx, output, targetDestination, options.Port)
@@ -115,11 +117,11 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSock
 		return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with --registry-port", err, options.Port)
 	}
 	defer func() {
-		transferErr = errors.Join(transferErr, closeRegistryTunnel(output, registryTunnel))
+		transferErr = errors.Join(transferErr, closeRegistryTunnel(progress, registryTunnel))
 	}()
 
 	if !targetDestination.IsLocalhost() && !options.SkipRemotePortCheck {
-		if err := term.PrintNthHeader(output, "Check registry tunnel is not exposed on remote network"); err != nil {
+		if err := progress.Header("Check registry tunnel is not exposed on remote network"); err != nil {
 			return err
 		}
 		if err := deploy.CheckTunnelExposure(ctx, output, targetDestination, options.Port); err != nil {
@@ -127,19 +129,20 @@ func transferImagesViaRegistry(ctx context.Context, output io.Writer, sourceSock
 		}
 	}
 
-	if err := term.PrintNthHeader(output, "Transfer via registry"); err != nil {
+	if err := progress.Header("Transfer via registry"); err != nil {
 		return err
 	}
 	return TransferImagesViaRegistry(ctx, output, sourceSocket, targetSocket, scope, options.Port)
 }
 
-func closeRegistryTunnel(output io.Writer, tunnel *ssh.Tunnel) error {
+func closeRegistryTunnel(progress *term.Progress, tunnel *ssh.Tunnel) error {
 	ctx, cancel := context.WithTimeout(context.Background(), tunnelCleanupTimeout)
 	defer cancel()
 
+	output := progress.Output()
 	var headerError error
 	if output != nil {
-		headerError = term.PrintNthHeader(output, "Close registry SSH tunnel")
+		headerError = progress.Header("Close registry SSH tunnel")
 	}
 	closeError := tunnel.Close(ctx, output)
 	if closeError != nil {

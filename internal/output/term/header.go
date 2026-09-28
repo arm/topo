@@ -7,12 +7,30 @@ import (
 	"unicode/utf8"
 )
 
-func PrintFirstHeader(w io.Writer, description string) error {
-	return printHeader(w, description, "")
+type Progress struct {
+	output  io.Writer
+	started bool
 }
 
-func PrintNthHeader(w io.Writer, description string) error {
-	return printHeader(w, description, "\n")
+func NewProgress(output io.Writer) *Progress {
+	return &Progress{output: output}
+}
+
+func (p *Progress) Header(description string) error {
+	prefix := ""
+	if p.started {
+		prefix = "\n"
+	}
+
+	if err := printHeader(p.output, description, prefix); err != nil {
+		return err
+	}
+	p.started = true
+	return nil
+}
+
+func (p *Progress) Output() io.Writer {
+	return p.output
 }
 
 func printHeader(w io.Writer, description string, prefix string) error {
@@ -31,12 +49,15 @@ func Header(description string, palette Palette) string {
 	}
 
 	const totalWidth = 60
-	prefix := "── "
-	suffix := " "
+	leadingBar := "── "
+	barSeparator := " "
 
-	descriptionWidth := utf8.RuneCountInString(description)
-	contentWidth := utf8.RuneCountInString(prefix) + descriptionWidth + utf8.RuneCountInString(suffix)
-	barWidth := max(totalWidth-contentWidth, 0)
-	bar := suffix + strings.Repeat("─", barWidth)
-	return palette.Color(Dim, prefix) + description + palette.Color(Dim, bar)
+	titleWidth := utf8.RuneCountInString(description)
+	headerContentWidth := utf8.RuneCountInString(leadingBar) + titleWidth + utf8.RuneCountInString(barSeparator)
+	trailingBarWidth := max(totalWidth-headerContentWidth, 0)
+	trailingBar := ""
+	if trailingBarWidth > 0 {
+		trailingBar = barSeparator + strings.Repeat("─", trailingBarWidth)
+	}
+	return palette.Color(Dim, leadingBar) + description + palette.Color(Dim, trailingBar)
 }
