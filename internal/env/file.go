@@ -67,7 +67,7 @@ func UpdateFile(path string, updates map[string]string, options EncodeOptions) e
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to read env file: %w", err)
 	}
-	updated, err := applyFileUpdates(string(content), encodeValues(updates, options))
+	updated, err := applyEnvUpdates(string(content), encodeValues(updates, options))
 	if err != nil {
 		return fmt.Errorf("failed to update env file: %w", err)
 	}
@@ -78,7 +78,7 @@ func UpdateFile(path string, updates map[string]string, options EncodeOptions) e
 }
 
 func ToString(values map[string]string, options EncodeOptions) (string, error) {
-	return applyFileUpdates("", encodeValues(values, options))
+	return applyEnvUpdates("", encodeValues(values, options))
 }
 
 func encodeValues(values map[string]string, options EncodeOptions) map[string]string {
@@ -92,15 +92,13 @@ func encodeValues(values map[string]string, options EncodeOptions) map[string]st
 	return encoded
 }
 
-func applyFileUpdates(content string, updates map[string]string) (string, error) {
+func applyEnvUpdates(content string, updates map[string]string) (string, error) {
 	remaining := maps.Clone(updates)
 	var result strings.Builder
 	for len(content) > 0 {
-		lineEnd := strings.IndexByte(content, '\n')
-		if lineEnd < 0 {
-			lineEnd = len(content)
-		} else {
-			lineEnd++
+		lineEnd := len(content)
+		if index := strings.IndexByte(content, '\n'); index >= 0 {
+			lineEnd = index + 1
 		}
 		line := content[:lineEnd]
 		trimmed := strings.TrimSpace(line)
@@ -145,6 +143,7 @@ func valueEnd(content string, start int) (int, error) {
 	if start < len(content) && (content[start] == '\'' || content[start] == '"') {
 		quote := content[start]
 		for i := start + 1; i < len(content); i++ {
+			// Skip escaped characters
 			if content[i] == '\\' {
 				i++
 				continue
@@ -157,8 +156,12 @@ func valueEnd(content string, start int) (int, error) {
 	}
 	end := start
 	for end < len(content) && content[end] != '\n' && content[end] != '\r' {
-		if content[end] == '#' && (end == start || content[end-1] == ' ' || content[end-1] == '\t') {
-			break
+		// In unquoted values, a hash starts a comment only at the start or after whitespace.
+		if content[end] == '#' {
+			isCommentStart := end == start || content[end-1] == ' ' || content[end-1] == '\t'
+			if isCommentStart {
+				break
+			}
 		}
 		end++
 	}
