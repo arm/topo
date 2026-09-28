@@ -32,7 +32,6 @@ func TestProgress(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, buffer.String(), "\n\n── Second")
 		})
-
 	})
 }
 
