@@ -3,12 +3,13 @@ package env
 import (
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/compose-spec/compose-go/v2/dotenv"
 )
@@ -53,46 +54,126 @@ func ReadFiles(paths []string) (map[string]string, error) {
 	return content, nil
 }
 
-func UpdateFile(path string, values map[string]string) error {
-	merged, err := dotenv.ReadFile(path, nil)
-	if errors.Is(err, os.ErrNotExist) {
-		merged = make(map[string]string)
-	} else if err != nil {
+var assignmentHeader = regexp.MustCompile(`^[ \t]*(?:export[ \t]+)?([\pL\pN_.\[\]-]+)[ \t]*[=:][ \t]*`)
+
+type EncodeOptions struct {
+	PreserveInterpolation bool
+}
+
+func UpdateFile(path string, updates map[string]string, options EncodeOptions) error {
+	if len(updates) == 0 {
+		return nil
+	}
+	content, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to read env file: %w", err)
 	}
-	maps.Copy(merged, values)
-	content, err := encodeFile(merged)
+	updated, err := applyEnvUpdates(string(content), encodeValues(updates, options))
 	if err != nil {
-		return fmt.Errorf("failed to encode env file content: %w", err)
+		return fmt.Errorf("failed to update env file: %w", err)
 	}
-	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(updated), 0o600); err != nil {
 		return fmt.Errorf("failed to write env file: %w", err)
 	}
 	return nil
 }
 
-func WriteFile(output io.Writer, values map[string]string) error {
-	content, err := encodeFile(values)
-	if err != nil {
-		return fmt.Errorf("failed to encode env file content: %w", err)
-	}
-	if _, err := io.WriteString(output, content); err != nil {
-		return fmt.Errorf("failed to write env file: %w", err)
-	}
-	return nil
+func ToString(values map[string]string, options EncodeOptions) (string, error) {
+	return applyEnvUpdates("", encodeValues(values, options))
 }
 
-func encodeFile(values map[string]string) (string, error) {
-	var content strings.Builder
-	for _, name := range slices.Sorted(maps.Keys(values)) {
-		if name == "" {
-			return "", errors.New("env parameter name must not be empty")
+func encodeValues(values map[string]string, options EncodeOptions) map[string]string {
+	encoded := make(map[string]string, len(values))
+	for name, value := range values {
+		encoded[name] = escapes.Replace(value)
+		if !options.PreserveInterpolation {
+			encoded[name] = strings.ReplaceAll(encoded[name], "$", "$$")
 		}
-		content.WriteString(name)
-		content.WriteString("=\"")
-		content.WriteString(escapes.Replace(values[name]))
-		content.WriteString("\"\n")
+	}
+	return encoded
+}
+
+func applyEnvUpdates(content string, updates map[string]string) (string, error) {
+	remaining := maps.Clone(updates)
+	var result strings.Builder
+	for len(content) > 0 {
+		lineEnd := len(content)
+		if index := strings.IndexByte(content, '\n'); index >= 0 {
+			lineEnd = index + 1
+		}
+		line := content[:lineEnd]
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			result.WriteString(line)
+			content = content[lineEnd:]
+			continue
+		}
+		header := assignmentHeader.FindStringSubmatch(content)
+		if header == nil {
+			return "", errors.New("unsupported env assignment syntax")
+		}
+		start := len(header[0])
+		end, err := valueEnd(content, start)
+		if err != nil {
+			return "", err
+		}
+		result.WriteString(content[:start])
+		if value, ok := updates[header[1]]; ok {
+			result.WriteString("\"")
+			result.WriteString(value)
+			result.WriteString("\"")
+			delete(remaining, header[1])
+		} else {
+			result.WriteString(content[start:end])
+		}
+		content = content[end:]
+	}
+	if len(remaining) > 0 && result.Len() > 0 && !strings.HasSuffix(result.String(), "\n") {
+		result.WriteByte('\n')
+	}
+	for _, name := range slices.Sorted(maps.Keys(remaining)) {
+		result.WriteString(name)
+		result.WriteString("=\"")
+		result.WriteString(remaining[name])
+		result.WriteString("\"\n")
+	}
+	return result.String(), nil
+}
+
+func valueEnd(content string, valueStart int) (int, error) {
+	if valueStart < len(content) && (content[valueStart] == '\'' || content[valueStart] == '"') {
+		return quotedValueEnd(content, valueStart)
 	}
 
-	return content.String(), nil
+	return unquotedValueEnd(content, valueStart)
+}
+
+func unquotedValueEnd(content string, valueStart int) (int, error) {
+	valueEnd := valueStart
+	for valueEnd < len(content) {
+		character := content[valueEnd]
+		if character == '\n' || character == '\r' {
+			break
+		}
+		valueEnd++
+	}
+	// Remove inline comments
+	value, _, _ := strings.Cut(content[valueStart:valueEnd], " #")
+	value = strings.TrimRightFunc(value, unicode.IsSpace)
+	return valueStart + len(value), nil
+}
+
+func quotedValueEnd(content string, openingQuoteIndex int) (int, error) {
+	quote := content[openingQuoteIndex]
+	for index := openingQuoteIndex + 1; index < len(content); index++ {
+		// An escaped character cannot close the quoted value.
+		if content[index] == '\\' {
+			index++
+			continue
+		}
+		if content[index] == quote {
+			return index + 1, nil
+		}
+	}
+	return 0, errors.New("unterminated quoted env value")
 }

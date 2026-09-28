@@ -80,7 +80,7 @@ func configureProject(composeFilePath string, resolver parameter.Resolver) error
 	}
 
 	outputPath := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
-	return env.UpdateFile(outputPath, values)
+	return env.UpdateFile(outputPath, values, env.EncodeOptions{})
 }
 
 func migrateProject(output io.Writer, composeFilePath string) error {
