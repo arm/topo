@@ -17,7 +17,8 @@ import (
 var ErrParameterMigrationRequired = errors.New("this project appears to use the parameter format from Topo versions older than 14.0.0")
 
 func Clone(output io.Writer, path string, src Source, resolver parameter.Resolver, migrateToEnv bool) error {
-	if err := term.PrintFirstHeader(output, "Copy files"); err != nil {
+	progress := term.NewProgress(output)
+	if err := progress.Header("Copy files"); err != nil {
 		return err
 	}
 	if err := copyProject(src, path); err != nil {
@@ -30,7 +31,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 	}
 
 	if migrateToEnv {
-		if err := term.PrintNthHeader(output, "Migrate to dotenv-based configuration"); err != nil {
+		if err := progress.Header("Migrate to dotenv-based configuration"); err != nil {
 			return err
 		}
 		if err := migrateProject(output, composeFilePath); err != nil {
@@ -41,7 +42,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 		}
 	}
 
-	if err := term.PrintNthHeader(output, "Configure project"); err != nil {
+	if err := progress.Header("Configure project"); err != nil {
 		return err
 	}
 	if err := configureProject(composeFilePath, resolver); err != nil {
@@ -51,7 +52,7 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 		return fmt.Errorf("configure failed: %w", err)
 	}
 
-	if err := term.PrintNthHeader(output, "Project ready"); err != nil {
+	if err := progress.Header("Project ready"); err != nil {
 		return err
 	}
 	return printSummary(output, path)
