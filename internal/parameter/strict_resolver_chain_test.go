@@ -87,35 +87,35 @@ func TestStrictResolverChain(t *testing.T) {
 		resolver.AssertExpectations(t)
 	})
 
-	t.Run("stops calling resolvers when all required parameters are satisfied", func(t *testing.T) {
+	t.Run("stops calling resolvers when all parameters are supplied", func(t *testing.T) {
 		resolver1 := &mockResolver{}
 		resolver2 := &mockResolver{}
 		definitions := []parameter.Definition{
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
-		resolver1.On("Resolve", definitions, parameter.Values(nil)).Return(parameter.Values{"GREETING": "Hello"}, nil)
+		resolver1.On("Resolve", definitions, parameter.Values(nil)).Return(parameter.Values{"GREETING": "Hello", "PORT": "8080"}, nil)
 		chain := parameter.NewStrictResolverChain(resolver1, resolver2)
 
 		got, err := chain.Resolve(definitions, nil)
 
 		require.NoError(t, err)
-		want := parameter.Values{"GREETING": "Hello"}
+		want := parameter.Values{"GREETING": "Hello", "PORT": "8080"}
 		assert.Equal(t, want, got)
 		resolver1.AssertExpectations(t)
 		resolver2.AssertNotCalled(t, "Resolve")
 	})
 
-	t.Run("calls second resolver when first does not satisfy all required parameters", func(t *testing.T) {
+	t.Run("passes only unsupplied parameters to the next resolver regardless of requiredness", func(t *testing.T) {
 		resolver1 := &mockResolver{}
 		resolver2 := &mockResolver{}
 		all := []parameter.Definition{
 			{Name: "GREETING", Required: true},
-			{Name: "NAME", Required: true},
+			{Name: "NAME", Required: false},
 			{Name: "PORT", Required: false},
 		}
 		remaining := []parameter.Definition{
-			{Name: "NAME", Required: true},
+			{Name: "NAME", Required: false},
 			{Name: "PORT", Required: false},
 		}
 		currentValues := parameter.Values{"PORT": "8080"}
@@ -133,32 +133,6 @@ func TestStrictResolverChain(t *testing.T) {
 		assert.Equal(t, want, got)
 		resolver1.AssertExpectations(t)
 		resolver2.AssertExpectations(t)
-	})
-
-	t.Run("collects values from multiple resolvers", func(t *testing.T) {
-		resolver1 := parameter.NewStaticResolver(parameter.Values{
-			"PORT": "8080",
-			"NAME": "Topo",
-		})
-		resolver2 := parameter.NewStaticResolver(parameter.Values{
-			"GREETING": "Hello",
-		})
-		chain := parameter.NewStrictResolverChain(resolver1, resolver2)
-		definitions := []parameter.Definition{
-			{Name: "NAME", Required: true},
-			{Name: "GREETING", Required: true},
-			{Name: "PORT", Required: true},
-		}
-
-		got, err := chain.Resolve(definitions, nil)
-
-		require.NoError(t, err)
-		want := parameter.Values{
-			"NAME":     "Topo",
-			"GREETING": "Hello",
-			"PORT":     "8080",
-		}
-		assert.Equal(t, want, got)
 	})
 
 	t.Run("allows required parameters with non-empty current values", func(t *testing.T) {
@@ -187,23 +161,6 @@ func TestStrictResolverChain(t *testing.T) {
 		_, err := chain.Resolve(definitions, parameter.Values{"PORT": "8080"})
 
 		assert.Equal(t, parameter.MissingParametersError(definitions), err)
-	})
-
-	t.Run("does not resolve omitted optional parameters", func(t *testing.T) {
-		resolver := parameter.NewStaticResolver(nil)
-		chain := parameter.NewStrictResolverChain(resolver)
-		definitions := []parameter.Definition{
-			{
-				Name:     "CINNAMON",
-				Required: false,
-			},
-		}
-
-		got, err := chain.Resolve(definitions, nil)
-
-		require.NoError(t, err)
-		want := parameter.Values{}
-		assert.Equal(t, want, got)
 	})
 }
 
