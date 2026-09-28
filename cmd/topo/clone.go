@@ -73,7 +73,7 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
-		if term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
+		if !noPrompt(cmd) && term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
 			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stdout))
 		}
 
@@ -88,6 +88,7 @@ interactive prompts.`,
 }
 
 func init() {
+	addNoPromptFlag(topoCloneCmd)
 	addMigrateToEnvFlag(topoCloneCmd)
 	rootCmd.AddCommand(topoCloneCmd)
 }

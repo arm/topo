@@ -75,7 +75,7 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
-		if term.IsTTY(os.Stderr) && term.IsTTY(os.Stdin) {
+		if !noPrompt(cmd) && term.IsTTY(os.Stderr) && term.IsTTY(os.Stdin) {
 			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stderr))
 		}
 
@@ -104,6 +104,7 @@ interactive prompts.`,
 }
 
 func init() {
+	addNoPromptFlag(configureCmd)
 	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
 	addComposeFileFlag(configureCmd)
 	addEnvFileFlag(configureCmd)
