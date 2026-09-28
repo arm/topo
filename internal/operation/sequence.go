@@ -13,16 +13,11 @@ func NewSequence(operations ...Operation) Sequence {
 }
 
 func (s Sequence) Run(cmdOutput io.Writer) error {
-	printHeader := term.PrintFirstHeader
-	for index, op := range s {
+	progress := term.NewProgress(cmdOutput)
+	for _, op := range s {
 		if cmdOutput != nil {
-			description := op.Description()
-			err := printHeader(cmdOutput, description)
-			if err != nil {
+			if err := progress.Header(op.Description()); err != nil {
 				return err
-			}
-			if index == 0 {
-				printHeader = term.PrintNthHeader
 			}
 		}
 		if err := op.Run(cmdOutput); err != nil {
