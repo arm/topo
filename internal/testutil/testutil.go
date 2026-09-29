@@ -13,6 +13,7 @@ import (
 	"github.com/arm/topo/internal/compose"
 	"github.com/arm/topo/internal/env"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 const TestSshTarget = "test-target"
@@ -32,6 +33,19 @@ func RequireLinuxDockerEngine(t testing.TB) {
 	require.NoError(t, err, "failed to get docker info")
 	if strings.TrimSpace(string(output)) != "linux" {
 		t.Skip("skipping test that requires linux docker engine")
+	}
+}
+
+func RequirePodman(t testing.TB) {
+	t.Helper()
+	if _, err := exec.LookPath("podman"); err != nil {
+		t.Skip("podman is not installed")
+	}
+	if _, err := exec.LookPath("docker-compose"); err != nil {
+		t.Skip("docker-compose is not installed")
+	}
+	if output, err := exec.Command("podman", "info").CombinedOutput(); err != nil {
+		t.Skipf("local Podman engine is unavailable: %v: %s", err, output)
 	}
 }
 
@@ -70,6 +84,34 @@ func RequireWriteComposeFile(t testing.TB, dir, content string) string {
 	return composePath
 }
 
+// FixPodmanInDockerQuirk avoids a Docker Desktop nested-container restriction.
+// The Podman target inherits oom_score_adj: 200, but Podman otherwise starts
+// each service with oom_score_adj: 0. Docker Desktop rejects that decrease, so
+// this adds oom_score_adj: 200 to each fixture service.
+func FixPodmanInDockerQuirk(contents string) (string, error) {
+	var definition map[string]any
+	if err := yaml.Unmarshal([]byte(contents), &definition); err != nil {
+		return "", err
+	}
+	services, ok := definition["services"].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("compose file services must be a mapping")
+	}
+	for name, value := range services {
+		service, ok := value.(map[string]any)
+		if !ok {
+			return "", fmt.Errorf("service %q must be a mapping", name)
+		}
+		service["oom_score_adj"] = 200
+	}
+
+	updatedContents, err := yaml.Marshal(definition)
+	if err != nil {
+		return "", err
+	}
+	return string(updatedContents), nil
+}
+
 func CmdWithStderr(output string, exitCode int) *exec.Cmd {
 	if runtime.GOOS == "windows" {
 		script := "$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::Error.Write($env:TOPO_CMD_OUT); exit [int]$env:TOPO_CMD_CODE"
@@ -102,7 +144,7 @@ func RequireReadFile(t testing.TB, path string) string {
 
 func RequireEnvFileValues(t testing.TB, path string, want map[string]string) {
 	t.Helper()
-	got, err := env.ReadFile(path)
+	got, err := env.ReadFiles([]string{path})
 	require.NoError(t, err, "failed to load env file %s", path)
 	require.Equal(t, want, got, "env file %s", path)
 }

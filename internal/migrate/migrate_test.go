@@ -92,7 +92,7 @@ x-topo:
 
 		require.NoError(t, err)
 		envContents := testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename))
-		assert.Contains(t, envContents, "\nFOO=\"current\"\n")
+		assert.Equal(t, "FOO=\"current\"\n", envContents)
 		assert.NotContains(t, envContents, "OTHER=")
 		assert.YAMLEq(t, want, testutil.RequireReadFile(t, path))
 	})
@@ -122,7 +122,7 @@ x-topo:
 		err := migrate.ToEnv(path)
 
 		require.NoError(t, err)
-		assert.Contains(t, testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename)), "\nFOO=\"${FOO}\"\n")
+		assert.Equal(t, "FOO=\"${FOO}\"\n", testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename)))
 		assert.YAMLEq(t, want, testutil.RequireReadFile(t, path))
 	})
 
@@ -197,7 +197,7 @@ x-topo:
 		require.NoError(t, err)
 		envContents := testutil.RequireReadFile(t, filepath.Join(root, env.DefaultFilename))
 		assert.NotContains(t, envContents, "MISSING=")
-		assert.Contains(t, envContents, "\nPRESENT=\"\"\n")
+		assert.Equal(t, "PRESENT=\"\"\n", envContents)
 		assert.YAMLEq(t, want, testutil.RequireReadFile(t, path))
 	})
 

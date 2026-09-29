@@ -67,7 +67,7 @@ func ToEnv(composeFilePath string) error {
 		return fmt.Errorf("no parameter values to migrate; only projects with referenced parameters can be migrated")
 	}
 
-	err = env.WriteFile(envFilePath, values)
+	err = env.UpdateFile(envFilePath, values, env.EncodeOptions{PreserveInterpolation: true})
 	if err != nil {
 		return fmt.Errorf("failed to save env file: %w", err)
 	}
