@@ -7,7 +7,7 @@ import (
 )
 
 // StrictResolverChain chains resolvers and ensures all required parameters have values.
-// It stops early once all required parameters are satisfied.
+// Each resolver receives only parameters not supplied by earlier resolvers.
 type StrictResolverChain struct {
 	resolvers []Resolver
 }
@@ -32,10 +32,6 @@ func (r *StrictResolverChain) Resolve(definitions []Definition, currentValues Va
 
 		maps.Copy(updates, newValues)
 		remaining = withoutValues(remaining, updates)
-
-		if allRequiredHaveValues(definitions, updates, currentValues) {
-			break
-		}
 	}
 
 	if err := validateRequiredValues(definitions, updates, currentValues); err != nil {
@@ -68,15 +64,6 @@ func withoutValues(definitions []Definition, values Values) []Definition {
 		}
 	}
 	return remaining
-}
-
-func allRequiredHaveValues(definitions []Definition, updates, currentValues Values) bool {
-	for _, definition := range definitions {
-		if definition.Required && !hasValue(definition.Name, updates, currentValues) {
-			return false
-		}
-	}
-	return true
 }
 
 func hasValue(name string, updates, currentValues Values) bool {
