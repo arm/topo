@@ -7,6 +7,7 @@ import (
 
 const (
 	Reset  = "\033[0m"
+	Bold   = "\033[1m"
 	Dim    = "\033[2;90m"
 	Gray   = "\033[90m"
 	Green  = "\033[32m"
