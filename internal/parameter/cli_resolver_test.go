@@ -9,6 +9,17 @@ import (
 )
 
 func TestCLIResolver(t *testing.T) {
+	t.Run("preserves an explicitly empty value", func(t *testing.T) {
+		resolver, err := parameter.NewCLIResolver([]string{"GREETING="})
+		require.NoError(t, err)
+		definitions := []parameter.Definition{{Name: "GREETING", Required: true}}
+
+		got, err := resolver.Resolve(definitions, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Values{"GREETING": ""}, got)
+	})
+
 	t.Run("parses valid parameters", func(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"GREETING=Hello", "PORT=8080"})
 		require.NoError(t, err)

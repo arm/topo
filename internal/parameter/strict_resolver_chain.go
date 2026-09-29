@@ -67,11 +67,11 @@ func withoutValues(definitions []Definition, values Values) []Definition {
 }
 
 func hasValue(name string, updates, currentValues Values) bool {
-	value, supplied := updates[name]
-	if !supplied {
-		value = currentValues[name]
+	if _, supplied := updates[name]; supplied {
+		return true
 	}
-	return value != ""
+	_, present := currentValues[name]
+	return present
 }
 
 func validateRequiredValues(definitions []Definition, updates, currentValues Values) error {

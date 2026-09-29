@@ -145,22 +145,24 @@ func TestStrictResolverChain(t *testing.T) {
 		assert.Empty(t, got)
 	})
 
-	t.Run("errors when the current value is empty", func(t *testing.T) {
+	t.Run("allows required parameters with empty current values", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
 		definitions := []parameter.Definition{{Name: "PORT", Required: true}}
 
-		_, err := chain.Resolve(definitions, parameter.Values{"PORT": ""})
+		got, err := chain.Resolve(definitions, parameter.Values{"PORT": ""})
 
-		assert.Equal(t, parameter.MissingParametersError(definitions), err)
+		require.NoError(t, err)
+		assert.Empty(t, got)
 	})
 
 	t.Run("empty update overrides a non-empty current value", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"PORT": ""}))
 		definitions := []parameter.Definition{{Name: "PORT", Required: true}}
 
-		_, err := chain.Resolve(definitions, parameter.Values{"PORT": "8080"})
+		got, err := chain.Resolve(definitions, parameter.Values{"PORT": "8080"})
 
-		assert.Equal(t, parameter.MissingParametersError(definitions), err)
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Values{"PORT": ""}, got)
 	})
 }
 
