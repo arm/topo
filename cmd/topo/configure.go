@@ -75,7 +75,7 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
-		if !noPrompt(cmd) && term.IsTTY(os.Stderr) && term.IsTTY(os.Stdin) {
+		if promptsEnabled(cmd) && term.IsTTY(os.Stderr) && term.IsTTY(os.Stdin) {
 			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stderr))
 		}
 

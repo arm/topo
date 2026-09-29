@@ -251,15 +251,15 @@ func migrateToEnv(cmd *cobra.Command) bool {
 const noPromptFlag = "no-prompt"
 
 func addNoPromptFlag(cmd *cobra.Command) {
-	cmd.Flags().Bool(noPromptFlag, false, "disable interactive prompts")
+	cmd.Flags().Bool(noPromptFlag, false, "disable interactive prompts for project parameters")
 }
 
-func noPrompt(cmd *cobra.Command) bool {
-	enabled, err := cmd.Flags().GetBool(noPromptFlag)
+func promptsEnabled(cmd *cobra.Command) bool {
+	disablePrompts, err := cmd.Flags().GetBool(noPromptFlag)
 	if err != nil {
 		panic(fmt.Sprintf("internal error: no-prompt flag not registered: %v", err))
 	}
-	return enabled
+	return !disablePrompts
 }
 
 func experimentalFeaturesEnabled() bool {
