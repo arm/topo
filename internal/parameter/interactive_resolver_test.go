@@ -16,12 +16,13 @@ func TestInteractiveResolver(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(input, output)
 
-		definitions := []parameter.Definition{
+		parameters := []parameter.Parameter{
 			{
 				Name:        "GREETING",
 				Description: "The greeting message",
 				Required:    true,
 				Example:     "Hello",
+				Value:       new("CURRENT GREETING HELLO!"),
 			},
 			{
 				Name:        "PORT",
@@ -30,7 +31,7 @@ func TestInteractiveResolver(t *testing.T) {
 			},
 		}
 
-		got, err := resolver.Resolve(definitions, parameter.Values{"GREETING": "CURRENT GREETING HELLO!"})
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -49,7 +50,7 @@ func TestInteractiveResolver(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(input, output)
 
-		got, err := resolver.Resolve([]parameter.Definition{{Name: "OPTIONAL"}}, nil)
+		got, err := resolver.Resolve([]parameter.Parameter{{Name: "OPTIONAL"}})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -59,11 +60,12 @@ func TestInteractiveResolver(t *testing.T) {
 		input := strings.NewReader("\n")
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(input, output)
-		definitions := []parameter.Definition{{
-			Name: "GREETING",
+		parameters := []parameter.Parameter{{
+			Name:  "GREETING",
+			Value: new("Hello"),
 		}}
 
-		got, err := resolver.Resolve(definitions, parameter.Values{"GREETING": "Hello"})
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -73,9 +75,9 @@ func TestInteractiveResolver(t *testing.T) {
 	t.Run("shows an explicitly empty current value", func(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), output)
-		currentValues := parameter.Values{"GREETING": ""}
+		parameters := []parameter.Parameter{{Name: "GREETING", Value: new("")}}
 
-		got, err := resolver.Resolve([]parameter.Definition{{Name: "GREETING"}}, currentValues)
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -85,12 +87,12 @@ func TestInteractiveResolver(t *testing.T) {
 	t.Run("re-prompts when a required value is missing", func(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n \t\nprovided\nnext\n"), output)
-		definitions := []parameter.Definition{
+		parameters := []parameter.Parameter{
 			{Name: "REQUIRED", Required: true},
 			{Name: "NEXT"},
 		}
 
-		got, err := resolver.Resolve(definitions, nil)
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Values{"REQUIRED": "provided", "NEXT": "next"}, got)

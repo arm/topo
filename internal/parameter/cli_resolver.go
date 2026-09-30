@@ -23,14 +23,15 @@ func NewCLIResolver(cliArgs []string) (*CLIResolver, error) {
 	return &CLIResolver{input: parsed}, nil
 }
 
-func (r *CLIResolver) Resolve(definitions []Definition, _ Values) (Values, error) {
+func (r *CLIResolver) Resolve(parameters []Parameter) (Values, error) {
 	values := Values{}
 	seen := make(map[string]bool, len(r.input))
 
-	for _, definition := range definitions {
-		if value, ok := r.input[definition.Name]; ok {
-			values[definition.Name] = value
-			seen[definition.Name] = true
+	for _, parameter := range parameters {
+		name := parameter.Name
+		if value, ok := r.input[name]; ok {
+			values[name] = value
+			seen[name] = true
 		}
 	}
 
