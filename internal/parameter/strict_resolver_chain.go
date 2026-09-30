@@ -16,16 +16,16 @@ func NewStrictResolverChain(resolvers ...Resolver) *StrictResolverChain {
 	return &StrictResolverChain{resolvers: resolvers}
 }
 
-func (r *StrictResolverChain) Resolve(definitions []Definition, currentValues Values) (Values, error) {
+func (r *StrictResolverChain) Resolve(parameters []Parameter) (Values, error) {
 	updates := Values{}
-	remaining := definitions
+	remaining := parameters
 
 	for _, resolver := range r.resolvers {
 		if len(remaining) == 0 {
 			break
 		}
 
-		newValues, err := resolver.Resolve(remaining, currentValues)
+		newValues, err := resolver.Resolve(remaining)
 		if err != nil {
 			return nil, err
 		}
@@ -34,51 +34,44 @@ func (r *StrictResolverChain) Resolve(definitions []Definition, currentValues Va
 		remaining = withoutValues(remaining, updates)
 	}
 
-	if err := validateRequiredValues(definitions, updates, currentValues); err != nil {
+	if err := validateRequiredValues(parameters, updates); err != nil {
 		return nil, err
 	}
 
 	return updates, nil
 }
 
-type MissingParametersError []Definition
+type MissingParametersError []Parameter
 
 func (e MissingParametersError) Error() string {
 	var msg strings.Builder
 	msg.WriteString("missing value(s) for required parameters:\n")
-	for _, definition := range e {
-		fmt.Fprintf(&msg, "  %s:\n", definition.Name)
-		fmt.Fprintf(&msg, "    description: %s\n", definition.Description)
-		if definition.Example != "" {
-			fmt.Fprintf(&msg, "    example: %s\n", definition.Example)
+	for _, parameter := range e {
+		fmt.Fprintf(&msg, "  %s:\n", parameter.Name)
+		fmt.Fprintf(&msg, "    description: %s\n", parameter.Description)
+		if parameter.Example != "" {
+			fmt.Fprintf(&msg, "    example: %s\n", parameter.Example)
 		}
 	}
 	return msg.String()
 }
 
-func withoutValues(definitions []Definition, values Values) []Definition {
-	var remaining []Definition
-	for _, definition := range definitions {
-		if _, exists := values[definition.Name]; !exists {
-			remaining = append(remaining, definition)
+func withoutValues(parameters []Parameter, values Values) []Parameter {
+	var remaining []Parameter
+	for _, parameter := range parameters {
+		if _, exists := values[parameter.Name]; !exists {
+			remaining = append(remaining, parameter)
 		}
 	}
 	return remaining
 }
 
-func hasValue(name string, updates, currentValues Values) bool {
-	if _, supplied := updates[name]; supplied {
-		return true
-	}
-	_, present := currentValues[name]
-	return present
-}
-
-func validateRequiredValues(definitions []Definition, updates, currentValues Values) error {
-	var missing []Definition
-	for _, definition := range definitions {
-		if definition.Required && !hasValue(definition.Name, updates, currentValues) {
-			missing = append(missing, definition)
+func validateRequiredValues(parameters []Parameter, updates Values) error {
+	var missing []Parameter
+	for _, parameter := range parameters {
+		_, supplied := updates[parameter.Name]
+		if !supplied && parameter.Required && parameter.Value == nil {
+			missing = append(missing, parameter)
 		}
 	}
 
