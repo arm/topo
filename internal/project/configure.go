@@ -4,32 +4,26 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
 func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, error) {
-	currentValues, err := env.CurrentValues(scope.EnvFiles)
+	parameters, err := LoadParameters(scope)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load current environment values: %w", err)
+		return nil, fmt.Errorf("failed to load parameters: %w", err)
 	}
 
-	definitions, err := LoadParameterDefinitions(scope.ComposeFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load parameter definitions: %w", err)
-	}
-
-	if len(definitions) == 0 {
+	if len(parameters) == 0 {
 		return nil, nil
 	}
 
-	if err := warnUnreferencedParameters(scope.ComposeFile, definitions); err != nil {
+	if err := warnUnreferencedParameters(scope.ComposeFile, parameters); err != nil {
 		return nil, err
 	}
 
-	values, err := resolver.Resolve(definitions, currentValues)
+	values, err := resolver.Resolve(parameters)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect parameter values: %w", err)
 	}
@@ -41,14 +35,14 @@ func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, err
 	return values, nil
 }
 
-func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Definition) error {
+func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Parameter) error {
 	model, err := readUninterpolated(composeFilePath)
 	if err != nil {
 		return err
 	}
 	referencedEnvVars := template.ExtractVariables(model, nil)
 
-	unreferencedDefinitions := slices.DeleteFunc(slices.Clone(definitions), func(d parameter.Definition) bool {
+	unreferencedDefinitions := slices.DeleteFunc(slices.Clone(definitions), func(d parameter.Parameter) bool {
 		_, referenced := referencedEnvVars[d.Name]
 		return referenced
 	})
