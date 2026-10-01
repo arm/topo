@@ -70,7 +70,7 @@ func validateRequiredValues(parameters []Parameter, updates Values) error {
 	var missing []Parameter
 	for _, parameter := range parameters {
 		_, supplied := updates[parameter.Name]
-		if !supplied && parameter.Required && parameter.Value == nil {
+		if !supplied && parameter.Required && parameter.ExistingValue == nil {
 			missing = append(missing, parameter)
 		}
 	}

@@ -26,7 +26,7 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	for i := range parameters {
 		param := &parameters[i]
 		if value, present := currentValues[param.Name]; present {
-			param.Value = &value
+			param.ExistingValue = &value
 		}
 	}
 	return parameters, nil

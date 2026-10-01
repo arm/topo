@@ -53,8 +53,8 @@ x-topo:
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
-			Name:  "TOPO_TEST_FILE_PARAMETER",
-			Value: new("configured"),
+			Name:          "TOPO_TEST_FILE_PARAMETER",
+			ExistingValue: new("configured"),
 		}}, got)
 	})
 
