@@ -28,10 +28,7 @@ func (r *InteractiveResolver) Resolve(definitions []Definition, currentValues Va
 	palette := term.NewPaletteFor(r.output)
 
 	for i, definition := range definitions {
-		prompt := formatParameterPrompt(definition, currentValues, i+1, len(definitions), palette) + "\n"
-		if i == 0 {
-			prompt = "\n" + prompt
-		}
+		prompt := fmt.Sprintf("%s\n", formatParameterPrompt(definition, currentValues, i+1, len(definitions), palette))
 		if _, err := fmt.Fprint(r.output, prompt); err != nil {
 			return nil, err
 		}
@@ -39,7 +36,7 @@ func (r *InteractiveResolver) Resolve(definitions []Definition, currentValues Va
 		_, hasCurrentValue := currentValues[definition.Name]
 
 		for {
-			if _, err := fmt.Fprint(r.output, palette.Color(term.Cyan, "> ")); err != nil {
+			if _, err := fmt.Fprintf(r.output, "%s ", palette.Color(term.Magenta, ">")); err != nil {
 				return nil, err
 			}
 			if !scanner.Scan() {
@@ -56,9 +53,12 @@ func (r *InteractiveResolver) Resolve(definitions []Definition, currentValues Va
 			if !definition.Required || hasCurrentValue {
 				break
 			}
-			if _, err := fmt.Fprintln(r.output, palette.Color(term.Red, "! A value is required.")); err != nil {
+			if _, err := fmt.Fprintf(r.output, "%s A value is required.\n", palette.Color(term.Red, "✗")); err != nil {
 				return nil, err
 			}
+		}
+		if _, err := fmt.Fprintln(r.output); err != nil {
+			return nil, err
 		}
 	}
 	return values, nil
@@ -66,32 +66,27 @@ func (r *InteractiveResolver) Resolve(definitions []Definition, currentValues Va
 
 func formatParameterPrompt(definition Definition, currentValues Values, number, total int, palette term.Palette) string {
 	currentValue, hasCurrentValue := currentValues[definition.Name]
-	question := "Set " + definition.Name + "?"
-	instruction := "Enter a value, or leave blank to skip."
-	if definition.Required {
-		instruction = "Enter a value."
-	}
-	if hasCurrentValue {
-		question = "Change " + definition.Name + "?"
-		instruction = "Enter a new value, or leave blank to keep the current value."
-	}
-
-	progress := palette.Color(term.Dim, fmt.Sprintf("(%d/%d)", number, total))
-	lines := []string{palette.Color(term.Bold, question) + " " + progress}
+	progress := palette.Color(term.Dim, fmt.Sprintf("%d/%d", number, total))
+	lines := []string{fmt.Sprintf("%s %s", progress, definition.Name), ""}
 	if description := strings.TrimSpace(definition.Description); description != "" {
-		lines = append(lines, description)
+		lines = append(lines, fmt.Sprintf("    %s", strings.ReplaceAll(description, "\n", "\n    ")), "")
 	}
 	var metadata []string
 	if hasCurrentValue {
-		metadata = append(metadata, fmt.Sprintf("%s %q", palette.Color(term.Gray, "Current:"), currentValue))
+		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Current:"), currentValue))
 	}
 	if example := strings.TrimSpace(definition.Example); example != "" {
-		metadata = append(metadata, fmt.Sprintf("%s %q", palette.Color(term.Gray, "Example:"), example))
+		indentedExample := strings.ReplaceAll(example, "\n", "\n    ")
+		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Example:"), indentedExample))
 	}
 	if len(metadata) > 0 {
-		lines = append(lines, "")
 		lines = append(lines, metadata...)
+		lines = append(lines, "")
 	}
-	lines = append(lines, "", palette.Color(term.Cyan, instruction))
+	if hasCurrentValue {
+		lines = append(lines, fmt.Sprintf("%s Leave empty to keep the current value.", palette.Color(term.Blue, "i")))
+	} else if !definition.Required {
+		lines = append(lines, fmt.Sprintf("%s Leave empty to skip.", palette.Color(term.Blue, "i")))
+	}
 	return strings.Join(lines, "\n")
 }

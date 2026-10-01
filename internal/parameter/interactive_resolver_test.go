@@ -39,9 +39,9 @@ func TestInteractiveResolver(t *testing.T) {
 		}
 		assert.Equal(t, want, got)
 		assert.Contains(t, output.String(), "The greeting message")
-		assert.Contains(t, output.String(), `Example: "Hello"`)
-		assert.Contains(t, output.String(), "Change GREETING? (1/2)")
-		assert.Contains(t, output.String(), "Enter a new value, or leave blank to keep the current value.")
+		assert.Contains(t, output.String(), "Example: \"Hello\"")
+		assert.Contains(t, output.String(), "1/2 GREETING")
+		assert.Contains(t, output.String(), "i Leave empty to keep the current value.")
 	})
 
 	t.Run("skips empty inputs", func(t *testing.T) {
@@ -94,6 +94,6 @@ func TestInteractiveResolver(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Values{"REQUIRED": "provided", "NEXT": "next"}, got)
-		assert.Equal(t, 2, strings.Count(output.String(), "! A value is required."))
+		assert.Equal(t, 2, strings.Count(output.String(), "✗ A value is required."))
 	})
 }
