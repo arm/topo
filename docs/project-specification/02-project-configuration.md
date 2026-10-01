@@ -10,7 +10,7 @@ description: Define project parameters and reference them through environment va
 
 [Topo Projects](../introduction/glossary.md#topo-project) support configuration through project parameters:
 
-- [`x-topo.parameters`](../introduction/glossary.md#x-topo) defines parameter metadata (description, whether required, examples, and advisory hints)
+- [`x-topo.parameters`](../introduction/glossary.md#x-topo) defines parameter metadata (descriptions, examples, and advisory hints)
 - Compose environment variable references connect parameter names to their uses in the project
 - `topo configure` saves parameter values in `.env.topo` without rewriting the Compose file
 - When a project parameter is used during an image build, its value is passed through standard Compose `build.args` and consumed by the Dockerfile as an `ARG`
@@ -41,7 +41,6 @@ x-topo:
     GREETING:
       description: |
         The greeting message to display in the container
-      required: true
       example: "Hello from Arm SME"
 ```
 
@@ -77,6 +76,16 @@ docker compose --env-file .env.topo up --build
 ```
 
 Parameter names must match their environment variable references. If the project defines parameters but none are referenced, `topo configure` rejects the project as using the legacy format.
+
+### Required and defaulted parameters
+
+Topo derives which parameters are required or have defaults from [environment variable interpolation](https://docs.docker.com/reference/compose-file/interpolation/) in the Project's compose file.
+
+- `${GREETING:-Hello, World}` provides a fallback when the variable is unset or empty. Users can skip this parameter during configuration.
+- `${GREETING?Set GREETING}` requires the variable to be set when Compose interpolates the file.
+- `${GREETING:?Set GREETING}` requires a non-empty value when Compose interpolates the file.
+
+If a parameter has a required reference and no current value, Topo requires a value during configuration. Existing values satisfy this check, including explicitly empty values.
 
 ## Migrate a legacy configured project for use with Topo 14.0.0
 

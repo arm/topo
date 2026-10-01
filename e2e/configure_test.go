@@ -91,6 +91,5 @@ x-topo:
   parameters:
     ` + parameterName + `:
       description: Name to greet
-      required: true
 `
 }

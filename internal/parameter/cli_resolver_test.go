@@ -12,7 +12,7 @@ func TestCLIResolver(t *testing.T) {
 	t.Run("preserves an explicitly empty value", func(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"GREETING="})
 		require.NoError(t, err)
-		parameters := []parameter.Parameter{{Name: "GREETING", Required: true}}
+		parameters := []parameter.Parameter{{Name: "GREETING"}}
 
 		got, err := resolver.Resolve(parameters)
 
@@ -25,8 +25,8 @@ func TestCLIResolver(t *testing.T) {
 		require.NoError(t, err)
 
 		parameters := []parameter.Parameter{
-			{Name: "GREETING", Required: true},
-			{Name: "PORT", Required: false},
+			{Name: "GREETING"},
+			{Name: "PORT"},
 		}
 
 		got, err := resolver.Resolve(parameters)
@@ -44,7 +44,7 @@ func TestCLIResolver(t *testing.T) {
 		require.NoError(t, err)
 
 		parameters := []parameter.Parameter{
-			{Name: "CONNECTION_STRING", Required: true},
+			{Name: "CONNECTION_STRING"},
 		}
 
 		got, err := resolver.Resolve(parameters)
@@ -68,7 +68,7 @@ func TestCLIResolver(t *testing.T) {
 		require.NoError(t, err)
 
 		parameters := []parameter.Parameter{
-			{Name: "GREETING", Required: true},
+			{Name: "GREETING"},
 		}
 
 		_, err = resolver.Resolve(parameters)
@@ -82,9 +82,9 @@ func TestCLIResolver(t *testing.T) {
 		require.NoError(t, err)
 
 		parameters := []parameter.Parameter{
-			{Name: "NAME", Required: true},
-			{Name: "GREETING", Required: true},
-			{Name: "PORT", Required: true},
+			{Name: "NAME"},
+			{Name: "GREETING"},
+			{Name: "PORT"},
 		}
 
 		got, err := resolver.Resolve(parameters)

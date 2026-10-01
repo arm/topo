@@ -20,14 +20,12 @@ func TestInteractiveResolver(t *testing.T) {
 			{
 				Name:          "GREETING",
 				Description:   "The greeting message",
-				Required:      true,
 				Example:       "Hello",
 				ExistingValue: new("CURRENT GREETING HELLO!"),
 			},
 			{
 				Name:        "PORT",
 				Description: "Port number",
-				Required:    false,
 			},
 		}
 
@@ -84,11 +82,44 @@ func TestInteractiveResolver(t *testing.T) {
 		assert.Contains(t, output.String(), `Current: ""`)
 	})
 
+	t.Run("shows paths and complete usage expressions", func(t *testing.T) {
+		output := &bytes.Buffer{}
+		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), output)
+		parameters := []parameter.Parameter{{
+			Name: "GREETING",
+			References: []parameter.Reference{
+				{Path: "services.app.build.args.GREETING", Expression: "${GREETING:-hello}/${GREETING:-hi}"},
+				{Path: "services.app.command[1]", Expression: "prefix-${GREETING:-${OTHER}}"},
+			},
+		}}
+
+		_, err := resolver.Resolve(parameters)
+
+		require.NoError(t, err)
+		assert.Contains(t, output.String(), `References:
+      services.app.build.args.GREETING: "${GREETING:-hello}/${GREETING:-hi}"
+      services.app.command[1]: "prefix-${GREETING:-${OTHER}}"`)
+	})
+
+	t.Run("allows skipping parameters with no required references", func(t *testing.T) {
+		output := &bytes.Buffer{}
+		resolver := parameter.NewInteractiveResolver(strings.NewReader("\nnext\n"), output)
+		parameters := []parameter.Parameter{
+			{Name: "GREETING", References: []parameter.Reference{{Expression: "${GREETING:-hello}/${GREETING:-${OTHER:?required}}"}}},
+			{Name: "NEXT"},
+		}
+
+		got, err := resolver.Resolve(parameters)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Values{"NEXT": "next"}, got)
+	})
+
 	t.Run("re-prompts when a required value is missing", func(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n \t\nprovided\nnext\n"), output)
 		parameters := []parameter.Parameter{
-			{Name: "REQUIRED", Required: true},
+			{Name: "REQUIRED", References: []parameter.Reference{{Expression: "${REQUIRED:?required}"}}},
 			{Name: "NEXT"},
 		}
 

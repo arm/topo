@@ -28,7 +28,7 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Values, error) {
 	palette := term.NewPaletteFor(r.output)
 
 	for i, parameter := range parameters {
-		needsValue := parameter.Required && parameter.ExistingValue == nil
+		needsValue := parameter.needsValue()
 		prompt := fmt.Sprintf("%s\n", formatParameterPrompt(parameter, needsValue, i+1, len(parameters), palette))
 		if _, err := fmt.Fprint(r.output, prompt); err != nil {
 			return nil, err
@@ -76,6 +76,13 @@ func formatParameterPrompt(parameter Parameter, needsValue bool, number, total i
 	if example := strings.TrimSpace(parameter.Example); example != "" {
 		indentedExample := strings.ReplaceAll(example, "\n", "\n    ")
 		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Example:"), indentedExample))
+	}
+	if len(parameter.References) > 0 {
+		metadata = append(metadata, "    "+palette.Color(term.Dim, "References:"))
+		for _, reference := range parameter.References {
+			pathLabel := palette.Color(term.Magenta, reference.Path+":")
+			metadata = append(metadata, fmt.Sprintf("      %s %q", pathLabel, reference.Expression))
+		}
 	}
 	if len(metadata) > 0 {
 		lines = append(lines, metadata...)

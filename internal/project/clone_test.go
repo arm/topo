@@ -62,15 +62,14 @@ services:
   app:
     build:
       args:
-        GREETING: ${GREETING}
+        GREETING: ${GREETING:?required}
   app-2:
     build:
       args:
         GREETING: "goodbye!"
 x-topo:
   parameters:
-    GREETING:
-      required: true
+    GREETING: {}
 `
 		mockSource := mockSourceWithContent(t, map[string]string{
 			compose.DefaultFileName(): composeFileContents,
@@ -94,12 +93,11 @@ services:
   app:
     build:
       args:
-        GREETING: ${GREETING}
+        GREETING: ${GREETING:?required}
 x-topo:
   parameters:
     GREETING:
       description: "Greeting"
-      required: true
 `)
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), false)
@@ -174,12 +172,11 @@ services:
   app:
     build:
       args:
-        GREETING: ${GREETING}
+        GREETING: ${GREETING:?required}
 x-topo:
   parameters:
     GREETING:
       description: "Greeting"
-      required: true
 `,
 		})
 

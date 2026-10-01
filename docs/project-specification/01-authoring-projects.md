@@ -27,9 +27,9 @@ services:
     platform: linux/arm64
     build:
       context: .
-      # (Optional) defaults for plain docker compose; Implementations may override these from x-topo parameters
+      # Use the fallback when GREETING is unset or empty.
       args:
-        GREETING: "Hello, World"
+        GREETING: "${GREETING:-Hello, World}"
 
 x-topo:
   name: "hello-world"
@@ -40,7 +40,6 @@ x-topo:
   parameters:
     GREETING:
       description: "The greeting message to display"
-      required: true
       example: "Hello from Arm!"
 ```
 
@@ -76,7 +75,6 @@ x-topo:
   parameters: # Optional
     <PARAMETER_NAME>:
       description: string # Optional
-      required: boolean # Optional
       example: string # Optional
 ```
 

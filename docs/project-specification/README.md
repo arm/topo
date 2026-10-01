@@ -24,7 +24,7 @@ services:
     build:
       context: .
       args:
-        GREETING: "Hello, World"
+        GREETING: "${GREETING:-Hello, World}"
 
 x-topo:
   name: "hello-world"
@@ -33,7 +33,6 @@ x-topo:
   parameters:
     GREETING:
       description: "Message shown by the app"
-      required: true
       example: "Hello from Arm"
 ```
 

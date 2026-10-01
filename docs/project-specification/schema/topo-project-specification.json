@@ -44,7 +44,7 @@
                   },
                   "required": {
                     "type": "boolean",
-                    "description": "If `true`, Implementations must require this parameter to be set when configuring the Project."
+                    "description": "Deprecated. Topo versions >13.0.0 ignore this property."
                   },
                   "default": {
                     "type": "string",
