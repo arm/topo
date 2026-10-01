@@ -88,7 +88,6 @@ func TestDeploy(t *testing.T) {
 
 	t.Run("Podman", func(t *testing.T) {
 		testutil.RequirePodman(t)
-		t.Setenv("TOPO_EXPERIMENTAL_FEATURES", "1")
 		container := testutil.StartContainer(
 			t,
 			testutil.PodmanContainer.WithPublishedPorts("8080"),
