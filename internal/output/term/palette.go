@@ -27,7 +27,7 @@ func NewPalette(enabled bool) Palette {
 
 func NewPaletteFor(w io.Writer) Palette {
 	allowColor := os.Getenv("NO_COLOR") == ""
-	return NewPalette(allowColor && IsTTY(w))
+	return NewPalette(allowColor && IsTerminal(w))
 }
 
 func (p Palette) Color(code, text string) string {
