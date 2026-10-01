@@ -28,7 +28,7 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Values, error) {
 	palette := term.NewPaletteFor(r.output)
 
 	for i, parameter := range parameters {
-		needsValue := parameter.Required && parameter.Value == nil
+		needsValue := parameter.Required && parameter.ExistingValue == nil
 		prompt := fmt.Sprintf("%s\n", formatParameterPrompt(parameter, needsValue, i+1, len(parameters), palette))
 		if _, err := fmt.Fprint(r.output, prompt); err != nil {
 			return nil, err
@@ -70,8 +70,8 @@ func formatParameterPrompt(parameter Parameter, needsValue bool, number, total i
 		lines = append(lines, fmt.Sprintf("    %s", strings.ReplaceAll(description, "\n", "\n    ")), "")
 	}
 	var metadata []string
-	if parameter.Value != nil {
-		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Current:"), *parameter.Value))
+	if parameter.ExistingValue != nil {
+		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Current:"), *parameter.ExistingValue))
 	}
 	if example := strings.TrimSpace(parameter.Example); example != "" {
 		indentedExample := strings.ReplaceAll(example, "\n", "\n    ")
@@ -81,7 +81,7 @@ func formatParameterPrompt(parameter Parameter, needsValue bool, number, total i
 		lines = append(lines, metadata...)
 		lines = append(lines, "")
 	}
-	if parameter.Value != nil {
+	if parameter.ExistingValue != nil {
 		lines = append(lines, fmt.Sprintf("%s Leave empty to keep the current value.", palette.Color(term.Blue, "i")))
 	} else if !needsValue {
 		lines = append(lines, fmt.Sprintf("%s Leave empty to skip.", palette.Color(term.Blue, "i")))

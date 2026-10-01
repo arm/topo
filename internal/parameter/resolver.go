@@ -1,11 +1,11 @@
 package parameter
 
 type Parameter struct {
-	Name        string
-	Description string
-	Required    bool
-	Example     string
-	Value       *string
+	Name          string
+	Description   string
+	Required      bool
+	Example       string
+	ExistingValue *string
 }
 
 type Values map[string]string

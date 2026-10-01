@@ -18,11 +18,11 @@ func TestInteractiveResolver(t *testing.T) {
 
 		parameters := []parameter.Parameter{
 			{
-				Name:        "GREETING",
-				Description: "The greeting message",
-				Required:    true,
-				Example:     "Hello",
-				Value:       new("CURRENT GREETING HELLO!"),
+				Name:          "GREETING",
+				Description:   "The greeting message",
+				Required:      true,
+				Example:       "Hello",
+				ExistingValue: new("CURRENT GREETING HELLO!"),
 			},
 			{
 				Name:        "PORT",
@@ -61,8 +61,8 @@ func TestInteractiveResolver(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(input, output)
 		parameters := []parameter.Parameter{{
-			Name:  "GREETING",
-			Value: new("Hello"),
+			Name:          "GREETING",
+			ExistingValue: new("Hello"),
 		}}
 
 		got, err := resolver.Resolve(parameters)
@@ -75,7 +75,7 @@ func TestInteractiveResolver(t *testing.T) {
 	t.Run("shows an explicitly empty current value", func(t *testing.T) {
 		output := &bytes.Buffer{}
 		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), output)
-		parameters := []parameter.Parameter{{Name: "GREETING", Value: new("")}}
+		parameters := []parameter.Parameter{{Name: "GREETING", ExistingValue: new("")}}
 
 		got, err := resolver.Resolve(parameters)
 

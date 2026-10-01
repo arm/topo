@@ -112,11 +112,11 @@ func TestStrictResolverChain(t *testing.T) {
 		all := []parameter.Parameter{
 			{Name: "GREETING", Required: true},
 			{Name: "NAME", Required: false},
-			{Name: "PORT", Value: new("8080"), Required: false},
+			{Name: "PORT", ExistingValue: new("8080"), Required: false},
 		}
 		remaining := []parameter.Parameter{
 			{Name: "NAME", Required: false},
-			{Name: "PORT", Value: new("8080"), Required: false},
+			{Name: "PORT", ExistingValue: new("8080"), Required: false},
 		}
 		resolver1.On("Resolve", all).Return(parameter.Values{"GREETING": "Hello"}, nil)
 		resolver2.On("Resolve", remaining).Return(parameter.Values{"NAME": "World"}, nil)
@@ -136,7 +136,7 @@ func TestStrictResolverChain(t *testing.T) {
 
 	t.Run("allows required parameters with non-empty current values", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
-		parameters := []parameter.Parameter{{Name: "PORT", Value: new("8080"), Required: true}}
+		parameters := []parameter.Parameter{{Name: "PORT", ExistingValue: new("8080"), Required: true}}
 
 		got, err := chain.Resolve(parameters)
 
@@ -146,7 +146,7 @@ func TestStrictResolverChain(t *testing.T) {
 
 	t.Run("allows required parameters with empty current values", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
-		parameters := []parameter.Parameter{{Name: "PORT", Value: new(""), Required: true}}
+		parameters := []parameter.Parameter{{Name: "PORT", ExistingValue: new(""), Required: true}}
 
 		got, err := chain.Resolve(parameters)
 
@@ -156,7 +156,7 @@ func TestStrictResolverChain(t *testing.T) {
 
 	t.Run("empty update overrides a non-empty current value", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"PORT": ""}))
-		parameters := []parameter.Parameter{{Name: "PORT", Value: new("8080"), Required: true}}
+		parameters := []parameter.Parameter{{Name: "PORT", ExistingValue: new("8080"), Required: true}}
 
 		got, err := chain.Resolve(parameters)
 
