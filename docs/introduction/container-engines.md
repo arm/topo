@@ -97,27 +97,10 @@ Install [Podman](https://podman.io/docs/installation) so that the SSH user can r
 
 Topo queries the target Podman API from the host through a temporary SSH tunnel. Being able to run `podman` on the target is not enough: its API socket must also be functional and accessible to the SSH user.
 
-For rootless Podman on a systemd-based target, log in **as the SSH user** and run:
+For rootless Podman on systemd, run as the SSH user (or the local user on the host):
 
 ```sh
-systemctl --user start podman.socket
+systemctl --user enable --now podman.socket
 ```
 
-This enables socket activation of the Podman API service. To enable the socket on future user-session starts, use `systemctl --user enable podman.socket`. Use the same setup on a Linux host running rootless Podman.
-
-If `topo health --engine podman --target user@target.example` reports:
-
-```text
-✗ Podman API (host-side Podman could not query the target API through topo’s temporary SSH tunnel)
-```
-
-Check the socket on the target as the SSH user:
-
-```sh
-systemctl --user status podman.socket
-podman info --format '{{.Host.RemoteSocket.Path}}'
-```
-
-A typical rootless socket path is `/run/user/1000/podman/podman.sock`; the user ID can differ. Topo discovers the path rather than assuming UID 1000. Ensure the reported socket is functional and accessible to that user, then rerun the health check.
-
-For systems without systemd, rootful Podman, or keeping a user service available after logout, follow the [Podman API service documentation](https://docs.podman.io/en/latest/markdown/podman-system-service.1.html). Do not make the socket world-accessible: API access grants full control of that user's containers. The target SSH server must also allow the forwarding used by Topo's tunnel.
+For other setups and keeping the service available after logout, see the [Podman API service documentation](https://docs.podman.io/en/latest/markdown/podman-system-service.1.html). Keep the socket restricted to that user, and ensure the target SSH server allows forwarding.
