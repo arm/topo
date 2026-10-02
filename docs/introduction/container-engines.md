@@ -77,7 +77,7 @@ Podman deployments do not support Compose services with a `runtime:` setting, in
 
 ### Install Podman on the host
 
-Install [Podman](https://podman.io/docs/installation) and Docker Compose as a `docker-compose` executable on `PATH`. Topo uses this provider through `podman compose`; `podman-compose` is not a substitute.
+Install [Podman](https://podman.io/docs/installation) and configure `podman compose` to use Docker Compose. Topo uses Podman’s configured Compose provider. `podman-compose` is not a substitute. See [Podman’s Compose configuration](https://docs.podman.io/en/latest/markdown/podman-compose.1.html).
 
 On macOS and Windows, initialise and start a [Podman machine](https://docs.podman.io/en/latest/markdown/podman-machine.1.html). On Linux, ensure the host Podman API socket is running using the [socket setup below](#enable-the-podman-api-socket).
 
