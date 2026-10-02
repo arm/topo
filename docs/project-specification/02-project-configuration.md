@@ -82,8 +82,8 @@ Parameter names must match their environment variable references. If the project
 Topo derives which parameters are required or have defaults from [environment variable interpolation](https://docs.docker.com/reference/compose-file/interpolation/) in the Project's compose file.
 
 - `${GREETING:-Hello, World}` provides a fallback when the variable is unset or empty. Users can skip this parameter during configuration.
-- `${GREETING?Set GREETING}` requires the variable to be set when Compose interpolates the file.
-- `${GREETING:?Set GREETING}` requires a non-empty value when Compose interpolates the file.
+- `${GREETING?Set GREETING}` requires the variable to be set.
+- `${GREETING:?Set GREETING}` requires a non-empty value.
 
 If a parameter has a required reference and no current value, Topo requires a value during configuration. Existing values satisfy this check, including explicitly empty values.
 
