@@ -10,8 +10,6 @@ import (
 	"github.com/arm/topo/internal/project"
 )
 
-const composeProvider = "docker-compose"
-
 func Command(ctx context.Context, socket Socket, args ...string) *exec.Cmd {
 	// #nosec G702 -- Podman arguments are passed directly, not interpreted by a shell.
 	cmd := exec.CommandContext(ctx, "podman", args...)
@@ -39,10 +37,10 @@ func ComposeCommand(ctx context.Context, socket Socket, scope project.Scope, arg
 }
 
 // ComposeRawCommand creates a project-independent Compose command without endpoint configuration.
+// Podman selects the provider using its configuration and inherited environment.
 func ComposeRawCommand(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "podman", append([]string{"compose"}, args...)...)
 	cmd.Env = append(os.Environ(),
-		"PODMAN_COMPOSE_PROVIDER="+composeProvider,
 		"PODMAN_COMPOSE_WARNING_LOGS=false",
 	)
 	return cmd
@@ -58,7 +56,6 @@ func composeCommand(ctx context.Context, socket Socket, environment []string, ar
 	cmd := exec.CommandContext(ctx, "podman", args...)
 	cmd.Env = append(os.Environ(), environment...)
 	cmd.Env = append(cmd.Env,
-		"PODMAN_COMPOSE_PROVIDER="+composeProvider,
 		"PODMAN_COMPOSE_WARNING_LOGS=false",
 	)
 	var err error
