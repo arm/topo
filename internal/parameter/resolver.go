@@ -1,14 +1,15 @@
 package parameter
 
-type Definition struct {
-	Name        string
-	Description string
-	Required    bool
-	Example     string
+type Parameter struct {
+	Name          string
+	Description   string
+	Required      bool
+	Example       string
+	ExistingValue *string
 }
 
 type Values map[string]string
 
 type Resolver interface {
-	Resolve(definitions []Definition, currentValues Values) (Values, error)
+	Resolve(parameters []Parameter) (Values, error)
 }
