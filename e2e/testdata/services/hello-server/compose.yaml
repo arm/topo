@@ -18,5 +18,4 @@ x-topo:
   parameters:
     NAME:
       description: "The name to greet in the response"
-      required: false
       example: "Topo"

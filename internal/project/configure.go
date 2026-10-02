@@ -2,11 +2,9 @@ package project
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
-	"github.com/compose-spec/compose-go/v2/template"
 )
 
 func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, error) {
@@ -19,8 +17,11 @@ func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, err
 		return nil, nil
 	}
 
-	if err := warnUnreferencedParameters(scope.ComposeFile, parameters); err != nil {
-		return nil, err
+	for i := range parameters {
+		param := &parameters[i]
+		if len(param.References) == 0 {
+			logger.Warn(fmt.Sprintf("parameter %q is not referenced through an environment variable in the Compose file; configuring it will have no effect", param.Name))
+		}
 	}
 
 	values, err := resolver.Resolve(parameters)
@@ -33,23 +34,4 @@ func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, err
 	}
 
 	return values, nil
-}
-
-func warnUnreferencedParameters(composeFilePath string, definitions []parameter.Parameter) error {
-	model, err := readUninterpolated(composeFilePath)
-	if err != nil {
-		return err
-	}
-	referencedEnvVars := template.ExtractVariables(model, nil)
-
-	unreferencedDefinitions := slices.DeleteFunc(slices.Clone(definitions), func(d parameter.Parameter) bool {
-		_, referenced := referencedEnvVars[d.Name]
-		return referenced
-	})
-
-	for _, param := range unreferencedDefinitions {
-		logger.Warn(fmt.Sprintf("parameter %q is not referenced through an environment variable in the Compose file; configuring it will have no effect", param.Name))
-	}
-
-	return nil
 }

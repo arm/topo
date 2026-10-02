@@ -44,11 +44,11 @@
                   },
                   "required": {
                     "type": "boolean",
-                    "description": "If `true`, Implementations must require this parameter to be set when configuring the Project."
+                    "description": "Deprecated. Topo versions >13.0.0 ignore this property. Use required env var interpolation in your Project's compose file instead e.g. `${REQUIRED_PARAMETER:?error}`."
                   },
                   "default": {
                     "type": "string",
-                    "description": "Deprecated. Topo versions >11.0.1 ignore this property."
+                    "description": "Deprecated. Topo versions >11.0.1 ignore this property. Use defaulted env var interpolation in your Project's compose file instead e.g. `${DEFAULTED_PARAMETER:-default}`."
                   },
                   "example": {
                     "type": "string",
