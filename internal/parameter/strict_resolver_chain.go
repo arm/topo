@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// StrictResolverChain chains resolvers and ensures all required parameters have values.
+// StrictResolverChain chains resolvers and validates parameter values against their references.
 // Each resolver receives only parameters not supplied by earlier resolvers.
 type StrictResolverChain struct {
 	resolvers []Resolver
@@ -41,19 +41,32 @@ func (r *StrictResolverChain) Resolve(parameters []Parameter) (Values, error) {
 	return updates, nil
 }
 
-type MissingParametersError []Parameter
+type validationError struct {
+	Parameter Parameter
+	Err       error
+}
 
-func (e MissingParametersError) Error() string {
+type ValidationErrorRollup []validationError
+
+func (e ValidationErrorRollup) Error() string {
 	var msg strings.Builder
-	msg.WriteString("missing value(s) for required parameters:\n")
-	for _, parameter := range e {
-		fmt.Fprintf(&msg, "  %s:\n", parameter.Name)
-		fmt.Fprintf(&msg, "    description: %s\n", parameter.Description)
-		if parameter.Example != "" {
-			fmt.Fprintf(&msg, "    example: %s\n", parameter.Example)
+	msg.WriteString("parameter validation failed:\n")
+	for _, ve := range e {
+		parameter := ve.Parameter
+		fmt.Fprintf(&msg, "%s:\n", parameter.Name)
+		if parameter.Description != "" {
+			fmt.Fprintf(&msg, "  description: %s\n", parameter.Description)
 		}
+		if parameter.Example != "" {
+			fmt.Fprintf(&msg, "  example: %s\n", parameter.Example)
+		}
+		fmt.Fprintf(&msg, "  references:\n")
+		for _, ref := range parameter.References {
+			fmt.Fprintf(&msg, "    - %s: %s\n", ref.Path, ref.Expression)
+		}
+		fmt.Fprintf(&msg, "  reason: %v\n", ve.Err)
 	}
-	return msg.String()
+	return strings.TrimSpace(msg.String())
 }
 
 func withoutValues(parameters []Parameter, values Values) []Parameter {
@@ -67,16 +80,21 @@ func withoutValues(parameters []Parameter, values Values) []Parameter {
 }
 
 func validateRequiredValues(parameters []Parameter, updates Values) error {
-	var missing []Parameter
+	var errs []validationError
 	for _, parameter := range parameters {
-		_, supplied := updates[parameter.Name]
-		if !supplied && parameter.needsValue() {
-			missing = append(missing, parameter)
+		value := parameter.ExistingValue
+		newValue, supplied := updates[parameter.Name]
+		if supplied {
+			value = &newValue
+		}
+
+		if err := parameter.AssertSatisfiedBy(value); err != nil {
+			errs = append(errs, validationError{Parameter: parameter, Err: err})
 		}
 	}
 
-	if len(missing) > 0 {
-		return MissingParametersError(missing)
+	if len(errs) > 0 {
+		return ValidationErrorRollup(errs)
 	}
 
 	return nil
