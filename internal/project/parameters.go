@@ -4,12 +4,35 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
 	"gopkg.in/yaml.v3"
 )
 
-func LoadParameterDefinitions(composeFilePath string) ([]parameter.Definition, error) {
+func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
+	parameters, err := loadParameterMetadata(scope.ComposeFile)
+	if err != nil {
+		return nil, err
+	}
+	if len(parameters) == 0 {
+		return parameters, nil
+	}
+
+	currentValues, err := env.CurrentValues(scope.EnvFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load current environment values: %w", err)
+	}
+	for i := range parameters {
+		param := &parameters[i]
+		if value, present := currentValues[param.Name]; present {
+			param.ExistingValue = &value
+		}
+	}
+	return parameters, nil
+}
+
+func loadParameterMetadata(composeFilePath string) ([]parameter.Parameter, error) {
 	reader, err := os.Open(composeFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open compose file: %w", err)
@@ -27,9 +50,9 @@ func LoadParameterDefinitions(composeFilePath string) ([]parameter.Definition, e
 		raw.Metadata.Parameters = raw.Metadata.Args
 	}
 
-	definitions := make([]parameter.Definition, 0, len(raw.Metadata.Parameters))
+	parameters := make([]parameter.Parameter, 0, len(raw.Metadata.Parameters))
 	for name, param := range raw.Metadata.Parameters {
-		definitions = append(definitions, parameter.Definition{
+		parameters = append(parameters, parameter.Parameter{
 			Name:        name,
 			Description: param.Description,
 			Required:    param.Required,
@@ -37,7 +60,7 @@ func LoadParameterDefinitions(composeFilePath string) ([]parameter.Definition, e
 		})
 	}
 
-	return definitions, nil
+	return parameters, nil
 }
 
 type parameterFile struct {

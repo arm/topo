@@ -12,9 +12,9 @@ func TestCLIResolver(t *testing.T) {
 	t.Run("preserves an explicitly empty value", func(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"GREETING="})
 		require.NoError(t, err)
-		definitions := []parameter.Definition{{Name: "GREETING", Required: true}}
+		parameters := []parameter.Parameter{{Name: "GREETING", Required: true}}
 
-		got, err := resolver.Resolve(definitions, nil)
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Values{"GREETING": ""}, got)
@@ -24,12 +24,12 @@ func TestCLIResolver(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"GREETING=Hello", "PORT=8080"})
 		require.NoError(t, err)
 
-		definitions := []parameter.Definition{
+		parameters := []parameter.Parameter{
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: false},
 		}
 
-		got, err := resolver.Resolve(definitions, nil)
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -43,11 +43,11 @@ func TestCLIResolver(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"CONNECTION_STRING=host=localhost;port=5432"})
 		require.NoError(t, err)
 
-		definitions := []parameter.Definition{
+		parameters := []parameter.Parameter{
 			{Name: "CONNECTION_STRING", Required: true},
 		}
 
-		got, err := resolver.Resolve(definitions, nil)
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		want := parameter.Values{
@@ -67,11 +67,11 @@ func TestCLIResolver(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"UNKNOWN=value"})
 		require.NoError(t, err)
 
-		definitions := []parameter.Definition{
+		parameters := []parameter.Parameter{
 			{Name: "GREETING", Required: true},
 		}
 
-		_, err = resolver.Resolve(definitions, nil)
+		_, err = resolver.Resolve(parameters)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unknown parameter: UNKNOWN")
@@ -81,13 +81,13 @@ func TestCLIResolver(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"PORT=8080", "GREETING=Hello", "NAME=Topo"})
 		require.NoError(t, err)
 
-		definitions := []parameter.Definition{
+		parameters := []parameter.Parameter{
 			{Name: "NAME", Required: true},
 			{Name: "GREETING", Required: true},
 			{Name: "PORT", Required: true},
 		}
 
-		got, err := resolver.Resolve(definitions, nil)
+		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
 		want := parameter.Values{
