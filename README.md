@@ -63,20 +63,22 @@ Not sure what these terms mean? The [glossary](docs/introduction/glossary.md) de
 
 **Host machine** (where you run `topo`):
 
-- [Docker](#install-a-container-engine)
+- [Docker or Podman](#install-a-container-engine)
 - OpenSSH Client
 
 **Target machine** (the remote Arm system):
 
 - Reachable with SSH
 - Linux on ARM64
-- [Docker](#install-a-container-engine)
+- [Docker or Podman](#install-a-container-engine)
 
 The host and target can be the same system. If you're working directly on an Arm Linux system, use `--target localhost`.
 
 ### Install a Container Engine
 
-See [Install Docker for Topo](docs/introduction/container-engines.md) for supported installation methods and verification steps.
+See [Install a container engine for Topo](docs/introduction/container-engines.md) for Docker and Podman setup and verification steps.
+
+Docker is the default. To use Podman, pass set `TOPO_ENGINE=podman` or pass `--engine podman` to any command which uses the container engine. See the [Podman setup guide](docs/introduction/container-engines.md#podman), especially the target API socket requirement.
 
 ### Linux and macOS
 

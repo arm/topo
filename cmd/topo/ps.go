@@ -108,8 +108,6 @@ func init() {
 	addComposeFileFlag(topoPsCmd)
 	addEnvFileFlag(topoPsCmd)
 	topoPsCmd.Flags().BoolP("all", "a", false, "show all containers, including stopped")
-	if experimentalFeaturesEnabled() {
-		addEngineFlag(topoPsCmd)
-	}
+	addEngineFlag(topoPsCmd)
 	rootCmd.AddCommand(topoPsCmd)
 }

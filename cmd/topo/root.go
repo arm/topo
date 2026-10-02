@@ -262,6 +262,7 @@ func promptsEnabled(cmd *cobra.Command) bool {
 	return !disablePrompts
 }
 
+//nolint:unused // Reserved for experimental feature gates.
 func experimentalFeaturesEnabled() bool {
 	const experimentalFeaturesEnvVar = "TOPO_EXPERIMENTAL_FEATURES"
 	return env.IsVarTruthy(experimentalFeaturesEnvVar)

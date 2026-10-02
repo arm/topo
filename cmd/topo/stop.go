@@ -56,8 +56,6 @@ func init() {
 	addTargetFlag(topoStopCmd)
 	addComposeFileFlag(topoStopCmd)
 	addEnvFileFlag(topoStopCmd)
-	if experimentalFeaturesEnabled() {
-		addEngineFlag(topoStopCmd)
-	}
+	addEngineFlag(topoStopCmd)
 	rootCmd.AddCommand(topoStopCmd)
 }

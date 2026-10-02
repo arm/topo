@@ -204,9 +204,7 @@ func init() {
 	addTargetFlag(deployCmd)
 	addComposeFileFlag(deployCmd)
 	addEnvFileFlag(deployCmd)
-	if experimentalFeaturesEnabled() {
-		addEngineFlag(deployCmd)
-	}
+	addEngineFlag(deployCmd)
 	deployCmd.Flags().StringVarP(&registryPort, "registry-port", "p", docker.DefaultRegistryPort, fmt.Sprintf("registry and SSH tunnel port (can also be set via %s env var)", portEnvVar))
 	deployCmd.Flags().BoolVar(&noRegistry, "no-registry", false, "use full-image save/load transfer instead of delta-optimised registry transfer; for environments where registry transfer or reverse SSH forwarding is unavailable")
 	deployCmd.Flags().BoolVar(&skipRemotePortCheck, "skip-remote-port-check", false, fmt.Sprintf("skip checking whether the SSH tunnel port is exposed on the remote network (can also be set via %s env var)", skipRemotePortCheckEnvVar))

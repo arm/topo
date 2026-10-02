@@ -62,9 +62,7 @@ var healthCmd = &cobra.Command{
 func init() {
 	addTargetFlag(healthCmd)
 	addTimeoutFlag(healthCmd, defaultTimeout)
-	if experimentalFeaturesEnabled() {
-		addEngineFlag(healthCmd)
-	}
+	addEngineFlag(healthCmd)
 	healthCmd.Flags().Bool(skipVersionChecksFlag, false, fmt.Sprintf("skip version checks for dependencies (can also be set via %s env var)", skipVersionChecksEnvVar))
 	rootCmd.AddCommand(healthCmd)
 }
