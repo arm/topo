@@ -52,6 +52,8 @@ func TestInteractiveResolver(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
+		assert.Contains(t, output.String(), "i Leave empty to skip.")
+		assert.NotContains(t, output.String(), "Leave empty to keep the current value.")
 	})
 
 	t.Run("shows current values", func(t *testing.T) {
@@ -80,6 +82,7 @@ func TestInteractiveResolver(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, got)
 		assert.Contains(t, output.String(), `Current: ""`)
+		assert.Contains(t, output.String(), "i Leave empty to keep the current value.")
 	})
 
 	t.Run("shows paths and complete usage expressions", func(t *testing.T) {
@@ -128,5 +131,6 @@ func TestInteractiveResolver(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Values{"REQUIRED": "provided", "NEXT": "next"}, got)
 		assert.Equal(t, 2, strings.Count(output.String(), "✗ A value is required."))
+		assert.Contains(t, output.String(), "i A value is required.")
 	})
 }
