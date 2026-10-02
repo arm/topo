@@ -72,10 +72,6 @@ func openRemotePodmanTunnel(ctx context.Context, target ssh.Destination) (string
 	return remoteSocketPath, tunnel, RemotePodmanProbeResult{}
 }
 
-func CheckPodmanComposeProvider(ctx context.Context) error {
-	return runCommand(ctx, podman.ComposeRawCommand(ctx, "version"))
-}
-
 func runCommand(ctx context.Context, cmd *exec.Cmd) error {
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {

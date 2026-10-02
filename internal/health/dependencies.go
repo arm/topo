@@ -359,15 +359,17 @@ func NewDependencyOnPodmanConnection(r runner.Runner) Dependency {
 	}
 }
 
-func NewDependencyOnDockerComposeForPodman(composeVersion func(context.Context) error) Dependency {
+func NewDependencyOnDockerComposeForPodman(isPodmanComposeDockerCompose func(context.Context) bool) Dependency {
 	return Dependency{
 		Label: "Podman Compose",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if err := composeVersion(ctx); err != nil {
+			if !isPodmanComposeDockerCompose(ctx) {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
-					Message:  err.Error(),
-					Fix:      &Fix{Description: "Ensure docker-compose is on the $PATH. See " + containerEngineInstallURL},
+					Message:  "Podman is not using Docker Compose",
+					Fix: &Fix{
+						Description: "Configure Podman to use Docker Compose. See https://docs.podman.io/en/latest/markdown/podman-compose.1.html",
+					},
 				}}
 			}
 			return DependencyCheckResult{SuccessValue: "docker-compose"}

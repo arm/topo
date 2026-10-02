@@ -350,23 +350,24 @@ func TestNewDependencyOnPodmanConnection(t *testing.T) {
 }
 
 func TestNewDependencyOnDockerComposeForPodman(t *testing.T) {
-	t.Run("reports an available Compose provider", func(t *testing.T) {
-		dependency := health.NewDependencyOnDockerComposeForPodman(func(context.Context) error { return nil })
+	t.Run("reports Docker Compose as the provider", func(t *testing.T) {
+		dependency := health.NewDependencyOnDockerComposeForPodman(func(context.Context) bool { return true })
 
 		got := dependency.Check(t.Context())
 
 		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "docker-compose"}, got)
 	})
 
-	t.Run("reports an unavailable Compose provider", func(t *testing.T) {
-		dependency := health.NewDependencyOnDockerComposeForPodman(func(context.Context) error { return errors.New("version failed") })
+	t.Run("reports when the provider is not Docker Compose", func(t *testing.T) {
+		dependency := health.NewDependencyOnDockerComposeForPodman(func(context.Context) bool { return false })
 
 		got := dependency.Check(t.Context())
 
 		assert.Equal(t, health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
-			Message:  "version failed",
-			Fix:      &health.Fix{Description: "Ensure docker-compose is on the $PATH. See " + podmanInstallURL},
+			Message:  "Podman is not using Docker Compose",
+			Fix: &health.Fix{
+				Description: "Configure Podman to use Docker Compose. See https://docs.podman.io/en/latest/markdown/podman-compose.1.html"},
 		}}, got)
 	})
 }
