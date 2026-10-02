@@ -1,99 +1,118 @@
 package parameter
 
 import (
-	"bufio"
 	"fmt"
-	"io"
+	"os"
 	"strings"
 
 	"github.com/arm/topo/internal/output/term"
+	"github.com/clipperhouse/displaywidth"
+	"github.com/compose-spec/compose-go/v2/template"
 )
 
 // InteractiveResolver resolves parameter definitions to values by prompting via stdin/stdout.
 type InteractiveResolver struct {
-	input  io.Reader
-	output io.Writer
+	input  *os.File
+	output *os.File
 }
 
-func NewInteractiveResolver(in io.Reader, out io.Writer) *InteractiveResolver {
+func NewInteractiveResolver(in *os.File, out *os.File) *InteractiveResolver {
 	return &InteractiveResolver{input: in, output: out}
 }
 
-func (r *InteractiveResolver) Resolve(parameters []Parameter) (Values, error) {
+func (r *InteractiveResolver) Resolve(parameters []Parameter) (_ Values, err error) {
 	values := Values{}
 	if len(parameters) == 0 {
 		return values, nil
 	}
-	scanner := bufio.NewScanner(r.input)
+	if !term.IsTerminal(r.input) || !term.IsTerminal(r.output) {
+		panic("internal error: interactive resolver not running in an interactive terminal")
+	}
+
 	palette := term.NewPaletteFor(r.output)
 
 	for i, parameter := range parameters {
-		prompt := fmt.Sprintf("%s\n", formatParameterPrompt(parameter, i+1, len(parameters), palette))
-		if _, err := fmt.Fprint(r.output, prompt); err != nil {
+		initial := ""
+		if parameter.ExistingValue != nil {
+			initial = *parameter.ExistingValue
+		}
+
+		value, err := term.ReadPrompt(r.input, r.output, term.Prompt{
+			Validate: func(input string) bool {
+				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input)) == nil
+			},
+			Content: func(input string) []string {
+				return formatParameterPromptContent(parameter, input, i+1, len(parameters), palette)
+			},
+			Initial: initial,
+			Prefix:  palette.Color(term.Magenta, ">") + " ",
+		})
+		if err != nil {
 			return nil, err
 		}
 
-		for {
-			if _, err := fmt.Fprintf(r.output, "%s ", palette.Color(term.Magenta, ">")); err != nil {
-				return nil, err
-			}
-			if !scanner.Scan() {
-				if err := scanner.Err(); err != nil {
-					return nil, err
-				}
-				return values, nil
-			}
-			value := strings.TrimSpace(scanner.Text())
-			if value != "" {
-				values[parameter.Name] = value
-				break
-			}
-			if err := parameter.AssertSatisfiedBy(parameter.ExistingValue); err == nil {
-				break
-			}
-			if _, err := fmt.Fprintf(r.output, "%s A value is required.\n", palette.Color(term.Red, "✗")); err != nil {
-				return nil, err
-			}
-		}
-		if _, err := fmt.Fprintln(r.output); err != nil {
-			return nil, err
+		if value == "" {
+			// TODO mark parameter.Name for removal and pass through to env.UpdateFile
+		} else if parameter.ExistingValue == nil || value != *parameter.ExistingValue {
+			values[parameter.Name] = value
 		}
 	}
 	return values, nil
 }
 
-func formatParameterPrompt(parameter Parameter, number, total int, palette term.Palette) string {
+func formatParameterPromptContent(parameter Parameter, currentInput string, number, total int, palette term.Palette) []string {
 	progress := palette.Color(term.Dim, fmt.Sprintf("%d/%d", number, total))
 	lines := []string{fmt.Sprintf("%s %s", progress, parameter.Name), ""}
 	if description := strings.TrimSpace(parameter.Description); description != "" {
-		lines = append(lines, fmt.Sprintf("    %s", strings.ReplaceAll(description, "\n", "\n    ")), "")
+		for line := range strings.SplitSeq(description, "\n") {
+			lines = append(lines, fmt.Sprintf("    %s", line))
+		}
 	}
 	var metadata []string
-	if parameter.ExistingValue != nil {
-		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Current:"), *parameter.ExistingValue))
-	}
 	if example := strings.TrimSpace(parameter.Example); example != "" {
-		indentedExample := strings.ReplaceAll(example, "\n", "\n    ")
-		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Example:"), indentedExample))
+		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Example:"), example))
 	}
 	if len(parameter.References) > 0 {
 		metadata = append(metadata, "    "+palette.Color(term.Dim, "References:"))
+		pathWidth := 0
+		for _, reference := range parameter.References {
+			pathWidth = max(pathWidth, displaywidth.String(reference.Path+":"))
+		}
+		lookup := func(name string) (string, bool) {
+			if name == parameter.Name && currentInput != "" {
+				return currentInput, true
+			}
+			return "", false
+		}
 		for _, reference := range parameter.References {
 			pathLabel := palette.Color(term.Magenta, reference.Path+":")
-			metadata = append(metadata, fmt.Sprintf("      %s %q", pathLabel, reference.Expression))
+			value, err := template.SubstituteWithOptions(reference.Expression, lookup, template.WithoutLogging)
+			preview := fmt.Sprintf("%q", value)
+			if err != nil {
+				preview = palette.Color(term.Red, "✗") + " " + err.Error()
+			}
+			padding := strings.Repeat(" ", pathWidth-displaywidth.String(reference.Path+":"))
+			metadata = append(metadata, fmt.Sprintf("      %s%s %s", pathLabel, padding, preview))
+			raw := palette.Color(term.Dim, fmt.Sprintf("%s", reference.Expression))
+			metadata = append(metadata, strings.Repeat(" ", 6+pathWidth+1)+raw)
 		}
 	}
 	if len(metadata) > 0 {
 		lines = append(lines, metadata...)
 		lines = append(lines, "")
 	}
-	if err := parameter.AssertSatisfiedBy(parameter.ExistingValue); err == nil {
-		infoIcon := palette.Color(term.Blue, "i")
-		if parameter.ExistingValue != nil {
-			lines = append(lines, fmt.Sprintf("%s Leave empty to keep the current value.", infoIcon))
-		} else {
-			lines = append(lines, fmt.Sprintf("%s Leave empty to skip.", infoIcon))
-		}
+
+	if err := parameter.AssertSatisfiedBy(contentfulStringOrNil(currentInput)); err != nil {
+		lines = append(lines, fmt.Sprintf("%s %s %s: %s", palette.Color(term.Red, "✗"), parameter.Name, "is not satisfied by the current input", err.Error()))
+	} else {
+		lines = append(lines, fmt.Sprintf("%s Press enter to continue.", palette.Color(term.Green, "✓")))
 	}
-	return strings.Join(lines, "\n")
+	return lines
+}
+
+func contentfulStringOrNil(input string) *string {
+	if input == "" {
+		return nil
+	}
+	return &input
 }
