@@ -3,6 +3,7 @@ module github.com/arm/topo
 go 1.26.6
 
 require (
+	github.com/clipperhouse/displaywidth v0.11.0
 	github.com/compose-spec/compose-go/v2 v2.15.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/kevinburke/ssh_config v1.6.0
@@ -12,6 +13,7 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.48.0
+	golang.org/x/term v0.46.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -21,6 +23,7 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.1 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
+	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -46,6 +49,5 @@ require (
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 )
