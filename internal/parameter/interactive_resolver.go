@@ -1,15 +1,12 @@
 package parameter
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
-	// TODO consider if xterm should be entirely hidden behind topo/term
-	xterm "golang.org/x/term"
 )
 
 // InteractiveResolver resolves parameter definitions to values by prompting via stdin/stdout.
@@ -31,57 +28,33 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (_ Values, err err
 		panic("internal error: interactive resolver not running in an interactive terminal")
 	}
 
-	inFd := int(r.input.Fd())
-	old, err := xterm.MakeRaw(inFd)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err = errors.Join(err, xterm.Restore(inFd, old))
-	}()
-
-	reader := bufio.NewReader(r.input)
 	palette := term.NewPaletteFor(r.output)
 
 	for i, parameter := range parameters {
-		var lastContent []string
-		currentInput := ""
+		initial := ""
 		if parameter.ExistingValue != nil {
-			currentInput = *parameter.ExistingValue
+			initial = *parameter.ExistingValue
 		}
+		needsValue := parameter.needsValue()
 
-		// foreach keypress loop
-		for {
-			// re-measure terminal dimensions before nuking the previous content
-			width, _, err := term.Dimensions(r.output)
-			if err != nil {
-				return nil, err
-			}
-
-			// clear last content
-			if lastContentHeight := term.TextHeight(lastContent, width); lastContentHeight > 1 {
-				fmt.Fprint(r.output, term.MoveUp(lastContentHeight-1))
-			}
-			fmt.Fprint(r.output, term.MoveToRowStart+term.ClearLine)
-
-			// write new content
-			content := formatParameterPrompt(parameter, currentInput, true, i+1, len(parameters), palette)
-			fmt.Fprint(r.output, strings.Join(content, term.NewLine))
-			lastContent = content
-
-			// wait for keypress
-			key, err := reader.ReadByte()
-			if err != nil {
-				return nil, err
-			}
-			// TODO handle enter, backspace, and other control keys
-			currentInput += string(key)
-		}
+		value, err := term.ReadPrompt(r.input, r.output, term.Prompt{
+			Validate: func(input string) error {
+				if input == "" && needsValue {
+					return fmt.Errorf("%s A value is required.", palette.Color(term.Red, "✗"))
+				}
+				return nil
+			},
+			Content: func(input string, validationErr error) []string {
+				return formatParameterPrompt(parameter, input, validationErr, needsValue, i+1, len(parameters), palette)
+			},
+			Initial: initial,
+		})
+		logger.Info(fmt.Sprintf("%s %v", value, err))
 	}
 	return values, nil
 }
 
-func formatParameterPrompt(parameter Parameter, currentInput string, needsValue bool, number, total int, palette term.Palette) []string {
+func formatParameterPrompt(parameter Parameter, currentInput string, validationErr error, needsValue bool, number, total int, palette term.Palette) []string {
 	progress := palette.Color(term.Dim, fmt.Sprintf("%d/%d", number, total))
 	lines := []string{fmt.Sprintf("%s %s", progress, parameter.Name), ""}
 	if description := strings.TrimSpace(parameter.Description); description != "" {
@@ -111,6 +84,9 @@ func formatParameterPrompt(parameter Parameter, currentInput string, needsValue 
 		lines = append(lines, fmt.Sprintf("%s Leave empty to keep the current value.", palette.Color(term.Blue, "i")))
 	} else if !needsValue {
 		lines = append(lines, fmt.Sprintf("%s Leave empty to skip.", palette.Color(term.Blue, "i")))
+	}
+	if validationErr != nil {
+		lines = append(lines, fmt.Sprintf("    %s", validationErr.Error()))
 	}
 	lines = append(lines, fmt.Sprintf("%s %s", palette.Color(term.Magenta, ">"), currentInput))
 	return lines
