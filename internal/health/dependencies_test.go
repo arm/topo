@@ -367,7 +367,8 @@ func TestNewDependencyOnDockerComposeForPodman(t *testing.T) {
 			Severity: health.SeverityError,
 			Message:  "Podman is not using Docker Compose",
 			Fix: &health.Fix{
-				Description: "Configure Podman to use Docker Compose. See https://docs.podman.io/en/latest/markdown/podman-compose.1.html"},
+				Description: "Configure Podman to use Docker Compose. See https://docs.podman.io/en/latest/markdown/podman-compose.1.html",
+			},
 		}}, got)
 	})
 }
