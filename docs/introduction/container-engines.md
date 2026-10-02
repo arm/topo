@@ -70,16 +70,8 @@ For a custom Linux distribution built with the Yocto Project, see [`meta-virtual
 
 ### Select Podman
 
-Use `--engine podman` consistently for health checks and deployment commands:
+Set `TOPO_ENGINE=podman` in your environment to tell Topo to use Podman for any command where a container engine is required. Alternatively, specify the `--engine` flag on a per command basis (this takes precedence over `TOPO_ENGINE`). The selected engine applies to both the host and target.
 
-```sh
-topo health --engine podman --target user@target.example
-topo deploy --engine podman --target user@target.example
-topo ps --engine podman --target user@target.example
-topo stop --engine podman --target user@target.example
-```
-
-Alternatively, set `TOPO_ENGINE=podman` in your environment. An explicit `--engine` flag overrides this setting. The selected engine applies to both the host and target.
 
 Podman deployments do not support Compose services with a `runtime:` setting, including projects that require Remoteproc Runtime. Use Docker for those projects.
 

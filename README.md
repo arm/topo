@@ -78,7 +78,7 @@ The host and target can be the same system. If you're working directly on an Arm
 
 See [Install a container engine for Topo](docs/introduction/container-engines.md) for Docker and Podman setup and verification steps.
 
-Docker is the default. To use Podman, pass `--engine podman` to `topo health`, `topo deploy`, `topo ps`, and `topo stop`, or set `TOPO_ENGINE=podman`. See the [Podman setup guide](docs/introduction/container-engines.md#podman), especially the target API socket requirement.
+Docker is the default. To use Podman, pass set `TOPO_ENGINE=podman` or pass `--engine podman` to any command which uses the container engine. See the [Podman setup guide](docs/introduction/container-engines.md#podman), especially the target API socket requirement.
 
 ### Linux and macOS
 
