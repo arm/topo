@@ -102,7 +102,7 @@ x-topo:
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(), false)
 
-		require.ErrorContains(t, err, "missing value(s) for required parameters")
+		require.ErrorContains(t, err, "parameter validation failed")
 		_, statErr := os.Stat(destDir)
 		assert.True(t, os.IsNotExist(statErr))
 	})

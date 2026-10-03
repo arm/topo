@@ -51,7 +51,7 @@ func TestStrictResolverChain(t *testing.T) {
 
 		_, err := chain.Resolve(parameters)
 
-		assert.Equal(t, parameter.MissingParametersError{missing}, err)
+		assert.ErrorContains(t, err, "parameter validation failed")
 		resolver.AssertExpectations(t)
 	})
 
@@ -94,7 +94,7 @@ func TestStrictResolverChain(t *testing.T) {
 
 		_, err := chain.Resolve([]parameter.Parameter{missing})
 
-		assert.Equal(t, parameter.MissingParametersError{missing}, err)
+		assert.ErrorContains(t, err, "parameter validation failed")
 	})
 
 	t.Run("errors when resolver fails", func(t *testing.T) {
@@ -169,50 +169,66 @@ func TestStrictResolverChain(t *testing.T) {
 		assert.Empty(t, got)
 	})
 
-	t.Run("allows required parameters with empty current values", func(t *testing.T) {
-		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
-		parameters := []parameter.Parameter{{Name: "PORT", ExistingValue: new(""), References: []parameter.Reference{{Expression: "${PORT:?required}"}}}}
+	t.Run("accepts an empty value for a presence-required parameter", func(t *testing.T) {
+		values := parameter.Values{"PORT": ""}
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(values))
+		parameters := []parameter.Parameter{{Name: "PORT", References: []parameter.Reference{{Expression: "${PORT?required}"}}}}
 
 		got, err := chain.Resolve(parameters)
 
 		require.NoError(t, err)
+		assert.Equal(t, values, got)
+	})
+
+	t.Run("rejects an empty value for a value-required parameter", func(t *testing.T) {
+		values := parameter.Values{"PORT": ""}
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(values))
+		parameters := []parameter.Parameter{{Name: "PORT", References: []parameter.Reference{{Expression: "${PORT:?required}"}}}}
+
+		got, err := chain.Resolve(parameters)
+
+		require.Error(t, err)
 		assert.Empty(t, got)
 	})
 
 	t.Run("empty update overrides a non-empty current value", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"PORT": ""}))
-		parameters := []parameter.Parameter{{Name: "PORT", ExistingValue: new("8080"), References: []parameter.Reference{{Expression: "${PORT:?required}"}}}}
+		parameters := []parameter.Parameter{{Name: "PORT", ExistingValue: new("8080")}}
 
 		got, err := chain.Resolve(parameters)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Values{"PORT": ""}, got)
 	})
-}
 
-func TestMissingParametersError(t *testing.T) {
-	t.Run("formats error message with descriptions", func(t *testing.T) {
-		err := parameter.MissingParametersError{
+	t.Run("formats validation error with paths and reasons", func(t *testing.T) {
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
+		parameters := []parameter.Parameter{
 			{
 				Name:        "GREETING",
-				Description: "The greeting message",
-				Example:     "Hello",
+				Description: "greeting",
+				References:  []parameter.Reference{{Expression: "${GREETING:?required}", Path: "a.b.c"}},
 			},
 			{
-				Name:        "PORT",
-				Description: "Port number",
+				Name:       "PORT",
+				Example:    "example value",
+				References: []parameter.Reference{{Expression: "${PORT:?required}", Path: "a.b"}},
 			},
 		}
 
-		got := err.Error()
+		got, err := chain.Resolve(parameters)
 
-		want := `missing value(s) for required parameters:
-  GREETING:
-    description: The greeting message
-    example: Hello
-  PORT:
-    description: Port number
-`
-		assert.Equal(t, want, got)
+		require.EqualError(t, err, `parameter validation failed:
+GREETING:
+  description: greeting
+  references:
+    - a.b.c: ${GREETING:?required}
+  reason: required variable GREETING is missing a value
+PORT:
+  example: example value
+  references:
+    - a.b: ${PORT:?required}
+  reason: required variable PORT is missing a value`)
+		assert.Empty(t, got)
 	})
 }
