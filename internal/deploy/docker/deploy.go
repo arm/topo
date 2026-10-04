@@ -3,9 +3,7 @@ package docker
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"time"
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/deploy/post_deploy"
@@ -13,8 +11,6 @@ import (
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 )
-
-const tunnelCleanupTimeout = 5 * time.Second
 
 func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts deploy.Options) error {
 	sourceHost := LocalHost
@@ -84,49 +80,20 @@ func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sou
 		return err
 	}
 
-	if err := progress.Header("Open registry SSH tunnel"); err != nil {
+	if closeRegistryTunnel, err := deploy.OpenRegistrySSHTunnel(ctx, progress, targetHost, opts); err != nil {
 		return err
-	}
-	output := progress.Output()
-	tunnel, err := ssh.OpenTunnel(ctx, output, targetHost, opts.Port)
-	if err != nil {
-		return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Port)
-	}
-	defer func() {
-		transferErr = errors.Join(transferErr, closeTunnel(progress, tunnel))
-	}()
-
-	if !targetHost.IsLocalhost() && !opts.SkipRemotePortCheck {
-		if err := progress.Header("Check registry tunnel is not exposed on remote network"); err != nil {
-			return err
-		}
-		if err := deploy.CheckTunnelExposure(ctx, output, targetHost, opts.Port); err != nil {
-			return err
-		}
+	} else {
+		defer func() {
+			transferErr = errors.Join(transferErr, closeRegistryTunnel(progress))
+		}()
 	}
 
 	if err := progress.Header("Transfer via registry"); err != nil {
 		return err
 	}
-	if err := TransferImagesViaRegistry(ctx, output, sourceHost, NewHostFromDestination(targetHost), scope, opts.Port); err != nil {
+	if err := TransferImagesViaRegistry(ctx, progress.Output(), sourceHost, NewHostFromDestination(targetHost), scope, opts.Port); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func closeTunnel(progress *term.Progress, tunnel *ssh.Tunnel) error {
-	ctx, cancel := context.WithTimeout(context.Background(), tunnelCleanupTimeout)
-	defer cancel()
-
-	output := progress.Output()
-	var headerError error
-	if output != nil {
-		headerError = progress.Header("Close registry SSH tunnel")
-	}
-	closeError := tunnel.Close(ctx, output)
-	if closeError != nil {
-		closeError = fmt.Errorf("failed to close SSH tunnel: %w", closeError)
-	}
-	return errors.Join(headerError, closeError)
 }
