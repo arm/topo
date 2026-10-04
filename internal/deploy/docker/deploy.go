@@ -88,12 +88,12 @@ func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sou
 		}()
 	}
 
-	if err := progress.Header("Transfer via registry"); err != nil {
-		return err
-	}
-	if err := TransferImagesViaRegistry(ctx, progress.Output(), sourceHost, NewHostFromDestination(targetHost), scope, opts.Port); err != nil {
-		return err
-	}
-
-	return nil
+	return deploy.TransferImagesViaRegistry(
+		ctx,
+		progress,
+		scope,
+		opts.Port,
+		EngineExecutor{host: sourceHost},
+		EngineExecutor{host: NewHostFromDestination(targetHost)},
+	)
 }

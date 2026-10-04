@@ -115,10 +115,14 @@ func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sou
 		}()
 	}
 
-	if err := progress.Header("Transfer via registry"); err != nil {
-		return err
-	}
-	return TransferImagesViaRegistry(ctx, progress.Output(), sourceSocket, targetSocket, scope, options.Port)
+	return deploy.TransferImagesViaRegistry(
+		ctx,
+		progress,
+		scope,
+		options.Port,
+		EngineExecutor{socket: sourceSocket},
+		EngineExecutor{socket: targetSocket},
+	)
 }
 
 func closeRemoteTunnel(tunnel *ssh.TCPToUnixSocketTunnel) error {

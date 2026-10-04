@@ -24,11 +24,6 @@ func requireDocker(t *testing.T) {
 	gtestutil.RequireDocker(t)
 }
 
-func requireLinuxDockerEngine(t *testing.T) {
-	t.Helper()
-	gtestutil.RequireLinuxDockerEngine(t)
-}
-
 func startContainer(t *testing.T, spec gtestutil.ContainerSpec) *gtestutil.Container {
 	t.Helper()
 	return gtestutil.StartContainer(t, spec)

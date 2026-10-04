@@ -4,15 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/arm/topo/internal/deploy/podman"
-	"github.com/arm/topo/internal/project"
 	gtestutil "github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,25 +50,6 @@ func assertContainersInState(t *testing.T, projectName string, socket podman.Soc
 	for _, container := range containers {
 		assert.Equal(t, state, container["State"], "expected container %s to be %s (state=%s)", container["Names"], state, container["State"])
 	}
-}
-
-func imageTransferFixture(t *testing.T) (project.Scope, string) {
-	t.Helper()
-	temporaryDirectory := t.TempDir()
-	imageName := "test-image-" + sanitiseTestName(t)
-	composeFile := gtestutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
-services:
-  test:
-    build: .
-    image: %s
-`, imageName))
-	gtestutil.RequireWriteFile(t, filepath.Join(temporaryDirectory, "Dockerfile"), "FROM docker.io/library/alpine:latest\n")
-	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		_ = podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).Run()
-	})
-	return project.Scope{ComposeFile: composeFile}, imageName
 }
 
 func startTestRegistry(t *testing.T, containerName string) string {
