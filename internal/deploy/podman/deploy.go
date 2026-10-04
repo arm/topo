@@ -14,10 +14,7 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
-const (
-	DefaultRegistryContainerName = "topo-registry"
-	tunnelCleanupTimeout         = 5 * time.Second
-)
+const tunnelCleanupTimeout = 5 * time.Second
 
 func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options deploy.Options) (deployErr error) {
 	if err := EnsureNoRuntimeSet(scope); err != nil {
@@ -102,15 +99,13 @@ func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceS
 }
 
 func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sourceSocket Socket, targetDestination ssh.Destination, targetSocket Socket, scope project.Scope, options deploy.RegistryConfig) (transferErr error) {
+	options = options.WithDefaults()
+
 	output := progress.Output()
 	if err := progress.Header("Run registry"); err != nil {
 		return err
 	}
-	registryContainerName := options.ContainerName
-	if registryContainerName == "" {
-		registryContainerName = DefaultRegistryContainerName
-	}
-	if err := EnsureRegistryRunning(ctx, output, registryContainerName, options.Port); err != nil {
+	if err := EnsureRegistryRunning(ctx, output, options.ContainerName, options.Port); err != nil {
 		return err
 	}
 
