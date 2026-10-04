@@ -10,6 +10,7 @@ import (
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -209,4 +210,65 @@ func (fake *registryExecutorFake) RunCommand(_ context.Context, output io.Writer
 		return err
 	}
 	return fake.runError
+}
+
+func TestTransferImagesViaRegistry(t *testing.T) {
+	t.Run("transfers every image by digest and restores its original name on the target", func(t *testing.T) {
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
+name: transfer
+services:
+  built:
+    build: .
+  pulled:
+    image: team/web:latest
+`)
+		scope := project.Scope{ComposeFile: composeFile}
+		var calls [][]string
+		source := &registryTransferFake{
+			name: "source", calls: &calls,
+			digests: map[string]string{
+				"localhost:12345/team/web:latest": "localhost:12345/team/web@sha256:abc",
+				"localhost:12345/transfer-built":  "localhost:12345/transfer-built@sha256:def",
+			},
+		}
+		target := &registryTransferFake{name: "target", calls: &calls}
+		progress := term.NewProgress(io.Discard)
+
+		err := deploy.TransferImagesViaRegistry(t.Context(), progress, scope, "12345", source, target)
+
+		require.NoError(t, err)
+		want := [][]string{
+			{"source", "tag", "team/web:latest", "localhost:12345/team/web:latest"},
+			{"source", "push", "localhost:12345/team/web:latest"},
+			{"target", "pull", "localhost:12345/team/web@sha256:abc"},
+			{"target", "tag", "localhost:12345/team/web@sha256:abc", "team/web:latest"},
+
+			{"source", "tag", "transfer-built", "localhost:12345/transfer-built"},
+			{"source", "push", "localhost:12345/transfer-built"},
+			{"target", "pull", "localhost:12345/transfer-built@sha256:def"},
+			{"target", "tag", "localhost:12345/transfer-built@sha256:def", "transfer-built"},
+		}
+		assert.Equal(t, want, calls)
+	})
+}
+
+type registryTransferFake struct {
+	name    string
+	calls   *[][]string
+	digests map[string]string
+}
+
+func (fake *registryTransferFake) TagImage(_ context.Context, _ io.Writer, image, tag string) error {
+	*fake.calls = append(*fake.calls, []string{fake.name, "tag", image, tag})
+	return nil
+}
+
+func (fake *registryTransferFake) PushImage(_ context.Context, _ io.Writer, image string) (string, error) {
+	*fake.calls = append(*fake.calls, []string{fake.name, "push", image})
+	return fake.digests[image], nil
+}
+
+func (fake *registryTransferFake) PullImage(_ context.Context, _ io.Writer, digest string) error {
+	*fake.calls = append(*fake.calls, []string{fake.name, "pull", digest})
+	return nil
 }

@@ -227,3 +227,46 @@ func closeTunnel(progress *term.Progress, tunnel *ssh.Tunnel) error {
 	}
 	return errors.Join(headerError, closeError)
 }
+
+type RegistryEngineExecutor interface {
+	TagImage(ctx context.Context, output io.Writer, image, tag string) error
+	PushImage(ctx context.Context, output io.Writer, image string) (digest string, err error)
+	PullImage(ctx context.Context, output io.Writer, digest string) error
+}
+
+func TransferImagesViaRegistry(
+	ctx context.Context,
+	progress *term.Progress,
+	scope project.Scope,
+	localRegistryPort string,
+	sourceEx RegistryEngineExecutor,
+	targetEx RegistryEngineExecutor,
+) error {
+	if err := progress.Header("Transfer via registry"); err != nil {
+		return err
+	}
+
+	images, err := project.ImageNames(scope)
+	if err != nil {
+		return err
+	}
+
+	for _, image := range images {
+		registryTag := fmt.Sprintf("localhost:%s/%s", localRegistryPort, image)
+		if err := sourceEx.TagImage(ctx, progress.Output(), image, registryTag); err != nil {
+			return err
+		}
+		digest, err := sourceEx.PushImage(ctx, progress.Output(), registryTag)
+		if err != nil {
+			return err
+		}
+		if err := targetEx.PullImage(ctx, progress.Output(), digest); err != nil {
+			return err
+		}
+		if err := targetEx.TagImage(ctx, progress.Output(), digest, image); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
