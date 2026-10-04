@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -29,8 +30,7 @@ func Stop(ctx context.Context, output io.Writer, scope project.Scope, target ssh
 		socket = NewSocket(tunnel.SocketURL())
 	}
 
-	if err := progress.Header("Stop services"); err != nil {
-		return err
-	}
-	return RunComposeCommand(ctx, output, socket, scope, "stop")
+	composeRunner := buildRunComposeCommandFn(socket)
+
+	return deploy.StopServices(ctx, progress, scope, composeRunner)
 }

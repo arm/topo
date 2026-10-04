@@ -17,7 +17,10 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	registryPort := startTestRegistry(t, registryContainerName)
 
 	scope, imageName := imageTransferFixture(t)
-	require.NoError(t, podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, scope))
+	buildCommand, err := podman.ComposeCommand(t.Context(), podman.LocalSocket, scope, "build")
+	require.NoError(t, err)
+	buildOutput, err := buildCommand.CombinedOutput()
+	require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 	podmanContainer := startPodmanInContainer(t)
 	targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 	targetSocketTunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)

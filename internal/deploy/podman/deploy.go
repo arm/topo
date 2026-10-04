@@ -24,16 +24,9 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		return err
 	}
 	progress := term.NewProgress(output)
-	if err := progress.Header("Build images"); err != nil {
-		return err
-	}
-	if err := BuildImages(ctx, output, LocalSocket, scope); err != nil {
-		return err
-	}
-	if err := progress.Header("Pull images"); err != nil {
-		return err
-	}
-	if err := PullImages(ctx, output, LocalSocket, scope); err != nil {
+	localComposeRunner := buildRunComposeCommandFn(LocalSocket)
+
+	if err := deploy.PrepareImages(ctx, progress, scope, localComposeRunner); err != nil {
 		return err
 	}
 
@@ -65,10 +58,8 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		}
 	}
 
-	if err := progress.Header("Start services"); err != nil {
-		return err
-	}
-	if err := StartServices(ctx, output, targetSocket, scope, options.RecreateMode); err != nil {
+	remoteComposeRunner := buildRunComposeCommandFn(targetSocket)
+	if err := deploy.StartServices(ctx, progress, scope, options.RecreateMode, remoteComposeRunner); err != nil {
 		return err
 	}
 
