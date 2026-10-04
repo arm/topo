@@ -58,10 +58,24 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts dep
 }
 
 func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceHost, targetHost Host, scope project.Scope) error {
-	if err := progress.Header("Transfer images"); err != nil {
-		return err
-	}
-	return TransferImagesViaPipe(ctx, progress.Output(), sourceHost, targetHost, scope)
+	return deploy.TransferImagesViaPipe(
+		ctx,
+		progress,
+		func(ctx context.Context, output io.Writer, image string, imagePayload io.Writer) error {
+			saveCommand := Command(ctx, sourceHost, "save", image)
+			saveCommand.Stdout = imagePayload
+			saveCommand.Stderr = output
+			return saveCommand.Run()
+		},
+		func(ctx context.Context, output io.Writer, imagePayload io.Reader) error {
+			loadCommand := Command(ctx, targetHost, "load")
+			loadCommand.Stdin = imagePayload
+			loadCommand.Stderr = output
+			loadCommand.Stdout = output
+			return loadCommand.Run()
+		},
+		scope,
+	)
 }
 
 func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sourceHost Host, targetHost ssh.Destination, scope project.Scope, opts deploy.RegistryConfig) (transferErr error) {

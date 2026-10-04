@@ -48,3 +48,9 @@ func assertImageDoesNotExist(t *testing.T, socket podman.Socket, imageName strin
 	err := podman.Command(t.Context(), socket, "image", "exists", imageName).Run()
 	assert.Error(t, err)
 }
+
+func assertImageExists(t *testing.T, socket podman.Socket, imageName string) {
+	t.Helper()
+	err := podman.Command(t.Context(), socket, "image", "exists", imageName).Run()
+	assert.NoError(t, err)
+}
