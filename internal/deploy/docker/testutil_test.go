@@ -3,6 +3,7 @@ package docker_test
 import (
 	"bytes"
 	"context"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -26,11 +27,6 @@ func requireDocker(t *testing.T) {
 func requireLinuxDockerEngine(t *testing.T) {
 	t.Helper()
 	gtestutil.RequireLinuxDockerEngine(t)
-}
-
-func requireAvailableTCPPort(t *testing.T, host string) string {
-	t.Helper()
-	return gtestutil.RequireAvailableTCPPort(t, host)
 }
 
 func startContainer(t *testing.T, spec gtestutil.ContainerSpec) *gtestutil.Container {
@@ -104,4 +100,31 @@ func assertContainersStopped(t *testing.T, destination ssh.Destination, scope pr
 	for _, container := range containers {
 		assert.Equal(t, "exited", container["State"], "expected container %s to be exited (state=%s)", container["Name"], container["State"])
 	}
+}
+
+func startTestRegistry(t *testing.T, containerName string) string {
+	t.Helper()
+	requireContainerAbsent(t, containerName)
+	output, err := docker.Command(t.Context(), docker.LocalHost,
+		"run", "-d", "-p", "127.0.0.1::5000", "--name", containerName, "registry:2",
+	).CombinedOutput()
+	require.NoError(t, err, string(output))
+	output, err = docker.Command(t.Context(), docker.LocalHost, "port", containerName, "5000").CombinedOutput()
+	require.NoError(t, err, string(output))
+	host, port, err := net.SplitHostPort(strings.TrimSpace(string(output)))
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1", host)
+	return port
+}
+
+func requireContainerAbsent(t *testing.T, containerName string) {
+	t.Helper()
+	inspectCommand := docker.Command(t.Context(), docker.LocalHost, "inspect", containerName)
+	require.Error(t, inspectCommand.Run(), "container %s already exists", containerName)
+	t.Cleanup(func() {
+		removeOutput, err := docker.Command(context.Background(), docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
+		if err != nil && !strings.Contains(string(removeOutput), "No such container") {
+			t.Logf("failed to remove registry container: %v: %s", err, string(removeOutput))
+		}
+	})
 }

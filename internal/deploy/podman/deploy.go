@@ -101,17 +101,19 @@ func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceS
 func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sourceSocket Socket, targetDestination ssh.Destination, targetSocket Socket, scope project.Scope, options deploy.RegistryConfig) (transferErr error) {
 	options = options.WithDefaults()
 
-	output := progress.Output()
-	if err := progress.Header("Run registry"); err != nil {
-		return err
-	}
-	if err := EnsureRegistryRunning(ctx, output, options.ContainerName, options.Port); err != nil {
+	if err := deploy.PrepareRegistry(ctx, progress, options,
+		EngineExecutor{socket: sourceSocket},
+		// pasta reports either "Address in use" or "Address already in use",
+		// while Podman machine's macOS port-forwarding proxy reports "proxy already running".
+		[]string{"address in use", "address already in use", "proxy already running"},
+	); err != nil {
 		return err
 	}
 
 	if err := progress.Header("Open registry SSH tunnel"); err != nil {
 		return err
 	}
+	output := progress.Output()
 	registryTunnel, err := ssh.OpenTunnel(ctx, output, targetDestination, options.Port)
 	if err != nil {
 		return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with --registry-port", err, options.Port)

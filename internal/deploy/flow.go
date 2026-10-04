@@ -1,9 +1,13 @@
 package deploy
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os/exec"
+	"strings"
 
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
@@ -73,4 +77,106 @@ func transferImageViaPipe(
 		return nil
 	})
 	return group.Wait()
+}
+
+type EngineExecutor interface {
+	Command(ctx context.Context, args ...string) *exec.Cmd
+	RunCommand(ctx context.Context, output io.Writer, args ...string) error
+}
+
+func PrepareRegistry(
+	ctx context.Context,
+	progress *term.Progress,
+	config RegistryConfig,
+	ex EngineExecutor,
+	knownErrors []string,
+) error {
+	if err := progress.Header("Run registry"); err != nil {
+		return err
+	}
+
+	registryContainerExists := ex.RunCommand(ctx, io.Discard, "inspect", config.ContainerName) == nil
+	if registryContainerExists {
+		if err := validateRegistryPort(ctx, ex, config.ContainerName, config.Port); err != nil {
+			return err
+		}
+		return ex.RunCommand(ctx, progress.Output(), "start", config.ContainerName)
+	}
+
+	var commandOutput bytes.Buffer
+	combinedOutput := io.MultiWriter(progress.Output(), &commandOutput)
+	err := ex.RunCommand(
+		ctx,
+		combinedOutput,
+		"run",
+		"--pull=missing",
+		"-d",
+		"--restart", "always",
+		"-p", fmt.Sprintf("127.0.0.1:%s:5000", config.Port),
+		"--name", config.ContainerName,
+		"registry:2",
+	)
+	if err == nil {
+		return nil
+	}
+	commandErrorOutput := strings.ToLower(commandOutput.String())
+	for _, knownError := range knownErrors {
+		if strings.Contains(commandErrorOutput, knownError) {
+			return fmt.Errorf("%w\nport is already in use, this could be an existing %s or another process", err, config.ContainerName)
+		}
+	}
+	return err
+}
+
+func validateRegistryPort(ctx context.Context, ex EngineExecutor, containerName, requestedPort string) error {
+	cmd := ex.Command(ctx, "inspect", containerName)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to execute %s: %w", strings.Join(cmd.Args, " "), err)
+	}
+	actualPort, err := registryHostPort(output)
+	if err != nil {
+		return fmt.Errorf("failed to inspect existing registry %s: %w", containerName, err)
+	}
+	if actualPort == requestedPort {
+		return nil
+	}
+	return fmt.Errorf(
+		"registry port mismatch (running: %s, requested: %s)\nyou may need to remove the existing registry container %s",
+		actualPort, requestedPort, containerName,
+	)
+}
+
+func registryHostPort(inspectOutput []byte) (string, error) {
+	type portBinding struct {
+		HostPort string `json:"HostPort"`
+	}
+	type containerInspect struct {
+		State struct {
+			Running bool `json:"Running"`
+		} `json:"State"`
+		HostConfig struct {
+			PortBindings map[string][]portBinding `json:"PortBindings"`
+		} `json:"HostConfig"`
+		NetworkSettings struct {
+			Ports map[string][]portBinding `json:"Ports"`
+		} `json:"NetworkSettings"`
+	}
+
+	var containers []containerInspect
+	if err := json.Unmarshal(inspectOutput, &containers); err != nil {
+		return "", fmt.Errorf("decode registry inspect output: %w", err)
+	}
+	if len(containers) != 1 {
+		return "", fmt.Errorf("expected one inspected container, got %d", len(containers))
+	}
+
+	bindings := containers[0].HostConfig.PortBindings["5000/tcp"]
+	if containers[0].State.Running {
+		bindings = containers[0].NetworkSettings.Ports["5000/tcp"]
+	}
+	if len(bindings) == 0 || bindings[0].HostPort == "" {
+		return "", fmt.Errorf("container port 5000 is not published")
+	}
+	return bindings[0].HostPort, nil
 }
