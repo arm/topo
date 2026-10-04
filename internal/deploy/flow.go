@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/internal/ssh"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -179,4 +182,48 @@ func registryHostPort(inspectOutput []byte) (string, error) {
 		return "", fmt.Errorf("container port 5000 is not published")
 	}
 	return bindings[0].HostPort, nil
+}
+
+type tunnelCloseFn = func(*term.Progress) error
+
+func OpenRegistrySSHTunnel(ctx context.Context, progress *term.Progress, target ssh.Destination, config RegistryConfig) (tunnelCloseFn, error) {
+	if err := progress.Header("Open registry SSH tunnel"); err != nil {
+		return nil, err
+	}
+	output := progress.Output()
+	tunnel, err := ssh.OpenTunnel(ctx, output, target, config.Port)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, config.Port)
+	}
+
+	close := func(progress *term.Progress) error {
+		return closeTunnel(progress, tunnel)
+	}
+
+	if !target.IsLocalhost() && !config.SkipRemotePortCheck {
+		if err := progress.Header("Check registry tunnel is not exposed on remote network"); err != nil {
+			return nil, errors.Join(err, close(progress))
+		}
+		if err := CheckTunnelExposure(ctx, output, target, config.Port); err != nil {
+			return nil, errors.Join(err, close(progress))
+		}
+	}
+	return close, nil
+}
+
+func closeTunnel(progress *term.Progress, tunnel *ssh.Tunnel) error {
+	const tunnelCleanupTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), tunnelCleanupTimeout)
+	defer cancel()
+
+	output := progress.Output()
+	var headerError error
+	if output != nil {
+		headerError = progress.Header("Close registry SSH tunnel")
+	}
+	closeError := tunnel.Close(ctx, output)
+	if closeError != nil {
+		closeError = fmt.Errorf("failed to close SSH tunnel: %w", closeError)
+	}
+	return errors.Join(headerError, closeError)
 }
