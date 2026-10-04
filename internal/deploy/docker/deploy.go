@@ -77,17 +77,17 @@ func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceH
 func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sourceHost Host, targetHost ssh.Destination, scope project.Scope, opts deploy.RegistryConfig) (transferErr error) {
 	opts = opts.WithDefaults()
 
-	output := progress.Output()
-	if err := progress.Header("Run registry"); err != nil {
-		return err
-	}
-	if err := EnsureRegistryRunning(ctx, output, opts.ContainerName, opts.Port); err != nil {
+	if err := deploy.PrepareRegistry(ctx, progress, opts,
+		EngineExecutor{host: LocalHost},
+		[]string{"already in use", "already allocated"},
+	); err != nil {
 		return err
 	}
 
 	if err := progress.Header("Open registry SSH tunnel"); err != nil {
 		return err
 	}
+	output := progress.Output()
 	tunnel, err := ssh.OpenTunnel(ctx, output, targetHost, opts.Port)
 	if err != nil {
 		return fmt.Errorf("failed to open SSH tunnel: %w; ensure port %s is free or specify a different one with `--registry-port`", err, opts.Port)
