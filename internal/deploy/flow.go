@@ -18,6 +18,7 @@ func PrepareImages(ctx context.Context, progress *term.Progress, scope project.S
 }
 
 type RunSaveCommandFn func(ctx context.Context, output io.Writer, image string, imagePayload io.Writer) error
+
 type RunLoadCommandFn func(ctx context.Context, output io.Writer, imagePayload io.Reader) error
 
 func TransferImagesViaPipe(
