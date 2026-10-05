@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/arm/topo/internal/project"
 )
 
 type EngineExecutor struct {
@@ -59,4 +61,8 @@ func (ex EngineExecutor) PushImage(ctx context.Context, output io.Writer, tag st
 
 func (ex EngineExecutor) PullImage(ctx context.Context, output io.Writer, image string) error {
 	return ex.RunCommand(ctx, output, "pull", "--tls-verify=false", image)
+}
+
+func (ex EngineExecutor) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
+	return RunComposeCommand(ctx, output, ex.socket, scope, args...)
 }

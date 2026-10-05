@@ -14,10 +14,10 @@ import (
 
 func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts deploy.Options) error {
 	sourceHost := LocalHost
-	localComposeRunner := buildRunComposeCommandFn(sourceHost)
+	localEngine := EngineExecutor{LocalHost}
 	progress := term.NewProgress(output)
 
-	if err := deploy.PrepareImages(ctx, progress, scope, localComposeRunner); err != nil {
+	if err := deploy.PrepareImages(ctx, progress, scope, localEngine); err != nil {
 		return err
 	}
 
@@ -34,8 +34,8 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts dep
 		}
 	}
 
-	remoteComposeRunner := buildRunComposeCommandFn(NewHostFromDestination(opts.TargetHost))
-	if err := deploy.StartServices(ctx, progress, scope, opts.RecreateMode, remoteComposeRunner); err != nil {
+	remoteEngine := EngineExecutor{NewHostFromDestination(opts.TargetHost)}
+	if err := deploy.StartServices(ctx, progress, scope, opts.RecreateMode, remoteEngine); err != nil {
 		return err
 	}
 
