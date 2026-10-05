@@ -44,7 +44,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 
 		targetSocket = NewSocket(tunnel.SocketURL())
 		if options.Registry == nil {
-			if err := transferImagesViaPipe(ctx, progress, LocalSocket, targetSocket, scope); err != nil {
+			if err := deploy.TransferImagesViaPipe(ctx, progress, scope, localEngine, EngineExecutor{targetSocket}); err != nil {
 				return err
 			}
 		} else if err := transferImagesViaRegistry(ctx, progress, LocalSocket, options.TargetHost, targetSocket, scope, *options.Registry); err != nil {
@@ -71,27 +71,6 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		output,
 		scope,
 		options.DefaultSuccessMessage,
-	)
-}
-
-func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceSocket, targetSocket Socket, scope project.Scope) error {
-	return deploy.TransferImagesViaPipe(
-		ctx,
-		progress,
-		func(ctx context.Context, output io.Writer, image string, imagePayload io.Writer) error {
-			saveCommand := Command(ctx, sourceSocket, "save", image)
-			saveCommand.Stdout = imagePayload
-			saveCommand.Stderr = output
-			return saveCommand.Run()
-		},
-		func(ctx context.Context, output io.Writer, imagePayload io.Reader) error {
-			loadCommand := Command(ctx, targetSocket, "load")
-			loadCommand.Stdin = imagePayload
-			loadCommand.Stderr = output
-			loadCommand.Stdout = output
-			return loadCommand.Run()
-		},
-		scope,
 	)
 }
 

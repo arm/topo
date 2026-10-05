@@ -24,7 +24,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts dep
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry == nil {
 			targetHost := NewHostFromDestination(opts.TargetHost)
-			if err := transferImagesViaPipe(ctx, progress, sourceHost, targetHost, scope); err != nil {
+			if err := deploy.TransferImagesViaPipe(ctx, progress, scope, localEngine, EngineExecutor{targetHost}); err != nil {
 				return err
 			}
 		} else {
@@ -46,27 +46,6 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts dep
 		output,
 		scope,
 		opts.DefaultSuccessMessage,
-	)
-}
-
-func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceHost, targetHost Host, scope project.Scope) error {
-	return deploy.TransferImagesViaPipe(
-		ctx,
-		progress,
-		func(ctx context.Context, output io.Writer, image string, imagePayload io.Writer) error {
-			saveCommand := Command(ctx, sourceHost, "save", image)
-			saveCommand.Stdout = imagePayload
-			saveCommand.Stderr = output
-			return saveCommand.Run()
-		},
-		func(ctx context.Context, output io.Writer, imagePayload io.Reader) error {
-			loadCommand := Command(ctx, targetHost, "load")
-			loadCommand.Stdin = imagePayload
-			loadCommand.Stderr = output
-			loadCommand.Stdout = output
-			return loadCommand.Run()
-		},
-		scope,
 	)
 }
 
