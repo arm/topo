@@ -17,11 +17,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func PrepareImages(ctx context.Context, progress *term.Progress, scope project.Scope, runCompose RunComposeCommandFn) error {
-	if err := BuildImages(ctx, progress, scope, runCompose); err != nil {
+func PrepareImages(ctx context.Context, progress *term.Progress, scope project.Scope, runner ComposeCommandRunner) error {
+	if err := BuildImages(ctx, progress, scope, runner); err != nil {
 		return err
 	}
-	return PullImages(ctx, progress, scope, runCompose)
+	return PullImages(ctx, progress, scope, runner)
 }
 
 type RunSaveCommandFn func(ctx context.Context, output io.Writer, image string, imagePayload io.Writer) error

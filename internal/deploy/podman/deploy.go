@@ -18,9 +18,9 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		return err
 	}
 	progress := term.NewProgress(output)
-	localComposeRunner := buildRunComposeCommandFn(LocalSocket)
+	localEngine := EngineExecutor{LocalSocket}
 
-	if err := deploy.PrepareImages(ctx, progress, scope, localComposeRunner); err != nil {
+	if err := deploy.PrepareImages(ctx, progress, scope, localEngine); err != nil {
 		return err
 	}
 
@@ -52,8 +52,8 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		}
 	}
 
-	remoteComposeRunner := buildRunComposeCommandFn(targetSocket)
-	if err := deploy.StartServices(ctx, progress, scope, options.RecreateMode, remoteComposeRunner); err != nil {
+	remoteEngine := EngineExecutor{targetSocket}
+	if err := deploy.StartServices(ctx, progress, scope, options.RecreateMode, remoteEngine); err != nil {
 		return err
 	}
 
