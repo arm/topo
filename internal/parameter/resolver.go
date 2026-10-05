@@ -1,6 +1,10 @@
 package parameter
 
-import "github.com/compose-spec/compose-go/v2/template"
+import (
+	"strings"
+
+	"github.com/compose-spec/compose-go/v2/template"
+)
 
 type Parameter struct {
 	Name          string
@@ -15,17 +19,27 @@ type Reference struct {
 	Expression string
 }
 
-func (p Parameter) needsValue() bool {
-	if p.ExistingValue != nil {
-		return false
+const assertSuffix = "__TOPO_ASSERT_SATISFIEDBY__"
+
+// AssertSatisfiedBy treats requirements in nested defaults and alternatives as unconditional.
+func (p Parameter) AssertSatisfiedBy(val *string) error {
+	if val != nil && *val != "" {
+		return nil
 	}
 	for _, reference := range p.References {
-		variables := template.ExtractVariables(map[string]any{"reference": reference.Expression}, nil)
-		if variables[p.Name].Required {
-			return true
+		name, expression := p.Name, reference.Expression
+		if val != nil {
+			// Mark nonempty required (:?) variables with a unique suffix to distinguish them from presence required (?) variables
+			suffix := "_" + assertSuffix
+			name += suffix
+			expression = strings.ReplaceAll(expression, ":?", suffix+":?")
+		}
+		variables := template.ExtractVariables(map[string]any{"reference": expression}, nil)
+		if variables[name].Required {
+			return template.MissingRequiredError{Variable: p.Name}
 		}
 	}
-	return false
+	return nil
 }
 
 type Values map[string]string

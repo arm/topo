@@ -26,7 +26,7 @@ func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, err
 
 	values, err := resolver.Resolve(parameters)
 	if err != nil {
-		return nil, fmt.Errorf("failed to collect parameter values: %w", err)
+		return nil, err
 	}
 
 	if len(values) == 0 {
