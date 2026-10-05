@@ -1,7 +1,6 @@
 package parameter
 
 import (
-	"crypto/rand"
 	"strings"
 
 	"github.com/compose-spec/compose-go/v2/template"
@@ -20,6 +19,8 @@ type Reference struct {
 	Expression string
 }
 
+const assertSuffix = "__TOPO_ASSERT_SATISFIEDBY__"
+
 // AssertSatisfiedBy treats requirements in nested defaults and alternatives as unconditional.
 func (p Parameter) AssertSatisfiedBy(val *string) error {
 	if val != nil && *val != "" {
@@ -29,7 +30,7 @@ func (p Parameter) AssertSatisfiedBy(val *string) error {
 		name, expression := p.Name, reference.Expression
 		if val != nil {
 			// Mark nonempty required (:?) variables with a unique suffix to distinguish them from presence required (?) variables
-			suffix := "_" + rand.Text()
+			suffix := "_" + assertSuffix
 			name += suffix
 			expression = strings.ReplaceAll(expression, ":?", suffix+":?")
 		}
