@@ -53,7 +53,7 @@ func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sou
 	opts = opts.WithDefaults()
 
 	if err := deploy.PrepareRegistry(ctx, progress, opts,
-		EngineExecutor{host: LocalHost},
+		EngineExecutor{Host: LocalHost},
 		[]string{"already in use", "already allocated"},
 	); err != nil {
 		return err
@@ -72,7 +72,7 @@ func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sou
 		progress,
 		scope,
 		opts.Port,
-		EngineExecutor{host: sourceHost},
-		EngineExecutor{host: NewHostFromDestination(targetHost)},
+		EngineExecutor{Host: sourceHost},
+		EngineExecutor{Host: NewHostFromDestination(targetHost)},
 	)
 }

@@ -78,7 +78,7 @@ func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sou
 	options = options.WithDefaults()
 
 	if err := deploy.PrepareRegistry(ctx, progress, options,
-		EngineExecutor{socket: sourceSocket},
+		EngineExecutor{Socket: sourceSocket},
 		// pasta reports either "Address in use" or "Address already in use",
 		// while Podman machine's macOS port-forwarding proxy reports "proxy already running".
 		[]string{"address in use", "address already in use", "proxy already running"},
@@ -99,8 +99,8 @@ func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sou
 		progress,
 		scope,
 		options.Port,
-		EngineExecutor{socket: sourceSocket},
-		EngineExecutor{socket: targetSocket},
+		EngineExecutor{Socket: sourceSocket},
+		EngineExecutor{Socket: targetSocket},
 	)
 }
 

@@ -13,15 +13,15 @@ import (
 )
 
 type EngineExecutor struct {
-	host Host
+	Host Host
 }
 
 func (ex EngineExecutor) Command(ctx context.Context, args ...string) *exec.Cmd {
-	return Command(ctx, ex.host, args...)
+	return Command(ctx, ex.Host, args...)
 }
 
 func (ex EngineExecutor) RunCommand(ctx context.Context, output io.Writer, args ...string) error {
-	return RunCommand(ctx, output, ex.host, args...)
+	return RunCommand(ctx, output, ex.Host, args...)
 }
 
 func (ex EngineExecutor) TagImage(ctx context.Context, output io.Writer, image, tag string) error {
@@ -49,7 +49,7 @@ func (ex EngineExecutor) PullImage(ctx context.Context, output io.Writer, image 
 }
 
 func (ex EngineExecutor) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
-	return RunComposeCommand(ctx, output, ex.host, scope, args...)
+	return RunComposeCommand(ctx, output, ex.Host, scope, args...)
 }
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
