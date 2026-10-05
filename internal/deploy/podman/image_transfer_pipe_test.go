@@ -22,8 +22,10 @@ func TestTransferImagesViaPipe(t *testing.T) {
 		require.NoError(t, tunnel.Close())
 	})
 	remoteSocket := podman.NewSocket(tunnel.SocketURL())
-	err = podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, scope)
+	buildCommand, err := podman.ComposeCommand(t.Context(), podman.LocalSocket, scope, "build")
 	require.NoError(t, err)
+	buildOutput, err := buildCommand.CombinedOutput()
+	require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 
 	err = podman.TransferImagesViaPipe(t.Context(), t.Output(), podman.LocalSocket, remoteSocket, scope)
 
