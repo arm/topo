@@ -10,8 +10,6 @@ import (
 
 	cmdtext "github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy"
-	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/podman"
 	checks "github.com/arm/topo/internal/deploy/project_checks"
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
@@ -88,6 +86,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		)
 
 		options := deploy.Options{
+			Engine:                deploy.Engine(engine.value),
 			TargetHost:            ssh.NewDestination(target.value),
 			DefaultSuccessMessage: defaultSuccessMessage,
 		}
@@ -107,12 +106,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		var deploymentErr error
-		if engine.value == containerEnginePodman {
-			deploymentErr = podman.Deploy(ctx, os.Stdout, scope, options)
-		} else {
-			deploymentErr = docker.Deploy(ctx, os.Stdout, scope, options)
-		}
+		deploymentErr := deploy.Deploy(ctx, os.Stdout, scope, options)
 		if deploymentErr == nil {
 			return nil
 		}
