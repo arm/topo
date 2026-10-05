@@ -24,13 +24,14 @@ x-topo:
   parameters:
     FOO: {}
 `
+		changes := parameter.Changes{"FOO": new("baz")}
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
-		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(parameter.Values{"FOO": "baz"}))
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		values, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"FOO": "baz"}, values)
+		assert.Equal(t, changes, got)
 	})
 
 	t.Run("returns resolver updates", func(t *testing.T) {
@@ -41,12 +42,13 @@ x-topo:
 x-topo:
   parameters: {GREETING: {}}
 `
+		changes := parameter.Changes{"GREETING": new("updated")}
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
-		resolver := parameter.NewStaticResolver(parameter.Values{"GREETING": "updated"})
+		resolver := parameter.NewStaticResolver(changes)
 
-		values, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"GREETING": "updated"}, values)
+		assert.Equal(t, changes, got)
 	})
 }

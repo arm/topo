@@ -5,41 +5,47 @@ import (
 	"strings"
 )
 
-// CLIResolver resolves parameter definitions to values from command-line key=value pairs.
+// CLIResolver resolves assignments and removals supplied on the command line.
 // It validates that all provided keys match known parameter names.
 type CLIResolver struct {
-	input map[string]string
+	changes Changes
 }
 
-func NewCLIResolver(cliArgs []string) (*CLIResolver, error) {
-	parsed := make(map[string]string)
-	for _, arg := range cliArgs {
+func NewCLIResolver(assignments []string, removals []string) (*CLIResolver, error) {
+	changes := make(Changes)
+	for _, arg := range assignments {
 		parts := strings.SplitN(arg, "=", 2)
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("invalid parameter format: %s (expected PARAMETER=VALUE)", arg)
 		}
-		parsed[parts[0]] = parts[1]
+		changes[parts[0]] = new(parts[1])
 	}
-	return &CLIResolver{input: parsed}, nil
+	for _, name := range removals {
+		if value, exists := changes[name]; exists && value != nil {
+			return nil, fmt.Errorf("cannot both set and unset parameter: %s", name)
+		}
+		changes[name] = nil
+	}
+	return &CLIResolver{changes: changes}, nil
 }
 
-func (r *CLIResolver) Resolve(parameters []Parameter) (Values, error) {
-	values := Values{}
-	seen := make(map[string]bool, len(r.input))
+func (r *CLIResolver) Resolve(parameters []Parameter) (Changes, error) {
+	changes := Changes{}
+	seen := make(map[string]bool, len(r.changes))
 
 	for _, parameter := range parameters {
 		name := parameter.Name
-		if value, ok := r.input[name]; ok {
-			values[name] = value
+		if value, ok := r.changes[name]; ok {
+			changes[name] = value
 			seen[name] = true
 		}
 	}
 
-	for key := range r.input {
+	for key := range r.changes {
 		if !seen[key] {
 			return nil, fmt.Errorf("unknown parameter: %s", key)
 		}
 	}
 
-	return values, nil
+	return changes, nil
 }

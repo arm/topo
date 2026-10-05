@@ -48,7 +48,7 @@ func ToEnv(composeFilePath string) error {
 		return err
 	}
 
-	values := map[string]string{}
+	changes := map[string]*string{}
 	for _, param := range project.Metadata.Parameters {
 		currentValues := project.currentParameterValues[param.Name]
 		if len(currentValues) == 0 {
@@ -60,20 +60,20 @@ func ToEnv(composeFilePath string) error {
 			}
 		}
 
-		values[param.Name] = currentValues[0]
+		changes[param.Name] = new(currentValues[0])
 	}
 
-	if len(values) == 0 {
+	if len(changes) == 0 {
 		return fmt.Errorf("no parameter values to migrate; only projects with referenced parameters can be migrated")
 	}
 
-	err = env.UpdateFile(envFilePath, values, env.EncodeOptions{PreserveInterpolation: true})
+	err = env.UpdateFile(envFilePath, changes, env.EncodeOptions{PreserveInterpolation: true})
 	if err != nil {
 		return fmt.Errorf("failed to save env file: %w", err)
 	}
 
 	references := map[string]string{}
-	for k := range values {
+	for k := range changes {
 		references[k] = fmt.Sprintf("${%s?configured via topo}", k)
 	}
 	err = applyParameterValuesToComposeFile(composeFilePath, references)

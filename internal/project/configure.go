@@ -7,14 +7,10 @@ import (
 	"github.com/arm/topo/internal/parameter"
 )
 
-func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, error) {
+func Configure(scope Scope, resolver parameter.Resolver) (parameter.Changes, error) {
 	parameters, err := LoadParameters(scope)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load parameters: %w", err)
-	}
-
-	if len(parameters) == 0 {
-		return nil, nil
 	}
 
 	for i := range parameters {
@@ -24,14 +20,14 @@ func Configure(scope Scope, resolver parameter.Resolver) (map[string]string, err
 		}
 	}
 
-	values, err := resolver.Resolve(parameters)
+	changes, err := resolver.Resolve(parameters)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(values) == 0 {
+	if len(changes) == 0 {
 		return nil, nil
 	}
 
-	return values, nil
+	return changes, nil
 }
