@@ -56,6 +56,7 @@ func TestDeploy(t *testing.T) {
 		t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
 			registryContainerName := deploytestutil.TestContainerName(t) + "-registry"
 			registryPort := "12738"
+			deploytestutil.RequireDockerRegistryContainerAbsent(t, registryContainerName)
 			container := testutil.StartContainer(t, testutil.DinDContainer)
 			remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 			remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
@@ -130,6 +131,7 @@ services:
 			testutil.RequirePodman(t)
 			registryContainerName := deploytestutil.TestContainerName(t) + "-registry"
 			registryPort := "12739"
+			deploytestutil.RequirePodmanRegistryContainerAbsent(t, registryContainerName)
 			podmanContainer := testutil.StartContainer(t, testutil.PodmanContainer)
 			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
 			targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
