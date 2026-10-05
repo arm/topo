@@ -46,9 +46,9 @@ type validationError struct {
 	Err       error
 }
 
-type ValidationErrorRollup []validationError
+type ValidationErrors []validationError
 
-func (e ValidationErrorRollup) Error() string {
+func (e ValidationErrors) Error() string {
 	var msg strings.Builder
 	msg.WriteString("parameter validation failed:\n")
 	for _, ve := range e {
@@ -94,7 +94,7 @@ func validateRequiredValues(parameters []Parameter, updates Values) error {
 	}
 
 	if len(errs) > 0 {
-		return ValidationErrorRollup(errs)
+		return ValidationErrors(errs)
 	}
 
 	return nil
