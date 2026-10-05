@@ -13,15 +13,15 @@ import (
 )
 
 type EngineExecutor struct {
-	socket Socket
+	Socket Socket
 }
 
 func (ex EngineExecutor) Command(ctx context.Context, args ...string) *exec.Cmd {
-	return Command(ctx, ex.socket, args...)
+	return Command(ctx, ex.Socket, args...)
 }
 
 func (ex EngineExecutor) RunCommand(ctx context.Context, output io.Writer, args ...string) error {
-	return RunCommand(ctx, output, ex.socket, args...)
+	return RunCommand(ctx, output, ex.Socket, args...)
 }
 
 func (ex EngineExecutor) TagImage(ctx context.Context, output io.Writer, image, tag string) error {
@@ -64,5 +64,5 @@ func (ex EngineExecutor) PullImage(ctx context.Context, output io.Writer, image 
 }
 
 func (ex EngineExecutor) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
-	return RunComposeCommand(ctx, output, ex.socket, scope, args...)
+	return RunComposeCommand(ctx, output, ex.Socket, scope, args...)
 }
