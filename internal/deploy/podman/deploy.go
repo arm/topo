@@ -14,26 +14,16 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
-const (
-	DefaultRegistryContainerName = "topo-registry"
-	tunnelCleanupTimeout         = 5 * time.Second
-)
+const tunnelCleanupTimeout = 5 * time.Second
 
 func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options deploy.Options) (deployErr error) {
 	if err := EnsureNoRuntimeSet(scope); err != nil {
 		return err
 	}
 	progress := term.NewProgress(output)
-	if err := progress.Header("Build images"); err != nil {
-		return err
-	}
-	if err := BuildImages(ctx, output, LocalSocket, scope); err != nil {
-		return err
-	}
-	if err := progress.Header("Pull images"); err != nil {
-		return err
-	}
-	if err := PullImages(ctx, output, LocalSocket, scope); err != nil {
+	localComposeRunner := buildRunComposeCommandFn(LocalSocket)
+
+	if err := deploy.PrepareImages(ctx, progress, scope, localComposeRunner); err != nil {
 		return err
 	}
 
@@ -65,10 +55,8 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		}
 	}
 
-	if err := progress.Header("Start services"); err != nil {
-		return err
-	}
-	if err := StartServices(ctx, output, targetSocket, scope, options.RecreateMode); err != nil {
+	remoteComposeRunner := buildRunComposeCommandFn(targetSocket)
+	if err := deploy.StartServices(ctx, progress, scope, options.RecreateMode, remoteComposeRunner); err != nil {
 		return err
 	}
 
@@ -90,22 +78,34 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 }
 
 func transferImagesViaPipe(ctx context.Context, progress *term.Progress, sourceSocket, targetSocket Socket, scope project.Scope) error {
-	if err := progress.Header("Transfer images"); err != nil {
-		return err
-	}
-	return TransferImagesViaPipe(ctx, progress.Output(), sourceSocket, targetSocket, scope)
+	return deploy.TransferImagesViaPipe(
+		ctx,
+		progress,
+		func(ctx context.Context, output io.Writer, image string, imagePayload io.Writer) error {
+			saveCommand := Command(ctx, sourceSocket, "save", image)
+			saveCommand.Stdout = imagePayload
+			saveCommand.Stderr = output
+			return saveCommand.Run()
+		},
+		func(ctx context.Context, output io.Writer, imagePayload io.Reader) error {
+			loadCommand := Command(ctx, targetSocket, "load")
+			loadCommand.Stdin = imagePayload
+			loadCommand.Stderr = output
+			loadCommand.Stdout = output
+			return loadCommand.Run()
+		},
+		scope,
+	)
 }
 
 func transferImagesViaRegistry(ctx context.Context, progress *term.Progress, sourceSocket Socket, targetDestination ssh.Destination, targetSocket Socket, scope project.Scope, options deploy.RegistryConfig) (transferErr error) {
+	options = options.WithDefaults()
+
 	output := progress.Output()
 	if err := progress.Header("Run registry"); err != nil {
 		return err
 	}
-	registryContainerName := options.ContainerName
-	if registryContainerName == "" {
-		registryContainerName = DefaultRegistryContainerName
-	}
-	if err := EnsureRegistryRunning(ctx, output, registryContainerName, options.Port); err != nil {
+	if err := EnsureRegistryRunning(ctx, output, options.ContainerName, options.Port); err != nil {
 		return err
 	}
 

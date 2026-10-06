@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/project"
 )
 
@@ -77,4 +78,10 @@ func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, sco
 		return command.NewError(cmd, err)
 	}
 	return nil
+}
+
+func buildRunComposeCommandFn(socket Socket) deploy.RunComposeCommandFn {
+	return func(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
+		return RunComposeCommand(ctx, output, socket, scope, args...)
+	}
 }
