@@ -17,7 +17,10 @@ func TestTransferImagesViaRegistry(t *testing.T) {
 	registryPort := startTestRegistry(t, registryContainerName)
 
 	scope, imageName := imageTransferFixture(t)
-	require.NoError(t, podman.BuildImages(t.Context(), t.Output(), podman.LocalSocket, scope))
+	buildCommand, err := podman.ComposeCommand(t.Context(), podman.LocalSocket, scope, "build")
+	require.NoError(t, err)
+	buildOutput, err := buildCommand.CombinedOutput()
+	require.NoError(t, err, "failed to build image: %s", string(buildOutput))
 	podmanContainer := startPodmanInContainer(t)
 	targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 	targetSocketTunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
@@ -44,4 +47,10 @@ func assertImageDoesNotExist(t *testing.T, socket podman.Socket, imageName strin
 	t.Helper()
 	err := podman.Command(t.Context(), socket, "image", "exists", imageName).Run()
 	assert.Error(t, err)
+}
+
+func assertImageExists(t *testing.T, socket podman.Socket, imageName string) {
+	t.Helper()
+	err := podman.Command(t.Context(), socket, "image", "exists", imageName).Run()
+	assert.NoError(t, err)
 }
