@@ -7,7 +7,6 @@ import (
 	"os/exec"
 
 	"github.com/arm/topo/internal/command"
-	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/project"
 )
 
@@ -50,10 +49,4 @@ func hostToArgs(h Host) []string {
 		return nil
 	}
 	return []string{"-H", h.value}
-}
-
-func buildRunComposeCommandFn(host Host) deploy.RunComposeCommandFn {
-	return func(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
-		return RunComposeCommand(ctx, output, host, scope, args...)
-	}
 }

@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/arm/topo/internal/project"
 )
 
 type EngineExecutor struct {
@@ -44,6 +46,10 @@ func (ex EngineExecutor) PushImage(ctx context.Context, output io.Writer, image 
 
 func (ex EngineExecutor) PullImage(ctx context.Context, output io.Writer, image string) error {
 	return ex.RunCommand(ctx, output, "pull", image)
+}
+
+func (ex EngineExecutor) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
+	return RunComposeCommand(ctx, output, ex.host, scope, args...)
 }
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)

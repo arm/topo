@@ -15,11 +15,7 @@ import (
 
 func TestPullImages(t *testing.T) {
 	t.Run("skips services that have a build context", func(t *testing.T) {
-		var calledWith []string
-		composeRunner := func(_ context.Context, _ io.Writer, _ project.Scope, args ...string) error {
-			calledWith = args
-			return nil
-		}
+		composeRunner := &fakeComposeCommandRunner{}
 
 		composeFilePath := testutil.RequireWriteComposeFile(t, t.TempDir(), `
 services:
@@ -40,6 +36,17 @@ services:
 
 		require.NoError(t, err)
 		want := []string{"pull", "to-pull"}
-		assert.Equal(t, want, calledWith)
+		assert.Equal(t, want, composeRunner.calls)
 	})
+}
+
+type fakeComposeCommandRunner struct {
+	calls []string
+}
+
+func (runner *fakeComposeCommandRunner) RunComposeCommand(
+	_ context.Context, _ io.Writer, _ project.Scope, args ...string,
+) error {
+	runner.calls = args
+	return nil
 }

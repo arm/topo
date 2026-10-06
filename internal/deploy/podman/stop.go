@@ -30,7 +30,6 @@ func Stop(ctx context.Context, output io.Writer, scope project.Scope, target ssh
 		socket = NewSocket(tunnel.SocketURL())
 	}
 
-	composeRunner := buildRunComposeCommandFn(socket)
-
-	return deploy.StopServices(ctx, progress, scope, composeRunner)
+	remoteEngine := EngineExecutor{socket}
+	return deploy.StopServices(ctx, progress, scope, remoteEngine)
 }

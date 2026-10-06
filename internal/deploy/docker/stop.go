@@ -12,6 +12,6 @@ import (
 
 func Stop(ctx context.Context, output io.Writer, scope project.Scope, destination ssh.Destination) error {
 	progress := term.NewProgress(output)
-	remoteComposeRunner := buildRunComposeCommandFn(NewHostFromDestination(destination))
-	return deploy.StopServices(ctx, progress, scope, remoteComposeRunner)
+	remoteEngine := EngineExecutor{NewHostFromDestination(destination)}
+	return deploy.StopServices(ctx, progress, scope, remoteEngine)
 }

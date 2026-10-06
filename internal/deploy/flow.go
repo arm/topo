@@ -17,23 +17,24 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func PrepareImages(ctx context.Context, progress *term.Progress, scope project.Scope, runCompose RunComposeCommandFn) error {
-	if err := BuildImages(ctx, progress, scope, runCompose); err != nil {
+func PrepareImages(ctx context.Context, progress *term.Progress, scope project.Scope, runner ComposeCommandRunner) error {
+	if err := BuildImages(ctx, progress, scope, runner); err != nil {
 		return err
 	}
-	return PullImages(ctx, progress, scope, runCompose)
+	return PullImages(ctx, progress, scope, runner)
 }
 
-type RunSaveCommandFn func(ctx context.Context, output io.Writer, image string, imagePayload io.Writer) error
-
-type RunLoadCommandFn func(ctx context.Context, output io.Writer, imagePayload io.Reader) error
+type EngineExecutor interface {
+	Command(ctx context.Context, args ...string) *exec.Cmd
+	RunCommand(ctx context.Context, output io.Writer, args ...string) error
+}
 
 func TransferImagesViaPipe(
 	ctx context.Context,
 	progress *term.Progress,
-	runSave RunSaveCommandFn,
-	runLoad RunLoadCommandFn,
 	scope project.Scope,
+	sourceEx EngineExecutor,
+	targetEx EngineExecutor,
 ) error {
 	if err := progress.Header("Transfer images"); err != nil {
 		return err
@@ -47,7 +48,7 @@ func TransferImagesViaPipe(
 	var group errgroup.Group
 	for _, image := range images {
 		group.Go(func() error {
-			return transferImageViaPipe(ctx, progress.Output(), runSave, runLoad, image)
+			return transferImageViaPipe(ctx, progress.Output(), sourceEx, targetEx, image)
 		})
 	}
 	return group.Wait()
@@ -56,15 +57,18 @@ func TransferImagesViaPipe(
 func transferImageViaPipe(
 	ctx context.Context,
 	output io.Writer,
-	runSave RunSaveCommandFn,
-	runLoad RunLoadCommandFn,
+	sourceEx EngineExecutor,
+	targetEx EngineExecutor,
 	image string,
 ) error {
 	pipeReader, pipeWriter := io.Pipe()
 
 	var group errgroup.Group
 	group.Go(func() error {
-		err := runSave(ctx, output, image, pipeWriter)
+		saveCommand := sourceEx.Command(ctx, "save", image)
+		saveCommand.Stdout = pipeWriter
+		saveCommand.Stderr = output
+		err := saveCommand.Run()
 		_ = pipeWriter.CloseWithError(err)
 		if err != nil {
 			return fmt.Errorf("failed to save image %s: %w", image, err)
@@ -72,7 +76,11 @@ func transferImageViaPipe(
 		return nil
 	})
 	group.Go(func() error {
-		err := runLoad(ctx, output, pipeReader)
+		loadCommand := targetEx.Command(ctx, "load")
+		loadCommand.Stdin = pipeReader
+		loadCommand.Stdout = output
+		loadCommand.Stderr = output
+		err := loadCommand.Run()
 		_ = pipeReader.CloseWithError(err)
 		if err != nil {
 			return fmt.Errorf("failed to load image %s: %w", image, err)
@@ -80,11 +88,6 @@ func transferImageViaPipe(
 		return nil
 	})
 	return group.Wait()
-}
-
-type EngineExecutor interface {
-	Command(ctx context.Context, args ...string) *exec.Cmd
-	RunCommand(ctx context.Context, output io.Writer, args ...string) error
 }
 
 func PrepareRegistry(
