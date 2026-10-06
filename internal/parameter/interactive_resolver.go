@@ -9,7 +9,7 @@ import (
 	"github.com/arm/topo/internal/output/term"
 )
 
-// InteractiveResolver resolves parameter definitions to values by prompting via stdin/stdout.
+// InteractiveResolver resolves parameter definitions to changes by prompting via stdin/stdout.
 type InteractiveResolver struct {
 	input  io.Reader
 	output io.Writer
@@ -19,10 +19,10 @@ func NewInteractiveResolver(in io.Reader, out io.Writer) *InteractiveResolver {
 	return &InteractiveResolver{input: in, output: out}
 }
 
-func (r *InteractiveResolver) Resolve(parameters []Parameter) (Values, error) {
-	values := Values{}
+func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
+	changes := Changes{}
 	if len(parameters) == 0 {
-		return values, nil
+		return changes, nil
 	}
 	scanner := bufio.NewScanner(r.input)
 	palette := term.NewPaletteFor(r.output)
@@ -41,11 +41,11 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Values, error) {
 				if err := scanner.Err(); err != nil {
 					return nil, err
 				}
-				return values, nil
+				return changes, nil
 			}
 			value := strings.TrimSpace(scanner.Text())
 			if value != "" {
-				values[parameter.Name] = value
+				changes[parameter.Name] = new(value)
 				break
 			}
 			if err := parameter.AssertSatisfiedBy(parameter.ExistingValue); err == nil {
@@ -59,7 +59,7 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Values, error) {
 			return nil, err
 		}
 	}
-	return values, nil
+	return changes, nil
 }
 
 func formatParameterPrompt(parameter Parameter, number, total int, palette term.Palette) string {

@@ -60,17 +60,22 @@ type EncodeOptions struct {
 	PreserveInterpolation bool
 }
 
-func UpdateFile(path string, updates map[string]string, options EncodeOptions) error {
-	if len(updates) == 0 {
+// UpdateFile applies assignments and removals; a nil update removes a variable and a non-nil update sets its value.
+func UpdateFile(path string, changes map[string]*string, options EncodeOptions) error {
+	if len(changes) == 0 {
 		return nil
 	}
 	content, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	fileMissing := errors.Is(err, os.ErrNotExist)
+	if err != nil && !fileMissing {
 		return fmt.Errorf("failed to read env file: %w", err)
 	}
-	updated, err := applyEnvUpdates(string(content), encodeValues(updates, options))
+	updated, err := applyEnvChanges(string(content), encodeChanges(changes, options))
 	if err != nil {
 		return fmt.Errorf("failed to update env file: %w", err)
+	}
+	if fileMissing && updated == "" {
+		return nil
 	}
 	if err := os.WriteFile(path, []byte(updated), 0o600); err != nil {
 		return fmt.Errorf("failed to write env file: %w", err)
@@ -78,23 +83,33 @@ func UpdateFile(path string, updates map[string]string, options EncodeOptions) e
 	return nil
 }
 
-func ToString(values map[string]string, options EncodeOptions) (string, error) {
-	return applyEnvUpdates("", encodeValues(values, options))
+func ToString(changes map[string]*string, options EncodeOptions) (string, error) {
+	return applyEnvChanges("", encodeChanges(changes, options))
 }
 
-func encodeValues(values map[string]string, options EncodeOptions) map[string]string {
-	encoded := make(map[string]string, len(values))
-	for name, value := range values {
-		encoded[name] = escapes.Replace(value)
+func encodeChanges(changes map[string]*string, options EncodeOptions) map[string]*string {
+	encodedChanges := make(map[string]*string, len(changes))
+	for name, value := range changes {
+		if value == nil {
+			encodedChanges[name] = nil
+			continue
+		}
+		escaped := escapes.Replace(*value)
 		if !options.PreserveInterpolation {
-			encoded[name] = strings.ReplaceAll(encoded[name], "$", "$$")
+			escaped = strings.ReplaceAll(escaped, "$", "$$")
+		}
+		encodedChanges[name] = &escaped
+	}
+	return encodedChanges
+}
+
+func applyEnvChanges(content string, changes map[string]*string) (string, error) {
+	remainingAssignments := maps.Clone(changes)
+	for name, value := range remainingAssignments {
+		if value == nil {
+			delete(remainingAssignments, name)
 		}
 	}
-	return encoded
-}
-
-func applyEnvUpdates(content string, updates map[string]string) (string, error) {
-	remaining := maps.Clone(updates)
 	var result strings.Builder
 	for len(content) > 0 {
 		lineEnd := len(content)
@@ -112,32 +127,44 @@ func applyEnvUpdates(content string, updates map[string]string) (string, error) 
 		if header == nil {
 			return "", errors.New("unsupported env assignment syntax")
 		}
+		value, supplied := changes[header[1]]
 		start := len(header[0])
 		end, err := valueEnd(content, start)
 		if err != nil {
 			return "", err
 		}
+		if supplied && value == nil {
+			content = content[assignmentEnd(content, end):]
+			continue
+		}
 		result.WriteString(content[:start])
-		if value, ok := updates[header[1]]; ok {
+		if value, ok := changes[header[1]]; ok {
 			result.WriteString("\"")
-			result.WriteString(value)
+			result.WriteString(*value)
 			result.WriteString("\"")
-			delete(remaining, header[1])
+			delete(remainingAssignments, header[1])
 		} else {
 			result.WriteString(content[start:end])
 		}
 		content = content[end:]
 	}
-	if len(remaining) > 0 && result.Len() > 0 && !strings.HasSuffix(result.String(), "\n") {
+	if len(remainingAssignments) > 0 && result.Len() > 0 && !strings.HasSuffix(result.String(), "\n") {
 		result.WriteByte('\n')
 	}
-	for _, name := range slices.Sorted(maps.Keys(remaining)) {
+	for _, name := range slices.Sorted(maps.Keys(remainingAssignments)) {
 		result.WriteString(name)
 		result.WriteString("=\"")
-		result.WriteString(remaining[name])
+		result.WriteString(*remainingAssignments[name])
 		result.WriteString("\"\n")
 	}
 	return result.String(), nil
+}
+
+func assignmentEnd(content string, valueEnd int) int {
+	if index := strings.IndexByte(content[valueEnd:], '\n'); index >= 0 {
+		return valueEnd + index + 1
+	}
+	return len(content)
 }
 
 func valueEnd(content string, valueStart int) (int, error) {

@@ -67,7 +67,7 @@ interactive prompts.`,
 
 		var resolvers []parameter.Resolver
 		if len(cliArgs) > 0 {
-			cliResolver, err := parameter.NewCLIResolver(cliArgs)
+			cliResolver, err := parameter.NewCLIResolver(cliArgs, nil)
 			if err != nil {
 				return err
 			}

@@ -1,14 +1,14 @@
 package parameter
 
-// StaticResolver returns a fixed set of parameter values. Useful for testing.
+// StaticResolver returns a fixed set of parameter changes. Useful for testing.
 type StaticResolver struct {
-	values Values
+	changes Changes
 }
 
-func NewStaticResolver(values Values) *StaticResolver {
-	return &StaticResolver{values: values}
+func NewStaticResolver(changes Changes) *StaticResolver {
+	return &StaticResolver{changes: changes}
 }
 
-func (r *StaticResolver) Resolve(_ []Parameter) (Values, error) {
-	return r.values, nil
+func (r *StaticResolver) Resolve(_ []Parameter) (Changes, error) {
+	return r.changes, nil
 }
