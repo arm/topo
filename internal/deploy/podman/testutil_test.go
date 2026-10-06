@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,11 +26,6 @@ func sanitiseTestName(t *testing.T) string {
 func startPodmanInContainer(t *testing.T) *gtestutil.Container {
 	t.Helper()
 	return gtestutil.StartContainer(t, gtestutil.PodmanContainer)
-}
-
-func requireAvailableTCPPort(t *testing.T) string {
-	t.Helper()
-	return gtestutil.RequireAvailableTCPPort(t, "127.0.0.1")
 }
 
 func assertContainersRunning(t *testing.T, projectName string, socket podman.Socket) {
@@ -76,4 +73,31 @@ services:
 		_ = podman.Command(ctx, podman.LocalSocket, "image", "rm", "-f", imageName).Run()
 	})
 	return project.Scope{ComposeFile: composeFile}, imageName
+}
+
+func startTestRegistry(t *testing.T, containerName string) string {
+	t.Helper()
+	requireRegistryContainerAbsent(t, containerName)
+	output, err := podman.Command(t.Context(), podman.LocalSocket,
+		"run", "-d", "-p", "127.0.0.1::5000", "--name", containerName, "registry:2",
+	).CombinedOutput()
+	require.NoError(t, err, string(output))
+	output, err = podman.Command(t.Context(), podman.LocalSocket, "port", containerName, "5000").CombinedOutput()
+	require.NoError(t, err, string(output))
+	host, port, err := net.SplitHostPort(strings.TrimSpace(string(output)))
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1", host)
+	return port
+}
+
+func requireRegistryContainerAbsent(t *testing.T, containerName string) {
+	t.Helper()
+	inspectCommand := podman.Command(t.Context(), podman.LocalSocket, "inspect", containerName)
+	require.Error(t, inspectCommand.Run(), "container %s already exists", containerName)
+	t.Cleanup(func() {
+		removeOutput, err := podman.Command(context.Background(), podman.LocalSocket, "rm", "-f", containerName).CombinedOutput()
+		if err != nil && !strings.Contains(string(removeOutput), "no container with name or ID") {
+			t.Logf("failed to remove registry container: %v: %s", err, removeOutput)
+		}
+	})
 }
