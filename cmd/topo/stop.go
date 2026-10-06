@@ -3,8 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
 
@@ -45,10 +44,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		dest := ssh.NewDestination(target.value)
-		if engine.value == containerEnginePodman {
-			return podman.Stop(cmd.Context(), os.Stdout, scope, dest)
-		}
-		return docker.Stop(cmd.Context(), os.Stdout, scope, dest)
+		return deploy.Stop(cmd.Context(), os.Stdout, scope, dest, deploy.Engine(engine.value))
 	},
 }
 

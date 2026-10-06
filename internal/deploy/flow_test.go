@@ -4,17 +4,226 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/arm/topo/internal/deploy"
+	"github.com/arm/topo/internal/deploy/docker"
+	"github.com/arm/topo/internal/deploy/podman"
+	deploytestutil "github.com/arm/topo/internal/deploy/testutil"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDeploy(t *testing.T) {
+	t.Run("Docker", func(t *testing.T) {
+		testutil.RequireDocker(t)
+
+		t.Run("deploys to localhost", func(t *testing.T) {
+			scope, imageName := deploytestutil.DockerDeploymentFixture(t)
+			t.Cleanup(func() { deploytestutil.CleanupDockerComposeProject(t, scope) })
+			deploytestutil.RequireDockerImageDoesNotExist(t, docker.LocalHost, imageName)
+			deployOptions := deploy.Options{Engine: deploy.EngineDocker, TargetHost: ssh.PlainLocalhost}
+
+			err := deploy.Deploy(t.Context(), t.Output(), scope, deployOptions)
+
+			require.NoError(t, err)
+			deploytestutil.RequireDockerImageExists(t, docker.LocalHost, imageName)
+			deploytestutil.AssertDockerContainersRunning(t, ssh.PlainLocalhost, scope)
+		})
+
+		t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
+			container := testutil.StartContainer(t, testutil.DinDContainer)
+			remoteDockerHost := ssh.NewDestination(container.SSHDestination)
+			scope, imageName := deploytestutil.DockerDeploymentFixture(t)
+			deploytestutil.RequireDockerImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
+			deployOptions := deploy.Options{Engine: deploy.EngineDocker, TargetHost: remoteDockerHost}
+
+			err := deploy.Deploy(t.Context(), t.Output(), scope, deployOptions)
+
+			require.NoError(t, err)
+			deploytestutil.RequireDockerImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
+			deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, scope)
+		})
+
+		t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
+			registryContainerName := deploytestutil.TestContainerName(t) + "-registry"
+			registryPort := "12738"
+			deploytestutil.RequireDockerRegistryContainerAbsent(t, registryContainerName)
+			container := testutil.StartContainer(t, testutil.DinDContainer)
+			remoteDockerHost := ssh.NewDestination(container.SSHDestination)
+			remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
+			scope, imageName := deploytestutil.DockerDeploymentFixture(t)
+			deploytestutil.RequireDockerImageDoesNotExist(t, remoteCommandHost, imageName)
+			deployOptions := deploy.Options{
+				Engine:     deploy.EngineDocker,
+				TargetHost: remoteDockerHost,
+				Registry: &deploy.RegistryConfig{
+					ContainerName:       registryContainerName,
+					Port:                registryPort,
+					SkipRemotePortCheck: true,
+				},
+			}
+
+			err := deploy.Deploy(t.Context(), t.Output(), scope, deployOptions)
+
+			require.NoError(t, err)
+			deploytestutil.RequireDockerImageExists(t, remoteCommandHost, imageName)
+			deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, scope)
+		})
+	})
+
+	t.Run("Podman", func(t *testing.T) {
+		t.Run("rejects runtime before accessing Podman", func(t *testing.T) {
+			composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
+services:
+  firmware:
+    image: alpine
+    runtime: io.containerd.remoteproc.v1
+`)
+
+			scope := project.Scope{ComposeFile: composeFile}
+			options := deploy.Options{Engine: deploy.EnginePodman}
+
+			err := deploy.Deploy(t.Context(), &bytes.Buffer{}, scope, options)
+
+			require.ErrorContains(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments`)
+		})
+
+		t.Run("deploys to localhost", func(t *testing.T) {
+			testutil.RequirePodman(t)
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			t.Cleanup(func() { deploytestutil.CleanupPodmanComposeProject(t, scope) })
+			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: ssh.PlainLocalhost}
+
+			err := deploy.Deploy(t.Context(), t.Output(), scope, options)
+
+			require.NoError(t, err)
+			deploytestutil.AssertPodmanContainersInState(t, projectName, podman.LocalSocket, "running")
+		})
+
+		t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
+			testutil.RequirePodman(t)
+			podmanContainer := testutil.StartContainer(t, testutil.PodmanContainer)
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
+			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: targetDestination}
+
+			err := deploy.Deploy(t.Context(), t.Output(), scope, options)
+
+			require.NoError(t, err)
+			tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				require.NoError(t, tunnel.Close())
+			})
+			deploytestutil.AssertPodmanContainersInState(t, projectName, podman.NewSocket(tunnel.SocketURL()), "running")
+		})
+
+		t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
+			testutil.RequirePodman(t)
+			registryContainerName := deploytestutil.TestContainerName(t) + "-registry"
+			registryPort := "12739"
+			deploytestutil.RequirePodmanRegistryContainerAbsent(t, registryContainerName)
+			podmanContainer := testutil.StartContainer(t, testutil.PodmanContainer)
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
+			options := deploy.Options{
+				Engine:     deploy.EnginePodman,
+				TargetHost: targetDestination,
+				Registry: &deploy.RegistryConfig{
+					ContainerName: registryContainerName,
+					Port:          registryPort,
+				},
+			}
+
+			err := deploy.Deploy(t.Context(), t.Output(), scope, options)
+
+			require.NoError(t, err)
+			tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				require.NoError(t, tunnel.Close())
+			})
+			deploytestutil.AssertPodmanContainersInState(t, projectName, podman.NewSocket(tunnel.SocketURL()), "running")
+		})
+	})
+}
+
+func TestStop(t *testing.T) {
+	t.Run("Docker", func(t *testing.T) {
+		testutil.RequireDocker(t)
+
+		container := testutil.StartContainer(t, testutil.DinDContainer)
+		remoteDockerHost := ssh.NewDestination(container.SSHDestination)
+		temporaryDirectory := t.TempDir()
+		dockerFilePath := filepath.Join(temporaryDirectory, "Dockerfile")
+		testutil.RequireWriteFile(t, dockerFilePath, `
+FROM alpine:latest
+CMD ["tail", "-f", "/dev/null"]
+`)
+		composeFilePath := testutil.RequireWriteComposeFile(t, temporaryDirectory, fmt.Sprintf(`
+name: %s
+services:
+  busybox:
+    image: busybox
+    command: ["tail", "-f", "/dev/null"]
+    stop_grace_period: 1s
+  a-service:
+    build: .
+    stop_grace_period: 1s
+`, deploytestutil.TestProjectName(t)))
+		scope := project.Scope{ComposeFile: composeFilePath}
+		t.Cleanup(func() { deploytestutil.CleanupDockerComposeProject(t, scope) })
+		deployOptions := deploy.Options{Engine: deploy.EngineDocker, TargetHost: remoteDockerHost}
+		require.NoError(t, deploy.Deploy(t.Context(), io.Discard, scope, deployOptions))
+		deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, scope)
+
+		err := deploy.Stop(t.Context(), io.Discard, scope, remoteDockerHost, deploy.EngineDocker)
+
+		require.NoError(t, err)
+		deploytestutil.AssertDockerContainersStopped(t, remoteDockerHost, scope)
+	})
+
+	t.Run("Podman", func(t *testing.T) {
+		testutil.RequirePodman(t)
+
+		t.Run("stops services on localhost", func(t *testing.T) {
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			t.Cleanup(func() { deploytestutil.CleanupPodmanComposeProject(t, scope) })
+			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: ssh.PlainLocalhost}
+			require.NoError(t, deploy.Deploy(t.Context(), t.Output(), scope, options))
+
+			err := deploy.Stop(t.Context(), t.Output(), scope, ssh.PlainLocalhost, deploy.EnginePodman)
+
+			require.NoError(t, err)
+			deploytestutil.AssertPodmanContainersInState(t, projectName, podman.LocalSocket, "exited")
+		})
+
+		t.Run("stops services on a remote target", func(t *testing.T) {
+			podmanContainer := testutil.StartContainer(t, testutil.PodmanContainer)
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			target := ssh.NewDestination(podmanContainer.SSHDestination)
+			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: target}
+			require.NoError(t, deploy.Deploy(t.Context(), t.Output(), scope, options))
+
+			err := deploy.Stop(t.Context(), t.Output(), scope, target, deploy.EnginePodman)
+
+			require.NoError(t, err)
+			tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), io.Discard, target)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, tunnel.Close()) })
+			deploytestutil.AssertPodmanContainersInState(t, projectName, podman.NewSocket(tunnel.SocketURL()), "exited")
+		})
+	})
+}
 
 func TestPrepareRegistry(t *testing.T) {
 	config := deploy.RegistryConfig{ContainerName: "test-registry", Port: "12345"}
