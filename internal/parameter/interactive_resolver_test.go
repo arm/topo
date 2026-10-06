@@ -32,9 +32,9 @@ func TestInteractiveResolver(t *testing.T) {
 		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
-		want := parameter.Values{
-			"GREETING": "Hello, World",
-			"PORT":     "8080",
+		want := parameter.Changes{
+			"GREETING": new("Hello, World"),
+			"PORT":     new("8080"),
 		}
 		assert.Equal(t, want, got)
 		assert.Contains(t, output.String(), "The greeting message")
@@ -112,7 +112,7 @@ func TestInteractiveResolver(t *testing.T) {
 		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
-		assert.Equal(t, parameter.Values{"NEXT": "next"}, got)
+		assert.Equal(t, parameter.Changes{"NEXT": new("next")}, got)
 	})
 
 	t.Run("re-prompts when a required value is missing", func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestInteractiveResolver(t *testing.T) {
 		got, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
-		assert.Equal(t, parameter.Values{"REQUIRED": "provided", "NEXT": "next"}, got)
+		assert.Equal(t, parameter.Changes{"REQUIRED": new("provided"), "NEXT": new("next")}, got)
 		assert.Equal(t, 2, strings.Count(output.String(), "✗ A value is required."))
 	})
 }

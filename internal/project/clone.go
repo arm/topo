@@ -72,16 +72,16 @@ func configureProject(composeFilePath string, resolver parameter.Resolver) error
 		return err
 	}
 
-	values, err := Configure(Scope{
+	changes, err := Configure(Scope{
 		ComposeFile: composeFilePath,
 		EnvFiles:    envFiles,
 	}, resolver)
-	if err != nil || values == nil {
+	if err != nil || changes == nil {
 		return err
 	}
 
 	outputPath := filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
-	return env.UpdateFile(outputPath, values, env.EncodeOptions{})
+	return env.UpdateFile(outputPath, changes, env.EncodeOptions{})
 }
 
 func migrateProject(output io.Writer, composeFilePath string) error {

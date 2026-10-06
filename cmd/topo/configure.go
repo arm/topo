@@ -27,7 +27,10 @@ interactive prompts.`,
   topo configure
 
   # Provide parameters explicitly
-  topo configure GREETING_NAME="World"`,
+  topo configure GREETING_NAME="World"
+
+  # Remove parameters explicitly
+  topo configure --unset GREETING_NAME`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -67,9 +70,14 @@ interactive prompts.`,
 			outputPath = filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
 		}
 
+		unset, err := cmd.Flags().GetStringArray("unset")
+		if err != nil {
+			return err
+		}
+
 		var resolvers []parameter.Resolver
-		if len(args) > 0 {
-			cliResolver, err := parameter.NewCLIResolver(args)
+		if len(args) > 0 || len(unset) > 0 {
+			cliResolver, err := parameter.NewCLIResolver(args, unset)
 			if err != nil {
 				return err
 			}
@@ -81,16 +89,16 @@ interactive prompts.`,
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
 
-		values, err := project.Configure(project.Scope{
+		changes, err := project.Configure(project.Scope{
 			ComposeFile: composeFilePath,
 			EnvFiles:    envFiles,
 		}, resolver)
-		if err != nil || values == nil {
+		if err != nil || changes == nil {
 			return err
 		}
 
 		if outputPath == "-" {
-			content, err := env.ToString(values, env.EncodeOptions{})
+			content, err := env.ToString(changes, env.EncodeOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to encode env file content: %w", err)
 			}
@@ -99,11 +107,12 @@ interactive prompts.`,
 			}
 			return nil
 		}
-		return env.UpdateFile(outputPath, values, env.EncodeOptions{})
+		return env.UpdateFile(outputPath, changes, env.EncodeOptions{})
 	},
 }
 
 func init() {
+	configureCmd.Flags().StringArray("unset", nil, "remove a parameter from the output env file; repeat for multiple parameters")
 	addNoPromptFlag(configureCmd)
 	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
 	addComposeFileFlag(configureCmd)

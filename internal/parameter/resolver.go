@@ -42,8 +42,8 @@ func (p Parameter) AssertSatisfiedBy(val *string) error {
 	return nil
 }
 
-type Values map[string]string
+type Changes map[string]*string
 
 type Resolver interface {
-	Resolve(parameters []Parameter) (Values, error)
+	Resolve(parameters []Parameter) (Changes, error)
 }

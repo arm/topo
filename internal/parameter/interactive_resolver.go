@@ -10,7 +10,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-// InteractiveResolver resolves parameter definitions to values by prompting via stdin/stdout.
+// InteractiveResolver resolves parameter definitions to changes by prompting via stdin/stdout.
 type InteractiveResolver struct {
 	input  *os.File
 	output *os.File
@@ -20,10 +20,10 @@ func NewInteractiveResolver(in *os.File, out *os.File) *InteractiveResolver {
 	return &InteractiveResolver{input: in, output: out}
 }
 
-func (r *InteractiveResolver) Resolve(parameters []Parameter) (_ Values, err error) {
-	values := Values{}
+func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
+	changes := Changes{}
 	if len(parameters) == 0 {
-		return values, nil
+		return changes, nil
 	}
 	if !term.IsTerminal(r.input) || !term.IsTerminal(r.output) {
 		panic("internal error: interactive resolver not running in an interactive terminal")
@@ -52,12 +52,12 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (_ Values, err err
 		}
 
 		if value == "" {
-			// TODO mark parameter.Name for removal and pass through to env.UpdateFile
+			changes[parameter.Name] = nil
 		} else if parameter.ExistingValue == nil || value != *parameter.ExistingValue {
-			values[parameter.Name] = value
+			changes[parameter.Name] = new(value)
 		}
 	}
-	return values, nil
+	return changes, nil
 }
 
 func formatParameterPromptContent(parameter Parameter, currentInput string, number, total int, palette term.Palette) []string {
