@@ -51,7 +51,7 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 			return nil, err
 		}
 
-		if value == "" {
+		if value == "" && parameter.ExistingValue != nil {
 			changes[parameter.Name] = nil
 		} else if parameter.ExistingValue == nil || value != *parameter.ExistingValue {
 			changes[parameter.Name] = new(value)
@@ -103,7 +103,7 @@ func formatParameterPromptContent(parameter Parameter, currentInput string, numb
 	}
 
 	if err := parameter.AssertSatisfiedBy(contentfulStringOrNil(currentInput)); err != nil {
-		lines = append(lines, fmt.Sprintf("%s %s %s: %s", palette.Color(term.Red, "✗"), parameter.Name, "is not satisfied by the current input", err.Error()))
+		lines = append(lines, fmt.Sprintf("%s %s", palette.Color(term.Red, "✗"), err.Error()))
 	} else {
 		lines = append(lines, fmt.Sprintf("%s Press enter to continue.", palette.Color(term.Green, "✓")))
 	}
