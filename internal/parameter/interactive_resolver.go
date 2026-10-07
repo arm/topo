@@ -2,7 +2,6 @@ package parameter
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/arm/topo/internal/output/term"
@@ -10,26 +9,18 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-// InteractiveResolver resolves parameter definitions to changes by prompting via stdin/stdout.
+// InteractiveResolver resolves parameter definitions to changes by prompting for values.
 type InteractiveResolver struct {
-	input  *os.File
-	output *os.File
+	readPrompt func(term.Prompt) (string, error)
+	palette    term.Palette
 }
 
-func NewInteractiveResolver(in *os.File, out *os.File) *InteractiveResolver {
-	return &InteractiveResolver{input: in, output: out}
+func NewInteractiveResolver(readPrompt func(term.Prompt) (string, error), palette term.Palette) *InteractiveResolver {
+	return &InteractiveResolver{readPrompt: readPrompt, palette: palette}
 }
 
 func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 	changes := Changes{}
-	if len(parameters) == 0 {
-		return changes, nil
-	}
-	if !term.IsTerminal(r.input) || !term.IsTerminal(r.output) {
-		panic("internal error: interactive resolver not running in an interactive terminal")
-	}
-
-	palette := term.NewPaletteFor(r.output)
 
 	for i, parameter := range parameters {
 		initial := ""
@@ -37,25 +28,27 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 			initial = *parameter.ExistingValue
 		}
 
-		value, err := term.ReadPrompt(r.input, r.output, term.Prompt{
+		value, err := r.readPrompt(term.Prompt{
 			Validate: func(input string) bool {
 				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input)) == nil
 			},
 			Content: func(input string) []string {
-				return formatParameterPromptContent(parameter, input, i+1, len(parameters), palette)
+				return formatParameterPromptContent(parameter, input, i+1, len(parameters), r.palette)
 			},
 			Initial: initial,
-			Prefix:  palette.Color(term.Magenta, ">") + " ",
+			Prefix:  r.palette.Color(term.Magenta, ">") + " ",
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		if value == "" && parameter.ExistingValue != nil {
-			changes[parameter.Name] = nil
-		} else if parameter.ExistingValue == nil || value != *parameter.ExistingValue {
-			changes[parameter.Name] = new(value)
+		if value == "" && parameter.ExistingValue == nil {
+			continue
 		}
+		if parameter.ExistingValue != nil && value == *parameter.ExistingValue {
+			continue
+		}
+		changes[parameter.Name] = contentfulStringOrNil(value)
 	}
 	return changes, nil
 }

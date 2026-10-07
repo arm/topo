@@ -84,7 +84,9 @@ interactive prompts.`,
 			resolvers = append(resolvers, cliResolver)
 		}
 		if promptsEnabled(cmd) && term.IsTerminal(os.Stderr) && term.IsTerminal(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stderr))
+			resolvers = append(resolvers, parameter.NewInteractiveResolver(func(prompt term.Prompt) (string, error) {
+				return term.ReadPrompt(os.Stdin, os.Stderr, prompt)
+			}, term.NewPaletteFor(os.Stderr)))
 		}
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)
