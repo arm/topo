@@ -24,7 +24,7 @@ func StartSpinner(w io.Writer, message string) *Spinner {
 		done: make(chan struct{}),
 	}
 
-	if !IsTTY(w) {
+	if !IsTerminal(w) {
 		close(s.done)
 		return s
 	}

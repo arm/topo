@@ -20,13 +20,23 @@ func TestIsTTY(t *testing.T) {
 			require.NoError(t, w.Close())
 		}()
 
-		assert.False(t, term.IsTTY(w))
+		assert.False(t, term.IsTerminal(w))
 	})
 
 	t.Run("stdout returns a boolean", func(t *testing.T) {
-		got := term.IsTTY(os.Stdout)
+		got := term.IsTerminal(os.Stdout)
 
 		assert.IsType(t, true, got)
+	})
+
+	t.Run("null device returns false", func(t *testing.T) {
+		file, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+		require.NoError(t, err)
+		t.Cleanup(func() { assert.NoError(t, file.Close()) })
+
+		got := term.IsTerminal(file)
+
+		assert.False(t, got)
 	})
 }
 
