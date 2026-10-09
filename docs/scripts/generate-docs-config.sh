@@ -9,7 +9,7 @@ if [[ ${1:-} == --include-head ]]; then
 fi
 
 first_docs_major=8
-docs_major_versions_max=5
+docs_major_versions_max=10
 release_refs=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1000 --json tagName \
   --jq "
     def major_version: ltrimstr(\"v\") | split(\".\")[0] | tonumber;
