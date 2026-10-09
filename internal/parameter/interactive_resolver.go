@@ -1,80 +1,67 @@
 package parameter
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/arm/topo/internal/output/term"
 )
 
-// InteractiveResolver resolves parameter definitions to changes by prompting via stdin/stdout.
+// InteractiveResolver resolves parameter definitions to changes by prompting for values.
 type InteractiveResolver struct {
-	input  io.Reader
-	output io.Writer
+	readPrompt func(term.Prompt) (string, error)
+	palette    term.Palette
 }
 
-func NewInteractiveResolver(in io.Reader, out io.Writer) *InteractiveResolver {
-	return &InteractiveResolver{input: in, output: out}
+func NewInteractiveResolver(readPrompt func(term.Prompt) (string, error), palette term.Palette) *InteractiveResolver {
+	return &InteractiveResolver{readPrompt: readPrompt, palette: palette}
 }
 
 func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 	changes := Changes{}
-	if len(parameters) == 0 {
-		return changes, nil
-	}
-	scanner := bufio.NewScanner(r.input)
-	palette := term.NewPaletteFor(r.output)
 
 	for i, parameter := range parameters {
-		prompt := fmt.Sprintf("%s\n", formatParameterPrompt(parameter, i+1, len(parameters), palette))
-		if _, err := fmt.Fprint(r.output, prompt); err != nil {
+		initial := ""
+		if parameter.ExistingValue != nil {
+			initial = *parameter.ExistingValue
+		}
+
+		value, err := r.readPrompt(term.Prompt{
+			Validate: func(input string) bool {
+				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input)) == nil
+			},
+			Content: func(input string) []string {
+				return formatParameterPromptContent(parameter, input, i+1, len(parameters), r.palette)
+			},
+			Initial: initial,
+			Prefix:  r.palette.Color(term.Magenta, ">") + " ",
+		})
+		if err != nil {
 			return nil, err
 		}
 
-		for {
-			if _, err := fmt.Fprintf(r.output, "%s ", palette.Color(term.Magenta, ">")); err != nil {
-				return nil, err
-			}
-			if !scanner.Scan() {
-				if err := scanner.Err(); err != nil {
-					return nil, err
-				}
-				return changes, nil
-			}
-			value := strings.TrimSpace(scanner.Text())
-			if value != "" {
-				changes[parameter.Name] = new(value)
-				break
-			}
-			if err := parameter.AssertSatisfiedBy(parameter.ExistingValue); err == nil {
-				break
-			}
-			if _, err := fmt.Fprintf(r.output, "%s A value is required.\n", palette.Color(term.Red, "✗")); err != nil {
-				return nil, err
-			}
+		if value == "" && parameter.ExistingValue == nil {
+			continue
 		}
-		if _, err := fmt.Fprintln(r.output); err != nil {
-			return nil, err
+		if parameter.ExistingValue != nil && value == *parameter.ExistingValue {
+			continue
 		}
+		changes[parameter.Name] = contentfulStringOrNil(value)
 	}
 	return changes, nil
 }
 
-func formatParameterPrompt(parameter Parameter, number, total int, palette term.Palette) string {
+func formatParameterPromptContent(parameter Parameter, currentInput string, number, total int, palette term.Palette) []string {
 	progress := palette.Color(term.Dim, fmt.Sprintf("%d/%d", number, total))
 	lines := []string{fmt.Sprintf("%s %s", progress, parameter.Name), ""}
 	if description := strings.TrimSpace(parameter.Description); description != "" {
-		lines = append(lines, fmt.Sprintf("    %s", strings.ReplaceAll(description, "\n", "\n    ")), "")
+		for line := range strings.SplitSeq(description, "\n") {
+			lines = append(lines, fmt.Sprintf("    %s", line))
+		}
 	}
 	var metadata []string
-	if parameter.ExistingValue != nil {
-		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Current:"), *parameter.ExistingValue))
-	}
 	if example := strings.TrimSpace(parameter.Example); example != "" {
-		indentedExample := strings.ReplaceAll(example, "\n", "\n    ")
-		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Example:"), indentedExample))
+		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Example:"), example))
 	}
 	if len(parameter.References) > 0 {
 		metadata = append(metadata, "    "+palette.Color(term.Dim, "References:"))
@@ -87,13 +74,18 @@ func formatParameterPrompt(parameter Parameter, number, total int, palette term.
 		lines = append(lines, metadata...)
 		lines = append(lines, "")
 	}
-	if err := parameter.AssertSatisfiedBy(parameter.ExistingValue); err == nil {
-		infoIcon := palette.Color(term.Blue, "i")
-		if parameter.ExistingValue != nil {
-			lines = append(lines, fmt.Sprintf("%s Leave empty to keep the current value.", infoIcon))
-		} else {
-			lines = append(lines, fmt.Sprintf("%s Leave empty to skip.", infoIcon))
-		}
+
+	if err := parameter.AssertSatisfiedBy(contentfulStringOrNil(currentInput)); err != nil {
+		lines = append(lines, fmt.Sprintf("%s %s", palette.Color(term.Red, "✗"), err.Error()))
+	} else {
+		lines = append(lines, fmt.Sprintf("%s Press enter to continue.", palette.Color(term.Green, "✓")))
 	}
-	return strings.Join(lines, "\n")
+	return lines
+}
+
+func contentfulStringOrNil(input string) *string {
+	if input == "" {
+		return nil
+	}
+	return &input
 }
