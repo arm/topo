@@ -6,6 +6,7 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/clipperhouse/displaywidth v0.11.0
 	github.com/compose-spec/compose-go/v2 v2.15.0
+	github.com/creack/pty v1.1.24
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/mholt/archives v0.1.5

@@ -18,7 +18,6 @@ type Prompt struct {
 	Content  func(input string) []string
 }
 
-// TODO test
 func ReadPrompt(
 	inputFile, outputFile *os.File,
 	prompt Prompt,
