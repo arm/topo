@@ -82,7 +82,8 @@ func TestInteractiveResolver(t *testing.T) {
 		_, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
-		assert.Contains(t, prompt.Content("hello"), `      app: "${GREETING:-default}/${GREETING:-other}"`)
+		assert.Contains(t, prompt.Content("hello"), `      app: "hello/hello"`)
+		assert.Contains(t, prompt.Content("hello"), "           ${GREETING:-default}/${GREETING:-other}")
 	})
 
 	t.Run("allows empty input without required references", func(t *testing.T) {

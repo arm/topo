@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/output/term"
+	"github.com/clipperhouse/displaywidth"
+	"github.com/compose-spec/compose-go/v2/template"
 )
 
 // InteractiveResolver resolves parameter definitions to changes by prompting for values.
@@ -73,9 +75,27 @@ func formatParameterPromptContent(parameter Parameter, currentInput string, numb
 	}
 	if len(parameter.References) > 0 {
 		metadata = append(metadata, "    "+palette.Color(term.Dim, "References:"))
+		pathWidth := 0
+		for _, reference := range parameter.References {
+			pathWidth = max(pathWidth, displaywidth.String(reference.Path+":"))
+		}
+		lookup := func(name string) (string, bool) {
+			if name == parameter.Name && currentInput != "" {
+				return currentInput, true
+			}
+			return "", false
+		}
 		for _, reference := range parameter.References {
 			pathLabel := palette.Color(term.Magenta, reference.Path+":")
-			metadata = append(metadata, fmt.Sprintf("      %s %q", pathLabel, reference.Expression))
+			value, err := template.SubstituteWithOptions(reference.Expression, lookup, template.WithoutLogging)
+			preview := fmt.Sprintf("%q", value)
+			if err != nil {
+				preview = palette.Color(term.Red, "✗") + " " + err.Error()
+			}
+			padding := strings.Repeat(" ", pathWidth-displaywidth.String(reference.Path+":"))
+			metadata = append(metadata, fmt.Sprintf("      %s%s %s", pathLabel, padding, preview))
+			raw := palette.Color(term.Dim, fmt.Sprintf("%s", reference.Expression))
+			metadata = append(metadata, strings.Repeat(" ", 6+pathWidth+1)+raw)
 		}
 	}
 	if len(metadata) > 0 {
