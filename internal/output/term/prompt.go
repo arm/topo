@@ -1,6 +1,7 @@
 package term
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -32,8 +33,8 @@ func ReadPrompt(
 	editor, err := readline.NewEx(&readline.Config{
 		Prompt:       prompt.Prefix,
 		Stdin:        inputFile,
-		Stdout:       outputFile,
-		Stderr:       outputFile,
+		Stdout:       promptOutput{outputFile},
+		Stderr:       promptOutput{outputFile},
 		HistoryLimit: -1,
 		FuncMakeRaw: func() error {
 			var err error
@@ -53,7 +54,7 @@ func ReadPrompt(
 	defer func() { err = errors.Join(err, editor.Close()) }()
 
 	var currentContent []string
-	var currentInput []rune
+	var currentInput string
 	var drawErr error
 
 	editor.Config.SetListener(func(newInput []rune, _ int, key rune) ([]rune, int, bool) {
@@ -61,26 +62,40 @@ func ReadPrompt(
 			return nil, 0, false
 		}
 
+		currentInput = string(newInput)
 		if key == 0 {
 			// Readline's startup callback omits the prefilled input.
-			newInput = []rune(prompt.Initial)
+			currentInput = prompt.Initial
 		}
 
 		if key == readline.CharCtrlL {
 			currentContent = nil
 		}
 
-		currentInput = newInput
+		content := prompt.Content(currentInput)
+		drawErr = errors.Join(drawErr, render(editor, outputFile, content, currentContent))
+		currentContent = content
 
-		currentContent, drawErr = render(editor, outputFile, prompt, newInput, currentContent)
+		_, writeErr := io.WriteString(outputFile, endSynchronizedUpdate)
+		drawErr = errors.Join(drawErr, writeErr)
 		return nil, 0, false
 	})
 
 	editor.Config.FuncFilterInputRune = func(key rune) (rune, bool) {
 		if (key == readline.CharEnter || key == readline.CharCtrlJ) && prompt.Validate != nil {
-			return key, prompt.Validate(string(currentInput))
+			return key, prompt.Validate(currentInput)
 		}
 
+		// Readline clears and repaints before calling the listener. Group both
+		// renderers into one frame, excluding keys that can bypass the listener.
+		if editor.Operation.IsNormalMode() && canSynchronizeKey(key) {
+			_, writeErr := io.WriteString(outputFile, beginSynchronizedUpdate)
+			if writeErr != nil {
+				drawErr = errors.Join(drawErr, writeErr)
+				editor.Operation.Close()
+				return key, false
+			}
+		}
 		return key, true
 	}
 
@@ -89,13 +104,20 @@ func ReadPrompt(
 }
 
 const (
-	carriageReturn = "\r"
-	lineFeed       = "\n"
+	lineBreak      = "\r\n"
 	clearToEnd     = "\x1b[J"
+	cursorUpOneRow = "\x1b[A"
+	cursorUpRows   = "\x1b[%dA"
+	backspace      = "\b"
+	// DEC synchronized output presents a complete edit as one frame.
+	beginSynchronizedUpdate = "\x1b[?2026h"
+	endSynchronizedUpdate   = "\x1b[?2026l"
 )
 
-func moveUp(rows int) string {
-	return fmt.Sprintf("\x1b[%dA", rows)
+func canSynchronizeKey(key rune) bool {
+	return key != 0 && key != readline.CharInterrupt &&
+		key != readline.CharCtrlZ && key != readline.CharTab && key != readline.CharEnter &&
+		key != readline.CharCtrlJ && key != readline.CharDelete
 }
 
 func textHeight(lines []string, width int) int {
@@ -123,34 +145,43 @@ func textHeight(lines []string, width int) int {
 	return rows
 }
 
-func render(editor *readline.Instance, outputFile *os.File, prompt Prompt, currentInput []rune, previousLines []string) ([]string, error) {
-	editor.Clean()
-	defer editor.Refresh()
-
+func render(editor *readline.Instance, outputFile *os.File, rows, previousLines []string) error {
 	outputFd := int(outputFile.Fd()) // #nosec G115 - posix fds and Windows handles fit into an int
 	width, height, sizeErr := readline.GetSize(outputFd)
 	if sizeErr != nil || width < 1 || height < 1 {
 		editor.Operation.Close()
-		return nil, fmt.Errorf("terminal width unavailable: %d (%v)", width, sizeErr)
+		return fmt.Errorf("terminal width unavailable: %d (%v)", width, sizeErr)
 	}
+
+	editor.Clean()
+	defer editor.Refresh()
 
 	var update strings.Builder
 	if previousRows := textHeight(previousLines, width); previousRows > 0 {
-		fmt.Fprint(&update, moveUp(previousRows))
+		fmt.Fprintf(&update, cursorUpRows, previousRows)
 	}
 	update.WriteString(clearToEnd)
 
-	rows := prompt.Content(string(currentInput))
-
 	for _, row := range rows {
 		update.WriteString(row)
-		update.WriteString(carriageReturn)
-		update.WriteString(lineFeed)
+		update.WriteString(lineBreak)
 	}
 
 	_, err := io.WriteString(outputFile, update.String())
 	if err != nil {
 		editor.Operation.Close()
 	}
-	return rows, err
+	return err
+}
+
+// Readline backspaces before moving up across a wrapped row. With reverse
+// wrapping, that backspace already moves up, so remove the redundant step.
+type promptOutput struct{ file *os.File }
+
+func (w promptOutput) Write(data []byte) (int, error) {
+	_, err := w.file.Write(bytes.ReplaceAll(data, []byte(backspace+cursorUpOneRow), []byte(cursorUpOneRow)))
+	if err != nil {
+		return 0, err
+	}
+	return len(data), nil
 }
