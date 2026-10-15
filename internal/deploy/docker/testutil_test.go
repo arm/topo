@@ -120,7 +120,7 @@ func startTestRegistry(t *testing.T, containerName string) string {
 func requireContainerAbsent(t *testing.T, containerName string) {
 	t.Helper()
 	inspectCommand := docker.Command(t.Context(), docker.LocalHost, "inspect", containerName)
-	require.Error(t, inspectCommand.Run(), "container %s already exists", containerName)
+	require.Error(t, inspectCommand.Run(), "container %s exists", containerName)
 	t.Cleanup(func() {
 		removeOutput, err := docker.Command(context.Background(), docker.LocalHost, "rm", "-f", containerName).CombinedOutput()
 		if err != nil && !strings.Contains(string(removeOutput), "No such container") {
