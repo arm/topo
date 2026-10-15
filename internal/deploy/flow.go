@@ -47,12 +47,11 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		portConflictMessages = podman.ContainerPortConflictMessages
 	}
 
-	targetEngine := localEngine
-
 	if err := PrepareImages(ctx, progress, scope, localEngine); err != nil {
 		return err
 	}
 
+	targetEngine := localEngine
 	if !options.TargetHost.IsPlainLocalhost() {
 		if engine == EngineDocker {
 			targetEngine = docker.Engine{Host: docker.NewHostFromDestination(options.TargetHost)}
