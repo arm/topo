@@ -2,6 +2,7 @@ package parameter
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/arm/topo/internal/output/term"
@@ -11,6 +12,13 @@ import (
 type InteractiveResolver struct {
 	readPrompt func(term.Prompt) (string, error)
 	palette    term.Palette
+}
+
+func NewInteractiveResolverForTerminal(in *os.File, out *os.File) *InteractiveResolver {
+	readPrompt := func(prompt term.Prompt) (string, error) {
+		return term.ReadPrompt(in, out, prompt)
+	}
+	return NewInteractiveResolver(readPrompt, term.NewPaletteFor(out))
 }
 
 func NewInteractiveResolver(readPrompt func(term.Prompt) (string, error), palette term.Palette) *InteractiveResolver {
