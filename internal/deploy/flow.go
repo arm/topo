@@ -34,17 +34,17 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 	progress := term.NewProgress(output)
 	var localEngine Engine
 	var clean func() error
-	var knownRegistryErrors []string
+	var portConflictMessages []string
 
 	if engine == EngineDocker {
 		localEngine = docker.Engine{Host: docker.LocalHost}
-		knownRegistryErrors = []string{"already in use", "already allocated"}
+		portConflictMessages = docker.ContainerPortConflictMessages
 	} else {
 		if err := podman.EnsureNoRuntimeSet(scope); err != nil {
 			return err
 		}
 		localEngine = podman.Engine{Socket: podman.LocalSocket}
-		knownRegistryErrors = []string{"address in use", "address already in use", "proxy already running"}
+		portConflictMessages = podman.ContainerPortConflictMessages
 	}
 
 	targetEngine := localEngine
@@ -74,7 +74,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 			}
 		} else {
 			registryConfig := options.Registry.WithDefaults()
-			if err := PrepareRegistry(ctx, progress, registryConfig, localEngine, knownRegistryErrors); err != nil {
+			if err := PrepareRegistry(ctx, progress, registryConfig, localEngine, portConflictMessages); err != nil {
 				return err
 			}
 
@@ -248,7 +248,7 @@ func PrepareRegistry(
 	progress *term.Progress,
 	config RegistryConfig,
 	ex CommandRunner,
-	knownErrors []string,
+	portConflictMessages []string,
 ) error {
 	if err := progress.Header("Run registry"); err != nil {
 		return err
@@ -279,8 +279,8 @@ func PrepareRegistry(
 		return nil
 	}
 	commandErrorOutput := strings.ToLower(commandOutput.String())
-	for _, knownError := range knownErrors {
-		if strings.Contains(commandErrorOutput, knownError) {
+	for _, portConflictMessage := range portConflictMessages {
+		if strings.Contains(commandErrorOutput, portConflictMessage) {
 			return fmt.Errorf("%w\nport is already in use, this could be an existing %s or another process", err, config.ContainerName)
 		}
 	}

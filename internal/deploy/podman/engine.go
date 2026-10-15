@@ -16,6 +16,8 @@ type Engine struct {
 	Socket Socket
 }
 
+var ContainerPortConflictMessages = []string{"address in use", "address already in use", "proxy already running"}
+
 func (ex Engine) Command(ctx context.Context, args ...string) *exec.Cmd {
 	return Command(ctx, ex.Socket, args...)
 }

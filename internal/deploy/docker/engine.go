@@ -16,6 +16,8 @@ type Engine struct {
 	Host Host
 }
 
+var ContainerPortConflictMessages = []string{"already in use", "already allocated"}
+
 func (ex Engine) Command(ctx context.Context, args ...string) *exec.Cmd {
 	return Command(ctx, ex.Host, args...)
 }

@@ -363,9 +363,9 @@ func TestPrepareRegistry(t *testing.T) {
 		executor := &registryExecutorFake{runError: runError, runOutput: "Error: Address ALREADY in use\n"}
 		var output bytes.Buffer
 		progress := term.NewProgress(&output)
-		knownErrors := []string{"already in use", "already allocated"}
+		portConflictMessages := []string{"already in use", "already allocated"}
 
-		err := deploy.PrepareRegistry(t.Context(), progress, config, executor, knownErrors)
+		err := deploy.PrepareRegistry(t.Context(), progress, config, executor, portConflictMessages)
 
 		require.ErrorIs(t, err, runError)
 		assert.ErrorContains(t, err, "port is already in use, this could be an existing test-registry or another process")
