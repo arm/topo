@@ -24,7 +24,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		return err
 	}
 
-	targetSocket := LocalSocket
+	remoteEngine := localEngine
 	var tunnel *ssh.TCPToUnixSocketTunnel
 	if !options.TargetHost.IsPlainLocalhost() {
 		if err := progress.Header("Open Podman socket SSH tunnel"); err != nil {
@@ -42,9 +42,10 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 			}
 		}()
 
-		targetSocket = NewSocket(tunnel.SocketURL())
+		targetSocket := NewSocket(tunnel.SocketURL())
+		remoteEngine = EngineExecutor{targetSocket}
 		if options.Registry == nil {
-			if err := deploy.TransferImagesViaPipe(ctx, progress, scope, localEngine, EngineExecutor{targetSocket}); err != nil {
+			if err := deploy.TransferImagesViaPipe(ctx, progress, scope, localEngine, remoteEngine); err != nil {
 				return err
 			}
 		} else if err := transferImagesViaRegistry(ctx, progress, LocalSocket, options.TargetHost, targetSocket, scope, *options.Registry); err != nil {
@@ -52,7 +53,6 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		}
 	}
 
-	remoteEngine := EngineExecutor{targetSocket}
 	if err := deploy.StartServices(ctx, progress, scope, options.RecreateMode, remoteEngine); err != nil {
 		return err
 	}

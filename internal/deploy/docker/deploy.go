@@ -21,10 +21,10 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts dep
 		return err
 	}
 
+	remoteEngine := EngineExecutor{NewHostFromDestination(opts.TargetHost)}
 	if !opts.TargetHost.IsPlainLocalhost() {
 		if opts.Registry == nil {
-			targetHost := NewHostFromDestination(opts.TargetHost)
-			if err := deploy.TransferImagesViaPipe(ctx, progress, scope, localEngine, EngineExecutor{targetHost}); err != nil {
+			if err := deploy.TransferImagesViaPipe(ctx, progress, scope, localEngine, remoteEngine); err != nil {
 				return err
 			}
 		} else {
@@ -34,7 +34,6 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, opts dep
 		}
 	}
 
-	remoteEngine := EngineExecutor{NewHostFromDestination(opts.TargetHost)}
 	if err := deploy.StartServices(ctx, progress, scope, opts.RecreateMode, remoteEngine); err != nil {
 		return err
 	}
