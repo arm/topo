@@ -28,8 +28,8 @@ func TestEnrichContainers(t *testing.T) {
 			got := enrichContainers(input, "myhost", domains)
 
 			want := []EnrichedContainer{
-				{Id: "remote", ProcessingDomain: "m33"},
-				{Id: "host", ProcessingDomain: "Linux Host"},
+				{ID: "remote", ProcessingDomain: "m33"},
+				{ID: "host", ProcessingDomain: "Linux Host"},
 			}
 			assert.Equal(t, want, got)
 		})
@@ -39,7 +39,7 @@ func TestEnrichContainers(t *testing.T) {
 
 			got := enrichContainers(input, "myhost", map[string]string{})
 
-			want := []EnrichedContainer{{Id: "host", ProcessingDomain: "Linux Host"}}
+			want := []EnrichedContainer{{ID: "host", ProcessingDomain: "Linux Host"}}
 			assert.Equal(t, want, got)
 		})
 	})
@@ -88,7 +88,7 @@ func TestEnrichContainers(t *testing.T) {
 
 		got := enrichContainers(input, "myhost", domains)
 
-		want := []EnrichedContainer{{Id: "remote", ProcessingDomain: "m33", Address: "myhost:8080"}}
+		want := []EnrichedContainer{{ID: "remote", ProcessingDomain: "m33", Address: "myhost:8080"}}
 		assert.Equal(t, want, got)
 	})
 
@@ -101,7 +101,7 @@ func TestEnrichContainers(t *testing.T) {
 
 		want := []EnrichedContainer{{
 			ProcessingDomain: "Linux Host", Image: "web", State: "running", Status: "Up",
-			Id: "such-a-cool-id", Names: "project-web-1",
+			ID: "such-a-cool-id", Names: "project-web-1",
 		}}
 		assert.Equal(t, want, got)
 	})

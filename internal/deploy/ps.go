@@ -71,7 +71,7 @@ func containerIDs(raws []RawContainer) []string {
 const hostProcessingDomain = "Linux Host"
 
 type EnrichedContainer struct {
-	Id               string
+	ID               string
 	Names            string
 	Image            string
 	State            string
@@ -88,7 +88,7 @@ func enrichContainers(raws []RawContainer, hostname string, domains map[string]s
 			domain = hostProcessingDomain
 		}
 		containers[i] = EnrichedContainer{
-			Id:               raw.ID,
+			ID:               raw.ID,
 			Names:            raw.Names,
 			Image:            raw.Image,
 			State:            raw.State,

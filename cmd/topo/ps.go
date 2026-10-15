@@ -66,15 +66,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 func newContainerList(containers []deploy.EnrichedContainer) views.ContainerList {
 	items := make([]views.Container, len(containers))
 	for i, container := range containers {
-		items[i] = views.Container{
-			ID:               container.Id,
-			Names:            container.Names,
-			Image:            container.Image,
-			State:            container.State,
-			Status:           container.Status,
-			ProcessingDomain: container.ProcessingDomain,
-			Address:          container.Address,
-		}
+		items[i] = views.Container(container)
 	}
 	return views.ContainerList{Containers: items}
 }
