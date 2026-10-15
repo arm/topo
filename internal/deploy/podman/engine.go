@@ -12,23 +12,23 @@ import (
 	"github.com/arm/topo/internal/project"
 )
 
-type EngineExecutor struct {
+type Engine struct {
 	Socket Socket
 }
 
-func (ex EngineExecutor) Command(ctx context.Context, args ...string) *exec.Cmd {
+func (ex Engine) Command(ctx context.Context, args ...string) *exec.Cmd {
 	return Command(ctx, ex.Socket, args...)
 }
 
-func (ex EngineExecutor) RunCommand(ctx context.Context, output io.Writer, args ...string) error {
+func (ex Engine) RunCommand(ctx context.Context, output io.Writer, args ...string) error {
 	return RunCommand(ctx, output, ex.Socket, args...)
 }
 
-func (ex EngineExecutor) TagImage(ctx context.Context, output io.Writer, image, tag string) error {
+func (ex Engine) TagImage(ctx context.Context, output io.Writer, image, tag string) error {
 	return ex.RunCommand(ctx, output, "tag", image, tag)
 }
 
-func (ex EngineExecutor) PushImage(ctx context.Context, output io.Writer, tag string) (digest string, pushErr error) {
+func (ex Engine) PushImage(ctx context.Context, output io.Writer, tag string) (digest string, pushErr error) {
 	digestFile, err := os.CreateTemp("", "topo-registry-digest-*")
 	if err != nil {
 		return "", fmt.Errorf("create registry digest file: %w", err)
@@ -59,10 +59,10 @@ func (ex EngineExecutor) PushImage(ctx context.Context, output io.Writer, tag st
 	return fmt.Sprintf("%s@%s", tag, digest), nil
 }
 
-func (ex EngineExecutor) PullImage(ctx context.Context, output io.Writer, image string) error {
+func (ex Engine) PullImage(ctx context.Context, output io.Writer, image string) error {
 	return ex.RunCommand(ctx, output, "pull", "--tls-verify=false", image)
 }
 
-func (ex EngineExecutor) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
+func (ex Engine) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
 	return RunComposeCommand(ctx, output, ex.Socket, scope, args...)
 }

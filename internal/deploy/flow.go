@@ -20,29 +20,30 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type Engine interface {
+	CommandRunner
+	ComposeCommandRunner
+	RegistryClient
+}
+
 func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options Options) (deployErr error) {
 	engine := options.Engine
 	if engine != EngineDocker && engine != EnginePodman {
 		return fmt.Errorf("invalid engine %q: must be docker or podman", engine)
 	}
 	progress := term.NewProgress(output)
-	type deploymentExecutor interface {
-		EngineExecutor
-		ComposeCommandRunner
-		RegistryEngineExecutor
-	}
-	var localEngine deploymentExecutor
+	var localEngine Engine
 	var clean func() error
 	var knownRegistryErrors []string
 
 	if engine == EngineDocker {
-		localEngine = docker.EngineExecutor{Host: docker.LocalHost}
+		localEngine = docker.Engine{Host: docker.LocalHost}
 		knownRegistryErrors = []string{"already in use", "already allocated"}
 	} else {
 		if err := podman.EnsureNoRuntimeSet(scope); err != nil {
 			return err
 		}
-		localEngine = podman.EngineExecutor{Socket: podman.LocalSocket}
+		localEngine = podman.Engine{Socket: podman.LocalSocket}
 		knownRegistryErrors = []string{"address in use", "address already in use", "proxy already running"}
 	}
 
@@ -54,7 +55,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 
 	if !options.TargetHost.IsPlainLocalhost() {
 		if engine == EngineDocker {
-			targetEngine = docker.EngineExecutor{Host: docker.NewHostFromDestination(options.TargetHost)}
+			targetEngine = docker.Engine{Host: docker.NewHostFromDestination(options.TargetHost)}
 		} else {
 			socket, closeTunnel, err := openPodmanSocketTunnel(ctx, progress, options.TargetHost)
 			if err != nil {
@@ -64,7 +65,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 			defer func() {
 				deployErr = errors.Join(deployErr, clean())
 			}()
-			targetEngine = podman.EngineExecutor{Socket: socket}
+			targetEngine = podman.Engine{Socket: socket}
 		}
 
 		if options.Registry == nil {
@@ -120,7 +121,7 @@ func Stop(
 	output io.Writer,
 	scope project.Scope,
 	target ssh.Destination,
-	engine Engine,
+	engine EngineKind,
 ) (stopErr error) {
 	if engine != EngineDocker && engine != EnginePodman {
 		return fmt.Errorf("invalid engine %q: must be docker or podman", engine)
@@ -128,7 +129,7 @@ func Stop(
 	progress := term.NewProgress(output)
 
 	if engine == EngineDocker {
-		targetEngine := docker.EngineExecutor{Host: docker.NewHostFromDestination(target)}
+		targetEngine := docker.Engine{Host: docker.NewHostFromDestination(target)}
 		return StopServices(ctx, progress, scope, targetEngine)
 	}
 
@@ -144,7 +145,7 @@ func Stop(
 		socket = remoteSocket
 	}
 
-	targetEngine := podman.EngineExecutor{Socket: socket}
+	targetEngine := podman.Engine{Socket: socket}
 	return StopServices(ctx, progress, scope, targetEngine)
 }
 
@@ -176,7 +177,7 @@ func PrepareImages(ctx context.Context, progress *term.Progress, scope project.S
 	return PullImages(ctx, progress, scope, runner)
 }
 
-type EngineExecutor interface {
+type CommandRunner interface {
 	Command(ctx context.Context, args ...string) *exec.Cmd
 	RunCommand(ctx context.Context, output io.Writer, args ...string) error
 }
@@ -185,8 +186,8 @@ func TransferImagesViaPipe(
 	ctx context.Context,
 	progress *term.Progress,
 	scope project.Scope,
-	sourceEx EngineExecutor,
-	targetEx EngineExecutor,
+	sourceEx CommandRunner,
+	targetEx CommandRunner,
 ) error {
 	if err := progress.Header("Transfer images"); err != nil {
 		return err
@@ -209,8 +210,8 @@ func TransferImagesViaPipe(
 func transferImageViaPipe(
 	ctx context.Context,
 	output io.Writer,
-	sourceEx EngineExecutor,
-	targetEx EngineExecutor,
+	sourceEx CommandRunner,
+	targetEx CommandRunner,
 	image string,
 ) error {
 	pipeReader, pipeWriter := io.Pipe()
@@ -246,7 +247,7 @@ func PrepareRegistry(
 	ctx context.Context,
 	progress *term.Progress,
 	config RegistryConfig,
-	ex EngineExecutor,
+	ex CommandRunner,
 	knownErrors []string,
 ) error {
 	if err := progress.Header("Run registry"); err != nil {
@@ -286,7 +287,7 @@ func PrepareRegistry(
 	return err
 }
 
-func validateRegistryPort(ctx context.Context, ex EngineExecutor, containerName, requestedPort string) error {
+func validateRegistryPort(ctx context.Context, ex CommandRunner, containerName, requestedPort string) error {
 	cmd := ex.Command(ctx, "inspect", containerName)
 	output, err := cmd.Output()
 	if err != nil {
@@ -383,7 +384,7 @@ func closeTunnel(progress *term.Progress, tunnel *ssh.Tunnel) error {
 	return errors.Join(headerError, closeError)
 }
 
-type RegistryEngineExecutor interface {
+type RegistryClient interface {
 	TagImage(ctx context.Context, output io.Writer, image, tag string) error
 	PushImage(ctx context.Context, output io.Writer, image string) (digest string, err error)
 	PullImage(ctx context.Context, output io.Writer, digest string) error
@@ -394,8 +395,8 @@ func TransferImagesViaRegistry(
 	progress *term.Progress,
 	scope project.Scope,
 	localRegistryPort string,
-	sourceEx RegistryEngineExecutor,
-	targetEx RegistryEngineExecutor,
+	sourceEx RegistryClient,
+	targetEx RegistryClient,
 ) error {
 	if err := progress.Header("Transfer via registry"); err != nil {
 		return err

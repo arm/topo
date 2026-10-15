@@ -44,7 +44,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		dest := ssh.NewDestination(target.value)
-		return deploy.Stop(cmd.Context(), os.Stdout, scope, dest, deploy.Engine(engine.value))
+		return deploy.Stop(cmd.Context(), os.Stdout, scope, dest, deploy.EngineKind(engine.value))
 	},
 }
 

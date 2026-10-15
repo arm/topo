@@ -86,7 +86,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		)
 
 		options := deploy.Options{
-			Engine:                deploy.Engine(engine.value),
+			Engine:                deploy.EngineKind(engine.value),
 			TargetHost:            ssh.NewDestination(target.value),
 			DefaultSuccessMessage: defaultSuccessMessage,
 		}
