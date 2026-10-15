@@ -41,6 +41,9 @@ func ReadPrompt(
 			return err
 		},
 		FuncExitRaw: func() error {
+			if inputOriginalState == nil {
+				return nil
+			}
 			return readline.Restore(inputFd, inputOriginalState)
 		},
 	})
