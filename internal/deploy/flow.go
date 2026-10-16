@@ -387,6 +387,7 @@ type RegistryClient interface {
 	TagImage(ctx context.Context, output io.Writer, image, tag string) error
 	PushImage(ctx context.Context, output io.Writer, image string) (digest string, err error)
 	PullImage(ctx context.Context, output io.Writer, digest string) error
+	SupportsDigestRetagging(ctx context.Context) (bool, error) // TODO implement podman - yes always, docker - only with containerd snapshotter
 }
 
 func TransferImagesViaRegistry(
@@ -406,8 +407,18 @@ func TransferImagesViaRegistry(
 		return err
 	}
 
+	supportsDigestRetagging, err := sourceEx.SupportsDigestRetagging(ctx)
+	if err != nil {
+		return err
+	}
+	if !supportsDigestRetagging {
+		// TODO think about how to make this useful/ CE specific
+		return fmt.Errorf("source registry does not support digest retagging")
+	}
+
 	for _, image := range images {
-		registryTag := fmt.Sprintf("localhost:%s/%s", localRegistryPort, image)
+		bareImage := stripPinnedDigest(image)
+		registryTag := fmt.Sprintf("localhost:%s/%s", localRegistryPort, bareImage)
 		if err := sourceEx.TagImage(ctx, progress.Output(), image, registryTag); err != nil {
 			return err
 		}
@@ -418,10 +429,17 @@ func TransferImagesViaRegistry(
 		if err := targetEx.PullImage(ctx, progress.Output(), digest); err != nil {
 			return err
 		}
-		if err := targetEx.TagImage(ctx, progress.Output(), digest, image); err != nil {
+		if err := targetEx.TagImage(ctx, progress.Output(), digest, bareImage); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func stripPinnedDigest(image string) string {
+	if before, _, ok := strings.Cut(image, "@"); ok {
+		return before
+	}
+	return image
 }
