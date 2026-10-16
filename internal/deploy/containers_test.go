@@ -72,6 +72,33 @@ func TestEnrichContainers(t *testing.T) {
 			assert.Equal(t, want, got)
 		})
 
+		t.Run("preserves an explicit bind address containing the wildcard substring", func(t *testing.T) {
+			input := []RawContainer{{Ports: "10.0.0.0:8080->80/tcp"}}
+
+			got := enrichContainers(input, "myhost", nil)
+
+			want := []EnrichedContainer{{ProcessingDomain: "Linux Host", Address: "10.0.0.0:8080"}}
+			assert.Equal(t, want, got)
+		})
+
+		t.Run("brackets an IPv6 hostname when substituting the wildcard bind address", func(t *testing.T) {
+			input := []RawContainer{{Ports: "0.0.0.0:8080->80/tcp"}}
+
+			got := enrichContainers(input, "2001:db8::1", nil)
+
+			want := []EnrichedContainer{{ProcessingDomain: "Linux Host", Address: "[2001:db8::1]:8080"}}
+			assert.Equal(t, want, got)
+		})
+
+		t.Run("preserves an explicit IPv6 bind address", func(t *testing.T) {
+			input := []RawContainer{{Ports: "[2001:db8::2]:8080->80/tcp"}}
+
+			got := enrichContainers(input, "myhost", nil)
+
+			want := []EnrichedContainer{{ProcessingDomain: "Linux Host", Address: "[2001:db8::2]:8080"}}
+			assert.Equal(t, want, got)
+		})
+
 		t.Run("remaps all published ports", func(t *testing.T) {
 			input := []RawContainer{{Ports: "0.0.0.0:8080->80/tcp, 0.0.0.0:8443->443/tcp"}}
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 
 	"github.com/arm/topo/internal/deploy/docker"
@@ -109,7 +110,10 @@ func publishedAddress(rawPorts, hostname string) string {
 		if idx := strings.Index(part, "->"); idx != -1 {
 			part = part[:idx]
 		}
-		parts[i] = strings.ReplaceAll(part, "0.0.0.0", hostname)
+		if port, ok := strings.CutPrefix(part, "0.0.0.0:"); ok {
+			part = net.JoinHostPort(hostname, port)
+		}
+		parts[i] = part
 	}
 	return strings.Join(parts, ", ")
 }
