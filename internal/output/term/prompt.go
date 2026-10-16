@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/chzyer/readline"
 )
@@ -29,12 +31,13 @@ func ReadPrompt(
 	inputFd := int(inputFile.Fd())   // #nosec G115 - posix fds and Windows handles fit into an int
 	outputFd := int(outputFile.Fd()) // #nosec G115
 	var inputOriginalState *readline.State
+	output := &promptOutput{writer: outputFile}
 
 	editor, err := readline.NewEx(&readline.Config{
 		Prompt:              prompt.Prefix,
 		Stdin:               inputFile,
-		Stdout:              promptOutput{outputFile},
-		Stderr:              promptOutput{outputFile},
+		Stdout:              output,
+		Stderr:              output,
 		HistoryLimit:        -1,
 		ForceUseInteractive: true,
 		FuncGetWidth: func() int {
@@ -60,8 +63,7 @@ func ReadPrompt(
 		return "", err
 	}
 	defer func() {
-		_, finishErr := fmt.Fprint(outputFile, endSynchronizedUpdate)
-		err = errors.Join(err, editor.Close(), finishErr)
+		err = errors.Join(err, output.Close(), editor.Close())
 	}()
 
 	var invalid bool
@@ -109,9 +111,18 @@ const (
 	cursorForwardColumns    = "\x1b[%dC"
 )
 
-type promptOutput struct{ file *os.File }
+type promptOutput struct {
+	writer io.Writer
+	mu     sync.Mutex
+	closed bool
+}
 
-func (w promptOutput) Write(data []byte) (int, error) {
+func (w *promptOutput) Write(data []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed {
+		return len(data), nil
+	}
 	// Readline backspaces before moving up across a wrapped row. With reverse wrapping, that backspace already moves up, so remove the redundant step.
 	frame := bytes.ReplaceAll(data, []byte(backspace+cursorUpOneRow), []byte(cursorUpOneRow))
 	// Readline writes its clear and repaint separately; display them together.
@@ -120,11 +131,22 @@ func (w promptOutput) Write(data []byte) (int, error) {
 	} else {
 		frame = append(frame, endSynchronizedUpdate...)
 	}
-	_, err := w.file.Write(frame)
+	_, err := w.writer.Write(frame)
 	if err != nil {
 		return 0, err
 	}
 	return len(data), nil
+}
+
+func (w *promptOutput) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed {
+		return nil
+	}
+	w.closed = true
+	_, err := fmt.Fprint(w.writer, endSynchronizedUpdate)
+	return err
 }
 
 type promptPainter struct {
