@@ -29,6 +29,16 @@ func TestReadPrompt(t *testing.T) {
 		assert.Equal(t, "hello!", got)
 	})
 
+	t.Run("accepts a prefilled required value without editing", func(t *testing.T) {
+		terminal := newTestPTY(t, "\r\x03")
+		prompt := term.Prompt{Initial: "hello", Validate: func(input string) bool { return input != "" }}
+
+		got, err := term.ReadPrompt(terminal, terminal, prompt)
+
+		require.NoError(t, err)
+		assert.Equal(t, "hello", got)
+	})
+
 	t.Run("rejects invalid input before accepting a valid value", func(t *testing.T) {
 		terminal := newTestPTY(t, "\rhello\r")
 		var validated []string

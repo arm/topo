@@ -72,7 +72,9 @@ func ReadPrompt(
 		editor.Config.SetPainter(promptPainter{prompt, editor.Config.FuncGetWidth, &invalid})
 	}
 	editor.Config.SetListener(func(line []rune, _ int, key rune) ([]rune, int, bool) {
-		currentInput = string(line)
+		if key != 0 {
+			currentInput = string(line)
+		}
 		return nil, 0, false
 	})
 	editor.Config.FuncFilterInputRune = func(key rune) (rune, bool) {
