@@ -3,7 +3,9 @@ module github.com/arm/topo
 go 1.26.9
 
 require (
+	github.com/chzyer/readline v1.5.1
 	github.com/compose-spec/compose-go/v2 v2.15.0
+	github.com/creack/pty v1.1.24
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/mholt/archives v0.1.5
@@ -11,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	golang.org/x/sync v0.22.0
-	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
