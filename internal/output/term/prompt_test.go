@@ -3,10 +3,10 @@
 package term_test
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"os"
+	"slices"
 	"syscall"
 	"testing"
 	"time"
@@ -21,7 +21,7 @@ import (
 func TestReadPrompt(t *testing.T) {
 	t.Run("edits a prefilled value", func(t *testing.T) {
 		terminal := newTestPTY(t, "!\r")
-		prompt := term.Prompt{Initial: "hello", Content: promptContent}
+		prompt := term.Prompt{Initial: "hello"}
 
 		got, err := term.ReadPrompt(terminal, terminal, prompt)
 
@@ -32,7 +32,7 @@ func TestReadPrompt(t *testing.T) {
 	t.Run("rejects invalid input before accepting a valid value", func(t *testing.T) {
 		terminal := newTestPTY(t, "\rhello\r")
 		var validated []string
-		prompt := term.Prompt{Content: promptContent, Validate: func(input string) bool {
+		prompt := term.Prompt{Content: []string{"Value:"}, Validate: func(input string) bool {
 			validated = append(validated, input)
 			return input != ""
 		}}
@@ -44,18 +44,34 @@ func TestReadPrompt(t *testing.T) {
 		assert.Equal(t, []string{"", "hello"}, validated)
 	})
 
+	t.Run("shows errors only after invalid Enter and clears them on cursor movement", func(t *testing.T) {
+		terminal := newTestPTY(t, "\r\x1b[Dhello\r")
+		var errorsShown []bool
+		prompt := term.Prompt{
+			Validate: func(input string) bool { return input != "" },
+			Hint: func(input string, invalid bool) string {
+				if input == "" {
+					errorsShown = append(errorsShown, invalid)
+				}
+				return "   Hint"
+			},
+		}
+
+		got, err := term.ReadPrompt(terminal, terminal, prompt)
+
+		require.NoError(t, err)
+		assert.Equal(t, "hello", got)
+		assert.Equal(t, []bool{false, true, false}, slices.Compact(errorsShown))
+	})
+
 	t.Run("returns an interrupt on cancellation", func(t *testing.T) {
 		terminal := newTestPTY(t, "\x03")
-		prompt := term.Prompt{Content: promptContent}
+		prompt := term.Prompt{Content: []string{"Value:"}}
 
 		_, err := term.ReadPrompt(terminal, terminal, prompt)
 
 		assert.ErrorIs(t, err, readline.ErrInterrupt)
 	})
-}
-
-func promptContent(input string) []string {
-	return []string{"Value: " + input}
 }
 
 func newTestPTY(t *testing.T, keys string) *os.File {
@@ -79,17 +95,15 @@ func newTestPTY(t *testing.T, keys string) *os.File {
 		closeFiles()
 		assert.NoError(t, <-done)
 	})
+	// Queue keys without canonical buffering or Ctrl+C generating a signal.
+	_, err = readline.MakeRaw(int(testTty.Fd()))
+	require.NoError(t, err)
 	go func() {
-		output := bufio.NewReader(testPty)
-		if _, err := output.ReadString('\n'); err != nil {
-			done <- err
-			return
-		}
 		if _, err := io.WriteString(testPty, keys); err != nil {
 			done <- err
 			return
 		}
-		_, err := io.Copy(io.Discard, output)
+		_, err := io.Copy(io.Discard, testPty)
 		if errors.Is(err, syscall.EIO) || errors.Is(err, os.ErrClosed) {
 			err = nil
 		}

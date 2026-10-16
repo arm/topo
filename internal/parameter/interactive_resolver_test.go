@@ -29,8 +29,8 @@ func TestInteractiveResolver(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{
-			"1/1 GREETING", "", "    The greeting message", `    Example: "Hello"`, "", "✓ Press enter to continue.",
-		}, prompt.Content(""))
+			"   1/1 GREETING", "", "       The greeting message", `       Example: "Hello"`, "",
+		}, prompt.Content)
 	})
 
 	t.Run("does not create a change for an empty input on an absent parameter", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestInteractiveResolver(t *testing.T) {
 		_, err := resolver.Resolve(parameters)
 
 		require.NoError(t, err)
-		assert.Contains(t, prompt.Content("hello"), `      app: "${GREETING:-default}/${GREETING:-other}"`)
+		assert.Contains(t, prompt.Content, `         app: "${GREETING:-default}/${GREETING:-other}"`)
 	})
 
 	t.Run("allows empty input without required references", func(t *testing.T) {
@@ -96,6 +96,7 @@ func TestInteractiveResolver(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, prompt.Validate(""))
+		assert.Equal(t, "   Press Enter to continue · Ctrl+C to cancel", prompt.Hint("", false))
 	})
 
 	t.Run("rejects missing required input", func(t *testing.T) {
@@ -109,6 +110,9 @@ func TestInteractiveResolver(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.False(t, prompt.Validate(""))
+		assert.Equal(t, "   Enter a value to continue · Ctrl+C to cancel", prompt.Hint("", false))
+		assert.Equal(t, "   Press Enter to continue · Ctrl+C to cancel", prompt.Hint("value", false))
+		assert.Equal(t, "   ✗ REQUIRED is required, enter a value to continue · Ctrl+C to cancel", prompt.Hint("", true))
 	})
 }
 

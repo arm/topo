@@ -38,11 +38,12 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 			Validate: func(input string) bool {
 				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input)) == nil
 			},
-			Content: func(input string) []string {
-				return formatParameterPromptContent(parameter, input, i+1, len(parameters), r.palette)
+			Content: formatParameterPromptContent(parameter, i+1, len(parameters), r.palette),
+			Hint: func(input string, invalid bool) string {
+				return formatParameterPromptHint(parameter, input, invalid, r.palette)
 			},
 			Initial: initial,
-			Prefix:  r.palette.Color(term.Magenta, ">") + " ",
+			Prefix:  "   " + r.palette.Color(term.Magenta, ">") + " ",
 		})
 		if err != nil {
 			return nil, err
@@ -59,36 +60,41 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 	return changes, nil
 }
 
-func formatParameterPromptContent(parameter Parameter, currentInput string, number, total int, palette term.Palette) []string {
+func formatParameterPromptContent(parameter Parameter, number, total int, palette term.Palette) []string {
 	progress := palette.Color(term.Dim, fmt.Sprintf("%d/%d", number, total))
-	lines := []string{fmt.Sprintf("%s %s", progress, parameter.Name), ""}
+	lines := []string{fmt.Sprintf("   %s %s", progress, parameter.Name), ""}
 	if description := strings.TrimSpace(parameter.Description); description != "" {
 		for line := range strings.SplitSeq(description, "\n") {
-			lines = append(lines, fmt.Sprintf("    %s", line))
+			lines = append(lines, fmt.Sprintf("       %s", line))
 		}
 	}
-	var metadata []string
 	if example := strings.TrimSpace(parameter.Example); example != "" {
-		metadata = append(metadata, fmt.Sprintf("    %s %q", palette.Color(term.Dim, "Example:"), example))
+		lines = append(lines, fmt.Sprintf("       %s %q", palette.Color(term.Dim, "Example:"), example))
 	}
 	if len(parameter.References) > 0 {
-		metadata = append(metadata, "    "+palette.Color(term.Dim, "References:"))
+		lines = append(lines, "       "+palette.Color(term.Dim, "References:"))
 		for _, reference := range parameter.References {
 			pathLabel := palette.Color(term.Magenta, reference.Path+":")
-			metadata = append(metadata, fmt.Sprintf("      %s %q", pathLabel, reference.Expression))
+			lines = append(lines, fmt.Sprintf("         %s %q", pathLabel, reference.Expression))
 		}
 	}
-	if len(metadata) > 0 {
-		lines = append(lines, metadata...)
+	if len(lines) > 2 {
 		lines = append(lines, "")
 	}
-
-	if err := parameter.AssertSatisfiedBy(contentfulStringOrNil(currentInput)); err != nil {
-		lines = append(lines, fmt.Sprintf("%s %s", palette.Color(term.Red, "✗"), err.Error()))
-	} else {
-		lines = append(lines, fmt.Sprintf("%s Press enter to continue.", palette.Color(term.Green, "✓")))
-	}
 	return lines
+}
+
+func formatParameterPromptHint(parameter Parameter, input string, invalid bool, palette term.Palette) string {
+	message := "Enter a value to continue"
+	if input != "" || parameter.AssertSatisfiedBy(nil) == nil {
+		message = "Press Enter to continue"
+	}
+	message = palette.Color(term.Dim, message)
+
+	if invalid {
+		message = fmt.Sprintf("%s %s is required, enter a value to continue", palette.Color(term.Red, "✗"), parameter.Name)
+	}
+	return "   " + message + palette.Color(term.Dim, " · Ctrl+C to cancel")
 }
 
 func contentfulStringOrNil(input string) *string {

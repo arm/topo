@@ -4,19 +4,18 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/clipperhouse/displaywidth"
 )
 
 type Prompt struct {
 	Prefix   string
 	Initial  string
 	Validate func(input string) bool
-	Content  func(input string) []string
+	Content  []string
+	Hint     func(input string, invalid bool) string
 }
 
 func ReadPrompt(
@@ -27,15 +26,24 @@ func ReadPrompt(
 		panic("internal error: ReadPrompt not running in an interactive terminal")
 	}
 
-	inputFd := int(inputFile.Fd()) // #nosec G115 - posix fds and Windows handles fit into an int
+	inputFd := int(inputFile.Fd())   // #nosec G115 - posix fds and Windows handles fit into an int
+	outputFd := int(outputFile.Fd()) // #nosec G115
 	var inputOriginalState *readline.State
 
 	editor, err := readline.NewEx(&readline.Config{
-		Prompt:       prompt.Prefix,
-		Stdin:        inputFile,
-		Stdout:       promptOutput{outputFile},
-		Stderr:       promptOutput{outputFile},
-		HistoryLimit: -1,
+		Prompt:              prompt.Prefix,
+		Stdin:               inputFile,
+		Stdout:              promptOutput{outputFile},
+		Stderr:              promptOutput{outputFile},
+		HistoryLimit:        -1,
+		ForceUseInteractive: true,
+		FuncGetWidth: func() int {
+			width, _, err := readline.GetSize(outputFd)
+			if err != nil {
+				return 0
+			}
+			return width
+		},
 		FuncMakeRaw: func() error {
 			var err error
 			inputOriginalState, err = readline.MakeRaw(inputFd)
@@ -51,137 +59,106 @@ func ReadPrompt(
 	if err != nil {
 		return "", err
 	}
-	defer func() { err = errors.Join(err, editor.Close()) }()
+	defer func() {
+		_, finishErr := fmt.Fprint(outputFile, endSynchronizedUpdate)
+		err = errors.Join(err, editor.Close(), finishErr)
+	}()
 
-	var currentContent []string
-	var currentInput string
-	var drawErr error
+	var invalid bool
+	var writeErr error
+	currentInput := prompt.Initial
 
-	editor.Config.SetListener(func(newInput []rune, _ int, key rune) ([]rune, int, bool) {
-		if key == readline.CharCtrlJ || key == readline.CharInterrupt || key == readline.CharEnter || (key == readline.CharDelete && len(currentInput) == 0) {
-			return nil, 0, false
-		}
-
-		currentInput = string(newInput)
-		if key == 0 {
-			// Readline's startup callback omits the prefilled input.
-			currentInput = prompt.Initial
-		}
-
-		if key == readline.CharCtrlL {
-			currentContent = nil
-		}
-
-		content := prompt.Content(currentInput)
-		drawErr = errors.Join(drawErr, render(editor, outputFile, content, currentContent))
-		currentContent = content
-
-		_, writeErr := io.WriteString(outputFile, endSynchronizedUpdate)
-		drawErr = errors.Join(drawErr, writeErr)
+	if prompt.Hint != nil {
+		editor.Config.SetPainter(promptPainter{prompt, editor.Config.FuncGetWidth, &invalid})
+	}
+	editor.Config.SetListener(func(line []rune, _ int, key rune) ([]rune, int, bool) {
+		currentInput = string(line)
 		return nil, 0, false
 	})
-
 	editor.Config.FuncFilterInputRune = func(key rune) (rune, bool) {
+		invalid = false
 		if (key == readline.CharEnter || key == readline.CharCtrlJ) && prompt.Validate != nil {
-			return key, prompt.Validate(currentInput)
+			invalid = !prompt.Validate(currentInput)
 		}
-
-		// Readline clears and repaints before calling the listener. Group both
-		// renderers into one frame, excluding keys that can bypass the listener.
-		if editor.Operation.IsNormalMode() && canSynchronizeKey(key) {
-			_, writeErr := io.WriteString(outputFile, beginSynchronizedUpdate)
-			if writeErr != nil {
-				drawErr = errors.Join(drawErr, writeErr)
-				editor.Operation.Close()
-				return key, false
-			}
-		}
-		return key, true
+		return key, !invalid
 	}
 
+	for row := range prompt.Content {
+		if _, writeErr = fmt.Fprint(outputFile, prompt.Content[row]+lineBreak); writeErr != nil {
+			return "", writeErr
+		}
+	}
 	value, err := editor.ReadlineWithDefault(prompt.Initial)
-	return value, errors.Join(err, drawErr)
+	return value, errors.Join(err, writeErr)
 }
 
 const (
-	lineBreak      = "\r\n"
-	clearToEnd     = "\x1b[J"
-	cursorUpOneRow = "\x1b[A"
-	cursorUpRows   = "\x1b[%dA"
-	backspace      = "\b"
-	// DEC synchronized output presents a complete edit as one frame.
+	clearToEnd              = "\x1b[J"
 	beginSynchronizedUpdate = "\x1b[?2026h"
 	endSynchronizedUpdate   = "\x1b[?2026l"
+	carriageReturn          = "\r"
+	lineFeed                = "\n"
+	lineBreak               = carriageReturn + lineFeed
+	cursorUpOneRow          = "\x1b[A"
+	cursorUpRows            = "\x1b[%dA"
+	backspace               = "\b"
+	disableAutowrap         = "\x1b[?7l"
+	enableAutowrap          = "\x1b[?7h"
+	cursorForwardColumns    = "\x1b[%dC"
 )
 
-func canSynchronizeKey(key rune) bool {
-	return key != 0 && key != readline.CharInterrupt &&
-		key != readline.CharCtrlZ && key != readline.CharTab && key != readline.CharEnter &&
-		key != readline.CharCtrlJ && key != readline.CharDelete
-}
-
-func textHeight(lines []string, width int) int {
-	measure := displaywidth.Options{ControlSequences: true}
-
-	rows := 0
-	for _, line := range lines {
-		lineRows, lineColumn := 1, 0
-		graphemes := measure.StringGraphemes(line)
-
-		for graphemes.Next() {
-			cells := graphemes.Width()
-			if cells == 0 {
-				continue
-			}
-
-			if lineColumn+cells > width {
-				lineRows++
-				lineColumn = 0
-			}
-			lineColumn += cells
-		}
-		rows += lineRows
-	}
-	return rows
-}
-
-func render(editor *readline.Instance, outputFile *os.File, rows, previousLines []string) error {
-	outputFd := int(outputFile.Fd()) // #nosec G115 - posix fds and Windows handles fit into an int
-	width, height, sizeErr := readline.GetSize(outputFd)
-	if sizeErr != nil || width < 1 || height < 1 {
-		editor.Operation.Close()
-		return fmt.Errorf("terminal width unavailable: %d (%v)", width, sizeErr)
-	}
-
-	editor.Clean()
-	defer editor.Refresh()
-
-	var update strings.Builder
-	if previousRows := textHeight(previousLines, width); previousRows > 0 {
-		fmt.Fprintf(&update, cursorUpRows, previousRows)
-	}
-	update.WriteString(clearToEnd)
-
-	for _, row := range rows {
-		update.WriteString(row)
-		update.WriteString(lineBreak)
-	}
-
-	_, err := io.WriteString(outputFile, update.String())
-	if err != nil {
-		editor.Operation.Close()
-	}
-	return err
-}
-
-// Readline backspaces before moving up across a wrapped row. With reverse
-// wrapping, that backspace already moves up, so remove the redundant step.
 type promptOutput struct{ file *os.File }
 
 func (w promptOutput) Write(data []byte) (int, error) {
-	_, err := w.file.Write(bytes.ReplaceAll(data, []byte(backspace+cursorUpOneRow), []byte(cursorUpOneRow)))
+	// Readline backspaces before moving up across a wrapped row. With reverse wrapping, that backspace already moves up, so remove the redundant step.
+	frame := bytes.ReplaceAll(data, []byte(backspace+cursorUpOneRow), []byte(cursorUpOneRow))
+	// Readline writes its clear and repaint separately; display them together.
+	if bytes.HasPrefix(frame, []byte(clearToEnd)) {
+		frame = append([]byte(beginSynchronizedUpdate), frame...)
+	} else {
+		frame = append(frame, endSynchronizedUpdate...)
+	}
+	_, err := w.file.Write(frame)
 	if err != nil {
 		return 0, err
 	}
 	return len(data), nil
+}
+
+type promptPainter struct {
+	prompt  Prompt
+	width   func() int
+	invalid *bool
+}
+
+func (p promptPainter) Paint(line []rune, _ int) []rune {
+	width := p.width()
+	if width < 1 || strings.HasSuffix(string(line), lineFeed) {
+		return line
+	}
+	hint := p.prompt.Hint(string(line), *p.invalid)
+
+	runes := readline.Runes{}
+	cells := runes.WidthAll(runes.ColorFilter([]rune(p.prompt.Prefix))) + runes.WidthAll(line)
+	column := cells % width
+
+	var output strings.Builder
+	output.WriteString(string(line))
+	if cells > 0 && column == 0 {
+		output.WriteString(lineBreak)
+	}
+
+	output.WriteString(lineBreak + lineBreak)
+	output.WriteString(disableAutowrap)
+	output.WriteString(hint)
+	output.WriteString(" ")
+	output.WriteString(carriageReturn)
+	output.WriteString(enableAutowrap)
+
+	fmt.Fprintf(&output, cursorUpRows, 2)
+	if column > 0 {
+		fmt.Fprintf(&output, cursorForwardColumns, column)
+	}
+
+	return []rune(output.String())
 }
