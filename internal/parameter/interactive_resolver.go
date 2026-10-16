@@ -81,6 +81,9 @@ func formatParameterPromptContent(parameter Parameter, number, total int, palett
 	if len(lines) > 2 {
 		lines = append(lines, "")
 	}
+	if number > 1 {
+		lines = append([]string{""}, lines...)
+	}
 	return lines
 }
 
