@@ -53,7 +53,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			panic("internal error: all flag not registered: " + err.Error())
 		}
 
-		containers, err := deploy.PS(
+		containers, err := deploy.ListContainers(
 			cmd.Context(), scope, dest, deploy.EngineKind(engine.value), hostname, allContainers,
 		)
 		if err != nil {

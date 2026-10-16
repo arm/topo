@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPS(t *testing.T) {
+func TestListContainers(t *testing.T) {
 	t.Run("rejects an unsupported engine", func(t *testing.T) {
-		got, err := PS(
+		got, err := ListContainers(
 			t.Context(), project.Scope{}, ssh.PlainLocalhost, EngineKind("unknown"), "target", false,
 		)
 

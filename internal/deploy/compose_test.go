@@ -42,12 +42,12 @@ services:
 	})
 }
 
-func TestListContainers(t *testing.T) {
+func TestListContainersRaw(t *testing.T) {
 	t.Run("propagates command construction errors", func(t *testing.T) {
 		commandError := errors.New("cannot configure Compose")
 		runner := &fakeComposeCommandRunner{commandError: commandError}
 
-		got, err := deploy.ListContainers(t.Context(), project.Scope{ComposeFile: "compose.yaml"}, runner, false)
+		got, err := deploy.ListContainersRaw(t.Context(), project.Scope{ComposeFile: "compose.yaml"}, runner, false)
 
 		assert.Nil(t, got)
 		assert.ErrorIs(t, err, commandError)
@@ -56,7 +56,7 @@ func TestListContainers(t *testing.T) {
 	t.Run("passes --all when all is enabled", func(t *testing.T) {
 		runner := &fakeComposeCommandRunner{command: testutil.CmdWithOutput("", 0)}
 
-		_, err := deploy.ListContainers(t.Context(), project.Scope{ComposeFile: "compose.yaml"}, runner, true)
+		_, err := deploy.ListContainersRaw(t.Context(), project.Scope{ComposeFile: "compose.yaml"}, runner, true)
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"ps", "--format", "json", "--all"}, runner.calls)
@@ -67,7 +67,7 @@ func TestListContainers(t *testing.T) {
 {"ID":"def456","Names":"project-db-1","Image":"db","State":"running","Status":"Up 5 minutes","Ports":""}`
 		runner := &fakeComposeCommandRunner{command: testutil.CmdWithOutput(input, 0)}
 
-		got, err := deploy.ListContainers(t.Context(), project.Scope{ComposeFile: "compose.yaml"}, runner, false)
+		got, err := deploy.ListContainersRaw(t.Context(), project.Scope{ComposeFile: "compose.yaml"}, runner, false)
 
 		require.NoError(t, err)
 		want := []deploy.RawContainer{

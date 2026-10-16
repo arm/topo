@@ -13,7 +13,7 @@ import (
 	"github.com/arm/topo/internal/ssh"
 )
 
-func PS(
+func ListContainers(
 	ctx context.Context,
 	scope project.Scope,
 	target ssh.Destination,
@@ -44,7 +44,7 @@ func PS(
 		runner = podman.Engine{Socket: socket}
 	}
 
-	raws, err := ListContainers(ctx, scope, runner, all)
+	raws, err := ListContainersRaw(ctx, scope, runner, all)
 	if err != nil {
 		return nil, err
 	}

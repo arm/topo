@@ -71,7 +71,7 @@ type RawContainer struct {
 	Ports  string `json:"Ports"`
 }
 
-func ListContainers(
+func ListContainersRaw(
 	ctx context.Context,
 	scope project.Scope,
 	runner ComposeCommandRunner,
