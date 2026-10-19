@@ -459,12 +459,73 @@ services:
 		}
 		assert.Equal(t, want, calls)
 	})
+
+	t.Run("restores a pinned image using its original tag", func(t *testing.T) {
+		image := "busybox:1.37@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), "services:\n  app:\n    image: "+image+"\n")
+		var calls [][]string
+		source := &registryTransferFake{
+			name:    "source",
+			calls:   &calls,
+			digests: map[string]string{"localhost:12345/busybox:1.37": "localhost:12345/" + image},
+		}
+		target := &registryTransferFake{name: "target", calls: &calls}
+
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), project.Scope{ComposeFile: composeFile}, "12345", source, target)
+
+		require.NoError(t, err)
+		assert.Equal(t, [][]string{
+			{"target", preservesDigestOnTag},
+			{"source", "tag", image, "localhost:12345/busybox:1.37"},
+			{"source", "push", "localhost:12345/busybox:1.37"},
+			{"target", "pull", "localhost:12345/" + image},
+			{"target", "tag", "localhost:12345/" + image, "busybox:1.37"},
+		}, calls)
+	})
+
+	t.Run("rejects a changed digest before pulling on the target", func(t *testing.T) {
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: busybox:1.37@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+`)
+		var calls [][]string
+		source := &registryTransferFake{
+			name:    "source",
+			calls:   &calls,
+			digests: map[string]string{"localhost:12345/busybox:1.37": "localhost:12345/busybox@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+		}
+		target := &registryTransferFake{name: "target", calls: &calls}
+
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), project.Scope{ComposeFile: composeFile}, "12345", source, target)
+
+		require.ErrorContains(t, err, "pin the linux/arm64 image manifest digest")
+		require.Len(t, calls, 3)
+		assert.Equal(t, []string{"source", "push", "localhost:12345/busybox:1.37"}, calls[2])
+	})
+
+	t.Run("propagates target capability errors before transferring", func(t *testing.T) {
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: busybox:1.37@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+`)
+		var calls [][]string
+		source := &registryTransferFake{calls: &calls}
+		target := &registryTransferFake{name: "target", calls: &calls, digestPreservationError: errors.New("legacy image store")}
+
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), project.Scope{ComposeFile: composeFile}, "12345", source, target)
+
+		require.ErrorIs(t, err, target.digestPreservationError)
+		assert.Equal(t, [][]string{{"target", preservesDigestOnTag}}, calls)
+	})
 }
 
+const preservesDigestOnTag = "assert preserves digest on tag"
+
 type registryTransferFake struct {
-	name    string
-	calls   *[][]string
-	digests map[string]string
+	name                    string
+	calls                   *[][]string
+	digests                 map[string]string
+	digestPreservationError error
 }
 
 func (fake *registryTransferFake) TagImage(_ context.Context, _ io.Writer, image, tag string) error {
@@ -480,4 +541,9 @@ func (fake *registryTransferFake) PushImage(_ context.Context, _ io.Writer, imag
 func (fake *registryTransferFake) PullImage(_ context.Context, _ io.Writer, digest string) error {
 	*fake.calls = append(*fake.calls, []string{fake.name, "pull", digest})
 	return nil
+}
+
+func (fake *registryTransferFake) AssertPreservesDigestOnTag(context.Context) error {
+	*fake.calls = append(*fake.calls, []string{fake.name, preservesDigestOnTag})
+	return fake.digestPreservationError
 }

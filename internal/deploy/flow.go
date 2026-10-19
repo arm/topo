@@ -387,7 +387,7 @@ type RegistryClient interface {
 	TagImage(ctx context.Context, output io.Writer, image, tag string) error
 	PushImage(ctx context.Context, output io.Writer, image string) (digest string, err error)
 	PullImage(ctx context.Context, output io.Writer, digest string) error
-	SupportsDigestRetagging(ctx context.Context) (bool, error) // TODO implement podman - yes always, docker - only with containerd snapshotter
+	AssertPreservesDigestOnTag(ctx context.Context) error
 }
 
 func TransferImagesViaRegistry(
@@ -407,13 +407,8 @@ func TransferImagesViaRegistry(
 		return err
 	}
 
-	supportsDigestRetagging, err := sourceEx.SupportsDigestRetagging(ctx)
-	if err != nil {
+	if err := assertRegistryTransferSupported(ctx, images, targetEx); err != nil {
 		return err
-	}
-	if !supportsDigestRetagging {
-		// TODO think about how to make this useful/ CE specific
-		return fmt.Errorf("source registry does not support digest retagging")
 	}
 
 	for _, image := range images {
@@ -426,6 +421,12 @@ func TransferImagesViaRegistry(
 		if err != nil {
 			return err
 		}
+		if _, pin, pinned := strings.Cut(image, "@"); pinned {
+			_, pushedDigest, _ := strings.Cut(digest, "@")
+			if pushedDigest != pin {
+				return fmt.Errorf("cannot transfer pinned image %s: registry push changed its digest to %s; this can happen when Docker or Podman pushes only one platform of a multi-platform index, or changes image compression; for an index pin, pin the linux/arm64 image manifest digest instead; otherwise use a tag without @sha256:... in Compose", image, pushedDigest)
+			}
+		}
 		if err := targetEx.PullImage(ctx, progress.Output(), digest); err != nil {
 			return err
 		}
@@ -434,6 +435,23 @@ func TransferImagesViaRegistry(
 		}
 	}
 
+	return nil
+}
+
+func assertRegistryTransferSupported(ctx context.Context, images []string, target RegistryClient) error {
+	pinned := []string{}
+	for _, image := range images {
+		if !strings.Contains(image, "@") {
+			continue
+		}
+		pinned = append(pinned, image)
+	}
+
+	if len(pinned) > 0 {
+		if err := target.AssertPreservesDigestOnTag(ctx); err != nil {
+			return fmt.Errorf("cannot transfer pinned images %v to the target: %w", pinned, err)
+		}
+	}
 	return nil
 }
 
