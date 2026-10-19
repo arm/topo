@@ -3,8 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/arm/topo/internal/deploy/docker"
-	"github.com/arm/topo/internal/deploy/podman"
+	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/output/views"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
@@ -54,16 +53,9 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			panic("internal error: all flag not registered: " + err.Error())
 		}
 
-		if engine.value == containerEnginePodman {
-			containers, err := podman.ListContainers(scope, dest, hostname, allContainers)
-			if err != nil {
-				return err
-			}
-			return views.Print(newPodmanContainerList(containers), os.Stdout, outputFormat)
-		}
-
-		host := docker.NewHostFromDestination(dest)
-		containers, err := docker.ListContainers(scope, host, hostname, allContainers)
+		containers, err := deploy.ListContainers(
+			cmd.Context(), scope, dest, deploy.EngineKind(engine.value), hostname, allContainers,
+		)
 		if err != nil {
 			return err
 		}
@@ -71,34 +63,10 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	},
 }
 
-func newContainerList(containers []docker.Container) views.ContainerList {
+func newContainerList(containers []deploy.EnrichedContainer) views.ContainerList {
 	items := make([]views.Container, len(containers))
 	for i, container := range containers {
-		items[i] = views.Container{
-			ID:               container.Id,
-			Names:            container.Names,
-			Image:            container.Image,
-			State:            container.State,
-			Status:           container.Status,
-			ProcessingDomain: container.ProcessingDomain,
-			Address:          container.Address,
-		}
-	}
-	return views.ContainerList{Containers: items}
-}
-
-func newPodmanContainerList(containers []podman.Container) views.ContainerList {
-	items := make([]views.Container, len(containers))
-	for i, container := range containers {
-		items[i] = views.Container{
-			ID:               container.Id,
-			Names:            container.Names,
-			Image:            container.Image,
-			State:            container.State,
-			Status:           container.Status,
-			ProcessingDomain: container.ProcessingDomain,
-			Address:          container.Address,
-		}
+		items[i] = views.Container(container)
 	}
 	return views.ContainerList{Containers: items}
 }
