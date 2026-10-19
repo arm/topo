@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/chzyer/readline"
 )
@@ -56,7 +57,11 @@ func ReadPrompt(
 			if inputOriginalState == nil {
 				return nil
 			}
-			return readline.Restore(inputFd, inputOriginalState)
+			err := readline.Restore(inputFd, inputOriginalState)
+			if syscallErr, ok := errors.AsType[syscall.Errno](err); ok && syscallErr == 0 {
+				err = nil
+			}
+			return err
 		},
 	})
 	if err != nil {
