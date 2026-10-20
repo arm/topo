@@ -31,7 +31,15 @@ const (
 	RecreateModeNone
 )
 
+type EngineKind string
+
+const (
+	EngineDocker EngineKind = "docker"
+	EnginePodman EngineKind = "podman"
+)
+
 type Options struct {
+	Engine                EngineKind
 	RecreateMode          RecreateMode
 	TargetHost            ssh.Destination
 	Registry              *RegistryConfig

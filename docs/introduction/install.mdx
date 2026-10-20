@@ -23,25 +23,20 @@ Topo release binaries support the following host systems:
 
 A target must run Linux on AArch64 (`linux/arm64`). Topo uses Docker or Podman to build images on the host and run containers on the target.
 
-## Prepare the host
+## Prerequisites
 
-Install the following tools on the host:
+**Host machine** (where you run `topo`):
 
 - [Docker or Podman](container-engines.md)
-- OpenSSH client
-- Git to clone [Topo Projects](glossary.md#topo-project) from Git repositories
+- OpenSSH Client
 
-The Topo host needs network access to download releases, clone projects, and pull container images. Network requirements vary by project because project builds can download additional dependencies.
+**Target machine** (the remote Arm system):
 
-## Prepare the target
+- Reachable with SSH
+- Linux on ARM64
+- [Docker or Podman](container-engines.md)
 
-The target requires:
-
-- Linux on AArch64 (`linux/arm64`)
-- [Docker or Podman](container-engines.md) configured so that the target user can run commands without `sudo`
-- `lscpu`, which is usually included in the `util-linux` package
-- A POSIX-compatible login shell like `sh` or `bash`
-- SSH access from the host unless you deploy to `localhost`
+The host and target can be the same system. If you're working directly on an Arm Linux system, use `--target localhost`.
 
 ## Choose an installation method
 

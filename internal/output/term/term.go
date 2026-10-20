@@ -4,6 +4,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
 type Format int
@@ -15,18 +17,13 @@ const (
 	JSON
 )
 
-func IsTTY(w io.Writer) bool {
+func IsTerminal(w io.Writer) bool {
 	f, ok := w.(*os.File)
 	if !ok {
 		return false
 	}
-
-	info, err := f.Stat()
-	if err != nil {
-		return false
-	}
-
-	return (info.Mode() & os.ModeCharDevice) != 0
+	fd := int(f.Fd()) // #nosec G115 - posix fds and Windows handles fit into an int
+	return readline.IsTerminal(fd)
 }
 
 func WrapText(s string, maxWidth, indentSpaces int) string {

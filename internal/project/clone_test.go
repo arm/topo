@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/compose"
@@ -75,7 +74,7 @@ x-topo:
 			compose.DefaultFileName(): composeFileContents,
 			env.DefaultFilename:       "GREETING=hello\n",
 		})
-		resolver := parameter.NewInteractiveResolver(strings.NewReader("\n"), &bytes.Buffer{})
+		resolver := parameter.NewStaticResolver(nil)
 
 		err := project.Clone(t.Output(), destDir, mockSource, parameter.NewStrictResolverChain(resolver), false)
 
