@@ -73,8 +73,8 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
-		if promptsEnabled(cmd) && term.IsTTY(os.Stdout) && term.IsTTY(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolver(os.Stdin, os.Stdout))
+		if promptsEnabled(cmd) && term.IsTerminal(os.Stdout) && term.IsTerminal(os.Stdin) {
+			resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, os.Stdout))
 		}
 
 		resolver := parameter.NewStrictResolverChain(resolvers...)

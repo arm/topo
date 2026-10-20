@@ -69,6 +69,10 @@ func (ex Engine) PullImage(ctx context.Context, output io.Writer, image string) 
 	return ex.RunCommand(ctx, output, "pull", "--tls-verify=false", image)
 }
 
+func (ex Engine) ComposeCommand(ctx context.Context, scope project.Scope, args ...string) (*exec.Cmd, error) {
+	return ComposeCommand(ctx, ex.Socket, scope, args...)
+}
+
 func (ex Engine) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
 	return RunComposeCommand(ctx, output, ex.Socket, scope, args...)
 }
