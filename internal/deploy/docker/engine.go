@@ -27,21 +27,20 @@ func (ex Engine) RunCommand(ctx context.Context, output io.Writer, args ...strin
 	return RunCommand(ctx, output, ex.Host, args...)
 }
 
+// AssertPreservesDigestOnTag checks that a new image name can resolve with the
+// original digest after tagging. Docker's legacy image store adds a tag without
+// a corresponding repository digest reference; the containerd image store
+// always preserves the manifest descriptor.
 func (ex Engine) AssertPreservesDigestOnTag(ctx context.Context) error {
-	output, err := ex.Command(ctx, "info", "--format", `{{json .DriverStatus}}`).Output()
+	usesContainerd, err := ex.usesContainerdImageStore(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to check Docker image store: %w", err)
+		return err
 	}
-	var status [][]string
-	if err := json.Unmarshal(output, &status); err != nil {
-		return fmt.Errorf("failed to decode Docker driver status: %w", err)
+	if !usesContainerd {
+		return fmt.Errorf("the Docker daemon uses the legacy image store, which cannot restore the original digest-pinned reference; enable the containerd image store (https://docs.docker.com/engine/storage/containerd/) or use a tag without @sha256:... in Compose")
 	}
-	for _, entry := range status {
-		if len(entry) == 2 && entry[0] == "driver-type" && entry[1] == "io.containerd.snapshotter.v1" {
-			return nil
-		}
-	}
-	return fmt.Errorf("the Docker daemon uses the legacy image store, which cannot restore the original digest-pinned reference; enable the containerd image store (https://docs.docker.com/engine/storage/containerd/) or use a tag without @sha256:... in Compose")
+
+	return nil
 }
 
 func (ex Engine) TagImage(ctx context.Context, output io.Writer, image, tag string) error {
@@ -70,6 +69,23 @@ func (ex Engine) PullImage(ctx context.Context, output io.Writer, image string) 
 
 func (ex Engine) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
 	return RunComposeCommand(ctx, output, ex.Host, scope, args...)
+}
+
+func (ex Engine) usesContainerdImageStore(ctx context.Context) (bool, error) {
+	output, err := ex.Command(ctx, "info", "--format", `{{json .DriverStatus}}`).Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to check Docker image store: %w", err)
+	}
+	var status [][]string
+	if err := json.Unmarshal(output, &status); err != nil {
+		return false, fmt.Errorf("failed to decode Docker driver status: %w", err)
+	}
+	for _, entry := range status {
+		if len(entry) == 2 && entry[0] == "driver-type" && entry[1] == "io.containerd.snapshotter.v1" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 var digestRegexp = regexp.MustCompile(`digest: (sha256:[a-f0-9]+)`)
