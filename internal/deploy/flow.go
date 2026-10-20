@@ -412,7 +412,7 @@ func TransferImagesViaRegistry(
 	}
 
 	for _, image := range images {
-		bareImage := stripPinnedDigest(image)
+		bareImage, pin := splitImageIdentifier(image)
 		registryTag := fmt.Sprintf("localhost:%s/%s", localRegistryPort, bareImage)
 		if err := sourceEx.TagImage(ctx, progress.Output(), image, registryTag); err != nil {
 			return err
@@ -421,8 +421,8 @@ func TransferImagesViaRegistry(
 		if err != nil {
 			return err
 		}
-		if _, pin, pinned := strings.Cut(image, "@"); pinned {
-			_, pushedDigest, _ := strings.Cut(digest, "@")
+		if pin != "" {
+			_, pushedDigest := splitImageIdentifier(digest)
 			if pushedDigest != pin {
 				return fmt.Errorf("cannot transfer pinned image %s: registry push changed its digest to %s; this can happen when Docker or Podman pushes only one platform of a multi-platform index, or changes image compression; for an index pin, pin the linux/arm64 image manifest digest instead; otherwise use a tag without @sha256:... in Compose", image, pushedDigest)
 			}
@@ -455,9 +455,9 @@ func assertRegistryTransferSupported(ctx context.Context, images []string, targe
 	return nil
 }
 
-func stripPinnedDigest(image string) string {
-	if before, _, ok := strings.Cut(image, "@"); ok {
-		return before
+func splitImageIdentifier(image string) (name string, digest string) {
+	if before, pin, ok := strings.Cut(image, "@"); ok {
+		return before, pin
 	}
-	return image
+	return image, ""
 }
