@@ -57,44 +57,9 @@ jobs:
           echo "next_version=$next" >> "$GITHUB_OUTPUT"
 
       - name: Generate CycloneDX source SBOM
-        env:
-          CDXGEN_IMAGE: ghcr.io/cdxgen/cdxgen@sha256:c1c933ce31df8b3978566b4dc8369ce3ac049a802aa90cb8f02a29be4820c798
-          RELEASE_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
-          SBOM_DISCLAIMER: 'THIS SOFTWARE BILL OF MATERIALS ("SBOM") IS PROVIDED BY ARM LIMITED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT ARE DISCLAIMED. IN NO EVENT SHALL ARM LIMITED BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SBOM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.'
-        run: |
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -e FETCH_LICENSE=true \
-            -e HOME=/tmp \
-            -v "$PWD:/app" \
-            "$CDXGEN_IMAGE" \
-            --type go --fail-on-error \
-            --project-name topo --project-version "$RELEASE_TAG" \
-            --metadata-property "arm:sbom-disclaimer=$SBOM_DISCLAIMER" \
-            /app -o /app/topo-sbom-source.json
-          test -s topo-sbom-source.json
-
-      - name: Add external remoteproc-runtime dependency to SBOM
-        run: |
-          jq '
-            .metadata.component["bom-ref"] as $topo
-            | if ($topo == null or $topo == "") then error("Missing Topo bom-ref") else . end
-            | .components += [{
-                type: "application",
-                "bom-ref": "remoteproc-runtime",
-                name: "remoteproc-runtime",
-                scope: "optional",
-                description: "Installed separately with containerd-shim-remoteproc-v1 by topo install remoteproc-runtime. The latest version is resolved at installation time; not bundled with Topo.",
-                externalReferences: [{type: "distribution", url: "https://artifacts.tools.arm.com/remoteproc-runtime/"}]
-              }]
-            | .dependencies = (.dependencies // [])
-            | if any(.dependencies[]; .ref == $topo) then
-                (.dependencies[] | select(.ref == $topo) | .dependsOn) += ["remoteproc-runtime"]
-              else
-                .dependencies += [{ref: $topo, dependsOn: ["remoteproc-runtime"]}]
-              end
-          ' topo-sbom-source.json > topo-sbom-source.json.tmp
-          mv topo-sbom-source.json.tmp topo-sbom-source.json
+        uses: ./.github/actions/source-sbom
+        with:
+          release-tag: ${{ steps.calculate_next_version.outputs.next_version }}
 
       - name: Set git config
         run: |
@@ -231,10 +196,17 @@ jobs:
           } > combined_notes.md
 
           if [ "$PRE_RELEASE" = "true" ]; then
-            gh release create "$RELEASE_TAG" topo-sbom-source.json --title "$RELEASE_TAG" --prerelease --notes-file combined_notes.md
+            gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --prerelease --notes-file combined_notes.md
           else
-            gh release create "$RELEASE_TAG" topo-sbom-source.json --title "$RELEASE_TAG" --notes-file combined_notes.md
+            gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file combined_notes.md
           fi
+
+      - name: Upload source SBOM to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: arm/topo
+          RELEASE_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
+        run: gh release upload "$RELEASE_TAG" topo-sbom-source.json
 
   publish-docs:
     needs: release
