@@ -387,6 +387,7 @@ type RegistryClient interface {
 	TagImage(ctx context.Context, output io.Writer, image, tag string) error
 	PushImage(ctx context.Context, output io.Writer, image string) (digest string, err error)
 	PullImage(ctx context.Context, output io.Writer, digest string) error
+	AssertPreservesDigestOnTag(ctx context.Context) error
 }
 
 func TransferImagesViaRegistry(
@@ -406,8 +407,13 @@ func TransferImagesViaRegistry(
 		return err
 	}
 
+	if err := assertRegistryTransferSupported(ctx, images, targetEx); err != nil {
+		return err
+	}
+
 	for _, image := range images {
-		registryTag := fmt.Sprintf("localhost:%s/%s", localRegistryPort, image)
+		bareImage, pin := splitImageIdentifier(image)
+		registryTag := fmt.Sprintf("localhost:%s/%s", localRegistryPort, bareImage)
 		if err := sourceEx.TagImage(ctx, progress.Output(), image, registryTag); err != nil {
 			return err
 		}
@@ -415,13 +421,43 @@ func TransferImagesViaRegistry(
 		if err != nil {
 			return err
 		}
+		if pin != "" {
+			_, pushedDigest := splitImageIdentifier(digest)
+			if pushedDigest != pin {
+				return fmt.Errorf("cannot transfer pinned image %s: registry push changed its digest to %s; this can happen when Docker or Podman pushes only one platform of a multi-platform index, or changes image compression; for an index pin, pin the linux/arm64 image manifest digest instead; otherwise use a tag without @sha256:... in Compose", image, pushedDigest)
+			}
+		}
 		if err := targetEx.PullImage(ctx, progress.Output(), digest); err != nil {
 			return err
 		}
-		if err := targetEx.TagImage(ctx, progress.Output(), digest, image); err != nil {
+		if err := targetEx.TagImage(ctx, progress.Output(), digest, bareImage); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func assertRegistryTransferSupported(ctx context.Context, images []string, target RegistryClient) error {
+	pinned := []string{}
+	for _, image := range images {
+		if !strings.Contains(image, "@") {
+			continue
+		}
+		pinned = append(pinned, image)
+	}
+
+	if len(pinned) > 0 {
+		if err := target.AssertPreservesDigestOnTag(ctx); err != nil {
+			return fmt.Errorf("cannot transfer pinned images %v to the target: %w", pinned, err)
+		}
+	}
+	return nil
+}
+
+func splitImageIdentifier(image string) (name string, digest string) {
+	if before, pin, ok := strings.Cut(image, "@"); ok {
+		return before, pin
+	}
+	return image, ""
 }
