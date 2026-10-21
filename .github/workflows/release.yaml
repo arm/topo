@@ -56,6 +56,11 @@ jobs:
           fi
           echo "next_version=$next" >> "$GITHUB_OUTPUT"
 
+      - name: Generate CycloneDX source SBOM
+        uses: ./.github/actions/source-sbom
+        with:
+          release-tag: ${{ steps.calculate_next_version.outputs.next_version }}
+
       - name: Set git config
         run: |
           git config --global user.email "topo-release@users.noreply.github.com"
@@ -195,6 +200,13 @@ jobs:
           else
             gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file combined_notes.md
           fi
+
+      - name: Upload source SBOM to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: arm/topo
+          RELEASE_TAG: ${{ steps.calculate_next_version.outputs.next_version }}
+        run: gh release upload "$RELEASE_TAG" topo-sbom-source.json
 
   publish-docs:
     needs: release
