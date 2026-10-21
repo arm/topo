@@ -26,6 +26,10 @@ func (ex Engine) RunCommand(ctx context.Context, output io.Writer, args ...strin
 	return RunCommand(ctx, output, ex.Socket, args...)
 }
 
+func (ex Engine) AssertPreservesDigestOnTag(context.Context) error {
+	return nil
+}
+
 func (ex Engine) TagImage(ctx context.Context, output io.Writer, image, tag string) error {
 	return ex.RunCommand(ctx, output, "tag", image, tag)
 }
