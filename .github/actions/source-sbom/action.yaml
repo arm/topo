@@ -7,11 +7,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Generate and patch source SBOM
+    - name: Generate CycloneDX source SBOM
       shell: bash
       env:
         RELEASE_TAG: ${{ inputs.release-tag }}
-        ACTION_PATH: ${{ github.action_path }}
         CDXGEN_IMAGE: ghcr.io/cdxgen/cdxgen@sha256:c1c933ce31df8b3978566b4dc8369ce3ac049a802aa90cb8f02a29be4820c798
         SBOM_DISCLAIMER: 'THIS SOFTWARE BILL OF MATERIALS ("SBOM") IS PROVIDED BY ARM LIMITED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT ARE DISCLAIMED. IN NO EVENT SHALL ARM LIMITED BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SBOM, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.'
       run: |
@@ -26,5 +25,12 @@ runs:
           /app -o /app/topo-sbom-source.json
         cd "$GITHUB_WORKSPACE"
         test -s topo-sbom-source.json
+
+    - name: Add external remoteproc-runtime dependency to SBOM
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        cd "$GITHUB_WORKSPACE"
         jq -f "$ACTION_PATH/add-remoteproc-runtime.jq" topo-sbom-source.json > topo-sbom-source.json.tmp
         mv topo-sbom-source.json.tmp topo-sbom-source.json
