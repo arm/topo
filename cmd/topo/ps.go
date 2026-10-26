@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/output/views"
@@ -53,8 +55,10 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			panic("internal error: all flag not registered: " + err.Error())
 		}
 
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
 		containers, err := deploy.ListContainers(
-			cmd.Context(), scope, dest, deploy.EngineKind(engine.value), hostname, allContainers,
+			ctx, scope, dest, deploy.EngineKind(engine.value), hostname, allContainers,
 		)
 		if err != nil {
 			return err

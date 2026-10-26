@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/arm/topo/internal/deploy"
 	"github.com/arm/topo/internal/project"
@@ -44,7 +46,9 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		dest := ssh.NewDestination(target.value)
-		return deploy.Stop(cmd.Context(), os.Stdout, scope, dest, deploy.EngineKind(engine.value))
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return deploy.Stop(ctx, os.Stdout, scope, dest, deploy.EngineKind(engine.value))
 	},
 }
 
