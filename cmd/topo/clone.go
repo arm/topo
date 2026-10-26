@@ -78,10 +78,8 @@ interactive prompts.`,
 		}
 		if experimentalFeaturesEnabled() {
 			if target, ok := lookupTarget(cmd); ok {
-				ctx, cancel := contextWithTimeout(cmd)
-				defer cancel()
 				targetRunner := runner.For(ssh.NewDestination(target.value))
-				resolvers = append(resolvers, parameter.NewFactsResolver(ctx, targetRunner, fact.Providers))
+				resolvers = append(resolvers, parameter.NewFactsResolver(cmd.Context(), targetRunner, fact.Providers))
 			}
 		}
 		if promptsEnabled(cmd) && term.IsTerminal(os.Stdout) && term.IsTerminal(os.Stdin) {
@@ -101,7 +99,6 @@ interactive prompts.`,
 func init() {
 	if experimentalFeaturesEnabled() {
 		addTargetFlag(topoCloneCmd)
-		addTimeoutFlag(topoCloneCmd, defaultTimeout)
 	}
 	addNoPromptFlag(topoCloneCmd)
 	addMigrateToEnvFlag(topoCloneCmd)
