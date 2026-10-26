@@ -8,6 +8,25 @@ import (
 )
 
 func TestValue(t *testing.T) {
+	t.Run("String", func(t *testing.T) {
+		for _, tc := range []struct {
+			value fact.Value
+			want  string
+		}{
+			{fact.Value{Type: "boolean"}, "false"},
+			{fact.Value{Type: "boolean", Boolean: true}, "true"},
+			{fact.Value{Type: "integer"}, "0"},
+			{fact.Value{Type: "integer", Integer: -42}, "-42"},
+			{fact.Value{Type: "string"}, ""},
+			{fact.Value{Type: "string", Text: "example"}, "example"},
+			{fact.Value{Type: "unknown"}, ""},
+		} {
+			got := tc.value.String()
+
+			assert.Equal(t, tc.want, got)
+		}
+	})
+
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("accepts typed scalars including zero values", func(t *testing.T) {
 			for _, value := range []fact.Value{

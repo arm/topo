@@ -6,11 +6,14 @@ import (
 	"path/filepath"
 
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/fact"
 	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -83,6 +86,14 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
+		if experimentalFeaturesEnabled() {
+			if target, ok := lookupTarget(cmd); ok {
+				ctx, cancel := contextWithTimeout(cmd)
+				defer cancel()
+				targetRunner := runner.For(ssh.NewDestination(target.value))
+				resolvers = append(resolvers, parameter.NewFactsResolver(ctx, targetRunner, fact.Providers))
+			}
+		}
 		if promptsEnabled(cmd) && term.IsTerminal(os.Stderr) && term.IsTerminal(os.Stdin) {
 			resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, os.Stderr))
 		}
@@ -112,6 +123,10 @@ interactive prompts.`,
 }
 
 func init() {
+	if experimentalFeaturesEnabled() {
+		addTargetFlag(configureCmd)
+		addTimeoutFlag(configureCmd, defaultTimeout)
+	}
 	configureCmd.Flags().StringArray("unset", nil, "remove a parameter from the output env file; repeat for multiple parameters")
 	addNoPromptFlag(configureCmd)
 	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))

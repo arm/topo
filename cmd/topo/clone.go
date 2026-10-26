@@ -6,9 +6,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/arm/topo/internal/fact"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
+	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -73,6 +76,14 @@ interactive prompts.`,
 			}
 			resolvers = append(resolvers, cliResolver)
 		}
+		if experimentalFeaturesEnabled() {
+			if target, ok := lookupTarget(cmd); ok {
+				ctx, cancel := contextWithTimeout(cmd)
+				defer cancel()
+				targetRunner := runner.For(ssh.NewDestination(target.value))
+				resolvers = append(resolvers, parameter.NewFactsResolver(ctx, targetRunner, fact.Providers))
+			}
+		}
 		if promptsEnabled(cmd) && term.IsTerminal(os.Stdout) && term.IsTerminal(os.Stdin) {
 			resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, os.Stdout))
 		}
@@ -88,6 +99,10 @@ interactive prompts.`,
 }
 
 func init() {
+	if experimentalFeaturesEnabled() {
+		addTargetFlag(topoCloneCmd)
+		addTimeoutFlag(topoCloneCmd, defaultTimeout)
+	}
 	addNoPromptFlag(topoCloneCmd)
 	addMigrateToEnvFlag(topoCloneCmd)
 	rootCmd.AddCommand(topoCloneCmd)

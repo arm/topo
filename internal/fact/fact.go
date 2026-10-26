@@ -3,9 +3,12 @@ package fact
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/arm/topo/internal/runner"
 )
+
+var Providers = map[string]Provider{"topo.memory": MemoryProvider{}}
 
 type Provider interface {
 	Facts(ctx context.Context, targetRunner runner.CommandRunner) (Report, error)
@@ -47,6 +50,19 @@ type Value struct {
 	Boolean bool
 	Integer int64
 	Text    string
+}
+
+func (v Value) String() string {
+	switch v.Type {
+	case "boolean":
+		return strconv.FormatBool(v.Boolean)
+	case "integer":
+		return strconv.FormatInt(v.Integer, 10)
+	case "string":
+		return v.Text
+	default:
+		return ""
+	}
 }
 
 func (v Value) Validate() error {
