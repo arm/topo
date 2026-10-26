@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/arm/topo/internal/fact"
 	"github.com/arm/topo/internal/runner"
 )
 
@@ -28,11 +29,24 @@ func Hardware(ctx context.Context, r runner.Runner) (HardwareProfile, error) {
 	}
 	hp.RemoteProcessors = remoteProcessors
 
-	memTotal, err := Memory(ctx, r)
+	memTotal, err := memoryTotal(ctx, r)
 	if err != nil {
 		return hp, fmt.Errorf("collecting memory info: %w", err)
 	}
 	hp.TotalMemoryKb = memTotal
 
 	return hp, nil
+}
+
+func memoryTotal(ctx context.Context, r runner.Runner) (int64, error) {
+	provider := fact.MemoryProvider{}
+	report, err := provider.Facts(ctx, r)
+	if err != nil {
+		return 0, err
+	}
+	memory, ok := report.Find(fact.GroupSystemMemory, fact.FactMemoryTotal)
+	if !ok || memory.Value.Type != "integer" {
+		return 0, fmt.Errorf("memory provider did not return an integer %s fact in %s", fact.FactMemoryTotal, fact.GroupSystemMemory)
+	}
+	return memory.Value.Integer, nil
 }
