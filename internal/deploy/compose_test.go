@@ -42,6 +42,21 @@ services:
 	})
 }
 
+func TestLogServices(t *testing.T) {
+	t.Run("follows logs and delimits service names", func(t *testing.T) {
+		runner := &fakeComposeCommandRunner{}
+		options := deploy.LogsOptions{
+			Services: []string{"web", "worker", "--follow"},
+			Follow:   true,
+		}
+
+		err := deploy.LogServices(t.Context(), io.Discard, project.Scope{}, runner, options)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"logs", "--tail", "100", "--follow", "--", "web", "worker", "--follow"}, runner.calls)
+	})
+}
+
 func TestListContainersRaw(t *testing.T) {
 	t.Run("propagates command construction errors", func(t *testing.T) {
 		commandError := errors.New("cannot configure Compose")

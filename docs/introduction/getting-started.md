@@ -77,6 +77,24 @@ Check the `Address` column in the `topo ps` output for accessible service endpoi
 
 After you change the project, run `topo deploy --target user@target.example` again. Docker and Topo reuse cached layers where possible to reduce deployment time.
 
+## View service logs
+
+Show logs from all services in the project, including stopped containers:
+
+```sh
+topo logs --target user@target.example
+```
+
+To follow a specific service, use its name from the Compose file:
+
+```sh
+topo logs --target user@target.example --follow <service>
+```
+
+Press Ctrl+C to stop following logs. The services keep running. You can specify multiple service names.
+
+For Podman deployments, add `--engine podman` or set `TOPO_ENGINE=podman`. As with `topo ps`, use `-f` for a different Compose file and `--env-file` for its configuration. `-f` selects the file; use the full `--follow` option for streaming. Log output is text, including when the global `--output json` option is set.
+
 ## Stop the deployment
 
 From the project directory, stop the services:
