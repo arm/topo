@@ -27,6 +27,7 @@ func ComposeCommand(ctx context.Context, host Host, scope project.Scope, args ..
 	composeArgs = append(composeArgs, args...)
 	cmdArgs := append(hostToArgs(host), composeArgs...)
 	cmd := exec.CommandContext(ctx, "docker", cmdArgs...)
+	command.ConfigureCancellation(cmd)
 	cmd.Env = append(os.Environ(), scope.Env...)
 	return cmd
 }

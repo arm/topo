@@ -33,7 +33,12 @@ func ComposeCommand(ctx context.Context, socket Socket, scope project.Scope, arg
 		composeArgs = append(composeArgs, "--env-file", envFile)
 	}
 	composeArgs = append(composeArgs, args...)
-	return composeCommand(ctx, socket, scope.Env, composeArgs...)
+	cmd, err := composeCommand(ctx, socket, scope.Env, composeArgs...)
+	if err != nil {
+		return nil, err
+	}
+	command.ConfigureCancellation(cmd)
+	return cmd, nil
 }
 
 // ComposeRawCommand creates a project-independent Compose command without endpoint configuration.
