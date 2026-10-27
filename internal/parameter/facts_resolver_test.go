@@ -33,8 +33,8 @@ func TestFactsResolver(t *testing.T) {
 		}}}}
 		resolver := parameter.NewFactsResolver(context.Background(), nil, map[string]fact.Provider{"test": provider})
 		parameters := []parameter.Parameter{
-			{Name: "FIRST", Source: &parameter.Source{Provider: "test", Group: "settings", Select: "first"}},
-			{Name: "SECOND", Source: &parameter.Source{Provider: "test", Group: "settings", Select: "second"}},
+			{Name: "FIRST", Source: &parameter.Source{Provider: "test", Group: "settings", Fact: "first"}},
+			{Name: "SECOND", Source: &parameter.Source{Provider: "test", Group: "settings", Fact: "second"}},
 		}
 
 		got, err := resolver.Resolve(parameters)
@@ -51,8 +51,8 @@ func TestFactsResolver(t *testing.T) {
 		factsResolver := parameter.NewFactsResolver(context.Background(), nil, map[string]fact.Provider{"test": provider})
 		resolver := parameter.NewStrictResolverChain(cliResolver, factsResolver)
 		parameters := []parameter.Parameter{
-			{Name: "OVERRIDE", Source: &parameter.Source{Provider: "test", Group: "g", Select: "k"}},
-			{Name: "REMOVE", Source: &parameter.Source{Provider: "test", Group: "g", Select: "k"}},
+			{Name: "OVERRIDE", Source: &parameter.Source{Provider: "test", Group: "g", Fact: "k"}},
+			{Name: "REMOVE", Source: &parameter.Source{Provider: "test", Group: "g", Fact: "k"}},
 		}
 
 		got, err := resolver.Resolve(parameters)
@@ -80,11 +80,11 @@ func TestFactsResolver(t *testing.T) {
 			provider fakeFactsProvider
 			want     string
 		}{
-			{name: "incomplete source", source: parameter.Source{Provider: "test"}, want: "requires provider, group and select"},
-			{name: "unknown provider", source: parameter.Source{Provider: "unknown", Group: "g", Select: "k"}, want: "unknown provider"},
-			{name: "missing fact", source: parameter.Source{Provider: "test", Group: "g", Select: "k"}, want: "not found in group"},
-			{name: "probe failure", source: parameter.Source{Provider: "test", Group: "g", Select: "k"}, provider: fakeFactsProvider{err: assert.AnError}, want: assert.AnError.Error()},
-			{name: "invalid result", source: parameter.Source{Provider: "test", Group: "g", Select: "k"}, provider: fakeFactsProvider{result: fact.Report{Groups: []fact.Group{{}}}}, want: "empty or duplicate fact group"},
+			{name: "incomplete source", source: parameter.Source{Provider: "test"}, want: "requires provider, group and fact"},
+			{name: "unknown provider", source: parameter.Source{Provider: "unknown", Group: "g", Fact: "k"}, want: "unknown provider"},
+			{name: "missing fact", source: parameter.Source{Provider: "test", Group: "g", Fact: "k"}, want: "not found in group"},
+			{name: "probe failure", source: parameter.Source{Provider: "test", Group: "g", Fact: "k"}, provider: fakeFactsProvider{err: assert.AnError}, want: assert.AnError.Error()},
+			{name: "invalid result", source: parameter.Source{Provider: "test", Group: "g", Fact: "k"}, provider: fakeFactsProvider{result: fact.Report{Groups: []fact.Group{{}}}}, want: "empty or duplicate fact group"},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				resolver := parameter.NewFactsResolver(context.Background(), nil, map[string]fact.Provider{"test": &tc.provider})
@@ -95,6 +95,34 @@ func TestFactsResolver(t *testing.T) {
 				assert.ErrorContains(t, err, "VALUE")
 				assert.Nil(t, got)
 			})
+		}
+	})
+}
+
+func TestSourceableParameters(t *testing.T) {
+	t.Run("filters out parameters without a source", func(t *testing.T) {
+		bound := parameter.Parameter{Name: "BOUND", Source: &parameter.Source{Provider: "test", Group: "g", Fact: "k"}}
+		providers := map[string]fact.Provider{"test": &fakeFactsProvider{}}
+
+		got, err := parameter.SourceableParameters([]parameter.Parameter{{Name: "MANUAL"}, bound}, providers)
+
+		require.NoError(t, err)
+		assert.Equal(t, []parameter.Parameter{bound}, got)
+	})
+
+	t.Run("rejects invalid bindings", func(t *testing.T) {
+		for _, source := range []parameter.Source{
+			{Group: "g", Fact: "k"},
+			{Provider: "test", Fact: "k"},
+			{Provider: "test", Group: "g"},
+			{Provider: "unknown", Group: "g", Fact: "k"},
+		} {
+			providers := map[string]fact.Provider{"test": &fakeFactsProvider{}}
+
+			got, err := parameter.SourceableParameters([]parameter.Parameter{{Name: "VALUE", Source: &source}}, providers)
+
+			require.ErrorContains(t, err, "VALUE")
+			assert.Nil(t, got)
 		}
 	})
 }

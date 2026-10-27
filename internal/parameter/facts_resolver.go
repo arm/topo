@@ -19,24 +19,18 @@ func NewFactsResolver(ctx context.Context, targetRunner runner.CommandRunner, pr
 }
 
 func (r *FactsResolver) Resolve(parameters []Parameter) (Changes, error) {
+	sourceable, err := SourceableParameters(parameters, r.providers)
+	if err != nil {
+		return nil, err
+	}
 	changes := Changes{}
 	results := map[string]fact.Report{}
-	for _, parameter := range parameters {
+	for _, parameter := range sourceable {
 		source := parameter.Source
-		if source == nil {
-			continue
-		}
-		if source.Provider == "" || source.Group == "" || source.Select == "" {
-			return nil, fmt.Errorf("source requires provider, group and select for %s", parameter.Name)
-		}
 		result, ok := results[source.Provider]
 		if !ok {
-			provider, exists := r.providers[source.Provider]
-			if !exists {
-				return nil, fmt.Errorf("unknown provider %q for %s", source.Provider, parameter.Name)
-			}
 			var err error
-			result, err = provider.Facts(r.ctx, r.runner)
+			result, err = r.providers[source.Provider].Facts(r.ctx, r.runner)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve %s: %w", parameter.Name, err)
 			}
@@ -45,11 +39,29 @@ func (r *FactsResolver) Resolve(parameters []Parameter) (Changes, error) {
 			}
 			results[source.Provider] = result
 		}
-		fact, ok := result.Find(source.Group, source.Select)
+		fact, ok := result.Find(source.Group, source.Fact)
 		if !ok {
-			return nil, fmt.Errorf("fact %q not found in group %q for %s", source.Select, source.Group, parameter.Name)
+			return nil, fmt.Errorf("fact %q not found in group %q for %s", source.Fact, source.Group, parameter.Name)
 		}
 		changes[parameter.Name] = new(fact.Value.String())
 	}
 	return changes, nil
+}
+
+func SourceableParameters(parameters []Parameter, providers map[string]fact.Provider) ([]Parameter, error) {
+	var sourceable []Parameter
+	for _, param := range parameters {
+		source := param.Source
+		if source == nil {
+			continue
+		}
+		if source.Provider == "" || source.Group == "" || source.Fact == "" {
+			return nil, fmt.Errorf("source requires provider, group and fact for %s", param.Name)
+		}
+		if _, exists := providers[source.Provider]; !exists {
+			return nil, fmt.Errorf("unknown provider %q for %s", source.Provider, param.Name)
+		}
+		sourceable = append(sourceable, param)
+	}
+	return sourceable, nil
 }

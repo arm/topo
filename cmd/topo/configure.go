@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -78,25 +79,10 @@ interactive prompts.`,
 			return err
 		}
 
-		var resolvers []parameter.Resolver
-		if len(args) > 0 || len(unset) > 0 {
-			cliResolver, err := parameter.NewCLIResolver(args, unset)
-			if err != nil {
-				return err
-			}
-			resolvers = append(resolvers, cliResolver)
+		resolver, err := newConfigurationResolver(cmd, args, unset, os.Stderr)
+		if err != nil {
+			return err
 		}
-		if experimentalFeaturesEnabled() {
-			if target, ok := lookupTarget(cmd); ok {
-				targetRunner := runner.For(ssh.NewDestination(target.value))
-				resolvers = append(resolvers, parameter.NewFactsResolver(cmd.Context(), targetRunner, fact.Providers))
-			}
-		}
-		if promptsEnabled(cmd) && term.IsTerminal(os.Stderr) && term.IsTerminal(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, os.Stderr))
-		}
-
-		resolver := parameter.NewStrictResolverChain(resolvers...)
 
 		changes, err := project.Configure(project.Scope{
 			ComposeFile: composeFilePath,
@@ -131,4 +117,43 @@ func init() {
 	addEnvFileFlag(configureCmd)
 	addMigrateToEnvFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
+}
+
+func newConfigurationResolver(cmd *cobra.Command, assignments, removals []string, output *os.File) (*parameter.StrictResolverChain, error) {
+	cli, err := parameter.NewCLIResolver(assignments, removals)
+	if err != nil {
+		return nil, err
+	}
+	resolvers := []parameter.Resolver{cli}
+	if experimentalFeaturesEnabled() {
+		targetResolver := &targetFactsResolver{ctx: cmd.Context(), providers: fact.Providers}
+		if target, ok := lookupTarget(cmd); ok {
+			targetResolver.target = runner.For(ssh.NewDestination(target.value))
+		}
+		resolvers = append(resolvers, targetResolver)
+	}
+	if promptsEnabled(cmd) && term.IsTerminal(output) && term.IsTerminal(os.Stdin) {
+		resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, output))
+	}
+	return parameter.NewStrictResolverChain(resolvers...), nil
+}
+
+type targetFactsResolver struct {
+	ctx       context.Context
+	target    runner.CommandRunner
+	providers map[string]fact.Provider
+}
+
+func (r *targetFactsResolver) Resolve(parameters []parameter.Parameter) (parameter.Changes, error) {
+	if r.target != nil {
+		return parameter.NewFactsResolver(r.ctx, r.target, r.providers).Resolve(parameters)
+	}
+	sourceable, err := parameter.SourceableParameters(parameters, r.providers)
+	if err != nil {
+		return nil, err
+	}
+	for _, param := range sourceable {
+		logger.Warn(fmt.Sprintf("cannot automatically configure parameter %q without a target; provide --target or set TOPO_TARGET, or supply this parameter manually", param.Name))
+	}
+	return nil, nil
 }

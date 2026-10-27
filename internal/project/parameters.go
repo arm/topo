@@ -66,7 +66,7 @@ func loadParameterMetadata(composeFilePath string) ([]parameter.Parameter, error
 			source = &parameter.Source{
 				Provider: param.Source.Provider,
 				Group:    param.Source.Group,
-				Select:   param.Source.Select,
+				Fact:     param.Source.Fact,
 			}
 		}
 		parameters = append(parameters, parameter.Parameter{
@@ -139,5 +139,5 @@ type parameterFields struct {
 type sourceFields struct {
 	Provider string `yaml:"provider"`
 	Group    string `yaml:"group"`
-	Select   string `yaml:"select"`
+	Fact     string `yaml:"fact"`
 }

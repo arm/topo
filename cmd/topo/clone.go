@@ -6,12 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/arm/topo/internal/fact"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -68,25 +63,10 @@ interactive prompts.`,
 			cliArgs = args[1:]
 		}
 
-		var resolvers []parameter.Resolver
-		if len(cliArgs) > 0 {
-			cliResolver, err := parameter.NewCLIResolver(cliArgs, nil)
-			if err != nil {
-				return err
-			}
-			resolvers = append(resolvers, cliResolver)
+		resolver, err := newConfigurationResolver(cmd, cliArgs, nil, os.Stdout)
+		if err != nil {
+			return err
 		}
-		if experimentalFeaturesEnabled() {
-			if target, ok := lookupTarget(cmd); ok {
-				targetRunner := runner.For(ssh.NewDestination(target.value))
-				resolvers = append(resolvers, parameter.NewFactsResolver(cmd.Context(), targetRunner, fact.Providers))
-			}
-		}
-		if promptsEnabled(cmd) && term.IsTerminal(os.Stdout) && term.IsTerminal(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, os.Stdout))
-		}
-
-		resolver := parameter.NewStrictResolverChain(resolvers...)
 
 		err = project.Clone(os.Stdout, path, projectSource, resolver, migrateToEnv(cmd))
 		if errors.Is(err, project.ErrParameterMigrationRequired) {

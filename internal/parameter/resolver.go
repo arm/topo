@@ -9,7 +9,7 @@ import (
 type Source struct {
 	Provider string
 	Group    string
-	Select   string
+	Fact     string
 }
 
 type Parameter struct {
