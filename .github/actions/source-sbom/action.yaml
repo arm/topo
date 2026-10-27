@@ -18,7 +18,6 @@ runs:
           --user "$(id -u):$(id -g)" \
           -e FETCH_LICENSE=true -e HOME=/tmp \
           -e GOMODCACHE=/tmp/go-mod \
-          -e CDXGEN_DEBUG_MODE=debug \
           -v "$GITHUB_WORKSPACE:/app" \
           "$CDXGEN_IMAGE" \
           --type go --fail-on-error \
