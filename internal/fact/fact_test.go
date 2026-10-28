@@ -19,12 +19,19 @@ func TestValue(t *testing.T) {
 			{fact.Value{Type: "integer", Integer: -42}, "-42"},
 			{fact.Value{Type: "string"}, ""},
 			{fact.Value{Type: "string", Text: "example"}, "example"},
-			{fact.Value{Type: "unknown"}, ""},
 		} {
 			got := tc.value.String()
 
 			assert.Equal(t, tc.want, got)
 		}
+	})
+
+	t.Run("String panics for an unsupported type", func(t *testing.T) {
+		value := fact.Value{Type: "unknown"}
+
+		assert.PanicsWithValue(t, `unsupported value type: "unknown"`, func() {
+			_ = value.String()
+		})
 	})
 
 	t.Run("Validate", func(t *testing.T) {

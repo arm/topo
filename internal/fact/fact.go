@@ -81,9 +81,9 @@ func (v Value) String() string {
 		return strconv.FormatInt(v.Integer, 10)
 	case "string":
 		return v.Text
-	default:
-		return ""
 	}
+
+	panic(fmt.Sprintf("unsupported value type: %q", v.Type))
 }
 
 func (v Value) Validate() error {
