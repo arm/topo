@@ -33,6 +33,27 @@ func (r Report) Find(groupID, key string) (Fact, bool) {
 	return Fact{}, false
 }
 
+func (r Report) Validate() error {
+	groups := make(map[string]bool, len(r.Groups))
+	for _, group := range r.Groups {
+		if group.ID == "" || groups[group.ID] {
+			return fmt.Errorf("empty or duplicate fact group: %q", group.ID)
+		}
+		groups[group.ID] = true
+		keys := make(map[string]bool, len(group.Facts))
+		for _, fact := range group.Facts {
+			if fact.Key == "" || keys[fact.Key] {
+				return fmt.Errorf("invalid or duplicate fact: %q in group %q", fact.Key, group.ID)
+			}
+			keys[fact.Key] = true
+			if err := fact.Value.Validate(); err != nil {
+				return fmt.Errorf("invalid fact %q in group %q: %w", fact.Key, group.ID, err)
+			}
+		}
+	}
+	return nil
+}
+
 type Group struct {
 	ID    string
 	Facts []Fact
@@ -81,25 +102,4 @@ func (v Value) Validate() error {
 		}
 	}
 	return fmt.Errorf("invalid fact value type or fields: %q", v.Type)
-}
-
-func (r Report) Validate() error {
-	groups := make(map[string]bool, len(r.Groups))
-	for _, group := range r.Groups {
-		if group.ID == "" || groups[group.ID] {
-			return fmt.Errorf("empty or duplicate fact group: %q", group.ID)
-		}
-		groups[group.ID] = true
-		keys := make(map[string]bool, len(group.Facts))
-		for _, fact := range group.Facts {
-			if fact.Key == "" || keys[fact.Key] {
-				return fmt.Errorf("invalid or duplicate fact: %q in group %q", fact.Key, group.ID)
-			}
-			keys[fact.Key] = true
-			if err := fact.Value.Validate(); err != nil {
-				return fmt.Errorf("invalid fact %q in group %q: %w", fact.Key, group.ID, err)
-			}
-		}
-	}
-	return nil
 }
