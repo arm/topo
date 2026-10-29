@@ -5,17 +5,19 @@ import (
 	"fmt"
 
 	"github.com/arm/topo/internal/fact"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/runner"
+	"github.com/arm/topo/internal/ssh"
 )
 
 type FactsResolver struct {
 	providers map[string]fact.Provider
 	ctx       context.Context
-	runner    runner.CommandRunner
+	target    string
 }
 
-func NewFactsResolver(ctx context.Context, targetRunner runner.CommandRunner, providers map[string]fact.Provider) *FactsResolver {
-	return &FactsResolver{ctx: ctx, runner: targetRunner, providers: providers}
+func NewFactsResolver(ctx context.Context, target string, providers map[string]fact.Provider) *FactsResolver {
+	return &FactsResolver{ctx: ctx, target: target, providers: providers}
 }
 
 func (r *FactsResolver) Resolve(parameters []Parameter) (Changes, error) {
@@ -23,6 +25,16 @@ func (r *FactsResolver) Resolve(parameters []Parameter) (Changes, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if r.target == "" {
+		for _, param := range sourceable {
+			logger.Warn(fmt.Sprintf("cannot automatically configure parameter %q without a target; provide a target or supply this parameter manually", param.Name))
+		}
+		return nil, nil
+	}
+
+	runner := runner.For(ssh.NewDestination(r.target))
+
 	changes := Changes{}
 	results := map[string]fact.Report{}
 	for _, parameter := range sourceable {
@@ -30,7 +42,7 @@ func (r *FactsResolver) Resolve(parameters []Parameter) (Changes, error) {
 		result, ok := results[source.Provider]
 		if !ok {
 			var err error
-			result, err = r.providers[source.Provider].Facts(r.ctx, r.runner)
+			result, err = r.providers[source.Provider].Facts(r.ctx, runner)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve %s: %w", parameter.Name, err)
 			}

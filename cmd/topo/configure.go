@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,8 +12,6 @@ import (
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
-	"github.com/arm/topo/internal/runner"
-	"github.com/arm/topo/internal/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -126,34 +123,12 @@ func newConfigurationResolver(cmd *cobra.Command, assignments, removals []string
 	}
 	resolvers := []parameter.Resolver{cli}
 	if experimentalFeaturesEnabled() {
-		targetResolver := &targetFactsResolver{ctx: cmd.Context(), providers: fact.Providers}
-		if target, ok := lookupTarget(cmd); ok {
-			targetResolver.target = runner.For(ssh.NewDestination(target.value))
-		}
+		target, _ := lookupTarget(cmd)
+		targetResolver := parameter.NewFactsResolver(cmd.Context(), target.value, fact.Providers)
 		resolvers = append(resolvers, targetResolver)
 	}
 	if promptsEnabled(cmd) && term.IsTerminal(output) && term.IsTerminal(os.Stdin) {
 		resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, output))
 	}
 	return parameter.NewStrictResolverChain(resolvers...), nil
-}
-
-type targetFactsResolver struct {
-	ctx       context.Context
-	target    runner.CommandRunner
-	providers map[string]fact.Provider
-}
-
-func (r *targetFactsResolver) Resolve(parameters []parameter.Parameter) (parameter.Changes, error) {
-	if r.target != nil {
-		return parameter.NewFactsResolver(r.ctx, r.target, r.providers).Resolve(parameters)
-	}
-	sourceable, err := parameter.SourceableParameters(parameters, r.providers)
-	if err != nil {
-		return nil, err
-	}
-	for _, param := range sourceable {
-		logger.Warn(fmt.Sprintf("cannot automatically configure parameter %q without a target; provide --target or set TOPO_TARGET, or supply this parameter manually", param.Name))
-	}
-	return nil, nil
 }
