@@ -1,7 +1,6 @@
 package fact
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"strconv"
@@ -41,10 +40,9 @@ func (MemoryProvider) Facts(ctx context.Context, r runner.CommandRunner) (Report
 	}, nil
 }
 
-func findKeyValue(key string, text string) (int64, error) {
-	scanner := bufio.NewScanner(strings.NewReader(text))
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
+func findKeyValue(key, text string) (int64, error) {
+	for line := range strings.Lines(text) {
+		fields := strings.Fields(line)
 		if len(fields) >= 2 && fields[0] == key+":" {
 			return strconv.ParseInt(fields[1], 10, 64)
 		}
