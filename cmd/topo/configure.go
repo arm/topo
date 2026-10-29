@@ -8,8 +8,6 @@ import (
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/spf13/cobra"
 )
@@ -75,19 +73,10 @@ interactive prompts.`,
 			return err
 		}
 
-		var resolvers []parameter.Resolver
-		if len(args) > 0 || len(unset) > 0 {
-			cliResolver, err := parameter.NewCLIResolver(args, unset)
-			if err != nil {
-				return err
-			}
-			resolvers = append(resolvers, cliResolver)
+		resolver, err := newConfigurationResolver(cmd, args, unset, os.Stderr)
+		if err != nil {
+			return err
 		}
-		if promptsEnabled(cmd) && term.IsTerminal(os.Stderr) && term.IsTerminal(os.Stdin) {
-			resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, os.Stderr))
-		}
-
-		resolver := parameter.NewStrictResolverChain(resolvers...)
 
 		changes, err := project.Configure(project.Scope{
 			ComposeFile: composeFilePath,
@@ -112,6 +101,9 @@ interactive prompts.`,
 }
 
 func init() {
+	if experimentalFeaturesEnabled() {
+		addTargetFlag(configureCmd)
+	}
 	configureCmd.Flags().StringArray("unset", nil, "remove a parameter from the output env file; repeat for multiple parameters")
 	addNoPromptFlag(configureCmd)
 	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
