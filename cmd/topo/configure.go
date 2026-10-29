@@ -6,11 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/arm/topo/internal/env"
-	"github.com/arm/topo/internal/fact"
 	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/output/term"
-	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/spf13/cobra"
 )
@@ -114,21 +111,4 @@ func init() {
 	addEnvFileFlag(configureCmd)
 	addMigrateToEnvFlag(configureCmd)
 	rootCmd.AddCommand(configureCmd)
-}
-
-func newConfigurationResolver(cmd *cobra.Command, assignments, removals []string, output *os.File) (*parameter.StrictResolverChain, error) {
-	cli, err := parameter.NewCLIResolver(assignments, removals)
-	if err != nil {
-		return nil, err
-	}
-	resolvers := []parameter.Resolver{cli}
-	if experimentalFeaturesEnabled() {
-		target, _ := lookupTarget(cmd)
-		targetResolver := parameter.NewFactsResolver(cmd.Context(), target.value, fact.Providers)
-		resolvers = append(resolvers, targetResolver)
-	}
-	if promptsEnabled(cmd) && term.IsTerminal(output) && term.IsTerminal(os.Stdin) {
-		resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, output))
-	}
-	return parameter.NewStrictResolverChain(resolvers...), nil
 }
