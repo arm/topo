@@ -1,7 +1,6 @@
 package migrate_test
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -11,51 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestUsesLiteralBuildArgConfiguration(t *testing.T) {
-	t.Run("detects legacy build argument values without migrating the project", func(t *testing.T) {
-		path := writeGreetingComposeFile(t, "World")
-		original := testutil.RequireReadFile(t, path)
-
-		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(path)
-
-		require.NoError(t, err)
-		assert.True(t, usesLiteralBuildArgs)
-		assert.Equal(t, original, testutil.RequireReadFile(t, path))
-		assert.NoFileExists(t, filepath.Join(filepath.Dir(path), env.DefaultFilename))
-	})
-
-	t.Run("does not classify environment-backed build arguments as legacy", func(t *testing.T) {
-		path := writeGreetingComposeFile(t, "${GREETING_NAME?configured via topo}")
-
-		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(path)
-
-		require.NoError(t, err)
-		assert.False(t, usesLiteralBuildArgs)
-	})
-
-	t.Run("propagates inspection errors", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "missing.yaml")
-
-		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(path)
-
-		require.Error(t, err)
-		assert.False(t, usesLiteralBuildArgs)
-	})
-}
-
-func writeGreetingComposeFile(t *testing.T, greeting string) string {
-	t.Helper()
-	return testutil.RequireWriteComposeFile(t, t.TempDir(), fmt.Sprintf(`services:
-  app:
-    build:
-      args:
-        GREETING_NAME: %q
-x-topo:
-  parameters:
-    GREETING_NAME: {}
-`, greeting))
-}
 
 func TestToEnv(t *testing.T) {
 	t.Run("migrates repeated identical values and replaces only declared parameters", func(t *testing.T) {

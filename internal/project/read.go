@@ -45,7 +45,7 @@ func PullableServices(scope Scope) ([]string, error) {
 func Read(scope Scope) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
-		[]string{scope.ComposeFile},
+		scope.ComposeFiles,
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 		cli.WithEnvFiles(scope.EnvFiles...),
@@ -69,8 +69,8 @@ func Read(scope Scope) (*types.Project, error) {
 	return composeProject, nil
 }
 
-func readUninterpolated(composeFilePath string) (map[string]any, error) {
-	options, err := cli.NewProjectOptions([]string{composeFilePath},
+func readUninterpolated(composeFiles []string) (map[string]any, error) {
+	options, err := cli.NewProjectOptions(composeFiles,
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 		cli.WithLoadOptions(func(o *loader.Options) {

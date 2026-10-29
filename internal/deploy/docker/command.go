@@ -20,7 +20,10 @@ func RunCommand(ctx context.Context, output io.Writer, host Host, args ...string
 }
 
 func ComposeCommand(ctx context.Context, host Host, scope project.Scope, args ...string) *exec.Cmd {
-	composeArgs := []string{"compose", "-f", scope.ComposeFile}
+	composeArgs := []string{"compose"}
+	for _, composeFile := range scope.ComposeFiles {
+		composeArgs = append(composeArgs, "-f", composeFile)
+	}
 	for _, envFile := range scope.EnvFiles {
 		composeArgs = append(composeArgs, "--env-file", envFile)
 	}

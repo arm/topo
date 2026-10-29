@@ -3,7 +3,6 @@ package project
 import (
 	"cmp"
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/arm/topo/internal/env"
@@ -14,21 +13,24 @@ import (
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	parameters, err := loadParameterMetadata(scope.ComposeFile)
+	model, err := readUninterpolated(scope.ComposeFiles)
+	if err != nil {
+		return nil, err
+	}
+	parameters, err := decodeParameterMetadata(model)
 	if err != nil {
 		return nil, err
 	}
 	if len(parameters) == 0 {
 		return parameters, nil
 	}
+	if usesLiteralBuildArgConfiguration(model, parameters) {
+		return nil, ErrParameterMigrationRequired
+	}
 
 	currentValues, err := env.CurrentValues(scope.EnvFiles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
-	}
-	model, err := readUninterpolated(scope.ComposeFile)
-	if err != nil {
-		return nil, err
 	}
 	references := collectParameterReferences(model)
 	for i := range parameters {
@@ -41,16 +43,40 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	return parameters, nil
 }
 
-func loadParameterMetadata(composeFilePath string) ([]parameter.Parameter, error) {
-	reader, err := os.Open(composeFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open compose file: %w", err)
+func usesLiteralBuildArgConfiguration(model map[string]any, parameters []parameter.Parameter) bool {
+	services, _ := model["services"].(map[string]any)
+	var buildArguments []any
+	argumentNames := map[string]bool{}
+	for _, value := range services {
+		service := value.(map[string]any)
+		build, _ := service["build"].(map[string]any)
+		arguments, _ := build["args"].(map[string]any)
+		buildArguments = append(buildArguments, arguments)
+		for name := range arguments {
+			argumentNames[name] = true
+		}
 	}
-	defer reader.Close() //nolint:errcheck
+	references := template.ExtractVariables(map[string]any{"args": buildArguments}, nil)
+	hasParameterValues := false
+	for _, param := range parameters {
+		if _, referenced := references[param.Name]; referenced {
+			return false
+		}
+		if argumentNames[param.Name] {
+			hasParameterValues = true
+		}
+	}
+	return hasParameterValues
+}
+
+func decodeParameterMetadata(model map[string]any) ([]parameter.Parameter, error) {
+	var document yaml.Node
+	if err := document.Encode(model); err != nil {
+		return nil, fmt.Errorf("failed to encode project metadata: %w", err)
+	}
 
 	var raw parameterFile
-	decoder := yaml.NewDecoder(reader)
-	if err := decoder.Decode(&raw); err != nil {
+	if err := document.Decode(&raw); err != nil {
 		return nil, fmt.Errorf("failed to decode project metadata: %w", err)
 	}
 

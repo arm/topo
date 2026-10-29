@@ -28,7 +28,7 @@ x-topo:
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -46,7 +46,7 @@ x-topo:
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStaticResolver(changes)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
