@@ -20,6 +20,7 @@ func TestLoadParameters(t *testing.T) {
     PORT:
       description: HTTP port
       example: "8080"
+      source: {provider: test, group: settings, fact: port}
     EMPTY: {}
     UNSET: {}
 `)
@@ -28,7 +29,7 @@ func TestLoadParameters(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
-			{Name: "PORT", Description: "HTTP port", Example: "8080"},
+			{Name: "PORT", Description: "HTTP port", Example: "8080", Source: &parameter.Source{Provider: "test", Group: "settings", Fact: "port"}},
 			{Name: "EMPTY"},
 			{Name: "UNSET"},
 		}, got)
