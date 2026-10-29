@@ -41,7 +41,7 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	return project.Scope{ComposeFile: composeFilePath}, imageName
+	return project.Scope{ComposeFiles: []string{composeFilePath}}, imageName
 }
 
 func RequireDockerImageExists(t *testing.T, host docker.Host, imageName string) {
@@ -80,7 +80,7 @@ func CleanupDockerComposeProject(t *testing.T, scope project.Scope) {
 
 	cmd := docker.ComposeCommand(ctx, docker.LocalHost, scope, "down", "-v")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Logf("docker compose down failed: %v (compose file: %s): %s", err, scope.ComposeFile, output)
+		t.Logf("docker compose down failed: %v (compose files: %v): %s", err, scope.ComposeFiles, output)
 	}
 }
 

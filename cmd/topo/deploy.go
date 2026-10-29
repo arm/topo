@@ -39,7 +39,7 @@ This command performs the following operations in sequence:
   3. Transfer - Transfers built and pulled images and compose file to the target
   4. Run - Runs docker compose up on the target
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.`,
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Repeat -f to merge Compose files in the specified order.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -52,15 +52,15 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		composeFilePath, err := resolveComposeFilePath(cmd)
+		composeFilePaths, err := resolveComposeFilePaths(cmd)
 		if err != nil {
 			return err
 		}
-		envFiles, err := getEnvFiles(cmd, composeFilePath)
+		envFiles, err := getEnvFiles(cmd, composeFilePaths[0])
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
+		scope, err := project.BuildScope(composeFilePaths, target.value, envFiles)
 		if err != nil {
 			return err
 		}
@@ -78,10 +78,14 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		}
 
 		composeFileFlagValue := cmd.Flag(composeFileFlag)
+		composeFileArguments, err := cmd.Flags().GetStringArray(composeFileFlag)
+		if err != nil {
+			return err
+		}
 		defaultSuccessMessage := buildDefaultSuccessMessage(
 			engine,
 			target,
-			strings.TrimSpace(composeFileFlagValue.Value.String()),
+			composeFileArguments,
 			composeFileFlagValue.Changed,
 		)
 
@@ -118,12 +122,14 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	},
 }
 
-func buildDefaultSuccessMessage(engine engineSelection, target targetSelection, composeFilePath string, explicitComposeFile bool) string {
-	composeFileArg := ""
+func buildDefaultSuccessMessage(engine engineSelection, target targetSelection, composeFilePaths []string, explicitComposeFile bool) string {
+	var composeFileArgs []string
 	if explicitComposeFile {
-		composeFileArg = "-f " + cmdtext.QuoteArg(composeFilePath)
+		for _, path := range composeFilePaths {
+			composeFileArgs = append(composeFileArgs, "-f", cmdtext.QuoteArg(strings.TrimSpace(path)))
+		}
 	}
-	psCommand := joinNonEmpty("topo ps", engine.cliArg(), target.cliArg(), composeFileArg)
+	psCommand := joinNonEmpty("topo ps", engine.cliArg(), target.cliArg(), strings.Join(composeFileArgs, " "))
 	return fmt.Sprintf("Run `%s` to see deployed containers", psCommand)
 }
 

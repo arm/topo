@@ -64,7 +64,7 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	return project.Scope{ComposeFile: composeFile}, "test-project-" + testName
+	return project.Scope{ComposeFiles: []string{composeFile}}, "test-project-" + testName
 }
 
 func CleanupPodmanComposeProject(t *testing.T, scope project.Scope) {
