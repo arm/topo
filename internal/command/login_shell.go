@@ -28,7 +28,7 @@ func NewLoginShellWrapperWithMarker(marker string) *LoginShellWrapper {
 func (w *LoginShellWrapper) Wrap(cmd string) string {
 	payload := fmt.Sprintf("printf '%s\\n'; printf '%s\\n' >&2; %s", w.marker, w.marker, cmd)
 	escaped := shellEscapeForDoubleQuotes(payload)
-	return fmt.Sprintf(`/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
+	return fmt.Sprintf(`/bin/sh -c "exec \${SHELL:-/bin/sh} -l -c \"%s\""`, escaped)
 }
 
 // Unwrap removes output emitted before the wrapped command starts.
