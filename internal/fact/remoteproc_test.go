@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ fact.Provider = fact.RemoteprocProvider{}
-
 func TestRemoteprocProvider(t *testing.T) {
 	t.Run("reports distinct devices with duplicate names and gaps in numbering", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
