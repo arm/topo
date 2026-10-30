@@ -58,37 +58,54 @@ func init() {
 const composeFileFlag = "file"
 
 func addComposeFileFlag(cmd *cobra.Command) {
-	cmd.Flags().StringP(
+	cmd.Flags().StringArrayP(
 		composeFileFlag,
 		"f",
-		"",
-		"compose file to use (default: compose.yaml, then compose.yml)",
+		nil,
+		"compose files to merge in order; repeat for multiple files (default: compose.yaml, then compose.yml)",
 	)
 }
 
-func resolveComposeFilePath(cmd *cobra.Command) (string, error) {
+func resolveComposeFilePaths(cmd *cobra.Command) ([]string, error) {
 	flag := cmd.Flag(composeFileFlag)
 	if flag == nil {
 		panic(fmt.Sprintf("internal error: compose file flag not registered: %s", composeFileFlag))
 	}
 
 	if flag.Changed {
-		composeFileArg := strings.TrimSpace(flag.Value.String())
-		if composeFileArg == "" {
-			return "", fmt.Errorf("compose file path must not be empty")
-		}
-		composeFilePath, err := filepath.Abs(composeFileArg)
+		arguments, err := cmd.Flags().GetStringArray(composeFileFlag)
 		if err != nil {
-			return "", fmt.Errorf("failed to resolve compose file path: %w", err)
+			return nil, err
 		}
-		return compose.RequireFile(composeFilePath)
+		paths := make([]string, 0, len(arguments))
+		for _, argument := range arguments {
+			path, err := resolveComposeFileArgument(argument)
+			if err != nil {
+				return nil, err
+			}
+			paths = append(paths, path)
+		}
+		return paths, nil
 	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("failed to get current working directory: %w", err)
+		return nil, fmt.Errorf("failed to get current working directory: %w", err)
 	}
-	return compose.FindDefaultFile(cwd)
+	path, err := compose.FindDefaultFile(cwd)
+	return []string{path}, err
+}
+
+func resolveComposeFileArgument(argument string) (string, error) {
+	argument = strings.TrimSpace(argument)
+	if argument == "" {
+		return "", fmt.Errorf("compose file path must not be empty")
+	}
+	path, err := filepath.Abs(argument)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve compose file path: %w", err)
+	}
+	return compose.RequireFile(path)
 }
 
 const targetEnvVar = env.TargetVariable

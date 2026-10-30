@@ -87,6 +87,21 @@ topo stop --target user@target.example
 
 This command stops the services but does not remove their containers.
 
+## Use multiple Compose files
+
+Use a base file with additional files for a deployment configuration. Repeat `-f` to merge files in order using standard Compose merge rules. Later files override or extend earlier settings.
+
+```sh
+topo configure -f compose.yaml -f compose.production.yaml
+topo deploy --target user@target.example -f compose.yaml -f compose.production.yaml
+topo ps --target user@target.example -f compose.yaml -f compose.production.yaml
+topo stop --target user@target.example -f compose.yaml -f compose.production.yaml
+```
+
+Use the same files in the same order for each command. Default environment files and the default `configure` output file are located beside the first Compose file. Parameter metadata and variable references are read from the merged configuration.
+
+`topo configure --migrate-to-env` accepts only one Compose file because it rewrites that file.
+
 ## Next steps
 
 - Run `topo <command> --help` for command options.

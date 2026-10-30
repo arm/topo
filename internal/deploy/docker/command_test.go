@@ -22,10 +22,20 @@ func TestCommand(t *testing.T) {
 }
 
 func TestComposeCommand(t *testing.T) {
+	t.Run("passes compose files in the specified order", func(t *testing.T) {
+		host := docker.NewHostFromDestination(ssh.NewDestination("localhost"))
+		scope := project.Scope{ComposeFiles: []string{"base.yaml", "override.yaml"}}
+
+		cmd := docker.ComposeCommand(t.Context(), host, scope, "up", "-d")
+
+		want := []string{"docker", "compose", "-f", "base.yaml", "-f", "override.yaml", "up", "-d"}
+		assert.Equal(t, want, cmd.Args)
+	})
+
 	t.Run("sets host flag for remote host", func(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFile: "/path/to/compose.yaml"}
+		scope := project.Scope{ComposeFiles: []string{"/path/to/compose.yaml"}}
 
 		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
 
@@ -36,7 +46,7 @@ func TestComposeCommand(t *testing.T) {
 	t.Run("sets command env vars", func(t *testing.T) {
 		dest := ssh.NewDestination("localhost")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFile: "compose.yaml", Env: []string{"FOO=NOTBAR"}}
+		scope := project.Scope{ComposeFiles: []string{"compose.yaml"}, Env: []string{"FOO=NOTBAR"}}
 
 		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
 
@@ -46,7 +56,7 @@ func TestComposeCommand(t *testing.T) {
 	t.Run("sets env-file args", func(t *testing.T) {
 		dest := ssh.NewDestination("localhost")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFile: "compose.yaml", EnvFiles: []string{".foobar.env", ".env"}}
+		scope := project.Scope{ComposeFiles: []string{"compose.yaml"}, EnvFiles: []string{".foobar.env", ".env"}}
 
 		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
 

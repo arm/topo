@@ -42,8 +42,18 @@ func TestComposeSocketRawCommand(t *testing.T) {
 }
 
 func TestComposeCommand(t *testing.T) {
+	t.Run("passes compose files in the specified order", func(t *testing.T) {
+		scope := project.Scope{ComposeFiles: []string{"base.yaml", "override.yaml"}}
+
+		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
+
+		require.NoError(t, err)
+		want := []string{"podman", "compose", "-f", "base.yaml", "-f", "override.yaml", "up", "-d"}
+		assert.Equal(t, want, command.Args)
+	})
+
 	t.Run("sets args", func(t *testing.T) {
-		scope := project.Scope{ComposeFile: "compose.yaml"}
+		scope := project.Scope{ComposeFiles: []string{"compose.yaml"}}
 
 		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
@@ -52,7 +62,7 @@ func TestComposeCommand(t *testing.T) {
 	})
 
 	t.Run("sets command env vars", func(t *testing.T) {
-		scope := project.Scope{ComposeFile: "compose.yaml", Env: []string{"FOO=BAR"}}
+		scope := project.Scope{ComposeFiles: []string{"compose.yaml"}, Env: []string{"FOO=BAR"}}
 
 		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
@@ -61,7 +71,7 @@ func TestComposeCommand(t *testing.T) {
 	})
 
 	t.Run("sets env-file args", func(t *testing.T) {
-		scope := project.Scope{ComposeFile: "compose.yaml", EnvFiles: []string{".foobar.env", ".env"}}
+		scope := project.Scope{ComposeFiles: []string{"compose.yaml"}, EnvFiles: []string{".foobar.env", ".env"}}
 
 		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
@@ -73,7 +83,7 @@ func TestComposeCommand(t *testing.T) {
 		t.Setenv("DOCKER_HOST", "unix:///stale-docker.sock")
 		socket := podman.NewSocket("tcp://127.0.0.1:12345")
 
-		command, err := podman.ComposeCommand(context.Background(), socket, project.Scope{ComposeFile: "compose.yaml"}, "ps")
+		command, err := podman.ComposeCommand(context.Background(), socket, project.Scope{ComposeFiles: []string{"compose.yaml"}}, "ps")
 
 		require.NoError(t, err)
 		assert.Contains(t, command.Env, "DOCKER_HOST=tcp://127.0.0.1:12345")

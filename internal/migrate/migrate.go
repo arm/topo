@@ -5,34 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/arm/topo/internal/env"
-	"github.com/compose-spec/compose-go/v2/template"
 )
-
-func UsesLiteralBuildArgConfiguration(composeFilePath string) (bool, error) {
-	project, err := loadProject(composeFilePath)
-	if err != nil {
-		return false, err
-	}
-
-	buildArgs := make(map[string]any)
-	for name, values := range project.currentParameterValues {
-		buildArgs[name] = strings.Join(values, "\n")
-	}
-	references := template.ExtractVariables(buildArgs, nil)
-	hasParameterValues := false
-	for _, param := range project.Metadata.Parameters {
-		if _, referenced := references[param.Name]; referenced {
-			return false, nil
-		}
-		if len(project.currentParameterValues[param.Name]) > 0 {
-			hasParameterValues = true
-		}
-	}
-	return hasParameterValues, nil
-}
 
 func ToEnv(composeFilePath string) error {
 	projectDir := filepath.Dir(composeFilePath)

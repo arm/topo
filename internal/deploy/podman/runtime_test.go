@@ -17,7 +17,7 @@ services:
     image: alpine
 `)
 
-		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFile: composeFile})
+		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFiles: []string{composeFile}})
 
 		require.NoError(t, err)
 	})
@@ -30,7 +30,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFile: composeFile})
+		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFiles: []string{composeFile}})
 
 		require.EqualError(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments: "firmware" service uses "io.containerd.remoteproc.v1"`)
 	})
@@ -46,7 +46,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFile: composeFile})
+		err := podman.EnsureNoRuntimeSet(project.Scope{ComposeFiles: []string{composeFile}})
 
 		require.EqualError(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments: "application" service uses "kata", "firmware" service uses "io.containerd.remoteproc.v1"`)
 	})

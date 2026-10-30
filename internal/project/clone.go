@@ -59,22 +59,14 @@ func Clone(output io.Writer, path string, src Source, resolver parameter.Resolve
 }
 
 func configureProject(composeFilePath string, resolver parameter.Resolver) error {
-	usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
-	if err != nil {
-		return err
-	}
-	if usesLiteralBuildArgs {
-		return ErrParameterMigrationRequired
-	}
-
 	envFiles, err := env.ResolveFiles(filepath.Dir(composeFilePath), env.DefaultFilenames, true)
 	if err != nil {
 		return err
 	}
 
 	changes, err := Configure(Scope{
-		ComposeFile: composeFilePath,
-		EnvFiles:    envFiles,
+		ComposeFiles: []string{composeFilePath},
+		EnvFiles:     envFiles,
 	}, resolver)
 	if err != nil || changes == nil {
 		return err
