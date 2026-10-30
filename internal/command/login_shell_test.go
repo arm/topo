@@ -14,7 +14,7 @@ func TestLoginShellWrapper(t *testing.T) {
 
 			got := wrapper.Wrap("echo $PATH")
 
-			want := `/bin/sh -c "exec ${SHELL:-/bin/sh} -l -c \"printf '*FOO*\\n'; printf '*FOO*\\n' >&2; echo \\\$PATH\""`
+			want := `/bin/sh -c "exec \${SHELL:-/bin/sh} -l -c \"printf '*FOO*\\n'; printf '*FOO*\\n' >&2; echo \\\$PATH\""`
 			assert.Equal(t, want, got)
 		})
 	})

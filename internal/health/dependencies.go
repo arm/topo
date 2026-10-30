@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/fact"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/probe"
 	"github.com/arm/topo/internal/runner"
@@ -249,7 +250,8 @@ func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 		ID:    DependencyIDRemoteproc,
 		Label: "Processing Domain Driver (remoteproc)",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			remoteProcessors, err := probe.Remoteproc(ctx, r)
+			provider := fact.RemoteprocProvider{}
+			report, err := provider.Facts(ctx, r)
 			if err != nil {
 				return DependencyCheckResult{
 					Failure: &DependencyCheckFailure{
@@ -258,10 +260,13 @@ func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 					},
 				}
 			}
-			if len(remoteProcessors) > 0 {
-				names := make([]string, len(remoteProcessors))
-				for i, remoteProc := range remoteProcessors {
-					names[i] = remoteProc.Name
+			if len(report.Groups) > 0 {
+				names := make([]string, len(report.Groups))
+				for i, group := range report.Groups {
+					name, ok := group.Find(fact.FactRemoteprocName)
+					if ok {
+						names[i] = name.Value.String()
+					}
 				}
 				return DependencyCheckResult{
 					SuccessValue: strings.Join(names, ", "),
