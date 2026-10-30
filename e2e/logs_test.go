@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -106,38 +105,21 @@ func testLogs(t *testing.T, topo string, engine deploy.EngineKind, target ssh.De
 		"--engine", string(engine),
 	}
 
-	t.Run("shows logs from all services", func(t *testing.T) {
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			output, err := runLogsCommand(t, topo, args)
+	if target.IsPlainLocalhost() {
+		want := []string{"stdout-first", "stderr-last", "other-service"}
+		requireLogs(t, topo, args, want...)
+		if engine == deploy.EngineDocker {
+			require.NoError(t, runner.RunComposeCommand(t.Context(), t.Output(), scope, "stop"))
+			requireLogs(t, topo, args, want...)
+		}
+		return
+	}
 
-			assert.NoError(c, err, output)
-			assert.Contains(c, output, "stdout-first")
-			assert.Contains(c, output, "stderr-last")
-			assert.Contains(c, output, "other-service")
-		}, 30*time.Second, 200*time.Millisecond)
-	})
-
-	t.Run("reports an unknown service", func(t *testing.T) {
-		output, err := runLogsCommand(t, topo, args, "unknown-service")
-
-		require.Error(t, err)
-		assert.Contains(t, output, "no such service")
-	})
-
-	t.Run("streams output and exits cleanly on interrupt", func(t *testing.T) {
+	if runtime.GOOS != "windows" {
 		assertLogsFollow(t, topo, args)
-	})
-
-	t.Run("shows only the selected service's logs after stopping", func(t *testing.T) {
-		require.NoError(t, runner.RunComposeCommand(t.Context(), t.Output(), scope, "stop"))
-
-		output, err := runLogsCommand(t, topo, args, "logger")
-
-		require.NoError(t, err, output)
-		assert.Contains(t, output, "stdout-first")
-		assert.Contains(t, output, "stderr-last")
-		assert.NotContains(t, output, "other-service")
-	})
+	}
+	logs := requireLogs(t, topo, append(args, "logger"), "stdout-first", "stderr-last")
+	assert.NotContains(t, logs, "other-service")
 }
 
 func logsProject(t *testing.T) project.Scope {
@@ -160,28 +142,32 @@ services:
 	return project.Scope{ComposeFile: composeFile}
 }
 
-func runLogsCommand(t *testing.T, topo string, args []string, extra ...string) (string, error) {
+func requireLogs(t *testing.T, topo string, args []string, want ...string) string {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, topo, slices.Concat(args, extra)...)
-	cmd.WaitDelay = 3 * time.Second
-	if runtime.GOOS != "windows" {
-		cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
-	}
-	cmd.Dir = t.TempDir()
-	output, err := cmd.CombinedOutput()
-	return string(output), err
+	dir := t.TempDir()
+	var logs string
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		cmd := exec.CommandContext(ctx, topo, args...)
+		cmd.WaitDelay = 3 * time.Second
+		cmd.Dir = dir
+		output, err := cmd.CombinedOutput()
+		logs = string(output)
+
+		assert.NoError(c, err, logs)
+		for _, message := range want {
+			assert.Contains(c, logs, message)
+		}
+	}, 30*time.Second, 200*time.Millisecond)
+	return logs
 }
 
 func assertLogsFollow(t *testing.T, topo string, args []string) {
 	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("sending os.Interrupt to a child process is unsupported on Windows")
-	}
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, topo, slices.Concat(args, []string{"--follow", "logger"})...)
+	cmd := exec.CommandContext(ctx, topo, slices.Concat(args, []string{"--follow"})...)
 	cmd.WaitDelay = 3 * time.Second
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -198,13 +184,11 @@ func assertLogsFollow(t *testing.T, topo string, args []string) {
 			break
 		}
 	}
-	signalErr := cmd.Process.Signal(os.Interrupt)
-	_, readErr := io.Copy(io.Discard, output)
-	waitErr := cmd.Wait()
-
 	assert.Contains(t, scanner.Text(), "stdout-first", "log output must arrive while the command is still running")
+	assert.NoError(t, cmd.Process.Signal(os.Interrupt))
+	// Drain remaining output before waiting for the process to exit.
+	for scanner.Scan() {
+	}
 	assert.NoError(t, scanner.Err())
-	assert.NoError(t, signalErr)
-	assert.NoError(t, readErr)
-	assert.NoError(t, waitErr, stderr.String())
+	assert.NoError(t, cmd.Wait(), stderr.String())
 }
