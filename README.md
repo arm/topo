@@ -139,14 +139,14 @@ Topo builds the container images on your host, transfers them to the target over
 
 Your project is now running on your target. See the project README for details.
 
-View logs from all deployed services, or follow one service as it runs:
+View recent logs from all services in the project, or follow new output:
 
 ```sh
 topo logs --target [user@]host
-topo logs --target [user@]host --follow <service>
+topo logs --target [user@]host --follow
 ```
 
-Use Compose service names, and add `--engine podman` for Podman deployments.
+To select specific services, append their Compose service names to either command.
 
 ### 6. Stop the deployment
 

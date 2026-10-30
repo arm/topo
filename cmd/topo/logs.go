@@ -18,12 +18,14 @@ var topoLogsCmd = &cobra.Command{
 	Use:   "logs [SERVICE...]",
 	Short: "Show logs from deployed Compose services",
 	Long: `Show logs from deployed Compose services, including stopped containers.
+By default, show the last 100 log lines from each container.
 Omit service names to show logs from all services in the current project.
 Use --follow to stream new log output until interrupted with Ctrl+C.
 
 By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.
-Log output is streamed as text.`,
+Log output is text, including when --output json is set.`,
 	Example: `  topo logs --target user@board
+  topo logs --target user@board --follow
   topo logs --target user@board --follow web
   topo logs --target localhost --engine podman web worker`,
 	Args: cobra.ArbitraryArgs,
