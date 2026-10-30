@@ -100,9 +100,11 @@ func testLogs(t *testing.T, topo string, engine deploy.EngineKind, target ssh.De
 		require.NoError(t, runner.RunComposeCommand(ctx, t.Output(), scope, "down", "--volumes"))
 	})
 	require.NoError(t, deploy.Deploy(t.Context(), t.Output(), scope, deploy.Options{Engine: engine, TargetHost: target}))
-	t.Setenv("TOPO_TARGET", target.String())
-	t.Setenv("TOPO_ENGINE", string(engine))
-	args := []string{"logs", "-f", scope.ComposeFile}
+	args := []string{
+		"logs", "-f", scope.ComposeFile,
+		"--target", target.String(),
+		"--engine", string(engine),
+	}
 
 	t.Run("shows logs from all services", func(t *testing.T) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
