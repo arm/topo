@@ -8,7 +8,10 @@ import (
 	"github.com/arm/topo/internal/runner"
 )
 
-var Providers = map[string]Provider{"topo.memory": MemoryProvider{}}
+var Providers = map[string]Provider{
+	"topo.memory":     MemoryProvider{},
+	"topo.remoteproc": RemoteprocProvider{},
+}
 
 type Provider interface {
 	Facts(ctx context.Context, targetRunner runner.CommandRunner) (Report, error)
@@ -23,12 +26,7 @@ func (r Report) Find(groupID, key string) (Fact, bool) {
 		if group.ID != groupID {
 			continue
 		}
-		for _, fact := range group.Facts {
-			if fact.Key == key {
-				return fact, true
-			}
-		}
-		return Fact{}, false
+		return group.Find(key)
 	}
 	return Fact{}, false
 }
@@ -57,6 +55,15 @@ func (r Report) Validate() error {
 type Group struct {
 	ID    string
 	Facts []Fact
+}
+
+func (g Group) Find(key string) (Fact, bool) {
+	for _, fact := range g.Facts {
+		if fact.Key == key {
+			return fact, true
+		}
+	}
+	return Fact{}, false
 }
 
 type Fact struct {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
@@ -217,14 +216,10 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 }
 
 func TestRemoteprocDependency(t *testing.T) {
-	buildRunnerWithRemoteProcs := func(names []string) runner.Runner {
-		return &runner.Fake{Commands: map[string]runner.FakeResult{
-			"cat /sys/class/remoteproc/*/name": {Output: strings.Join(names, "\n")},
-		}}
-	}
-
 	t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
-		r := buildRunnerWithRemoteProcs(nil)
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"grep -H . /sys/class/remoteproc/*/name": {},
+		}}
 		dependency := health.NewDependencyOnRemoteproc(r)
 
 		got := dependency.Check(context.Background())
@@ -240,7 +235,7 @@ func TestRemoteprocDependency(t *testing.T) {
 
 	t.Run("fails when remoteproc probe fails", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"cat /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
+			"grep -H . /sys/class/remoteproc/*/name": {Err: runner.ErrTimeout},
 		}}
 		dependency := health.NewDependencyOnRemoteproc(r)
 
@@ -256,7 +251,11 @@ func TestRemoteprocDependency(t *testing.T) {
 	})
 
 	t.Run("reports remoteproc device names", func(t *testing.T) {
-		r := buildRunnerWithRemoteProcs([]string{"m4_0", "m4_1"})
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"grep -H . /sys/class/remoteproc/*/name": {Output: `/sys/class/remoteproc/remoteproc0/name:m4_0
+/sys/class/remoteproc/remoteproc1/name:m4_1
+`},
+		}}
 		dependency := health.NewDependencyOnRemoteproc(r)
 
 		got := dependency.Check(context.Background())
