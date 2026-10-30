@@ -19,6 +19,7 @@ func TestContainerList(t *testing.T) {
 					{
 						ID:               "abcdef123456",
 						Names:            "project-web-1",
+						Service:          "web",
 						Image:            "my-app",
 						State:            "running",
 						Status:           "Up 5 minutes",
@@ -80,6 +81,7 @@ func TestContainerList(t *testing.T) {
 					{
 						ID:               "abcdef123456",
 						Names:            "project-web-1",
+						Service:          "web",
 						Image:            "my-app",
 						State:            "running",
 						Status:           "Up 5 minutes",
@@ -94,7 +96,7 @@ func TestContainerList(t *testing.T) {
 
 			require.NoError(t, err)
 			want := `{
-				"containers": [{"id": "abcdef123456", "names": "project-web-1", "image": "my-app", "state": "running", "status": "Up 5 minutes", "processingDomain": "m0", "address": "localhost:8080"}]
+				"containers": [{"id": "abcdef123456", "names": "project-web-1", "service": "web", "image": "my-app", "state": "running", "status": "Up 5 minutes", "processingDomain": "m0", "address": "localhost:8080"}]
 			}`
 			assert.JSONEq(t, want, out.String())
 		})

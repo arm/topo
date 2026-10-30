@@ -73,12 +73,13 @@ func LogServices(ctx context.Context, output io.Writer, scope project.Scope, run
 }
 
 type RawContainer struct {
-	ID     string `json:"ID"`
-	Names  string `json:"Names"`
-	Image  string `json:"Image"`
-	State  string `json:"State"`
-	Status string `json:"Status"`
-	Ports  string `json:"Ports"`
+	ID      string `json:"ID"`
+	Names   string `json:"Names"`
+	Service string `json:"Service"`
+	Image   string `json:"Image"`
+	State   string `json:"State"`
+	Status  string `json:"Status"`
+	Ports   string `json:"Ports"`
 }
 
 func ListContainersRaw(
