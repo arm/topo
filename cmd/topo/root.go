@@ -62,7 +62,7 @@ func addComposeFileFlag(cmd *cobra.Command) {
 		composeFileFlag,
 		"f",
 		nil,
-		"compose files to merge in order; repeat for multiple files (default: compose.yaml, then compose.yml)",
+		"Compose file to use; specify -f for each file, e.g. -f base.yaml -f override.yaml (merged in order; without -f: use compose.yaml if present, otherwise compose.yml)",
 	)
 }
 

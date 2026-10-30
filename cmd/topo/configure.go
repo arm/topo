@@ -18,7 +18,7 @@ var configureCmd = &cobra.Command{
 	Short: "Configure project parameters",
 	Long: `Configure project parameters for the Topo project in the current directory.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Repeat -f to merge Compose files in the specified order.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file. Repeat -f to merge Compose files in the specified order.
 
 Some projects require parameters. Supply them on the command line or answer
 interactive prompts.`,
