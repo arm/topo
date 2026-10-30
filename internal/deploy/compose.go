@@ -62,6 +62,16 @@ func StopServices(ctx context.Context, progress *term.Progress, scope project.Sc
 	return runner.RunComposeCommand(ctx, progress.Output(), scope, "stop")
 }
 
+func LogServices(ctx context.Context, output io.Writer, scope project.Scope, runner ComposeCommandRunner, options LogsOptions) error {
+	args := []string{"logs", "--tail", "100"}
+	if options.Follow {
+		args = append(args, "--follow")
+	}
+	args = append(args, "--")
+	args = append(args, options.Services...)
+	return runner.RunComposeCommand(ctx, output, scope, args...)
+}
+
 type RawContainer struct {
 	ID     string `json:"ID"`
 	Names  string `json:"Names"`

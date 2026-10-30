@@ -139,6 +139,15 @@ Topo builds the container images on your host, transfers them to the target over
 
 Your project is now running on your target. See the project README for details.
 
+View recent logs from all services in the project, or follow new output:
+
+```sh
+topo logs --target [user@]host
+topo logs --target [user@]host --follow
+```
+
+To select specific services, append their Compose service names to either command.
+
 ### 6. Stop the deployment
 
 When you're done, stop the running services:
