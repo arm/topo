@@ -74,6 +74,7 @@ const hostProcessingDomain = "Linux Host"
 type EnrichedContainer struct {
 	ID               string
 	Names            string
+	Service          string
 	Image            string
 	State            string
 	Status           string
@@ -91,6 +92,7 @@ func enrichContainers(raws []RawContainer, hostname string, domains map[string]s
 		containers[i] = EnrichedContainer{
 			ID:               raw.ID,
 			Names:            raw.Names,
+			Service:          raw.Service,
 			Image:            raw.Image,
 			State:            raw.State,
 			Status:           raw.Status,

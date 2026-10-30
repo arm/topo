@@ -11,6 +11,7 @@ import (
 type Container struct {
 	ID               string `json:"id"`
 	Names            string `json:"names"`
+	Service          string `json:"service"`
 	Image            string `json:"image"`
 	State            string `json:"state"`
 	Status           string `json:"status"`
