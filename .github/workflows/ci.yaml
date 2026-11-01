@@ -48,7 +48,7 @@ jobs:
 
       - name: Install WSL (Windows)
         if: runner.os == 'Windows'
-        uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7
+        uses: Vampire/setup-wsl@4c48163d9f981914dd8caa0fc335fe19cca5bff4 # v7
         with:
           distribution: Alpine-3.23
           # Docker and Podman require the Linux kernel and container primitives provided by WSL2.
