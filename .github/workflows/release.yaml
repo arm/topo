@@ -232,7 +232,7 @@ jobs:
           aws-region: eu-west-1
 
       - name: Publish docs site
-        uses: ARM-software/docs-action/publish@v0.6.0
+        uses: ARM-software/docs-action/publish@v0.9.0
         with:
           docs-root: docs
           site-id: topo
