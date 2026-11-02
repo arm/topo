@@ -78,8 +78,8 @@ func TestListContainersRaw(t *testing.T) {
 	})
 
 	t.Run("decodes the NDJSON stream emitted by Compose", func(t *testing.T) {
-		input := `{"ID":"abc123","Names":"project-web-1","Image":"web","State":"running","Status":"Up 5 minutes","Ports":"0.0.0.0:8080->80/tcp"}
-{"ID":"def456","Names":"project-db-1","Image":"db","State":"running","Status":"Up 5 minutes","Ports":""}`
+		input := `{"ID":"abc123","Names":"custom-frontend","Service":"web","Image":"nginx","State":"running","Status":"Up 5 minutes","Ports":"0.0.0.0:8080->80/tcp"}
+{"ID":"def456","Names":"project-db-1","Service":"db","Image":"postgres","State":"running","Status":"Up 5 minutes","Ports":""}`
 		runner := &fakeComposeCommandRunner{command: testutil.CmdWithOutput(input, 0)}
 
 		got, err := deploy.ListContainersRaw(t.Context(), project.Scope{ComposeFile: "compose.yaml"}, runner, false)
@@ -87,11 +87,11 @@ func TestListContainersRaw(t *testing.T) {
 		require.NoError(t, err)
 		want := []deploy.RawContainer{
 			{
-				ID: "abc123", Names: "project-web-1", Image: "web", State: "running",
+				ID: "abc123", Names: "custom-frontend", Service: "web", Image: "nginx", State: "running",
 				Status: "Up 5 minutes", Ports: "0.0.0.0:8080->80/tcp",
 			},
 			{
-				ID: "def456", Names: "project-db-1", Image: "db", State: "running",
+				ID: "def456", Names: "project-db-1", Service: "db", Image: "postgres", State: "running",
 				Status: "Up 5 minutes", Ports: "",
 			},
 		}

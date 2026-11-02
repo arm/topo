@@ -121,14 +121,14 @@ func TestEnrichContainers(t *testing.T) {
 
 	t.Run("retains unmapped fields", func(t *testing.T) {
 		input := []RawContainer{{
-			Image: "web", State: "running", Status: "Up", ID: "such-a-cool-id", Names: "project-web-1",
+			Image: "nginx", State: "running", Status: "Up", ID: "such-a-cool-id", Names: "custom-frontend", Service: "web",
 		}}
 
 		got := enrichContainers(input, "myhost", nil)
 
 		want := []EnrichedContainer{{
-			ProcessingDomain: "Linux Host", Image: "web", State: "running", Status: "Up",
-			ID: "such-a-cool-id", Names: "project-web-1",
+			ProcessingDomain: "Linux Host", Image: "nginx", State: "running", Status: "Up",
+			ID: "such-a-cool-id", Names: "custom-frontend", Service: "web",
 		}}
 		assert.Equal(t, want, got)
 	})
