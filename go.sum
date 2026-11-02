@@ -38,8 +38,8 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/chzyer/test v1.0.0 h1:p3BQDXSxOhOG0P9z6/hGnII4LGiEPOYBhs8asl/fC04=
 github.com/chzyer/test v1.0.0/go.mod h1:2JlltgoNkt4TW/z9V/IzDdFaMTM2JPIi26O1pF38GC8=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/compose-spec/compose-go/v2 v2.15.0 h1:tdQw+eMyT+P6ZIb09JfcIVvbMmIa+PjST7cWezVLf00=
-github.com/compose-spec/compose-go/v2 v2.15.0/go.mod h1:Q1+qtN4vhzEjGrnqRtzx1xa8raDZQlMUe3WJxndYNiQ=
+github.com/compose-spec/compose-go/v2 v2.16.2 h1:pTp1DqQwJzFd85GzlWsSszKA1ABrV/ySqsClujIcWA8=
+github.com/compose-spec/compose-go/v2 v2.16.2/go.mod h1:Q1+qtN4vhzEjGrnqRtzx1xa8raDZQlMUe3WJxndYNiQ=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.24 h1:bJrF4RRfyJnbTJqzRLHzcGaZK1NeM5kTC9jGgovnR1s=
 github.com/creack/pty v1.1.24/go.mod h1:08sCNb52WyoAwi2QDyzUCTgcvVFhUzewun7wtTfvcwE=
