@@ -39,7 +39,7 @@ This command performs the following operations in sequence:
   3. Transfer - Transfers built and pulled images and compose file to the target
   4. Run - Runs docker compose up on the target
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file. Repeat -f to merge Compose files in the specified order.`,
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify one or more compose files.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true

@@ -19,7 +19,7 @@ var topoStopCmd = &cobra.Command{
 
 Executing this command does not remove the containers.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file. Repeat -f to merge Compose files in the specified order.`,
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify one or more compose files.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true

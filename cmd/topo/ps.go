@@ -17,7 +17,7 @@ var topoPsCmd = &cobra.Command{
 	Short: "List containers on the target for the current Compose project.",
 	Long: `List containers on the target for the current Compose project.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file. Repeat -f to merge Compose files in the specified order.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify one or more compose files.
 `,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, _ []string) error {

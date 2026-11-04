@@ -22,7 +22,7 @@ By default, show the last 100 log lines from each container.
 Omit service names to show logs from all services in the current project.
 Use --follow to stream new log output until interrupted with Ctrl+C.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file. Repeat -f to merge Compose files in the specified order.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify one or more compose files.
 Log output is text, including when --output json is set.`,
 	Example: `  topo logs --target user@board
   topo logs --target user@board --follow
