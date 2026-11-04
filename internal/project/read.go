@@ -69,13 +69,14 @@ func Read(scope Scope) (*types.Project, error) {
 	return composeProject, nil
 }
 
-func readUninterpolated(composeFiles []string) (map[string]any, error) {
+func readUninterpolated(composeFiles []string, loadOptions ...func(*loader.Options)) (map[string]any, error) {
 	options, err := cli.NewProjectOptions(composeFiles,
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 		cli.WithLoadOptions(func(o *loader.Options) {
 			o.SkipInterpolation = true
 		}),
+		cli.WithLoadOptions(loadOptions...),
 	)
 	if err != nil {
 		return nil, err

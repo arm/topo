@@ -14,7 +14,7 @@ import (
 )
 
 func TestLoadParameters(t *testing.T) {
-	t.Run("loads metadata and references from the merged configuration", func(t *testing.T) {
+	t.Run("merges metadata and preserves references from each file", func(t *testing.T) {
 		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
   app:
     image: app:${VERSION:-base}
@@ -35,7 +35,10 @@ x-topo:
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
 			Name: "VERSION", Description: "Deployment version", Example: "v1",
-			References: []parameter.Reference{{Path: "services.app.image", Expression: "app:${VERSION:?required}"}},
+			References: []parameter.Reference{
+				{Path: "services.app.image", Expression: "app:${VERSION:-base}"},
+				{Path: "services.app.image", Expression: "app:${VERSION:?required}"},
+			},
 		}}, got)
 	})
 

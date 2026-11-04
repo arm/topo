@@ -8,6 +8,7 @@ import (
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
+	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/template"
 	"gopkg.in/yaml.v3"
 )
@@ -32,7 +33,19 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
-	references := collectParameterReferences(model)
+	references := map[string][]parameter.Reference{}
+	for _, path := range scope.ComposeFiles {
+		fileModel, err := readUninterpolated([]string{path}, func(options *loader.Options) {
+			options.SkipValidation = true
+			options.SkipConsistencyCheck = true
+		})
+		if err != nil {
+			return nil, err
+		}
+		for name, usages := range collectParameterReferences(fileModel) {
+			references[name] = append(references[name], usages...)
+		}
+	}
 	for i := range parameters {
 		param := &parameters[i]
 		param.References = references[param.Name]

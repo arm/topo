@@ -11,6 +11,27 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
+	t.Run("rejects missing required value even when override supplies a default", func(t *testing.T) {
+		t.Setenv("VERSION", "")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine:${VERSION:?VERSION is required}
+x-topo:
+  parameters:
+    VERSION: {}
+`)
+		override := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine:${VERSION:-latest}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{base, override}}, resolver)
+
+		require.ErrorContains(t, err, "VERSION")
+		assert.Nil(t, got)
+	})
+
 	t.Run("accepts unreferenced parameters", func(t *testing.T) {
 		contents := `services:
   app:
