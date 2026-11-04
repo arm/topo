@@ -14,7 +14,9 @@ import (
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	model, err := readUninterpolated(scope.ComposeFiles)
+	model, err := readUninterpolated(scope.ComposeFiles, func(options *loader.Options) {
+		options.SkipExtends = true
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -24,6 +26,10 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	}
 	if len(parameters) == 0 {
 		return parameters, nil
+	}
+	model, err = readUninterpolated(scope.ComposeFiles)
+	if err != nil {
+		return nil, err
 	}
 	if usesLiteralBuildArgConfiguration(model, parameters) {
 		return nil, ErrParameterMigrationRequired

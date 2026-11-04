@@ -11,6 +11,22 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
+	t.Run("skips referenced files when there are no parameters", func(t *testing.T) {
+		t.Setenv("BASE_FILE", "")
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    extends:
+      file: "${BASE_FILE:-base.yaml}"
+      service: common
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
+
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
 	t.Run("rejects missing required value even when override supplies a default", func(t *testing.T) {
 		t.Setenv("VERSION", "")
 		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
