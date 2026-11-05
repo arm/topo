@@ -56,11 +56,11 @@ func TestComposeCommand(t *testing.T) {
 	t.Run("sets env-file args", func(t *testing.T) {
 		dest := ssh.NewDestination("localhost")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFiles: []string{"compose.yaml"}, EnvFiles: []string{".foobar.env", ".env"}}
+		scope := project.Scope{EnvFiles: []string{".foobar.env", ".env"}}
 
-		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
+		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope)
 
-		want := []string{"docker", "compose", "-f", "compose.yaml", "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}
+		want := []string{"docker", "compose", "--env-file", ".foobar.env", "--env-file", ".env"}
 		assert.Equal(t, want, cmd.Args)
 	})
 }

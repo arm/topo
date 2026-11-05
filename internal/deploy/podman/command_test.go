@@ -71,12 +71,12 @@ func TestComposeCommand(t *testing.T) {
 	})
 
 	t.Run("sets env-file args", func(t *testing.T) {
-		scope := project.Scope{ComposeFiles: []string{"compose.yaml"}, EnvFiles: []string{".foobar.env", ".env"}}
+		scope := project.Scope{EnvFiles: []string{".foobar.env", ".env"}}
 
-		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
+		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope)
 
 		require.NoError(t, err)
-		assert.Equal(t, []string{"podman", "compose", "-f", "compose.yaml", "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}, command.Args)
+		assert.Equal(t, []string{"podman", "compose", "--env-file", ".foobar.env", "--env-file", ".env"}, command.Args)
 	})
 
 	t.Run("configures remote socket", func(t *testing.T) {

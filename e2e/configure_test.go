@@ -24,18 +24,23 @@ func TestConfigure(t *testing.T) {
 		base := testutil.RequireWriteComposeFile(t, baseDir, `services:
   app:
     image: app:${TOPO_TEST_REQUIRED_VERSION:?required}
+    environment: {BASE_NAME: "${BASE_NAME}"}
 x-topo:
   parameters:
     TOPO_TEST_REQUIRED_VERSION: {}
+    BASE_NAME: {}
 `)
-		override := testutil.RequireWriteComposeFile(t, overrideDir, "services: {}\n")
+		override := testutil.RequireWriteComposeFile(t, overrideDir, configurableCompose("OVERRIDE_NAME"))
 		testutil.RequireWriteFile(t, filepath.Join(baseDir, env.DefaultFilename), "TOPO_TEST_REQUIRED_VERSION=v1\n")
-		cmd := exec.Command(topo, "configure", "--no-prompt", "-f", base, "-f", override)
+		cmd := exec.Command(topo, "configure", "--no-prompt", "-f", base, "-f", override, "BASE_NAME=Base", "OVERRIDE_NAME=Override")
 		cmd.Dir = workingDir
 
 		out, err := cmd.CombinedOutput()
 
 		require.NoErrorf(t, err, "configure failed: %s", out)
+		testutil.RequireEnvFileValues(t, filepath.Join(baseDir, env.DefaultFilename), map[string]string{
+			"TOPO_TEST_REQUIRED_VERSION": "v1", "BASE_NAME": "Base", "OVERRIDE_NAME": "Override",
+		})
 	})
 
 	t.Run("rejects multi-file migration without modifying source files", func(t *testing.T) {
@@ -95,21 +100,6 @@ x-topo:
 
 		require.NoErrorf(t, err, "configure failed: %s", out)
 		testutil.RequireEnvFileValues(t, filepath.Join(projectDir, env.DefaultFilename), map[string]string{"GREETING_NAME": "World"})
-	})
-
-	t.Run("configures parameters from repeated compose file flags", func(t *testing.T) {
-		projectDir := t.TempDir()
-		testutil.RequireWriteFile(t, filepath.Join(projectDir, "base.yaml"), configurableCompose("BASE_NAME"))
-		testutil.RequireWriteFile(t, filepath.Join(projectDir, "override.yaml"), configurableCompose("OVERRIDE_NAME"))
-		cmd := exec.Command(topo, "configure", "--no-prompt", "-f", "base.yaml", "-f", "override.yaml", "BASE_NAME=Base", "OVERRIDE_NAME=Override")
-		cmd.Dir = projectDir
-
-		out, err := cmd.CombinedOutput()
-
-		require.NoErrorf(t, err, "configure failed: %s", out)
-		testutil.RequireEnvFileValues(t, filepath.Join(projectDir, env.DefaultFilename), map[string]string{
-			"BASE_NAME": "Base", "OVERRIDE_NAME": "Override",
-		})
 	})
 
 	t.Run("writes parameters to env", func(t *testing.T) {
