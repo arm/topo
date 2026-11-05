@@ -1,6 +1,6 @@
 FROM docker:dind
 
-RUN apk add --no-cache openssh-server util-linux
+RUN apk add --no-cache --upgrade openssh-client-default openssh-server util-linux
 
 RUN echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
     echo "PermitEmptyPasswords yes" >> /etc/ssh/sshd_config && \
