@@ -3,34 +3,58 @@ package project
 import (
 	"cmp"
 	"fmt"
-	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
+	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/template"
 	"gopkg.in/yaml.v3"
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	parameters, err := loadParameterMetadata(scope.ComposeFile)
+	model, err := readUninterpolated(scope.ComposeFiles, "", func(options *loader.Options) {
+		options.SkipExtends = true
+		options.SkipInclude = true
+	})
+	if err != nil {
+		return nil, err
+	}
+	parameters, err := decodeParameterMetadata(model)
 	if err != nil {
 		return nil, err
 	}
 	if len(parameters) == 0 {
 		return parameters, nil
 	}
+	model, err = readUninterpolated(scope.ComposeFiles, "")
+	if err != nil {
+		return nil, err
+	}
+	if usesLiteralBuildArgConfiguration(model, parameters) {
+		return nil, ErrParameterMigrationRequired
+	}
 
 	currentValues, err := env.CurrentValues(scope.EnvFiles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
-	model, err := readUninterpolated(scope.ComposeFile)
-	if err != nil {
-		return nil, err
+	references := map[string][]parameter.Reference{}
+	for _, path := range scope.ComposeFiles {
+		fileModel, err := readUninterpolated([]string{path}, filepath.Dir(scope.ComposeFiles[0]), func(options *loader.Options) {
+			options.SkipValidation = true
+			options.SkipConsistencyCheck = true
+		})
+		if err != nil {
+			return nil, err
+		}
+		for name, usages := range collectParameterReferences(fileModel) {
+			references[name] = append(references[name], usages...)
+		}
 	}
-	references := collectParameterReferences(model)
 	for i := range parameters {
 		param := &parameters[i]
 		param.References = references[param.Name]
@@ -41,16 +65,47 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	return parameters, nil
 }
 
-func loadParameterMetadata(composeFilePath string) ([]parameter.Parameter, error) {
-	reader, err := os.Open(composeFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open compose file: %w", err)
+func usesLiteralBuildArgConfiguration(model map[string]any, parameters []parameter.Parameter) bool {
+	services, _ := model["services"].(map[string]any)
+	var buildArguments []any
+	argumentNames := map[string]bool{}
+	for _, value := range services {
+		service := value.(map[string]any)
+		build, _ := service["build"].(map[string]any)
+		buildArguments = append(buildArguments, build["args"])
+		switch arguments := build["args"].(type) {
+		case map[string]any:
+			for name := range arguments {
+				argumentNames[name] = true
+			}
+		case []any:
+			for _, argument := range arguments {
+				name, _, _ := strings.Cut(argument.(string), "=")
+				argumentNames[name] = true
+			}
+		}
 	}
-	defer reader.Close() //nolint:errcheck
+	references := template.ExtractVariables(map[string]any{"args": buildArguments}, nil)
+	hasParameterValues := false
+	for _, param := range parameters {
+		if _, referenced := references[param.Name]; referenced {
+			return false
+		}
+		if argumentNames[param.Name] {
+			hasParameterValues = true
+		}
+	}
+	return hasParameterValues
+}
+
+func decodeParameterMetadata(model map[string]any) ([]parameter.Parameter, error) {
+	var document yaml.Node
+	if err := document.Encode(model); err != nil {
+		return nil, fmt.Errorf("failed to encode project metadata: %w", err)
+	}
 
 	var raw parameterFile
-	decoder := yaml.NewDecoder(reader)
-	if err := decoder.Decode(&raw); err != nil {
+	if err := document.Decode(&raw); err != nil {
 		return nil, fmt.Errorf("failed to decode project metadata: %w", err)
 	}
 
