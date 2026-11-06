@@ -13,7 +13,6 @@ func SSHAuthentication(ctx context.Context, r *runner.SSH) error {
 		"-o", "PreferredAuthentications=publickey",
 		"-o", "PasswordAuthentication=no",
 		"-o", "NumberOfPasswordPrompts=0",
-		"-o", "StrictHostKeyChecking=yes",
 	)
 	return err
 }
