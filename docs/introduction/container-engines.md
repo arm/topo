@@ -19,7 +19,7 @@ After you install Topo, run the health check:
 topo health --target [user@]host
 ```
 
-`topo health` checks the selected container engine on both the host and target. It also checks the Compose provider on the host. For Podman, add `--engine podman`. Follow any recommended actions and run the health check again after each change.
+`topo health` checks the selected container engine on both the host and target, plus the host's Compose provider and ARM64 build support. For Podman, add `--engine podman`. Follow any recommended actions and run the health check again after each change.
 
 See the setup instructions for your selected engine below.
 

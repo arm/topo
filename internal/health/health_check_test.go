@@ -62,7 +62,8 @@ func TestAssembleHealthCheck(t *testing.T) {
 			Host: health.HostChecks{
 				Topo: passing("Topo"), SSH: passing("OpenSSH"), DockerCLI: passing("Docker CLI"),
 				Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
-				PodmanCLI: passing("Podman CLI"), PodmanConnection: passing("Podman connection"), PodmanCompose: passing("Podman Compose"),
+				ARM64Build: passing("ARM64 build support"),
+				PodmanCLI:  passing("Podman CLI"), PodmanConnection: passing("Podman connection"), PodmanCompose: passing("Podman Compose"),
 			},
 			Target: health.TargetChecks{
 				Connectivity: passing("Target access"), Docker: passing("Target Docker"),
@@ -72,6 +73,44 @@ func TestAssembleHealthCheck(t *testing.T) {
 		}
 	}
 	target := ssh.NewDestination("user@example.com")
+
+	for _, engine := range []health.Engine{health.EngineDocker, health.EnginePodman} {
+		t.Run(string(engine)+" reports ARM64 failure independently of Compose", func(t *testing.T) {
+			checks := newPassingChecks()
+			checks.Host.ARM64Build.Check = failingCheck
+			checks.Host.DockerCompose.Check = failingCheck
+			checks.Host.PodmanCompose.Check = failingCheck
+			healthCheck := health.AssembleHealthCheck(engine, &target, checks)
+
+			got := healthCheck.Evaluate(t.Context())
+
+			host := hostDependencies(got.Deployment.Dependencies)
+			if !assert.NotEmpty(t, host) {
+				return
+			}
+			assert.Equal(t, "ARM64 build support", host[len(host)-1].Label)
+			assert.NotNil(t, host[len(host)-1].Evaluation.Result.Failure)
+			for _, dependency := range got.ProjectDiscovery.Dependencies {
+				assert.Nil(t, dependency.Evaluation.Result.Failure)
+			}
+		})
+
+		t.Run(string(engine)+" blocks ARM64 check when engine is unavailable", func(t *testing.T) {
+			checks := newPassingChecks()
+			checks.Host.Docker.Check = failingCheck
+			checks.Host.PodmanConnection.Check = failingCheck
+			healthCheck := health.AssembleHealthCheck(engine, nil, checks)
+
+			got := healthCheck.Evaluate(t.Context())
+
+			host := hostDependencies(got.Deployment.Dependencies)
+			if !assert.NotEmpty(t, host) {
+				return
+			}
+			assert.Equal(t, "ARM64 build support", host[len(host)-1].Label)
+			assert.Equal(t, health.EvaluationBlocked, host[len(host)-1].Evaluation.State)
+		})
+	}
 
 	t.Run("does not register target checks when target is not specified", func(t *testing.T) {
 		checks := newPassingChecks()
@@ -131,6 +170,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			{Dependency: checks.Host.DockerCLI, State: health.EvaluationExecuted},
 			{Dependency: checks.Host.Docker, State: health.EvaluationExecuted},
 			{Dependency: checks.Host.DockerCompose, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.ARM64Build, State: health.EvaluationExecuted},
 		}
 		wantDeploymentTargetDependencies := []evaluatedDependencyExpectation{
 			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},
@@ -183,6 +223,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			{Dependency: checks.Host.DockerCLI, State: health.EvaluationExecuted},
 			{Dependency: checks.Host.Docker, State: health.EvaluationExecuted},
 			{Dependency: checks.Host.DockerCompose, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.ARM64Build, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.Remoteproc, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntime, State: health.EvaluationExecuted},
 			{Dependency: checks.Target.RemoteprocRuntimeShim, State: health.EvaluationExecuted},
@@ -280,6 +321,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			{Dependency: checks.Host.PodmanCLI, State: health.EvaluationExecuted},
 			{Dependency: checks.Host.PodmanConnection, State: health.EvaluationExecuted},
 			{Dependency: checks.Host.PodmanCompose, State: health.EvaluationExecuted},
+			{Dependency: checks.Host.ARM64Build, State: health.EvaluationExecuted},
 		}
 		wantTarget := []evaluatedDependencyExpectation{
 			{Dependency: checks.Target.Connectivity, State: health.EvaluationExecuted},

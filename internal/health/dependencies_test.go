@@ -215,6 +215,88 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 	})
 }
 
+func TestNewDependencyOnARM64Build(t *testing.T) {
+	buildRunner := func(command string, result runner.FakeResult) runner.Runner {
+		return &runner.Fake{Commands: map[string]runner.FakeResult{command: result}}
+	}
+
+	t.Run("reports Docker ARM64 build support", func(t *testing.T) {
+		r := buildRunner("docker buildx inspect", runner.FakeResult{Output: "Status: running\nPlatforms: linux/amd64, linux/arm64/v8*\n"})
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "linux/arm64"}, got)
+	})
+
+	t.Run("reports Podman ARM64 build support", func(t *testing.T) {
+		r := buildRunner("podman info --format json", runner.FakeResult{Output: `{"host":{"os":"linux","arch":"arm64","serviceIsRemote":true}}`})
+		dependency := health.NewDependencyOnARM64Build(health.EnginePodman, r)
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "linux/arm64"}, got)
+	})
+
+	t.Run("returns a Docker emulation fix when ARM64 is unsupported", func(t *testing.T) {
+		r := buildRunner("docker buildx inspect", runner.FakeResult{Output: "Status: running\nPlatforms: linux/amd64, linux/arm/v7"})
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "linux/arm64 is not reported as supported",
+			Fix:      &health.Fix{Description: "Enable ARM64 emulation on the selected Docker builder's host, or select a native ARM64 builder. For a local Linux Docker Engine, run: docker run --privileged --rm tonistiigi/binfmt --install arm64. See https://github.com/arm/topo#install-a-container-engine"},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns a Podman emulation fix when ARM64 is unsupported", func(t *testing.T) {
+		r := buildRunner("podman info --format json", runner.FakeResult{Output: `{"host":{"os":"linux","arch":"amd64","emulatedArchitectures":[]}}`})
+		dependency := health.NewDependencyOnARM64Build(health.EnginePodman, r)
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "linux/arm64 is not reported as supported",
+			Fix:      &health.Fix{Description: "Enable ARM64 emulation (QEMU/binfmt) on the Podman build host or inside its VM, or use a native ARM64 build host. See https://github.com/arm/topo#install-a-container-engine"},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("reports an inspection failure", func(t *testing.T) {
+		inspectionErr := errors.New("inspection failed")
+		r := buildRunner("docker buildx inspect", runner.FakeResult{Err: inspectionErr})
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  inspectionErr.Error(),
+			Fix:      &health.Fix{Description: "Check the selected engine and builder configuration, then retry topo health."},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("reports cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		r := buildRunner("docker buildx inspect", runner.FakeResult{Err: runner.ErrTimeout})
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(ctx)
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  context.Canceled.Error(),
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
 func TestRemoteprocDependency(t *testing.T) {
 	t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{

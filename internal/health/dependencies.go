@@ -202,6 +202,40 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
+func NewDependencyOnARM64Build(engine Engine, r runner.CommandRunner) Dependency {
+	var check func(context.Context, runner.CommandRunner) error
+	var fix string
+	if engine == EnginePodman {
+		check = probe.CheckPodmanARM64Build
+		fix = "Enable ARM64 emulation (QEMU/binfmt) on the Podman build host or inside its VM, or use a native ARM64 build host. See " + containerEngineInstallURL
+	} else {
+		check = probe.CheckDockerARM64Build
+		fix = "Enable ARM64 emulation on the selected Docker builder's host, or select a native ARM64 builder. For a local Linux Docker Engine, run: docker run --privileged --rm tonistiigi/binfmt --install arm64. See " + containerEngineInstallURL
+	}
+	return Dependency{
+		Label: "ARM64 build support",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			err := check(ctx, r)
+			if ctx.Err() != nil {
+				err = ctx.Err()
+			}
+			if err == nil {
+				return DependencyCheckResult{SuccessValue: "linux/arm64"}
+			}
+			failure := &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}
+			switch {
+			case errors.Is(err, probe.ErrARM64BuildUnsupported):
+				failure.Fix = &Fix{Description: fix}
+			case errors.Is(err, context.DeadlineExceeded), errors.Is(err, runner.ErrTimeout):
+				failure.Fix = &Fix{Description: "Retry topo health with a longer --timeout."}
+			case !errors.Is(err, context.Canceled):
+				failure.Fix = &Fix{Description: "Check the selected engine and builder configuration, then retry topo health."}
+			}
+			return DependencyCheckResult{Failure: failure}
+		},
+	}
+}
+
 type ConnectivityOperations struct {
 	Authenticate    func(context.Context, ssh.Destination) error
 	KnownHostsEntry func(ssh.Destination) (string, error)

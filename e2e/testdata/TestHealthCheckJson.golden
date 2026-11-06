@@ -9,6 +9,7 @@
         {"name": "Docker CLI", "location": "host", "status": "ok", "value": "docker"},
         {"name": "Docker daemon", "location": "host", "status": "ok", "value": "reachable"},
         {"name": "Docker Compose", "location": "host", "status": "ok", "value": "docker compose"},
+        {"name": "ARM64 build support", "location": "host", "status": "ok", "value": "linux/arm64"},
         {"name": "Connectivity", "location": "target", "status": "ok", "value": "TARGET_DESTINATION"},
         {"name": "Docker daemon", "location": "target", "status": "ok", "value": "reachable"},
         {"name": "Processing Domain Driver (remoteproc)", "location": "target", "status": "info", "value": "no remoteproc devices found"}
