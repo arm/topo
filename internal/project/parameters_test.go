@@ -14,6 +14,23 @@ import (
 )
 
 func TestLoadParameters(t *testing.T) {
+	t.Run("rejects legacy literal build arg in list form", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    build:
+      context: .
+      args:
+        - GREETING=hello
+x-topo:
+  parameters:
+    GREETING: {}
+`)
+
+		_, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
+
+		assert.ErrorIs(t, err, project.ErrParameterMigrationRequired)
+	})
+
 	t.Run("resolves override extends paths relative to the first compose file", func(t *testing.T) {
 		root := t.TempDir()
 		overrideDir := filepath.Join(root, "overrides")

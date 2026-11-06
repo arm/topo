@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/output/logger"
@@ -70,10 +71,17 @@ func usesLiteralBuildArgConfiguration(model map[string]any, parameters []paramet
 	for _, value := range services {
 		service := value.(map[string]any)
 		build, _ := service["build"].(map[string]any)
-		arguments, _ := build["args"].(map[string]any)
-		buildArguments = append(buildArguments, arguments)
-		for name := range arguments {
-			argumentNames[name] = true
+		buildArguments = append(buildArguments, build["args"])
+		switch arguments := build["args"].(type) {
+		case map[string]any:
+			for name := range arguments {
+				argumentNames[name] = true
+			}
+		case []any:
+			for _, argument := range arguments {
+				name, _, _ := strings.Cut(argument.(string), "=")
+				argumentNames[name] = true
+			}
 		}
 	}
 	references := template.ExtractVariables(map[string]any{"args": buildArguments}, nil)
