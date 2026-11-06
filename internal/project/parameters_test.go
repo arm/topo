@@ -14,6 +14,39 @@ import (
 )
 
 func TestLoadParameters(t *testing.T) {
+	t.Run("resolves override extends paths relative to the first compose file", func(t *testing.T) {
+		root := t.TempDir()
+		overrideDir := filepath.Join(root, "overrides")
+		testutil.RequireMkdirAll(t, overrideDir)
+		base := testutil.RequireWriteComposeFile(t, root, `services:
+  app:
+    image: alpine
+x-topo:
+  parameters:
+    TOPO_TEST_NAME: {}
+`)
+		testutil.RequireWriteFile(t, filepath.Join(root, "common.yaml"), `services:
+  common:
+    environment:
+      NAME: ${TOPO_TEST_NAME:-World}
+`)
+		override := testutil.RequireWriteComposeFile(t, overrideDir, `services:
+  app:
+    extends:
+      file: common.yaml
+      service: common
+`)
+
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{base, override}})
+		require.NoError(t, err)
+		assert.Equal(t, []parameter.Parameter{{
+			Name: "TOPO_TEST_NAME",
+			References: []parameter.Reference{{
+				Path: "services.app.environment.NAME", Expression: "${TOPO_TEST_NAME:-World}",
+			}},
+		}}, got)
+	})
+
 	t.Run("merges metadata and preserves references from each file", func(t *testing.T) {
 		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
   app:

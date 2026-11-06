@@ -3,6 +3,7 @@ package project
 import (
 	"cmp"
 	"fmt"
+	"path/filepath"
 	"slices"
 
 	"github.com/arm/topo/internal/env"
@@ -14,7 +15,7 @@ import (
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	model, err := readUninterpolated(scope.ComposeFiles, func(options *loader.Options) {
+	model, err := readUninterpolated(scope.ComposeFiles, "", func(options *loader.Options) {
 		options.SkipExtends = true
 	})
 	if err != nil {
@@ -27,7 +28,7 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	if len(parameters) == 0 {
 		return parameters, nil
 	}
-	model, err = readUninterpolated(scope.ComposeFiles)
+	model, err = readUninterpolated(scope.ComposeFiles, "")
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +42,7 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	}
 	references := map[string][]parameter.Reference{}
 	for _, path := range scope.ComposeFiles {
-		fileModel, err := readUninterpolated([]string{path}, func(options *loader.Options) {
+		fileModel, err := readUninterpolated([]string{path}, filepath.Dir(scope.ComposeFiles[0]), func(options *loader.Options) {
 			options.SkipValidation = true
 			options.SkipConsistencyCheck = true
 		})
