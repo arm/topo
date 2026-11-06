@@ -18,6 +18,7 @@ import (
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	model, err := readUninterpolated(scope.ComposeFiles, "", func(options *loader.Options) {
 		options.SkipExtends = true
+		options.SkipInclude = true
 	})
 	if err != nil {
 		return nil, err

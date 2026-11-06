@@ -11,6 +11,27 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
+	t.Run("accepts an interpolated include path when there are no parameters", func(t *testing.T) {
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine
+`)
+		t.Setenv("TOPO_TEST_INCLUDE_FILE", included)
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_INCLUDE_FILE}
+`)
+		override := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    command: echo hello
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{base, override}}, resolver)
+
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
 	t.Run("skips referenced files when there are no parameters", func(t *testing.T) {
 		t.Setenv("BASE_FILE", "")
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
