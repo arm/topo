@@ -84,7 +84,7 @@ func StartContainer(t *testing.T, spec ContainerSpec) *Container {
 	}
 	RequireLinuxDockerEngine(t)
 	containerName := generateContainerName(t)
-	spec.image = strings.TrimSuffix(spec.image, ":latest") + ":" + containerName
+	spec.image = uniqueImageReference(spec.image)
 	requireKnownHostsSSHConfig(t, containerName)
 
 	if err := buildImage(spec); err != nil {
@@ -162,6 +162,10 @@ func buildImage(spec ContainerSpec) error {
 		return fmt.Errorf("failed to build %s: %w", spec.image, err)
 	}
 	return nil
+}
+
+func uniqueImageReference(image string) string {
+	return strings.TrimSuffix(image, ":latest") + ":" + strings.ToLower(rand.Text())
 }
 
 func generateContainerName(t *testing.T) string {
