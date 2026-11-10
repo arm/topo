@@ -51,7 +51,7 @@ func TestHealthCheck(t *testing.T) {
 		assert.Contains(t, out, " ✓ Docker CLI (docker)")
 		assert.Contains(t, out, " ✓ Docker daemon (reachable)")
 		assert.Contains(t, out, " ✓ Docker Compose (docker compose)")
-		assert.Contains(t, out, " ✓ ARM64 build support (linux/arm64)")
+		assert.Contains(t, out, " ✓ Engine can build ARM64 images (linux/arm64)")
 	})
 
 	t.Run("shows that it's connected to a valid target", func(t *testing.T) {

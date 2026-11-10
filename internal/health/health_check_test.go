@@ -62,7 +62,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			Host: health.HostChecks{
 				Topo: passing("Topo"), SSH: passing("OpenSSH"), DockerCLI: passing("Docker CLI"),
 				Docker: passing("Container Engine"), DockerCompose: passing("Docker Compose"),
-				ARM64Build: passing("ARM64 build support"),
+				ARM64Build: passing("Engine can build ARM64 images"),
 				PodmanCLI:  passing("Podman CLI"), PodmanConnection: passing("Podman connection"), PodmanCompose: passing("Podman Compose"),
 			},
 			Target: health.TargetChecks{
@@ -88,7 +88,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			if !assert.NotEmpty(t, host) {
 				return
 			}
-			assert.Equal(t, "ARM64 build support", host[len(host)-1].Label)
+			assert.Equal(t, "Engine can build ARM64 images", host[len(host)-1].Label)
 			assert.NotNil(t, host[len(host)-1].Evaluation.Result.Failure)
 			for _, dependency := range got.ProjectDiscovery.Dependencies {
 				assert.Nil(t, dependency.Evaluation.Result.Failure)
@@ -107,7 +107,7 @@ func TestAssembleHealthCheck(t *testing.T) {
 			if !assert.NotEmpty(t, host) {
 				return
 			}
-			assert.Equal(t, "ARM64 build support", host[len(host)-1].Label)
+			assert.Equal(t, "Engine can build ARM64 images", host[len(host)-1].Label)
 			assert.Equal(t, health.EvaluationBlocked, host[len(host)-1].Evaluation.State)
 		})
 	}

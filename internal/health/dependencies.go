@@ -213,7 +213,7 @@ func NewDependencyOnARM64Build(engine Engine, r runner.CommandRunner) Dependency
 		fix = "Enable ARM64 emulation on the selected Docker builder's host, or select a native ARM64 builder. For a local Linux Docker Engine, run: docker run --privileged --rm tonistiigi/binfmt --install arm64. See " + containerEngineInstallURL
 	}
 	return Dependency{
-		Label: "ARM64 build support",
+		Label: "Engine can build ARM64 images",
 		Check: func(ctx context.Context) DependencyCheckResult {
 			err := check(ctx, r)
 			if ctx.Err() != nil {
