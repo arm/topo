@@ -238,7 +238,7 @@ func TestNewDependencyOnARM64Build(t *testing.T) {
 		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "linux/arm64"}, got)
 	})
 
-	t.Run("returns a Docker emulation fix when ARM64 is unsupported", func(t *testing.T) {
+	t.Run("links to setup instructions when Docker lacks ARM64 support", func(t *testing.T) {
 		r := buildRunner("docker buildx inspect", runner.FakeResult{Output: "Status: running\nPlatforms: linux/amd64, linux/arm/v7"})
 		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
 
@@ -247,12 +247,12 @@ func TestNewDependencyOnARM64Build(t *testing.T) {
 		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
 			Message:  "linux/arm64 is not reported as supported",
-			Fix:      &health.Fix{Description: "Enable ARM64 emulation on the selected Docker builder's host, or select a native ARM64 builder. For a local Linux Docker Engine, run: docker run --privileged --rm tonistiigi/binfmt --install arm64. See https://github.com/arm/topo#install-a-container-engine"},
+			Fix:      &health.Fix{Description: "See https://github.com/arm/topo#install-a-container-engine"},
 		}}
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("returns a Podman emulation fix when ARM64 is unsupported", func(t *testing.T) {
+	t.Run("links to setup instructions when Podman lacks ARM64 support", func(t *testing.T) {
 		r := buildRunner("podman info --format json", runner.FakeResult{Output: `{"host":{"os":"linux","arch":"amd64","emulatedArchitectures":[]}}`})
 		dependency := health.NewDependencyOnARM64Build(health.EnginePodman, r)
 
@@ -261,7 +261,7 @@ func TestNewDependencyOnARM64Build(t *testing.T) {
 		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
 			Severity: health.SeverityError,
 			Message:  "linux/arm64 is not reported as supported",
-			Fix:      &health.Fix{Description: "Enable ARM64 emulation (QEMU/binfmt) on the Podman build host or inside its VM, or use a native ARM64 build host. See https://github.com/arm/topo#install-a-container-engine"},
+			Fix:      &health.Fix{Description: "See https://github.com/arm/topo#install-a-container-engine"},
 		}}
 		assert.Equal(t, want, got)
 	})

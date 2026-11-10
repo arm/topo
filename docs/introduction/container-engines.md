@@ -60,6 +60,18 @@ Also install the [Docker Compose plugin](https://docs.docker.com/compose/install
 
 Follow the [Rancher Desktop installation instructions](https://docs.rancherdesktop.io/getting-started/installation/). Select **dockerd (moby)** as the container engine. Topo does not require Kubernetes.
 
+### Build ARM64 images
+
+Build steps that run ARM64 programs need a native ARM64 builder or emulation. Docker Desktop includes emulation by default.
+
+If your Linux builder lacks emulation, check [Docker's QEMU setup instructions](https://docs.docker.com/build/building/multi-platform/#install-qemu-manually) for prerequisites. Docker recommends `tonistiigi/binfmt`; to register ARM64:
+
+```sh
+docker run --privileged --rm tonistiigi/binfmt --install arm64
+```
+
+Use the Docker Engine on the Linux host or VM running the selected builder.
+
 ### Install Docker on the target
 
 The target must run Linux on AArch64 (`linux/arm64`). Follow the [Docker Engine installation instructions](https://docs.docker.com/engine/install/) for the target distribution, then complete the [Linux post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/) so the target SSH user can run `docker` without `sudo`.
@@ -80,6 +92,8 @@ Podman deployments do not support Compose services with a `runtime:` setting, in
 Install [Podman](https://podman.io/docs/installation) and configure `podman compose` to use Docker Compose. Topo uses Podman’s configured Compose provider. `podman-compose` is not a substitute. See [Podman’s Compose configuration](https://docs.podman.io/en/latest/markdown/podman-compose.1.html).
 
 On macOS and Windows, initialise and start a [Podman machine](https://docs.podman.io/en/latest/markdown/podman-machine.1.html). On Linux, ensure the host Podman API socket is running using the [socket setup below](#enable-the-podman-api-socket).
+
+ARM64 build steps need a native ARM64 host or QEMU/binfmt emulation. For a Podman machine, configure emulation inside the VM.
 
 ### Install Podman on the target
 
