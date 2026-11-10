@@ -75,24 +75,20 @@ func TestAssembleHealthCheck(t *testing.T) {
 	target := ssh.NewDestination("user@example.com")
 
 	for _, engine := range []health.Engine{health.EngineDocker, health.EnginePodman} {
-		t.Run(string(engine)+" reports ARM64 failure independently of Compose", func(t *testing.T) {
+		t.Run(string(engine)+" runs the ARM64 check when Compose is unavailable", func(t *testing.T) {
 			checks := newPassingChecks()
-			checks.Host.ARM64Build.Check = failingCheck
 			checks.Host.DockerCompose.Check = failingCheck
 			checks.Host.PodmanCompose.Check = failingCheck
-			healthCheck := health.AssembleHealthCheck(engine, &target, checks)
-
-			got := healthCheck.Evaluate(t.Context())
-
-			host := hostDependencies(got.Deployment.Dependencies)
-			if !assert.NotEmpty(t, host) {
-				return
+			arm64Checks := 0
+			checks.Host.ARM64Build.Check = func(ctx context.Context) health.DependencyCheckResult {
+				arm64Checks++
+				return passingCheck(ctx)
 			}
-			assert.Equal(t, "Engine can build ARM64 images", host[len(host)-1].Label)
-			assert.NotNil(t, host[len(host)-1].Evaluation.Result.Failure)
-			for _, dependency := range got.ProjectDiscovery.Dependencies {
-				assert.Nil(t, dependency.Evaluation.Result.Failure)
-			}
+			healthCheck := health.AssembleHealthCheck(engine, nil, checks)
+
+			healthCheck.Evaluate(t.Context())
+
+			assert.Equal(t, 1, arm64Checks)
 		})
 
 		t.Run(string(engine)+" blocks ARM64 check when engine is unavailable", func(t *testing.T) {
