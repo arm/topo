@@ -45,14 +45,15 @@ func TestCheckPodmanARM64BuildUnavailable(t *testing.T) {
 
 	for _, scenario := range []struct{ name, output, message string }{
 		{"missing host", `{"host":null}`, "did not report its host architecture and operating system"},
-		{"remote cannot use local emulation", `{"host":{"arch":"amd64","os":"linux","serviceIsRemote":true}}`, "inspect ARM64 binfmt registration on its build host or VM"},
+		{"remote cannot use local emulation", `{"host":{"arch":"amd64","os":"linux","serviceIsRemote":true}}`, "no configured Podman connection matches the selected engine"},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
 			r := &runner.Fake{Commands: map[string]runner.FakeResult{
-				"podman info --format json": {Output: scenario.output},
+				"podman info --format json":                   {Output: scenario.output},
+				"podman system connection list --format json": {Output: `[]`},
 			}}
 
-			err := checkPodmanARM64Build(t.Context(), r, "linux", binfmt)
+			err := checkPodmanARM64Build(t.Context(), r, binfmt)
 
 			assert.ErrorContains(t, err, scenario.message)
 			assert.NotErrorIs(t, err, ErrARM64BuildUnsupported)
@@ -81,9 +82,31 @@ func TestCheckPodmanARM64BuildBinfmtFallback(t *testing.T) {
 				binfmt["qemu-aarch64"] = &fstest.MapFile{Data: []byte(scenario.registration)}
 			}
 
-			err := checkPodmanARM64Build(t.Context(), r, "linux", binfmt)
+			err := checkPodmanARM64Build(t.Context(), r, binfmt)
 
 			assert.ErrorIs(t, err, scenario.wantErr)
 		})
 	}
+}
+
+func TestCheckPodmanARM64BuildMachineFallback(t *testing.T) {
+	t.Setenv("CONTAINER_CONNECTION", "")
+	t.Setenv("CONTAINER_HOST", "")
+
+	r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		"podman info --format json": {Output: `{"host":{"arch":"amd64","os":"linux","serviceIsRemote":true}}`},
+		"podman system connection list --format json": {Output: `[
+			{"Name":"unrelated"},
+			{"Name":"selected-root","URI":"ssh://root@127.0.0.1:2222/run/podman/podman.sock","Identity":"key","Default":true}
+		]`},
+		"podman machine list --format json": {Output: `[
+			{"Name":"build-vm","Port":2222,"IdentityPath":"key"}
+		]`},
+		"podman machine ssh build-vm cat /proc/sys/fs/binfmt_misc/status":       {Output: "enabled\n"},
+		"podman machine ssh build-vm cat /proc/sys/fs/binfmt_misc/qemu-aarch64": {Output: "enabled\nflags: F\n"},
+	}}
+
+	err := checkPodmanARM64Build(t.Context(), r, fstest.MapFS{})
+
+	assert.NoError(t, err)
 }

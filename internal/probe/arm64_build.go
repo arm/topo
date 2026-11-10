@@ -7,17 +7,18 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"runtime"
 	"slices"
 	"strings"
 
+	"github.com/arm/topo/internal/command"
+	"github.com/arm/topo/internal/deploy/podman/machine"
 	"github.com/arm/topo/internal/runner"
 )
 
 var ErrARM64BuildUnsupported = errors.New("linux/arm64 is not reported as supported")
 
 func CheckPodmanARM64Build(ctx context.Context, r runner.CommandRunner) error {
-	return checkPodmanARM64Build(ctx, r, runtime.GOOS, os.DirFS("/proc/sys/fs/binfmt_misc"))
+	return checkPodmanARM64Build(ctx, r, os.DirFS("/proc/sys/fs/binfmt_misc"))
 }
 
 func CheckDockerARM64Build(ctx context.Context, r runner.CommandRunner) error {
@@ -56,7 +57,7 @@ func CheckDockerARM64Build(ctx context.Context, r runner.CommandRunner) error {
 	return ErrARM64BuildUnsupported
 }
 
-func checkPodmanARM64Build(ctx context.Context, r runner.CommandRunner, localOS string, binfmt fs.FS) error {
+func checkPodmanARM64Build(ctx context.Context, r runner.CommandRunner, binfmt fs.FS) error {
 	output, _, err := r.Run(ctx, "podman info --format json")
 	if err != nil {
 		return err
@@ -86,15 +87,48 @@ func checkPodmanARM64Build(ctx context.Context, r runner.CommandRunner, localOS 
 		return ErrARM64BuildUnsupported
 	}
 	// Podman added emulatedArchitectures in 5.6; it is also omitted when empty.
-	// Fall back to local binfmt only for an explicitly local Linux engine.
-	if localOS != "linux" || host.ServiceIsRemote == nil || *host.ServiceIsRemote {
-		return errors.New("the Podman engine did not report emulated architectures; inspect ARM64 binfmt registration on its build host or VM")
+	// Read local binfmt only for an explicitly local Linux engine.
+	if host.ServiceIsRemote != nil && !*host.ServiceIsRemote {
+		return checkARM64Binfmt(func(name string) ([]byte, error) {
+			return fs.ReadFile(binfmt, name)
+		})
 	}
-	return checkARM64Binfmt(binfmt)
+	return checkPodmanMachineARM64Build(ctx, r)
 }
 
-func checkARM64Binfmt(binfmt fs.FS) error {
-	status, err := fs.ReadFile(binfmt, "status")
+func checkPodmanMachineARM64Build(ctx context.Context, r runner.CommandRunner) error {
+	connections, err := machine.Connections(ctx, r)
+	if err != nil {
+		return err
+	}
+	connectionIndex := slices.IndexFunc(connections, func(connection machine.Connection) bool {
+		if name := os.Getenv("CONTAINER_CONNECTION"); name != "" {
+			return connection.Name == name
+		}
+		if uri := os.Getenv("CONTAINER_HOST"); uri != "" {
+			return connection.URI == uri
+		}
+		return connection.Default
+	})
+	if connectionIndex < 0 {
+		return errors.New("no configured Podman connection matches the selected engine")
+	}
+	machines, err := machine.List(ctx, r)
+	if err != nil {
+		return err
+	}
+	machineName, err := machine.FindForConnection(connections[connectionIndex], machines)
+	if err != nil {
+		return err
+	}
+	return checkARM64Binfmt(func(name string) ([]byte, error) {
+		output, _, err := r.Run(ctx, "podman machine ssh "+command.QuoteArg(machineName)+" cat /proc/sys/fs/binfmt_misc/"+name)
+		return []byte(output), err
+	})
+}
+
+func checkARM64Binfmt(readFile func(string) ([]byte, error)) error {
+	status, err := readFile("status")
 	if err != nil {
 		return fmt.Errorf("read build host binfmt_misc status: %w", err)
 	}
@@ -106,7 +140,7 @@ func checkARM64Binfmt(binfmt fs.FS) error {
 		return errors.New("unrecognized build host binfmt_misc status")
 	}
 	// Standard registration installed by QEMU packages and tonistiigi/binfmt.
-	registration, err := fs.ReadFile(binfmt, "qemu-aarch64")
+	registration, err := readFile("qemu-aarch64")
 	if errors.Is(err, fs.ErrNotExist) {
 		return ErrARM64BuildUnsupported
 	}

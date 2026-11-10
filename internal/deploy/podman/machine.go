@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/arm/topo/internal/deploy/podman/machine"
+	"github.com/arm/topo/internal/runner"
 )
 
 // Represents `.ConnectionInfo` JSON from `podman machine inspect`.
@@ -21,7 +22,7 @@ type podmanMachineEndpoint struct {
 }
 
 func resolvePodmanMachine(ctx context.Context, connection machine.Connection) (podmanMachineEndpoint, error) {
-	machines, err := listPodmanMachines(ctx)
+	machines, err := machine.List(ctx, runner.NewLocal())
 	if err != nil {
 		return podmanMachineEndpoint{}, err
 	}
@@ -34,18 +35,6 @@ func resolvePodmanMachine(ctx context.Context, connection machine.Connection) (p
 		return podmanMachineEndpoint{}, fmt.Errorf("podman connection %q: %w", connection.Name, err)
 	}
 	return podmanMachineEndpoint{Name: machineName, ConnectionInfo: info}, nil
-}
-
-func listPodmanMachines(ctx context.Context) ([]machine.Identity, error) {
-	output, err := exec.CommandContext(ctx, "podman", "machine", "list", "--format", "json").Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list Podman machines: %w", err)
-	}
-	var machines []machine.Identity
-	if err := json.Unmarshal(output, &machines); err != nil {
-		return nil, fmt.Errorf("failed to parse Podman machines: %w", err)
-	}
-	return machines, nil
 }
 
 func inspectPodmanMachine(ctx context.Context, machineName string) (podmanMachineConnectionInfo, error) {
@@ -61,13 +50,9 @@ func inspectPodmanMachine(ctx context.Context, machineName string) (podmanMachin
 }
 
 func defaultPodmanConnection(ctx context.Context) (machine.Connection, error) {
-	output, err := exec.CommandContext(ctx, "podman", "system", "connection", "list", "--format", "json").Output()
+	connections, err := machine.Connections(ctx, runner.NewLocal())
 	if err != nil {
-		return machine.Connection{}, fmt.Errorf("failed to list Podman connections: %w", err)
-	}
-	var connections []machine.Connection
-	if err := json.Unmarshal(output, &connections); err != nil {
-		return machine.Connection{}, fmt.Errorf("failed to parse Podman connections: %w", err)
+		return machine.Connection{}, err
 	}
 	for _, connection := range connections {
 		if connection.Default {
