@@ -23,42 +23,6 @@ func CheckPodmanARM64Build(ctx context.Context, r runner.CommandRunner) error {
 	return checkPodmanARM64Build(ctx, r, os.DirFS(binfmtMiscPath))
 }
 
-func CheckDockerARM64Build(ctx context.Context, r runner.CommandRunner) error {
-	output, _, err := r.Run(ctx, "docker buildx inspect")
-	if err != nil {
-		return err
-	}
-	var platforms []string
-	for line := range strings.SplitSeq(output, "\n") {
-		key, value, ok := strings.Cut(line, ":")
-		if !ok {
-			continue
-		}
-		value = strings.TrimSpace(value)
-		switch key {
-		case "Error":
-			if value != "" {
-				return fmt.Errorf("inspect Docker builder: %s", value)
-			}
-		case "Status":
-			if value != "running" {
-				return fmt.Errorf("selected Docker builder node is %s; start it before checking its platforms", value)
-			}
-		case "Platforms":
-			if value != "" {
-				platforms = append(platforms, strings.Split(value, ", ")...)
-			}
-		}
-	}
-	if len(platforms) == 0 {
-		return errors.New("selected Docker builder capabilities are unavailable; inspect the builder with docker buildx inspect --bootstrap")
-	}
-	if slices.ContainsFunc(platforms, isARM64Platform) {
-		return nil
-	}
-	return ErrARM64BuildUnsupported
-}
-
 func checkPodmanARM64Build(ctx context.Context, r runner.CommandRunner, binfmt fs.FS) error {
 	output, _, err := r.Run(ctx, "podman info --format json")
 	if err != nil {
@@ -158,6 +122,42 @@ func checkARM64Binfmt(readFile func(string) ([]byte, error)) error {
 		if flags, ok := strings.CutPrefix(line, "flags:"); ok && strings.Contains(flags, "F") {
 			return nil
 		}
+	}
+	return ErrARM64BuildUnsupported
+}
+
+func CheckDockerARM64Build(ctx context.Context, r runner.CommandRunner) error {
+	output, _, err := r.Run(ctx, "docker buildx inspect")
+	if err != nil {
+		return err
+	}
+	var platforms []string
+	for line := range strings.SplitSeq(output, "\n") {
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		switch key {
+		case "Error":
+			if value != "" {
+				return fmt.Errorf("inspect Docker builder: %s", value)
+			}
+		case "Status":
+			if value != "running" {
+				return fmt.Errorf("selected Docker builder node is %s; start it before checking its platforms", value)
+			}
+		case "Platforms":
+			if value != "" {
+				platforms = append(platforms, strings.Split(value, ", ")...)
+			}
+		}
+	}
+	if len(platforms) == 0 {
+		return errors.New("selected Docker builder capabilities are unavailable; inspect the builder with docker buildx inspect --bootstrap")
+	}
+	if slices.ContainsFunc(platforms, isARM64Platform) {
+		return nil
 	}
 	return ErrARM64BuildUnsupported
 }
