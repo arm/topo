@@ -15,10 +15,12 @@ import (
 	"github.com/arm/topo/internal/runner"
 )
 
+const binfmtMiscPath = "/proc/sys/fs/binfmt_misc"
+
 var ErrARM64BuildUnsupported = errors.New("linux/arm64 is not reported as supported")
 
 func CheckPodmanARM64Build(ctx context.Context, r runner.CommandRunner) error {
-	return checkPodmanARM64Build(ctx, r, os.DirFS("/proc/sys/fs/binfmt_misc"))
+	return checkPodmanARM64Build(ctx, r, os.DirFS(binfmtMiscPath))
 }
 
 func CheckDockerARM64Build(ctx context.Context, r runner.CommandRunner) error {
@@ -122,7 +124,7 @@ func checkPodmanMachineARM64Build(ctx context.Context, r runner.CommandRunner) e
 		return err
 	}
 	return checkARM64Binfmt(func(name string) ([]byte, error) {
-		output, _, err := r.Run(ctx, "podman machine ssh "+command.QuoteArg(machineName)+" cat /proc/sys/fs/binfmt_misc/"+name)
+		output, _, err := r.Run(ctx, "podman machine ssh "+command.QuoteArg(machineName)+" cat "+binfmtMiscPath+"/"+name)
 		return []byte(output), err
 	})
 }
