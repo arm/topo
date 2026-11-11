@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-24.04, ubuntu-24.04-arm, windows-latest ]
+        os: [ ubuntu-latest, ubuntu-24.04-arm, windows-latest ]
         include:
           - os: windows-latest
             docker_host: ssh://test@localhost:2222
@@ -135,6 +135,19 @@ jobs:
         shell: pwsh
         run: |
           podman machine init --cpus 2 --memory 2048 --now
+
+      - name: Allow Podman to stop pasta (actions/runner-images#15182)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          profile=/etc/apparmor.d/usr.bin.pasta
+          if [ -f "$profile" ]; then
+            rule='signal (receive) set=(term) peer=podman,'
+            if ! sudo grep -Fq "$rule" "$profile"; then
+              sudo sed -i "$ i\  $rule" "$profile"
+            fi
+            sudo apparmor_parser -r "$profile"
+          fi
 
       - name: Start Podman API service (Linux)
         if: runner.os == 'Linux'
