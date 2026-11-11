@@ -20,10 +20,6 @@ const binfmtMiscPath = "/proc/sys/fs/binfmt_misc"
 var ErrARM64BuildUnsupported = errors.New("linux/arm64 is not reported as supported")
 
 func CheckPodmanARM64Build(ctx context.Context, r runner.CommandRunner) error {
-	return checkPodmanARM64Build(ctx, r, os.DirFS(binfmtMiscPath))
-}
-
-func checkPodmanARM64Build(ctx context.Context, r runner.CommandRunner, binfmt fs.FS) error {
 	output, _, err := r.Run(ctx, "podman info --format json")
 	if err != nil {
 		return err
@@ -56,7 +52,7 @@ func checkPodmanARM64Build(ctx context.Context, r runner.CommandRunner, binfmt f
 	// Read local binfmt only for an explicitly local Linux engine.
 	if host.ServiceIsRemote != nil && !*host.ServiceIsRemote {
 		return checkARM64Binfmt(func(name string) ([]byte, error) {
-			return fs.ReadFile(binfmt, name)
+			return os.ReadFile(binfmtMiscPath + "/" + name)
 		})
 	}
 	return checkPodmanMachineARM64Build(ctx, r)
