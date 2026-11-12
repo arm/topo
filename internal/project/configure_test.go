@@ -40,6 +40,116 @@ x-topo:
 		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_GREETING=hello\n")
 	}
 
+	t.Run("resolves a nested extends path through a sibling service in the inherited file", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_BASE_FILE", "")
+		t.Setenv("TOPO_TEST_COMMON_FILE", "")
+		common := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {common: {image: alpine}}\n")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  base:
+    extends: sibling
+  sibling:
+    extends: {file: "${TOPO_TEST_COMMON_FILE:?Choose common}", service: common}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    extends: {file: "${TOPO_TEST_BASE_FILE:?Choose base}", service: base}
+x-topo:
+  parameters: {TOPO_TEST_BASE_FILE: {}, TOPO_TEST_COMMON_FILE: {}}
+`)
+		cliResolver, err := parameter.NewCLIResolver([]string{
+			"TOPO_TEST_BASE_FILE=" + base, "TOPO_TEST_COMMON_FILE=" + common,
+		}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"TOPO_TEST_BASE_FILE": new(base), "TOPO_TEST_COMMON_FILE": new(common)}, got)
+	})
+
+	t.Run("rejects a cycle formed by resolved extends path parameters", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_BASE_FILE", "")
+		t.Setenv("TOPO_TEST_ROOT_FILE", "")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  base:
+    extends: {file: "${TOPO_TEST_ROOT_FILE:?Choose root}", service: app}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    extends: {file: "${TOPO_TEST_BASE_FILE:?Choose base}", service: base}
+x-topo:
+  parameters: {TOPO_TEST_BASE_FILE: {}, TOPO_TEST_ROOT_FILE: {}}
+`)
+		cliResolver, err := parameter.NewCLIResolver([]string{
+			"TOPO_TEST_BASE_FILE=" + base,
+			"TOPO_TEST_ROOT_FILE=" + path,
+		}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.ErrorContains(t, err, "extends cycle detected")
+		assert.Nil(t, got)
+	})
+
+	t.Run("resolves nested extends paths inside a parameterized include", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_CONFIG_FILE", "")
+		t.Setenv("TOPO_TEST_BASE_FILE", "")
+		t.Setenv("TOPO_TEST_COMMON_FILE", "")
+		common := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {common: {image: alpine}}\n")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  base:
+    extends: {file: "${TOPO_TEST_COMMON_FILE:?Choose common}", service: common}
+`)
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    extends: {file: "${TOPO_TEST_BASE_FILE:?Choose base}", service: base}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_CONFIG_FILE:?Choose a configuration file}
+x-topo:
+  parameters: {TOPO_TEST_CONFIG_FILE: {}, TOPO_TEST_BASE_FILE: {}, TOPO_TEST_COMMON_FILE: {}}
+`)
+		cliResolver, err := parameter.NewCLIResolver([]string{"TOPO_TEST_CONFIG_FILE=" + included, "TOPO_TEST_BASE_FILE=" + base, "TOPO_TEST_COMMON_FILE=" + common}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"TOPO_TEST_CONFIG_FILE": new(included), "TOPO_TEST_BASE_FILE": new(base), "TOPO_TEST_COMMON_FILE": new(common)}, got)
+	})
+
+	t.Run("resolves a parameterized extends path discovered in an inherited service", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_BASE_FILE", "")
+		t.Setenv("TOPO_TEST_COMMON_FILE", "")
+		common := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {common: {image: alpine}}\n")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  base:
+    extends:
+      file: ${TOPO_TEST_COMMON_FILE:?Choose a common configuration}
+      service: common
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    extends:
+      file: ${TOPO_TEST_BASE_FILE:?Choose a base configuration}
+      service: base
+x-topo:
+  parameters: {TOPO_TEST_BASE_FILE: {}, TOPO_TEST_COMMON_FILE: {}}
+`)
+		cliResolver, err := parameter.NewCLIResolver([]string{"TOPO_TEST_BASE_FILE=" + base, "TOPO_TEST_COMMON_FILE=" + common}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"TOPO_TEST_BASE_FILE": new(base), "TOPO_TEST_COMMON_FILE": new(common)}, got)
+	})
+
 	t.Run("stops when the resolver leaves a required include path unresolved", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_CONFIG_FILE", "")
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:

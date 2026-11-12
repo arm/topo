@@ -39,6 +39,11 @@ func resolveFilePathParameters(scope Scope, resolver parameter.Resolver, resolve
 			return nil, err
 		}
 		sources = append(sources, children...)
+		extended, err := readDirectExtendedServices(*source, sources)
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, extended...)
 	}
 	return changes, nil
 }
