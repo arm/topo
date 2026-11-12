@@ -114,6 +114,48 @@ func TestInteractiveResolver(t *testing.T) {
 		assert.Equal(t, "   Press Enter to continue · Ctrl+C to cancel", prompt.Hint("value", false))
 		assert.Equal(t, "   ✗ REQUIRED is required, enter a value to continue · Ctrl+C to cancel", prompt.Hint("", true))
 	})
+
+	t.Run("does not prompt for INNER when OUTER is supplied by the environment", func(t *testing.T) {
+		promptCount := 0
+		resolver := parameter.NewInteractiveResolver(func(term.Prompt) (string, error) {
+			promptCount++
+			return "", nil
+		}, term.NewPalette(false))
+		parameters := []parameter.Parameter{{Name: "INNER", References: []parameter.Reference{{
+			Expression:  "${OUTER:-${INNER:?Inner is required}}",
+			Environment: map[string]string{"OUTER": "hello"},
+		}}}}
+
+		got, err := resolver.Resolve(parameters)
+
+		require.NoError(t, err)
+		assert.Zero(t, promptCount)
+		assert.Empty(t, got)
+	})
+
+	t.Run("prompts only for OUTER when its answer makes INNER unused", func(t *testing.T) {
+		var prompts []term.Prompt
+		resolver := parameter.NewInteractiveResolver(func(prompt term.Prompt) (string, error) {
+			prompts = append(prompts, prompt)
+			if len(prompts) == 1 {
+				return "hello", nil
+			}
+			return "", nil
+		}, term.NewPalette(false))
+		parameters := []parameter.Parameter{
+			{Name: "OUTER"},
+			{Name: "INNER", References: []parameter.Reference{{
+				Expression: "${OUTER:-${INNER:?Inner is required}}",
+			}}},
+		}
+
+		got, err := resolver.Resolve(parameters)
+
+		require.NoError(t, err)
+		require.Len(t, prompts, 1)
+		assert.Contains(t, prompts[0].Content[0], "OUTER")
+		assert.Equal(t, parameter.Changes{"OUTER": new("hello")}, got)
+	})
 }
 
 func promptValues(values ...string) func(term.Prompt) (string, error) {

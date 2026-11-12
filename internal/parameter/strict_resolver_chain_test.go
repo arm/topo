@@ -201,7 +201,7 @@ func TestStrictResolverChain(t *testing.T) {
 		assert.Equal(t, parameter.Changes{"PORT": new("")}, got)
 	})
 
-	t.Run("formats validation error with paths and reasons", func(t *testing.T) {
+	t.Run("collects validation errors for all invalid Topo parameters", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
 		parameters := []parameter.Parameter{
 			{
@@ -223,12 +223,12 @@ GREETING:
   description: greeting
   references:
     - a.b.c: ${GREETING:?required}
-  reason: required variable GREETING is missing a value
+  reason: required variable GREETING is missing a value: required
 PORT:
   example: example value
   references:
     - a.b: ${PORT:?required}
-  reason: required variable PORT is missing a value`)
+  reason: required variable PORT is missing a value: required`)
 		assert.Empty(t, got)
 	})
 
@@ -255,5 +255,54 @@ PORT:
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "FOO")
+	})
+
+	t.Run("uses a resolved outer value instead of an empty environment value", func(t *testing.T) {
+		parameters := []parameter.Parameter{
+			{Name: "OUTER", ExistingValue: new("")},
+			{Name: "INNER", References: []parameter.Reference{{
+				Expression:  "${OUTER:-${INNER:?Inner is required}}",
+				Environment: map[string]string{"OUTER": ""},
+			}}},
+		}
+		changes := parameter.Changes{"OUTER": new("hello")}
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
+
+		got, err := chain.Resolve(parameters)
+
+		require.NoError(t, err)
+		assert.Equal(t, changes, got)
+	})
+
+	t.Run("setting OUTER to an empty string requires INNER", func(t *testing.T) {
+		parameters := []parameter.Parameter{
+			{Name: "OUTER", ExistingValue: new("hello")},
+			{Name: "INNER", References: []parameter.Reference{{
+				Expression:  "${OUTER:-${INNER:?Inner is required}}",
+				Environment: map[string]string{"OUTER": "hello"},
+			}}},
+		}
+		changes := parameter.Changes{"OUTER": new("")}
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
+
+		_, err := chain.Resolve(parameters)
+
+		require.ErrorContains(t, err, "required variable INNER")
+	})
+
+	t.Run("unsetting OUTER requires INNER", func(t *testing.T) {
+		parameters := []parameter.Parameter{
+			{Name: "OUTER", ExistingValue: new("hello")},
+			{Name: "INNER", References: []parameter.Reference{{
+				Expression:  "${OUTER:-${INNER:?Inner is required}}",
+				Environment: map[string]string{"OUTER": "hello"},
+			}}},
+		}
+		changes := parameter.Changes{"OUTER": nil}
+		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
+
+		_, err := chain.Resolve(parameters)
+
+		require.ErrorContains(t, err, "required variable INNER")
 	})
 }
