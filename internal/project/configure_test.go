@@ -12,7 +12,7 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
-	t.Run("accepts unreferenced parameters", func(t *testing.T) {
+	t.Run("accepts unreferenced Topo parameters", func(t *testing.T) {
 		contents := `services:
   app:
     platform: linux/arm64
@@ -53,7 +53,7 @@ x-topo:
 		assert.Equal(t, changes, got)
 	})
 
-	t.Run("skips referenced files when there are no parameters", func(t *testing.T) {
+	t.Run("does not load extended files for projects without Topo parameters", func(t *testing.T) {
 		t.Setenv("BASE_FILE", "")
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
   app:
@@ -69,7 +69,7 @@ x-topo:
 		assert.Nil(t, got)
 	})
 
-	t.Run("resolves a required parameter in an interpolated include", func(t *testing.T) {
+	t.Run("resolves a required Topo parameter in an interpolated include", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_GREETING", "")
 		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
   app:
@@ -93,7 +93,7 @@ x-topo:
 		assert.Equal(t, changes, got)
 	})
 
-	t.Run("rejects a missing required parameter in an interpolated include", func(t *testing.T) {
+	t.Run("rejects a missing required Topo parameter in an interpolated include", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_GREETING", "")
 		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
   app:
@@ -116,7 +116,7 @@ x-topo:
 		assert.Nil(t, got)
 	})
 
-	t.Run("accepts a required parameter supplied by the included project's dotenv file", func(t *testing.T) {
+	t.Run("accepts a required Topo parameter supplied by the included project's dotenv file", func(t *testing.T) {
 		testutil.Unsetenv(t, "TOPO_TEST_GREETING")
 		root := t.TempDir()
 		includedDirectory := filepath.Join(root, "included")
