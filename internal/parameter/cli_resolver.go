@@ -29,6 +29,20 @@ func NewCLIResolver(assignments []string, removals []string) (*CLIResolver, erro
 	return &CLIResolver{changes: changes}, nil
 }
 
+func (r *CLIResolver) ResolveSelected(declared, selected []Parameter) (Changes, error) {
+	changes, err := r.Resolve(declared)
+	if err != nil {
+		return nil, err
+	}
+	result := Changes{}
+	for _, parameter := range selected {
+		if value, present := changes[parameter.Name]; present {
+			result[parameter.Name] = value
+		}
+	}
+	return result, nil
+}
+
 func (r *CLIResolver) Resolve(parameters []Parameter) (Changes, error) {
 	changes := Changes{}
 	seen := make(map[string]bool, len(r.changes))

@@ -300,6 +300,13 @@ func readRootSource(scope Scope) (composeSource, error) {
 	if err != nil {
 		return composeSource{}, err
 	}
+	for name, value := range scope.EnvOverrides {
+		if value == nil {
+			delete(options.Environment, name)
+			continue
+		}
+		options.Environment[name] = *value
+	}
 	workingDirectory, err := options.GetWorkingDir()
 	if err != nil {
 		return composeSource{}, err
@@ -320,26 +327,35 @@ func readRootSource(scope Scope) (composeSource, error) {
 
 func discoverIncludeSources(sources []composeSource) ([]composeSource, error) {
 	for index := 0; index < len(sources); index++ {
-		source := sources[index]
-		includes, err := resolveIncludes(source.model["include"], source.workingDirectory, source.environment)
+		children, err := readDirectIncludes(sources[index])
 		if err != nil {
 			return nil, err
 		}
-		for _, config := range includes {
-			for _, path := range config.Path {
-				if path == source.path || slices.Contains(source.ancestors, path) {
-					return nil, fmt.Errorf("include cycle detected: %q includes %q", source.path, path)
-				}
+		sources = append(sources, children...)
+	}
+	return sources, nil
+}
+
+func readDirectIncludes(source composeSource) ([]composeSource, error) {
+	includes, err := resolveIncludes(source.model["include"], source.workingDirectory, source.environment)
+	if err != nil {
+		return nil, err
+	}
+	var sources []composeSource
+	for _, config := range includes {
+		for _, path := range config.Path {
+			if path == source.path || slices.Contains(source.ancestors, path) {
+				return nil, fmt.Errorf("include cycle detected: %q includes %q", source.path, path)
 			}
-			children, err := readIncludeSources(config, source.environment)
-			if err != nil {
-				return nil, err
-			}
-			for childIndex := range children {
-				children[childIndex].ancestors = append(slices.Clone(source.ancestors), source.path)
-			}
-			sources = append(sources, children...)
 		}
+		children, err := readIncludeSources(config, source.environment)
+		if err != nil {
+			return nil, err
+		}
+		for childIndex := range children {
+			children[childIndex].ancestors = append(slices.Clone(source.ancestors), source.path)
+		}
+		sources = append(sources, children...)
 	}
 	return sources, nil
 }

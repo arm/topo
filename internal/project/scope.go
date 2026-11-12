@@ -5,9 +5,10 @@ import (
 )
 
 type Scope struct {
-	ComposeFile string
-	Env         []string
-	EnvFiles    []string
+	EnvOverrides map[string]*string
+	ComposeFile  string
+	Env          []string
+	EnvFiles     []string
 }
 
 func BuildScope(composeFile string, target string, envFiles []string) (Scope, error) {
