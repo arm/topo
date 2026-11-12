@@ -80,21 +80,19 @@ func withoutChanges(parameters []Parameter, changes Changes) []Parameter {
 }
 
 func validateRequiredValues(parameters []Parameter, changes Changes) error {
-	var errs []validationError
+	values := Changes{}
 	for _, parameter := range parameters {
-		value := parameter.ExistingValue
-		newValue, supplied := changes[parameter.Name]
-		if supplied {
-			value = newValue
-		}
-
-		if err := parameter.AssertSatisfiedBy(value); err != nil {
-			errs = append(errs, validationError{Parameter: parameter, Err: err})
+		if parameter.ExistingValue != nil {
+			values[parameter.Name] = parameter.ExistingValue
 		}
 	}
-
-	if len(errs) > 0 {
-		return ValidationErrors(errs)
+	maps.Copy(values, changes)
+	for _, parameter := range parameters {
+		for _, reference := range parameter.References {
+			if err := reference.interpolate(values); err != nil {
+				return fmt.Errorf("parameter validation failed at %q: %w", reference.Path, err)
+			}
+		}
 	}
 
 	return nil
