@@ -35,6 +35,7 @@ type HostChecks struct {
 	DockerCLI        Dependency
 	Docker           Dependency
 	DockerCompose    Dependency
+	ARM64Build       Dependency
 	PodmanCLI        Dependency
 	PodmanConnection Dependency
 	PodmanCompose    Dependency
@@ -133,6 +134,7 @@ func newChecks(options HealthCheckOptions) Checks {
 		DockerCLI:        NewDependencyOnDockerCLI(localRunner),
 		Docker:           NewDependencyOnDockerDaemon(localRunner),
 		DockerCompose:    NewDependencyOnDockerCompose(localRunner),
+		ARM64Build:       NewDependencyOnARM64Build(options.Engine, localRunner),
 		PodmanCLI:        NewDependencyOnPodmanCLI(localRunner),
 		PodmanConnection: NewDependencyOnPodmanConnection(localRunner),
 		PodmanCompose:    NewDependencyOnDockerComposeForPodman(probe.CheckPodmanComposeIsDockerCompose),
@@ -200,12 +202,13 @@ func registerDockerHostChecks(registry *DependencyRegistry, checks HostChecks, t
 	dockerCLI := registry.Register(checks.DockerCLI, DependencyRequirements{}, DependencyScopeHost)
 	docker := registry.Register(checks.Docker, DependencyRequirements{Prerequisites: []*DependencyNode{dockerCLI}}, DependencyScopeHost)
 	compose := registry.Register(checks.DockerCompose, DependencyRequirements{Prerequisites: []*DependencyNode{dockerCLI}}, DependencyScopeHost)
+	arm64Build := registry.Register(checks.ARM64Build, DependencyRequirements{Prerequisites: []*DependencyNode{docker}}, DependencyScopeHost)
 	nodes := hostNodes{dockerCLI: dockerCLI, docker: docker}
 	if isLocalTarget {
-		nodes.deployment = []*DependencyNode{topo, dockerCLI, docker, compose}
+		nodes.deployment = []*DependencyNode{topo, dockerCLI, docker, compose, arm64Build}
 	} else {
 		ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
-		nodes.deployment = []*DependencyNode{topo, ssh, dockerCLI, docker, compose}
+		nodes.deployment = []*DependencyNode{topo, ssh, dockerCLI, docker, compose, arm64Build}
 		nodes.discovery = []*DependencyNode{ssh}
 	}
 	return nodes
@@ -215,12 +218,13 @@ func registerPodmanHostChecks(registry *DependencyRegistry, checks HostChecks, t
 	podmanCLI := registry.Register(checks.PodmanCLI, DependencyRequirements{}, DependencyScopeHost)
 	connection := registry.Register(checks.PodmanConnection, DependencyRequirements{Prerequisites: []*DependencyNode{podmanCLI}}, DependencyScopeHost)
 	compose := registry.Register(checks.PodmanCompose, DependencyRequirements{Prerequisites: []*DependencyNode{connection, podmanCLI}}, DependencyScopeHost)
+	arm64Build := registry.Register(checks.ARM64Build, DependencyRequirements{Prerequisites: []*DependencyNode{connection}}, DependencyScopeHost)
 	nodes := hostNodes{podmanCLI: podmanCLI, podmanCompose: compose}
 	if isLocalTarget {
-		nodes.deployment = []*DependencyNode{topo, podmanCLI, connection, compose}
+		nodes.deployment = []*DependencyNode{topo, podmanCLI, connection, compose, arm64Build}
 	} else {
 		ssh := registry.Register(checks.SSH, DependencyRequirements{}, DependencyScopeHost)
-		nodes.deployment = []*DependencyNode{topo, ssh, podmanCLI, connection, compose}
+		nodes.deployment = []*DependencyNode{topo, ssh, podmanCLI, connection, compose, arm64Build}
 		nodes.discovery = []*DependencyNode{ssh}
 	}
 	return nodes

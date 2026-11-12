@@ -1,9 +1,13 @@
 package machine
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
+
+	"github.com/arm/topo/internal/runner"
 )
 
 // Connection represents an entry from `podman system connection list`.
@@ -20,6 +24,30 @@ type Identity struct {
 	Name         string
 	SSHPort      int `json:"Port"`
 	IdentityPath string
+}
+
+func Connections(ctx context.Context, r runner.CommandRunner) ([]Connection, error) {
+	output, _, err := r.Run(ctx, "podman system connection list --format json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Podman connections: %w", err)
+	}
+	var connections []Connection
+	if err := json.Unmarshal([]byte(output), &connections); err != nil {
+		return nil, fmt.Errorf("failed to parse Podman connections: %w", err)
+	}
+	return connections, nil
+}
+
+func List(ctx context.Context, r runner.CommandRunner) ([]Identity, error) {
+	output, _, err := r.Run(ctx, "podman machine list --format json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Podman machines: %w", err)
+	}
+	var machines []Identity
+	if err := json.Unmarshal([]byte(output), &machines); err != nil {
+		return nil, fmt.Errorf("failed to parse Podman machines: %w", err)
+	}
+	return machines, nil
 }
 
 func FindForConnection(connection Connection, machines []Identity) (string, error) {

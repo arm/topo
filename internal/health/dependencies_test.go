@@ -215,6 +215,101 @@ func TestNewDependencyOnDockerComposeCheck(t *testing.T) {
 	})
 }
 
+func TestNewDependencyOnARM64Build(t *testing.T) {
+	t.Run("reports Docker ARM64 build support", func(t *testing.T) {
+		output := `Status: running
+Platforms: linux/amd64, linux/arm64/v8*
+`
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"docker buildx inspect": {Output: output},
+		}}
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "linux/arm64"}, got)
+	})
+
+	t.Run("reports Podman ARM64 build support", func(t *testing.T) {
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"podman info --format json": {Output: `{"host":{"os":"linux","arch":"arm64","serviceIsRemote":true}}`},
+		}}
+		dependency := health.NewDependencyOnARM64Build(health.EnginePodman, r)
+
+		got := dependency.Check(t.Context())
+
+		assert.Equal(t, health.DependencyCheckResult{SuccessValue: "linux/arm64"}, got)
+	})
+
+	t.Run("links to setup instructions when Docker lacks ARM64 support", func(t *testing.T) {
+		output := `Status: running
+Platforms: linux/amd64, linux/arm/v7`
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"docker buildx inspect": {Output: output},
+		}}
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "linux/arm64 is not reported as supported",
+			Fix:      &health.Fix{Description: "See https://github.com/arm/topo#install-a-container-engine"},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("links to setup instructions when Podman lacks ARM64 support", func(t *testing.T) {
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"podman info --format json": {Output: `{"host":{"os":"linux","arch":"amd64","emulatedArchitectures":[]}}`},
+		}}
+		dependency := health.NewDependencyOnARM64Build(health.EnginePodman, r)
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  "linux/arm64 is not reported as supported",
+			Fix:      &health.Fix{Description: "See https://github.com/arm/topo#install-a-container-engine"},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("reports an inspection failure", func(t *testing.T) {
+		inspectionErr := errors.New("inspection failed")
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"docker buildx inspect": {Err: inspectionErr},
+		}}
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(t.Context())
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  inspectionErr.Error(),
+			Fix:      &health.Fix{Description: "Check the selected engine and builder configuration, then retry topo health."},
+		}}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("reports cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			"docker buildx inspect": {Err: runner.ErrTimeout},
+		}}
+		dependency := health.NewDependencyOnARM64Build(health.EngineDocker, r)
+
+		got := dependency.Check(ctx)
+
+		want := health.DependencyCheckResult{Failure: &health.DependencyCheckFailure{
+			Severity: health.SeverityError,
+			Message:  context.Canceled.Error(),
+		}}
+		assert.Equal(t, want, got)
+	})
+}
+
 func TestRemoteprocDependency(t *testing.T) {
 	t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{

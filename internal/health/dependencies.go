@@ -202,6 +202,37 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	}
 }
 
+func NewDependencyOnARM64Build(engine Engine, r runner.CommandRunner) Dependency {
+	var check func(context.Context, runner.CommandRunner) error
+	if engine == EnginePodman {
+		check = probe.CheckPodmanARM64Build
+	} else {
+		check = probe.CheckDockerARM64Build
+	}
+	return Dependency{
+		Label: "Engine can build ARM64 images",
+		Check: func(ctx context.Context) DependencyCheckResult {
+			err := check(ctx, r)
+			if ctx.Err() != nil {
+				err = ctx.Err()
+			}
+			if err == nil {
+				return DependencyCheckResult{SuccessValue: "linux/arm64"}
+			}
+			failure := &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}
+			switch {
+			case errors.Is(err, probe.ErrARM64BuildUnsupported):
+				failure.Fix = &Fix{Description: "See " + containerEngineInstallURL}
+			case errors.Is(err, context.DeadlineExceeded), errors.Is(err, runner.ErrTimeout):
+				failure.Fix = &Fix{Description: "Retry topo health with a longer --timeout."}
+			case !errors.Is(err, context.Canceled):
+				failure.Fix = &Fix{Description: "Check the selected engine and builder configuration, then retry topo health."}
+			}
+			return DependencyCheckResult{Failure: failure}
+		},
+	}
+}
+
 type ConnectivityOperations struct {
 	Authenticate    func(context.Context, ssh.Destination) error
 	KnownHostsEntry func(ssh.Destination) (string, error)

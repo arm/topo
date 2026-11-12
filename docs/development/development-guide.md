@@ -40,7 +40,7 @@ golangci-lint run --fix
 
 The project uses [Go's built-in support for unit testing](https://pkg.go.dev/cmd/go/internal/test) to provide test coverage.
 
-Container tests require OpenSSH and Docker running Linux containers. Some tests also require Podman. Test container images are built automatically.
+Container tests require OpenSSH and Docker running Linux containers, with ARM64 build support for the health e2e test. Some tests also require Podman. Test container images are built automatically.
 
 From the repository root, opt in to SSH configuration when running container tests:
 
