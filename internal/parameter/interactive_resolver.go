@@ -36,7 +36,7 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 
 		value, err := r.readPrompt(term.Prompt{
 			Validate: func(input string) bool {
-				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input)) == nil
+				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input), nil) == nil
 			},
 			Content: formatParameterPromptContent(parameter, i+1, len(parameters), r.palette),
 			Hint: func(input string, invalid bool) string {
@@ -89,7 +89,7 @@ func formatParameterPromptContent(parameter Parameter, number, total int, palett
 
 func formatParameterPromptHint(parameter Parameter, input string, invalid bool, palette term.Palette) string {
 	message := "Enter a value to continue"
-	if input != "" || parameter.AssertSatisfiedBy(nil) == nil {
+	if input != "" || parameter.AssertSatisfiedBy(nil, nil) == nil {
 		message = "Press Enter to continue"
 	}
 	message = palette.Color(term.Dim, message)

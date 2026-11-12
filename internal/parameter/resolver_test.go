@@ -15,20 +15,9 @@ func TestParameterAssertSatisfiedBy(t *testing.T) {
 		}
 		value := "8080"
 
-		err := p.AssertSatisfiedBy(&value)
+		err := p.AssertSatisfiedBy(&value, nil)
 
 		assert.NoError(t, err)
-	})
-
-	t.Run("checks a required parameter after another parameter in the same string", func(t *testing.T) {
-		p := parameter.Parameter{
-			Name:       "PORT",
-			References: []parameter.Reference{{Expression: "${HOST:?host is required}:${PORT:?port is required}"}},
-		}
-
-		err := p.AssertSatisfiedBy(nil)
-
-		assert.ErrorContains(t, err, "required variable PORT")
 	})
 
 	t.Run("accepts a value satisfying all references", func(t *testing.T) {
@@ -41,7 +30,7 @@ func TestParameterAssertSatisfiedBy(t *testing.T) {
 		}
 		value := "8080"
 
-		err := p.AssertSatisfiedBy(&value)
+		err := p.AssertSatisfiedBy(&value, nil)
 
 		assert.NoError(t, err)
 	})
@@ -55,7 +44,7 @@ func TestParameterAssertSatisfiedBy(t *testing.T) {
 			},
 		}
 
-		err := p.AssertSatisfiedBy(nil)
+		err := p.AssertSatisfiedBy(nil, nil)
 
 		assert.NoError(t, err)
 	})
@@ -69,7 +58,7 @@ func TestParameterAssertSatisfiedBy(t *testing.T) {
 			},
 		}
 
-		err := p.AssertSatisfiedBy(nil)
+		err := p.AssertSatisfiedBy(nil, nil)
 
 		assert.ErrorContains(t, err, "required variable PORT")
 	})
@@ -81,7 +70,7 @@ func TestParameterAssertSatisfiedBy(t *testing.T) {
 		}
 		value := ""
 
-		err := p.AssertSatisfiedBy(&value)
+		err := p.AssertSatisfiedBy(&value, nil)
 
 		assert.NoError(t, err)
 	})
@@ -93,8 +82,19 @@ func TestParameterAssertSatisfiedBy(t *testing.T) {
 		}
 		value := ""
 
-		err := p.AssertSatisfiedBy(&value)
+		err := p.AssertSatisfiedBy(&value, nil)
 
 		assert.ErrorContains(t, err, "required variable PORT")
+	})
+
+	t.Run("defers validation when another missing variable prevents evaluating the parameter", func(t *testing.T) {
+		p := parameter.Parameter{
+			Name:       "PORT",
+			References: []parameter.Reference{{Expression: "${HOST:?host is required}:${PORT:?port is required}"}},
+		}
+
+		err := p.AssertSatisfiedBy(nil, nil)
+
+		assert.NoError(t, err)
 	})
 }

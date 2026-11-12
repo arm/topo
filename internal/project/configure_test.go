@@ -53,6 +53,26 @@ x-topo:
 		assert.Equal(t, changes, got)
 	})
 
+	t.Run("accepts an unset required Topo parameter inside an unused fallback", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_OUTER", "hello")
+		testutil.Unsetenv(t, "TOPO_TEST_INNER")
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine
+    environment:
+      GREETING: ${TOPO_TEST_OUTER:-${TOPO_TEST_INNER:?Inner is required}}
+x-topo:
+  parameters:
+    TOPO_TEST_INNER: {}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
 	t.Run("does not load extended files for projects without Topo parameters", func(t *testing.T) {
 		t.Setenv("BASE_FILE", "")
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
