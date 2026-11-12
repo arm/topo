@@ -3,7 +3,6 @@ package project
 import (
 	"cmp"
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/arm/topo/internal/env"
@@ -14,23 +13,31 @@ import (
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	parameters, err := loadParameterMetadata(scope.ComposeFile)
+	sources, err := readRootSources(scope)
+	if err != nil {
+		return nil, err
+	}
+	parameters, err := decodeParameterMetadata(sources[0].model)
 	if err != nil {
 		return nil, err
 	}
 	if len(parameters) == 0 {
 		return parameters, nil
 	}
-
+	sources, err = discoverIncludeSources(sources)
+	if err != nil {
+		return nil, err
+	}
+	for index := range sources {
+		if err := resolveSourceInheritance(&sources[index]); err != nil {
+			return nil, err
+		}
+	}
 	currentValues, err := env.CurrentValues(scope.EnvFiles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
-	model, err := readUninterpolated(scope.ComposeFile)
-	if err != nil {
-		return nil, err
-	}
-	references := collectParameterReferences(model)
+	references := collectSourceParameterReferences(sources)
 	for i := range parameters {
 		param := &parameters[i]
 		param.References = references[param.Name]
@@ -41,16 +48,27 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	return parameters, nil
 }
 
-func loadParameterMetadata(composeFilePath string) ([]parameter.Parameter, error) {
-	reader, err := os.Open(composeFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open compose file: %w", err)
+func collectSourceParameterReferences(sources []composeSource) map[string][]parameter.Reference {
+	references := map[string][]parameter.Reference{}
+	for _, source := range sources {
+		for name, usages := range collectParameterReferences(source.model) {
+			for index := range usages {
+				usages[index].Environment = source.environment
+			}
+			references[name] = append(references[name], usages...)
+		}
 	}
-	defer reader.Close() //nolint:errcheck
+	return references
+}
+
+func decodeParameterMetadata(model map[string]any) ([]parameter.Parameter, error) {
+	var document yaml.Node
+	if err := document.Encode(model); err != nil {
+		return nil, fmt.Errorf("failed to encode project metadata: %w", err)
+	}
 
 	var raw parameterFile
-	decoder := yaml.NewDecoder(reader)
-	if err := decoder.Decode(&raw); err != nil {
+	if err := document.Decode(&raw); err != nil {
 		return nil, fmt.Errorf("failed to decode project metadata: %w", err)
 	}
 

@@ -172,3 +172,9 @@ func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string) {
 
 	require.JSONEq(t, want, got, "output did not match golden file %s", goldenPath)
 }
+
+func Unsetenv(t testing.TB, name string) {
+	t.Helper()
+	t.Setenv(name, "")
+	require.NoError(t, os.Unsetenv(name))
+}
