@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/parameter"
+	"github.com/compose-spec/compose-go/v2/template"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -201,7 +202,7 @@ func TestStrictResolverChain(t *testing.T) {
 		assert.Equal(t, parameter.Changes{"PORT": new("")}, got)
 	})
 
-	t.Run("collects validation errors for all invalid Topo parameters", func(t *testing.T) {
+	t.Run("reports the first validation error with its path and reason", func(t *testing.T) {
 		chain := parameter.NewStrictResolverChain(parameter.NewStaticResolver(nil))
 		parameters := []parameter.Parameter{
 			{
@@ -218,17 +219,7 @@ func TestStrictResolverChain(t *testing.T) {
 
 		got, err := chain.Resolve(parameters)
 
-		require.EqualError(t, err, `parameter validation failed:
-GREETING:
-  description: greeting
-  references:
-    - a.b.c: ${GREETING:?required}
-  reason: required variable GREETING is missing a value: required
-PORT:
-  example: example value
-  references:
-    - a.b: ${PORT:?required}
-  reason: required variable PORT is missing a value: required`)
+		require.EqualError(t, err, `parameter validation failed at "a.b.c": required variable GREETING is missing a value: required`)
 		assert.Empty(t, got)
 	})
 
@@ -287,7 +278,9 @@ PORT:
 
 		_, err := chain.Resolve(parameters)
 
-		require.ErrorContains(t, err, "required variable INNER")
+		var missing *template.MissingRequiredError
+		require.ErrorAs(t, err, &missing)
+		assert.Equal(t, "INNER", missing.Variable)
 	})
 
 	t.Run("unsetting OUTER requires INNER", func(t *testing.T) {
@@ -303,6 +296,8 @@ PORT:
 
 		_, err := chain.Resolve(parameters)
 
-		require.ErrorContains(t, err, "required variable INNER")
+		var missing *template.MissingRequiredError
+		require.ErrorAs(t, err, &missing)
+		assert.Equal(t, "INNER", missing.Variable)
 	})
 }
