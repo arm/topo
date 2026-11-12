@@ -87,17 +87,12 @@ func validateRequiredValues(parameters []Parameter, changes Changes) error {
 		}
 	}
 	maps.Copy(values, changes)
-	var errs []validationError
 	for _, parameter := range parameters {
 		for _, reference := range parameter.References {
 			if err := reference.interpolate(values); err != nil {
-				errs = append(errs, validationError{Parameter: parameter, Err: err})
-				break
+				return fmt.Errorf("parameter validation failed at %q: %w", reference.Path, err)
 			}
 		}
-	}
-	if len(errs) > 0 {
-		return ValidationErrors(errs)
 	}
 
 	return nil
