@@ -21,6 +21,36 @@ func currentEnvironment(t *testing.T, paths ...string) map[string]string {
 }
 
 func TestLoadParameters(t *testing.T) {
+	t.Run("preserves a required variable expression in a device mapping", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    devices: ["${TOPO_TEST_DEVICE:?Device is required}:/dev/test"]
+x-topo:
+  parameters: {TOPO_TEST_DEVICE: {}}
+`)
+
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, []parameter.Reference{{Path: "services.app.devices[0]", Expression: "${TOPO_TEST_DEVICE:?Device is required}:/dev/test", Environment: currentEnvironment(t)}}, got[0].References)
+	})
+
+	t.Run("preserves a required variable expression in a port mapping", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    ports: ["${TOPO_TEST_PORT:?Port is required}:8080"]
+x-topo:
+  parameters: {TOPO_TEST_PORT: {}}
+`)
+
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, []parameter.Reference{{Path: "services.app.ports[0]", Expression: "${TOPO_TEST_PORT:?Port is required}:8080", Environment: currentEnvironment(t)}}, got[0].References)
+	})
+
 	t.Run("loads parameter metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `x-topo:
   parameters:
