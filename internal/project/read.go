@@ -3,6 +3,7 @@ package project
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/dotenv"
 	"github.com/compose-spec/compose-go/v2/loader"
+	"github.com/compose-spec/compose-go/v2/override"
 	"github.com/compose-spec/compose-go/v2/template"
 	"github.com/compose-spec/compose-go/v2/types"
 	"gopkg.in/yaml.v3"
@@ -84,31 +86,117 @@ type composeSource struct {
 }
 
 func resolveSourceInheritance(source *composeSource) error {
-	services, _ := source.model["services"].(map[string]any)
-	for _, value := range services {
-		service, _ := value.(map[string]any)
-		if _, present := service["extends"]; !present {
-			continue
-		}
-		model, err := loader.LoadModelWithContext(context.Background(), types.ConfigDetails{
-			WorkingDir:  source.workingDirectory,
-			Environment: source.environment,
-			ConfigFiles: []types.ConfigFile{{Filename: source.path, Config: source.model}},
-		}, func(options *loader.Options) {
-			options.SkipInterpolation = true
-			options.SkipInclude = true
-			options.SkipNormalization = true
-			options.SkipValidation = true
-			options.SkipConsistencyCheck = true
-			options.ResolvePaths = false
-		})
+	if source.model["services"] == nil {
+		return nil
+	}
+	services, ok := source.model["services"].(map[string]any)
+	if !ok {
+		return fmt.Errorf("compose file %q must contain a services mapping", source.path)
+	}
+	resolved := make(map[string]any, len(services))
+	for name := range services {
+		service, err := resolveServiceInheritance(*source, name)
 		if err != nil {
 			return err
 		}
-		source.model = model
-		return nil
+		resolved[name] = service
 	}
+	source.model = maps.Clone(source.model)
+	source.model["services"] = resolved
 	return nil
+}
+
+func resolveServiceInheritance(source composeSource, service string) (map[string]any, error) {
+	chain, err := collectServiceInheritance(source, service)
+	if err != nil {
+		return nil, err
+	}
+	var document yaml.Node
+	if err := document.Encode(chain); err != nil {
+		return nil, err
+	}
+	if err := document.Decode(&chain); err != nil {
+		return nil, err
+	}
+	merged := map[string]any{}
+	for index := len(chain) - 1; index >= 0; index-- {
+		merged, err = override.ExtendService(merged, chain[index])
+		if err != nil {
+			return nil, err
+		}
+	}
+	delete(merged, "extends")
+	return merged, nil
+}
+
+func collectServiceInheritance(source composeSource, service string) ([]map[string]any, error) {
+	config := types.ExtendsConfig{Service: service}
+	visited := map[[2]string]bool{}
+	var chain []map[string]any
+	for {
+		extended, err := readExtendedService(&source, config.File, config.Service)
+		if err != nil {
+			return nil, err
+		}
+		identity := [2]string{source.path, config.Service}
+		if visited[identity] {
+			return nil, fmt.Errorf("extends cycle detected at service %q in %q", config.Service, source.path)
+		}
+		visited[identity] = true
+		chain = append(chain, extended)
+		value, present := extended["extends"]
+		if !present {
+			return chain, nil
+		}
+		config, err = decodeExtends(value)
+		if err != nil {
+			return nil, err
+		}
+	}
+}
+
+func decodeExtends(value any) (types.ExtendsConfig, error) {
+	if service, ok := value.(string); ok {
+		value = map[string]any{"service": service}
+	}
+	var config types.ExtendsConfig
+	if err := loader.Transform(value, &config); err != nil {
+		return config, fmt.Errorf("decode extends: %w", err)
+	}
+	if config.Service == "" {
+		return config, fmt.Errorf("extends must specify a service")
+	}
+	return config, nil
+}
+
+func readExtendedService(source *composeSource, file, service string) (map[string]any, error) {
+	model := source.model
+	path := source.path
+	if file != "" {
+		resolved, err := resolveComposeFilePath(file, source.workingDirectory, source.environment)
+		if err != nil {
+			return nil, err
+		}
+		path = resolved
+		model, err = readRawComposeFile(path)
+		if err != nil {
+			return nil, err
+		}
+	}
+	services, ok := model["services"].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("compose file %q must contain a services mapping", path)
+	}
+	extended, ok := services[service].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("extends service %q in %q is missing or is not a mapping", service, path)
+	}
+	if file != "" {
+		source.path = path
+		source.model = model
+		source.workingDirectory = filepath.Dir(path)
+	}
+	return extended, nil
 }
 
 func readRootSources(scope Scope) ([]composeSource, error) {

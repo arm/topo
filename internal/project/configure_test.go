@@ -192,6 +192,57 @@ x-topo:
 		require.ErrorContains(t, err, "required variable TOPO_TEST_GREETING")
 		assert.Nil(t, got)
 	})
+
+	t.Run("resolves a required parameter through an interpolated extends path", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_GREETING", "")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  common:
+    image: alpine
+    environment:
+      GREETING: ${TOPO_TEST_GREETING:?Greeting is required}
+`)
+		t.Setenv("TOPO_TEST_BASE_FILE", base)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    extends:
+      file: ${TOPO_TEST_BASE_FILE}
+      service: common
+x-topo:
+  parameters:
+    TOPO_TEST_GREETING: {}
+`)
+		changes := parameter.Changes{"TOPO_TEST_GREETING": new("hello")}
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, changes, got)
+	})
+
+	t.Run("rejects a missing required parameter through an interpolated extends path", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_GREETING", "")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  common:
+    image: alpine
+    environment: {GREETING: "${TOPO_TEST_GREETING:?Greeting is required}"}
+`)
+		t.Setenv("TOPO_TEST_BASE_FILE", base)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    extends:
+      file: ${TOPO_TEST_BASE_FILE}
+      service: common
+x-topo:
+  parameters: {TOPO_TEST_GREETING: {}}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.ErrorContains(t, err, "required variable TOPO_TEST_GREETING")
+		assert.Nil(t, got)
+	})
 }
 
 func TestConfigureLiteralExtends(t *testing.T) {
