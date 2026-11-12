@@ -60,7 +60,14 @@ func (p Parameter) AssertSatisfiedBy(val *string, changes Changes) error {
 type Changes map[string]*string
 
 func (reference Reference) interpolate(changes Changes) error {
+	return reference.interpolateWithLookup(changes, nil)
+}
+
+func (reference Reference) interpolateWithLookup(changes Changes, onLookup func(string)) error {
 	_, err := template.SubstituteWithOptions(reference.Expression, func(name string) (string, bool) {
+		if onLookup != nil {
+			onLookup(name)
+		}
 		if value, supplied := changes[name]; supplied {
 			if value == nil {
 				return "", false
@@ -71,6 +78,22 @@ func (reference Reference) interpolate(changes Changes) error {
 		return value, present
 	}, template.WithoutLogging)
 	return err
+}
+
+func (parameter Parameter) isUsed(changes Changes) bool {
+	if len(parameter.References) == 0 {
+		return true
+	}
+	for _, reference := range parameter.References {
+		used := false
+		err := reference.interpolateWithLookup(changes, func(name string) {
+			used = used || name == parameter.Name
+		})
+		if used || err != nil {
+			return true
+		}
+	}
+	return false
 }
 
 type Resolver interface {
