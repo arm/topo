@@ -113,6 +113,10 @@ topo stop --target user@target.example
 
 This command stops the services but does not remove their containers.
 
+## Use multiple Compose files
+
+Use a base file with additional files for a deployment configuration. Repeat `-f` to merge files in order using standard Compose merge rules. Later files override or extend earlier settings.
+
 ## Next steps
 
 - Run `topo <command> --help` for command options.

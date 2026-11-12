@@ -1,60 +1,40 @@
 package migrate_test
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/arm/topo/internal/env"
 	"github.com/arm/topo/internal/migrate"
+	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUsesLiteralBuildArgConfiguration(t *testing.T) {
-	t.Run("detects legacy build argument values without migrating the project", func(t *testing.T) {
-		path := writeGreetingComposeFile(t, "World")
-		original := testutil.RequireReadFile(t, path)
+	for _, scenario := range []struct {
+		name      string
+		arguments any
+		want      bool
+	}{
+		{"literal map value requires migration", map[string]any{"GREETING": "hello"}, true},
+		{"environment backed map needs no migration", map[string]any{"GREETING": "${GREETING?configured via topo}"}, false},
+		{"literal list value requires migration", []any{"GREETING=hello"}, true},
+		{"environment backed list needs no migration", []any{"GREETING=${GREETING?configured via topo}"}, false},
+		{"unrelated argument needs no migration", map[string]any{"OTHER": "hello"}, false},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			parsedComposeConfig := map[string]any{"services": map[string]any{
+				"app": map[string]any{"build": map[string]any{"args": scenario.arguments}},
+			}}
+			parameters := []parameter.Parameter{{Name: "GREETING"}}
 
-		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(path)
+			got := migrate.UsesLiteralBuildArgConfiguration(parsedComposeConfig, parameters)
 
-		require.NoError(t, err)
-		assert.True(t, usesLiteralBuildArgs)
-		assert.Equal(t, original, testutil.RequireReadFile(t, path))
-		assert.NoFileExists(t, filepath.Join(filepath.Dir(path), env.DefaultFilename))
-	})
-
-	t.Run("does not classify environment-backed build arguments as legacy", func(t *testing.T) {
-		path := writeGreetingComposeFile(t, "${GREETING_NAME?configured via topo}")
-
-		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(path)
-
-		require.NoError(t, err)
-		assert.False(t, usesLiteralBuildArgs)
-	})
-
-	t.Run("propagates inspection errors", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "missing.yaml")
-
-		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(path)
-
-		require.Error(t, err)
-		assert.False(t, usesLiteralBuildArgs)
-	})
-}
-
-func writeGreetingComposeFile(t *testing.T, greeting string) string {
-	t.Helper()
-	return testutil.RequireWriteComposeFile(t, t.TempDir(), fmt.Sprintf(`services:
-  app:
-    build:
-      args:
-        GREETING_NAME: %q
-x-topo:
-  parameters:
-    GREETING_NAME: {}
-`, greeting))
+			assert.Equal(t, scenario.want, got)
+		})
+	}
 }
 
 func TestToEnv(t *testing.T) {

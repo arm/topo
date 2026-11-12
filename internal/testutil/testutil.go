@@ -142,6 +142,12 @@ func RequireReadFile(t testing.TB, path string) string {
 	return string(data)
 }
 
+func Unsetenv(t testing.TB, name string) {
+	t.Helper()
+	t.Setenv(name, "")
+	require.NoError(t, os.Unsetenv(name))
+}
+
 func RequireEnvFileValues(t testing.TB, path string, want map[string]string) {
 	t.Helper()
 	got, err := env.ReadFiles([]string{path})
@@ -171,10 +177,4 @@ func AssertJsonGoldenFile(t *testing.T, got string, goldenPath string) {
 	want := string(wantBytes)
 
 	require.JSONEq(t, want, got, "output did not match golden file %s", goldenPath)
-}
-
-func Unsetenv(t testing.TB, name string) {
-	t.Helper()
-	t.Setenv(name, "")
-	require.NoError(t, os.Unsetenv(name))
 }

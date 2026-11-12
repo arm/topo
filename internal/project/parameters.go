@@ -6,18 +6,20 @@ import (
 	"slices"
 
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/migrate"
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/parameter"
+	"github.com/compose-spec/compose-go/v2/override"
 	"github.com/compose-spec/compose-go/v2/template"
 	"gopkg.in/yaml.v3"
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	root, err := readRootSource(scope)
+	sources, err := readRootSources(scope)
 	if err != nil {
 		return nil, err
 	}
-	sources, err := discoverIncludeSources([]composeSource{root})
+	sources, err = discoverIncludeSources(sources)
 	if err != nil {
 		return nil, err
 	}
@@ -33,11 +35,41 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 			return nil, err
 		}
 	}
+	parsedComposeConfig := map[string]any{}
+	for _, source := range sources[:len(scope.ComposeFiles)] {
+		var document yaml.Node
+		if err := document.Encode(source.model); err != nil {
+			return nil, err
+		}
+		var copied map[string]any
+		if err := document.Decode(&copied); err != nil {
+			return nil, err
+		}
+		parsedComposeConfig, err = override.Merge(parsedComposeConfig, copied)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if migrate.UsesLiteralBuildArgConfiguration(parsedComposeConfig, parameters) {
+		return nil, ErrParameterMigrationRequired
+	}
+
 	currentValues, err := env.CurrentValues(scope.EnvFiles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
-	references := collectSourceParameterReferences(sources)
+	references := collectParameterReferencesBeforeMerge(sources[:len(scope.ComposeFiles)])
+	for _, source := range sources[len(scope.ComposeFiles):] {
+		if migrate.UsesLiteralBuildArgConfiguration(source.model, parameters) {
+			return nil, ErrParameterMigrationRequired
+		}
+		for name, usages := range collectParameterReferences(source.model) {
+			for index := range usages {
+				usages[index].Environment = source.environment
+			}
+			references[name] = append(references[name], usages...)
+		}
+	}
 	for i := range parameters {
 		param := &parameters[i]
 		param.References = references[param.Name]
@@ -48,7 +80,7 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	return parameters, nil
 }
 
-func collectSourceParameterReferences(sources []composeSource) map[string][]parameter.Reference {
+func collectParameterReferencesBeforeMerge(sources []composeSource) map[string][]parameter.Reference {
 	references := map[string][]parameter.Reference{}
 	for _, source := range sources {
 		for name, usages := range collectParameterReferences(source.model) {
@@ -65,7 +97,6 @@ func collectSourceParameterReferences(sources []composeSource) map[string][]para
 }
 
 func loadParameterDeclarations(sources []composeSource) ([]parameter.Parameter, error) {
-	var parameters []parameter.Parameter
 	seen := map[string]bool{}
 	for _, source := range sources {
 		declared, err := decodeParameterMetadata(source.model)
@@ -73,14 +104,21 @@ func loadParameterDeclarations(sources []composeSource) ([]parameter.Parameter, 
 			return nil, err
 		}
 		for _, param := range declared {
-			if seen[param.Name] {
+			if seen[param.Name] && len(source.ancestors) > 0 {
 				return nil, fmt.Errorf("duplicate Topo parameter %q in %q", param.Name, source.path)
 			}
 			seen[param.Name] = true
-			parameters = append(parameters, param)
 		}
 	}
-	return parameters, nil
+	model := map[string]any{}
+	for _, source := range sources {
+		merged, err := override.Merge(model, map[string]any{"x-topo": source.model["x-topo"]})
+		if err != nil {
+			return nil, fmt.Errorf("merge metadata from %q: %w", source.path, err)
+		}
+		model = merged
+	}
+	return decodeParameterMetadata(model)
 }
 
 func selectFilePathParameters(parameters []parameter.Parameter, sources []composeSource, currentValues map[string]string) []parameter.Parameter {
