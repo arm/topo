@@ -50,21 +50,15 @@ func PullableServices(scope Scope) ([]string, error) {
 
 func Read(scope Scope) (*types.Project, error) {
 	ctx := context.Background()
-	options, err := cli.NewProjectOptions(
-		[]string{scope.ComposeFile},
-		cli.WithResolvedPaths(false),
-		cli.WithNormalization(false),
-		cli.WithEnvFiles(scope.EnvFiles...),
-		cli.WithEnv(scope.Env),
-	)
+	options, err := newProjectOptions(scope)
 	if err != nil {
 		return nil, err
 	}
-	err = cli.WithOsEnv(options)
+	err = cli.WithResolvedPaths(false)(options)
 	if err != nil {
 		return nil, err
 	}
-	err = cli.WithDotEnv(options)
+	err = cli.WithNormalization(false)(options)
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +105,17 @@ func resolveSourceInheritance(source *composeSource) error {
 	return nil
 }
 
+func newProjectOptions(scope Scope) (*cli.ProjectOptions, error) {
+	return cli.NewProjectOptions([]string{scope.ComposeFile},
+		cli.WithEnv(scope.Env),
+		cli.WithOsEnv,
+		cli.WithEnvFiles(scope.EnvFiles...),
+		cli.WithDotEnv,
+	)
+}
+
 func readRootSource(scope Scope) (composeSource, error) {
-	options, err := cli.NewProjectOptions([]string{scope.ComposeFile},
-		cli.WithEnv(scope.Env), cli.WithOsEnv, cli.WithEnvFiles(scope.EnvFiles...), cli.WithDotEnv)
+	options, err := newProjectOptions(scope)
 	if err != nil {
 		return composeSource{}, err
 	}
