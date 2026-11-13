@@ -3,10 +3,12 @@ package project
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/dotenv"
@@ -70,15 +72,90 @@ func Read(scope Scope) (*types.Project, error) {
 }
 
 type composeSource struct {
-	path             string
-	ancestors        []string
-	workingDirectory string
-	environment      types.Mapping
-	model            map[string]any
+	path                  string
+	ancestors             []string
+	workingDirectory      string
+	environment           types.Mapping
+	referenceEnvironments map[string]types.Mapping
+	model                 map[string]any
 }
 
-func resolveSourceInheritance(source *composeSource) error {
+func findIncludedServiceSource(source composeSource, sources []composeSource, service string) (*composeSource, error) {
+	var found *composeSource
+	for index := range sources {
+		candidate := &sources[index]
+		if !slices.Contains(candidate.ancestors, source.path) {
+			continue
+		}
+		services, _ := candidate.model["services"].(map[string]any)
+		if _, present := services[service]; !present {
+			continue
+		}
+		if found != nil {
+			return nil, fmt.Errorf("service %q is defined in both included files %q and %q", service, found.path, candidate.path)
+		}
+		found = candidate
+	}
+	return found, nil
+}
+
+func resolveSourceInheritance(source *composeSource, sources []composeSource) error {
+	source.referenceEnvironments = map[string]types.Mapping{}
+	for _, references := range collectParameterReferences(source.model) {
+		for _, reference := range references {
+			source.referenceEnvironments[reference.Path] = source.environment
+		}
+	}
 	services, _ := source.model["services"].(map[string]any)
+	visibleServices := maps.Clone(services)
+	serviceOrigins := map[string]*composeSource{}
+	for _, included := range sources {
+		includedServices, _ := included.model["services"].(map[string]any)
+		for name := range includedServices {
+			if _, present := visibleServices[name]; present {
+				continue
+			}
+			origin, err := findIncludedServiceSource(*source, sources, name)
+			if err != nil {
+				return err
+			}
+			if origin != nil && visibleServices != nil {
+				visibleServices[name] = origin.model["services"].(map[string]any)[name]
+				serviceOrigins[name] = origin
+			}
+		}
+	}
+	for range services {
+		for name, value := range services {
+			service, _ := value.(map[string]any)
+			base, _ := service["extends"].(string)
+			if config, ok := service["extends"].(map[string]any); ok {
+				if config["file"] != nil {
+					continue
+				}
+				base, _ = config["service"].(string)
+			}
+			if base == "" {
+				continue
+			}
+			origin := source
+			if included, present := serviceOrigins[base]; present {
+				origin = included
+			}
+			prefix := "services." + base + "."
+			for path, environment := range origin.referenceEnvironments {
+				if !strings.HasPrefix(path, prefix) {
+					continue
+				}
+				inheritedPath := "services." + name + "." + strings.TrimPrefix(path, prefix)
+				if _, present := source.referenceEnvironments[inheritedPath]; !present {
+					source.referenceEnvironments[inheritedPath] = environment
+				}
+			}
+		}
+	}
+	inheritanceModel := maps.Clone(source.model)
+	inheritanceModel["services"] = visibleServices
 	for _, value := range services {
 		service, _ := value.(map[string]any)
 		if _, present := service["extends"]; !present {
@@ -87,7 +164,7 @@ func resolveSourceInheritance(source *composeSource) error {
 		model, err := loader.LoadModelWithContext(context.Background(), types.ConfigDetails{
 			WorkingDir:  source.workingDirectory,
 			Environment: source.environment,
-			ConfigFiles: []types.ConfigFile{{Filename: source.path, Config: source.model}},
+			ConfigFiles: []types.ConfigFile{{Filename: source.path, Config: inheritanceModel}},
 		}, func(options *loader.Options) {
 			options.SkipInterpolation = true
 			options.SkipInclude = true
@@ -98,6 +175,12 @@ func resolveSourceInheritance(source *composeSource) error {
 		})
 		if err != nil {
 			return err
+		}
+		resolvedServices := model["services"].(map[string]any)
+		for name := range resolvedServices {
+			if _, local := services[name]; !local {
+				delete(resolvedServices, name)
+			}
 		}
 		source.model = model
 		return nil

@@ -179,6 +179,18 @@ x-topo:
 }
 
 func TestConfigureLiteralExtends(t *testing.T) {
+	writeIncludedCommonServiceWithDotenv := func(t *testing.T, root string) {
+		t.Helper()
+		includedDirectory := filepath.Join(root, "included")
+		testutil.RequireMkdirAll(t, includedDirectory)
+		testutil.RequireWriteComposeFile(t, includedDirectory, `services:
+  common:
+    image: alpine
+    environment: {GREETING: "${TOPO_TEST_EXTENDS_GREETING:?Greeting is required}"}
+`)
+		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_EXTENDS_GREETING=hello\n")
+	}
+
 	for _, scenario := range []struct {
 		name      string
 		value     string
@@ -219,4 +231,117 @@ x-topo:
 			assert.Empty(t, got)
 		})
 	}
+
+	t.Run("extends a service defined in an included file", func(t *testing.T) {
+		testutil.Unsetenv(t, "GREETING")
+		root := t.TempDir()
+		testutil.RequireWriteFile(t, filepath.Join(root, "common.yaml"), "services:\n  common:\n    image: alpine\n")
+		path := testutil.RequireWriteComposeFile(t, root, `include: [./common.yaml]
+services:
+  app:
+    extends: common
+    environment:
+      GREETING: ${GREETING}
+x-topo:
+  parameters:
+    GREETING: {}
+`)
+		cliResolver, err := parameter.NewCLIResolver([]string{"GREETING=hello"}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"GREETING": new("hello")}, got)
+	})
+
+	t.Run("resolves an included service's extends file relative to its own directory", func(t *testing.T) {
+		testutil.Unsetenv(t, "TOPO_TEST_EXTENDS_GREETING")
+		root := t.TempDir()
+		shared := filepath.Join(root, "shared")
+		testutil.RequireMkdirAll(t, shared)
+		testutil.RequireWriteFile(t, filepath.Join(shared, "base.yaml"), `services:
+  base:
+    image: alpine
+    environment: {GREETING: "${TOPO_TEST_EXTENDS_GREETING:?Greeting is required}"}
+`)
+		testutil.RequireWriteComposeFile(t, shared, `services:
+  common:
+    extends: {file: ./base.yaml, service: base}
+`)
+		path := testutil.RequireWriteComposeFile(t, root, `include: [./shared/compose.yaml]
+services:
+  app:
+    extends: common
+x-topo:
+  parameters: {TOPO_TEST_EXTENDS_GREETING: {}}
+`)
+		changes := parameter.Changes{"TOPO_TEST_EXTENDS_GREETING": new("hello")}
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, changes, got)
+	})
+
+	t.Run("checks an overriding root expression against the root environment", func(t *testing.T) {
+		testutil.Unsetenv(t, "TOPO_TEST_EXTENDS_GREETING")
+		root := t.TempDir()
+		writeIncludedCommonServiceWithDotenv(t, root)
+		path := testutil.RequireWriteComposeFile(t, root, `include: [./included/compose.yaml]
+services:
+  app:
+    extends: common
+    environment: {GREETING: "${TOPO_TEST_EXTENDS_GREETING:?Greeting is required}"}
+x-topo:
+  parameters: {TOPO_TEST_EXTENDS_GREETING: {}}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.ErrorContains(t, err, "required variable TOPO_TEST_EXTENDS_GREETING")
+		assert.Nil(t, got)
+	})
+
+	t.Run("uses the included dotenv with extends service mapping", func(t *testing.T) {
+		testutil.Unsetenv(t, "TOPO_TEST_EXTENDS_GREETING")
+		root := t.TempDir()
+		writeIncludedCommonServiceWithDotenv(t, root)
+		path := testutil.RequireWriteComposeFile(t, root, `include: [./included/compose.yaml]
+services:
+  app:
+    extends:
+      service: common
+x-topo:
+  parameters: {TOPO_TEST_EXTENDS_GREETING: {}}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("uses the included dotenv for an inherited required parameter", func(t *testing.T) {
+		testutil.Unsetenv(t, "TOPO_TEST_EXTENDS_GREETING")
+		root := t.TempDir()
+		writeIncludedCommonServiceWithDotenv(t, root)
+		path := testutil.RequireWriteComposeFile(t, root, `include: [./included/compose.yaml]
+services:
+  app:
+    extends: common
+x-topo:
+  parameters: {TOPO_TEST_EXTENDS_GREETING: {}}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
 }

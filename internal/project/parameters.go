@@ -28,8 +28,8 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	for index := range sources {
-		if err := resolveSourceInheritance(&sources[index]); err != nil {
+	for index := len(sources) - 1; index >= 0; index-- {
+		if err := resolveSourceInheritance(&sources[index], sources); err != nil {
 			return nil, err
 		}
 	}
@@ -54,6 +54,9 @@ func collectSourceParameterReferences(sources []composeSource) map[string][]para
 		for name, usages := range collectParameterReferences(source.model) {
 			for index := range usages {
 				usages[index].Environment = source.environment
+				if environment, present := source.referenceEnvironments[usages[index].Path]; present {
+					usages[index].Environment = environment
+				}
 			}
 			references[name] = append(references[name], usages...)
 		}
