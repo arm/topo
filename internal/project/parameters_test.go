@@ -29,7 +29,7 @@ x-topo:
   parameters: {TOPO_TEST_DEVICE: {}}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		require.Len(t, got, 1)
@@ -44,7 +44,7 @@ x-topo:
   parameters: {TOPO_TEST_PORT: {}}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		require.Len(t, got, 1)
@@ -62,7 +62,7 @@ x-topo:
     UNSET: {}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -87,7 +87,7 @@ x-topo:
     TOPO_TEST_UNSET_PARAMETER: {}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -117,7 +117,7 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_FILE_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_FILE_PARAMETER=configured\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}, EnvFiles: []string{basePath, envPath}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -142,7 +142,7 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_PARAMETER=topo\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}, EnvFiles: []string{basePath, envPath}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -163,7 +163,7 @@ x-topo:
 `)
 		testutil.RequireWriteFile(t, filepath.Join(root, env.DefaultFilename), "invalid=\"unterminated\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -178,7 +178,7 @@ x-topo:
     PORT: {}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
@@ -192,10 +192,27 @@ x-topo:
     LEGACY: {}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
+	})
+
+	t.Run("rejects legacy literal build arg in list form", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    build:
+      context: .
+      args:
+        - GREETING=hello
+x-topo:
+  parameters:
+    GREETING: {}
+`)
+
+		_, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
+
+		assert.ErrorIs(t, err, project.ErrParameterMigrationRequired)
 	})
 
 	t.Run("resolves aliases and merge keys with explicit overrides", func(t *testing.T) {
@@ -210,7 +227,7 @@ x-topo:
       example: "9000"
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -219,10 +236,71 @@ x-topo:
 		}, got)
 	})
 
+	t.Run("merges metadata and preserves references from each file", func(t *testing.T) {
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: app:${VERSION:-base}
+x-topo:
+  parameters:
+    VERSION: {description: Base version, example: "v1"}
+`)
+		override := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: app:${VERSION:?required}
+x-topo:
+  parameters:
+    VERSION: {description: Deployment version}
+`)
+
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{base, override}})
+
+		require.NoError(t, err)
+		assert.Equal(t, []parameter.Parameter{{
+			Name: "VERSION", Description: "Deployment version", Example: "v1",
+			References: []parameter.Reference{
+				{Path: "services.app.image", Expression: "app:${VERSION:-base}", Environment: currentEnvironment(t)},
+				{Path: "services.app.image", Expression: "app:${VERSION:?required}", Environment: currentEnvironment(t)},
+			},
+		}}, got)
+	})
+
+	t.Run("resolves override extends paths relative to the first compose file", func(t *testing.T) {
+		root := t.TempDir()
+		overrideDir := filepath.Join(root, "overrides")
+		testutil.RequireMkdirAll(t, overrideDir)
+		base := testutil.RequireWriteComposeFile(t, root, `services:
+  app:
+    image: alpine
+x-topo:
+  parameters:
+    TOPO_TEST_NAME: {}
+`)
+		testutil.RequireWriteFile(t, filepath.Join(root, "common.yaml"), `services:
+  common:
+    environment:
+      NAME: ${TOPO_TEST_NAME:-World}
+`)
+		override := testutil.RequireWriteComposeFile(t, overrideDir, `services:
+  app:
+    extends:
+      file: common.yaml
+      service: common
+`)
+
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{base, override}})
+		require.NoError(t, err)
+		assert.Equal(t, []parameter.Parameter{{
+			Name: "TOPO_TEST_NAME",
+			References: []parameter.Reference{{
+				Path: "services.app.environment.NAME", Expression: "${TOPO_TEST_NAME:-World}", Environment: currentEnvironment(t),
+			}},
+		}}, got)
+	})
+
 	t.Run("returns no Topo parameters without metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -231,7 +309,7 @@ x-topo:
 	t.Run("reports missing files", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "missing.yaml")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		assert.ErrorIs(t, err, os.ErrNotExist)
 		assert.Nil(t, got)
@@ -240,7 +318,7 @@ x-topo:
 	t.Run("reports invalid YAML", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(project.Scope{ComposeFiles: []string{path}})
 
 		assert.Error(t, err)
 		assert.Nil(t, got)

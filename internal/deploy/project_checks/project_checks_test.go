@@ -18,7 +18,7 @@ services:
     platform: linux/arm64
 `)
 
-		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFiles: []string{composeFile}}))
 	})
 
 	t.Run("succeeds with valid platforms with variant", func(t *testing.T) {
@@ -29,7 +29,7 @@ services:
     platform: linux/arm64/v8
 `)
 
-		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFiles: []string{composeFile}}))
 	})
 	t.Run("fails when platform missing", func(t *testing.T) {
 		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
@@ -38,7 +38,7 @@ services:
     image: busybox
 `)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile})
+		err := checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFiles: []string{composeFile}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing platform declaration")
 	})
@@ -50,7 +50,7 @@ services:
     platform: linux/amd64
 `)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile})
+		err := checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFiles: []string{composeFile}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "linux/amd64")
 	})
@@ -62,7 +62,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFiles: []string{composeFile}}))
 	})
 	t.Run("succeeds with valid remoteproc-runtime", func(t *testing.T) {
 		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
@@ -73,6 +73,6 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFiles: []string{composeFile}}))
 	})
 }

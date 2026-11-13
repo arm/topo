@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ var configureCmd = &cobra.Command{
 	Short: "Configure project parameters",
 	Long: `Configure project parameters for the Topo project in the current directory.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify one or more compose files.
 
 Some projects require parameters. Supply them on the command line or answer
 interactive prompts.`,
@@ -33,31 +34,27 @@ interactive prompts.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		composeFilePath, err := resolveComposeFilePath(cmd)
+		composeFilePaths, err := resolveComposeFilePaths(cmd)
 		if err != nil {
 			return err
 		}
+		firstComposeFilePath := composeFilePaths[0]
 
 		if migrateToEnv(cmd) {
-			err := migrate.ToEnv(composeFilePath)
+			if len(composeFilePaths) != 1 {
+				return fmt.Errorf("--migrate-to-env requires exactly one Compose file")
+			}
+			err := migrate.ToEnv(firstComposeFilePath)
 			if err != nil {
 				return err
 			}
-			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", composeFilePath, env.DefaultFilename))
+			logger.Info(fmt.Sprintf("successfully migrated %q to be parameterized from %q", firstComposeFilePath, env.DefaultFilename))
 			return nil
 		}
 
-		envFiles, err := getEnvFiles(cmd, composeFilePath)
+		envFiles, err := getEnvFiles(cmd, firstComposeFilePath)
 		if err != nil {
 			return err
-		}
-
-		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
-		if err != nil {
-			return err
-		}
-		if usesLiteralBuildArgs {
-			return fmt.Errorf("this project appears to use the parameter format supported by Topo versions older than 14.0.0. Try running 'topo configure --migrate-to-env', then retry configuration")
 		}
 
 		outputPath, err := cmd.Flags().GetString("output")
@@ -65,7 +62,7 @@ interactive prompts.`,
 			return err
 		}
 		if !cmd.Flags().Changed("output") {
-			outputPath = filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
+			outputPath = filepath.Join(filepath.Dir(firstComposeFilePath), env.DefaultFilename)
 		}
 
 		unset, err := cmd.Flags().GetStringArray("unset")
@@ -79,9 +76,12 @@ interactive prompts.`,
 		}
 
 		changes, err := project.Configure(project.Scope{
-			ComposeFile: composeFilePath,
-			EnvFiles:    envFiles,
+			ComposeFiles: composeFilePaths,
+			EnvFiles:     envFiles,
 		}, resolver)
+		if errors.Is(err, project.ErrParameterMigrationRequired) {
+			return fmt.Errorf("%w; run 'topo configure --migrate-to-env', then retry configuration", err)
+		}
 		if err != nil || changes == nil {
 			return err
 		}

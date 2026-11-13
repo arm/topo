@@ -9,11 +9,10 @@ import (
 )
 
 func resolveFilePathParameters(scope Scope, resolver parameter.Resolver, resolved map[string]bool) (parameter.Changes, error) {
-	root, err := readRootSource(scope)
+	sources, err := readRootSources(scope)
 	if err != nil {
 		return nil, err
 	}
-	sources := []composeSource{root}
 	changes := parameter.Changes{}
 	for index := 0; index < len(sources); index++ {
 		declared, err := loadParameterDeclarations(sources)

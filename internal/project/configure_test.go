@@ -62,7 +62,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Changes{"TOPO_TEST_BASE_FILE": new(base), "TOPO_TEST_COMMON_FILE": new(common)}, got)
@@ -88,7 +88,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.ErrorContains(t, err, "extends cycle detected")
 		assert.Nil(t, got)
@@ -116,7 +116,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Changes{"TOPO_TEST_CONFIG_FILE": new(included), "TOPO_TEST_BASE_FILE": new(base), "TOPO_TEST_COMMON_FILE": new(common)}, got)
@@ -144,7 +144,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Changes{"TOPO_TEST_BASE_FILE": new(base), "TOPO_TEST_COMMON_FILE": new(common)}, got)
@@ -168,7 +168,7 @@ x-topo:
 		}, term.NewPalette(false))
 		resolver := parameter.NewStrictResolverChain(interactive)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		var missing *template.MissingRequiredError
 		require.ErrorAs(t, err, &missing)
@@ -194,7 +194,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.ErrorContains(t, err, "include cycle detected")
 		assert.Nil(t, got)
@@ -221,7 +221,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -243,7 +243,7 @@ x-topo:
 		}, term.NewPalette(false))
 		resolver := parameter.NewStrictResolverChain(interactive)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{included}, promptedValues)
@@ -269,7 +269,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Changes{"TOPO_TEST_CONFIG_FILE": new(included), "TOPO_TEST_GREETING": new("hello")}, got)
@@ -290,7 +290,7 @@ x-topo:
 		changes := parameter.Changes{"TOPO_TEST_CONFIG_FILE": new(included)}
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -313,7 +313,7 @@ x-topo:
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -331,7 +331,7 @@ x-topo:
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStaticResolver(changes)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -351,9 +351,30 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("rejects missing required value even when override supplies a default", func(t *testing.T) {
+		t.Setenv("VERSION", "")
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine:${VERSION:?VERSION is required}
+x-topo:
+  parameters:
+    VERSION: {}
+`)
+		override := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine:${VERSION:-latest}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{base, override}}, resolver)
+
+		require.ErrorContains(t, err, "VERSION")
 		assert.Nil(t, got)
 	})
 
@@ -367,7 +388,28 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
+
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("accepts an interpolated include path when there are no parameters", func(t *testing.T) {
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine
+`)
+		t.Setenv("TOPO_TEST_INCLUDE_FILE", included)
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_INCLUDE_FILE}
+`)
+		override := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    command: echo hello
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{base, override}}, resolver)
 
 		require.NoError(t, err)
 		assert.Nil(t, got)
@@ -390,7 +432,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Changes{"TOPO_TEST_GREETING": new("hello")}, got)
@@ -412,7 +454,7 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.ErrorContains(t, err, `duplicate Topo parameter "TOPO_TEST_GREETING"`)
 		assert.Contains(t, err.Error(), included)
@@ -436,7 +478,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Changes{"TOPO_TEST_DATABASE_CONFIG": new(database)}, got)
@@ -448,7 +490,7 @@ x-topo:
 		changes := parameter.Changes{"TOPO_TEST_GREETING": new("hello")}
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -459,7 +501,7 @@ x-topo:
 		path := writeProjectWithInterpolatedInclude(t)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		var missing *template.MissingRequiredError
 		require.ErrorAs(t, err, &missing)
@@ -479,7 +521,7 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Nil(t, got)
@@ -496,7 +538,7 @@ x-topo:
 		changes := parameter.Changes{"TOPO_TEST_GREETING": new("")}
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		var missing *template.MissingRequiredError
 		require.ErrorAs(t, err, &missing)
@@ -522,7 +564,7 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		var missing *template.MissingRequiredError
 		require.ErrorAs(t, err, &missing)
@@ -551,7 +593,7 @@ x-topo:
 		changes := parameter.Changes{"TOPO_TEST_GREETING": new("hello")}
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -575,7 +617,7 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		var missing *template.MissingRequiredError
 		require.ErrorAs(t, err, &missing)
@@ -627,7 +669,7 @@ x-topo:
 			}
 			resolver := parameter.NewStrictResolverChain()
 
-			got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+			got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 			if scenario.wantError {
 				require.ErrorContains(t, err, "TOPO_TEST_EXTENDS_GREETING")
@@ -656,7 +698,7 @@ x-topo:
 		require.NoError(t, err)
 		resolver := parameter.NewStrictResolverChain(cliResolver)
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, parameter.Changes{"GREETING": new("hello")}, got)
@@ -686,7 +728,7 @@ x-topo:
 		changes := parameter.Changes{"TOPO_TEST_EXTENDS_GREETING": new("hello")}
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -706,7 +748,7 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.ErrorContains(t, err, "required variable TOPO_TEST_EXTENDS_GREETING")
 		assert.Nil(t, got)
@@ -726,7 +768,7 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Nil(t, got)
@@ -745,7 +787,7 @@ x-topo:
 `)
 		resolver := parameter.NewStrictResolverChain()
 
-		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+		got, err := project.Configure(project.Scope{ComposeFiles: []string{path}}, resolver)
 
 		require.NoError(t, err)
 		assert.Nil(t, got)

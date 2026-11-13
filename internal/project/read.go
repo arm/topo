@@ -181,7 +181,7 @@ func resolveSourceInheritance(source *composeSource, sources []composeSource) er
 }
 
 func newProjectOptions(scope Scope) (*cli.ProjectOptions, error) {
-	return cli.NewProjectOptions([]string{scope.ComposeFile},
+	return cli.NewProjectOptions(scope.ComposeFiles,
 		cli.WithEnv(scope.Env),
 		cli.WithOsEnv,
 		cli.WithEnvFiles(scope.EnvFiles...),
@@ -297,10 +297,10 @@ func readExtendedService(source *composeSource, file, service string) (map[strin
 	return extended, nil
 }
 
-func readRootSource(scope Scope) (composeSource, error) {
+func readRootSources(scope Scope) ([]composeSource, error) {
 	options, err := newProjectOptions(scope)
 	if err != nil {
-		return composeSource{}, err
+		return nil, err
 	}
 	for name, value := range scope.EnvOverrides {
 		if value == nil {
@@ -311,20 +311,24 @@ func readRootSource(scope Scope) (composeSource, error) {
 	}
 	workingDirectory, err := options.GetWorkingDir()
 	if err != nil {
-		return composeSource{}, err
+		return nil, err
 	}
-	path, err := filepath.Abs(scope.ComposeFile)
-	if err != nil {
-		return composeSource{}, err
+	sources := make([]composeSource, 0, len(scope.ComposeFiles))
+	for _, path := range scope.ComposeFiles {
+		path, err := filepath.Abs(path)
+		if err != nil {
+			return nil, err
+		}
+		model, err := readRawComposeFile(path)
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, composeSource{
+			path: path, workingDirectory: workingDirectory,
+			environment: options.Environment, model: model,
+		})
 	}
-	model, err := readRawComposeFile(path)
-	if err != nil {
-		return composeSource{}, err
-	}
-	return composeSource{
-		path: path, workingDirectory: workingDirectory,
-		environment: options.Environment, model: model,
-	}, nil
+	return sources, nil
 }
 
 func discoverIncludeSources(sources []composeSource) ([]composeSource, error) {

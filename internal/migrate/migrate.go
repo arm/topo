@@ -8,31 +8,9 @@ import (
 	"strings"
 
 	"github.com/arm/topo/internal/env"
+	"github.com/arm/topo/internal/parameter"
 	"github.com/compose-spec/compose-go/v2/template"
 )
-
-func UsesLiteralBuildArgConfiguration(composeFilePath string) (bool, error) {
-	project, err := loadProject(composeFilePath)
-	if err != nil {
-		return false, err
-	}
-
-	buildArgs := make(map[string]any)
-	for name, values := range project.currentParameterValues {
-		buildArgs[name] = strings.Join(values, "\n")
-	}
-	references := template.ExtractVariables(buildArgs, nil)
-	hasParameterValues := false
-	for _, param := range project.Metadata.Parameters {
-		if _, referenced := references[param.Name]; referenced {
-			return false, nil
-		}
-		if len(project.currentParameterValues[param.Name]) > 0 {
-			hasParameterValues = true
-		}
-	}
-	return hasParameterValues, nil
-}
 
 func ToEnv(composeFilePath string) error {
 	projectDir := filepath.Dir(composeFilePath)
@@ -82,6 +60,44 @@ func ToEnv(composeFilePath string) error {
 		return errors.Join(fmt.Errorf("failed to apply parameter values to compose file: %w", err), deleteErr)
 	}
 	return nil
+}
+
+func UsesLiteralBuildArgConfiguration(parsedComposeConfig map[string]any, parameters []parameter.Parameter) bool {
+	buildArguments, argumentNames := collectBuildArguments(parsedComposeConfig)
+	references := template.ExtractVariables(map[string]any{"args": buildArguments}, nil)
+	hasParameterValues := false
+	for _, param := range parameters {
+		if _, referenced := references[param.Name]; referenced {
+			return false
+		}
+		if argumentNames[param.Name] {
+			hasParameterValues = true
+		}
+	}
+	return hasParameterValues
+}
+
+func collectBuildArguments(model map[string]any) ([]any, map[string]bool) {
+	services, _ := model["services"].(map[string]any)
+	var buildArguments []any
+	argumentNames := map[string]bool{}
+	for _, value := range services {
+		service := value.(map[string]any)
+		build, _ := service["build"].(map[string]any)
+		buildArguments = append(buildArguments, build["args"])
+		switch arguments := build["args"].(type) {
+		case map[string]any:
+			for name := range arguments {
+				argumentNames[name] = true
+			}
+		case []any:
+			for _, argument := range arguments {
+				name, _, _ := strings.Cut(argument.(string), "=")
+				argumentNames[name] = true
+			}
+		}
+	}
+	return buildArguments, argumentNames
 }
 
 func loadProject(composeFilePath string) (Project, error) {
