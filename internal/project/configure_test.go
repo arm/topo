@@ -24,6 +24,19 @@ x-topo:
     environment:
       GREETING: ${TOPO_TEST_GREETING:?Greeting is required}
 `
+	writeProjectWithInterpolatedInclude := func(t *testing.T) string {
+		t.Helper()
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), includedComposeWithRequiredGreeting)
+		t.Setenv("TOPO_TEST_INCLUDE_FILE", included)
+		return testutil.RequireWriteComposeFile(t, t.TempDir(), composeWithInterpolatedInclude)
+	}
+	writeIncludedProjectWithDotenv := func(t *testing.T, root, contents string) {
+		t.Helper()
+		includedDirectory := filepath.Join(root, "included")
+		testutil.RequireMkdirAll(t, includedDirectory)
+		testutil.RequireWriteComposeFile(t, includedDirectory, contents)
+		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_GREETING=hello\n")
+	}
 
 	t.Run("accepts unreferenced Topo parameters", func(t *testing.T) {
 		contents := `services:
@@ -84,9 +97,7 @@ x-topo:
 
 	t.Run("resolves a required Topo parameter in an interpolated include", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_GREETING", "")
-		included := testutil.RequireWriteComposeFile(t, t.TempDir(), includedComposeWithRequiredGreeting)
-		t.Setenv("TOPO_TEST_INCLUDE_FILE", included)
-		path := testutil.RequireWriteComposeFile(t, t.TempDir(), composeWithInterpolatedInclude)
+		path := writeProjectWithInterpolatedInclude(t)
 		changes := parameter.Changes{"TOPO_TEST_GREETING": new("hello")}
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
@@ -98,9 +109,7 @@ x-topo:
 
 	t.Run("rejects a missing required Topo parameter in an interpolated include", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_GREETING", "")
-		included := testutil.RequireWriteComposeFile(t, t.TempDir(), includedComposeWithRequiredGreeting)
-		t.Setenv("TOPO_TEST_INCLUDE_FILE", included)
-		path := testutil.RequireWriteComposeFile(t, t.TempDir(), composeWithInterpolatedInclude)
+		path := writeProjectWithInterpolatedInclude(t)
 		resolver := parameter.NewStrictResolverChain()
 
 		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
@@ -112,10 +121,7 @@ x-topo:
 	t.Run("accepts a required Topo parameter supplied by the included project's dotenv file", func(t *testing.T) {
 		testutil.Unsetenv(t, "TOPO_TEST_GREETING")
 		root := t.TempDir()
-		includedDirectory := filepath.Join(root, "included")
-		testutil.RequireMkdirAll(t, includedDirectory)
-		testutil.RequireWriteComposeFile(t, includedDirectory, includedComposeWithRequiredGreeting)
-		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_GREETING=hello\n")
+		writeIncludedProjectWithDotenv(t, root, includedComposeWithRequiredGreeting)
 		path := testutil.RequireWriteComposeFile(t, root, `include:
   - ./included/compose.yaml
 x-topo:
@@ -133,14 +139,7 @@ x-topo:
 	t.Run("rejects an explicit empty value overriding an included dotenv default", func(t *testing.T) {
 		testutil.Unsetenv(t, "TOPO_TEST_GREETING")
 		root := t.TempDir()
-		includedDirectory := filepath.Join(root, "included")
-		testutil.RequireMkdirAll(t, includedDirectory)
-		testutil.RequireWriteComposeFile(t, includedDirectory, `services:
-  app:
-    image: alpine
-    environment: {GREETING: "${TOPO_TEST_GREETING:?Greeting is required}"}
-`)
-		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_GREETING=hello\n")
+		writeIncludedProjectWithDotenv(t, root, includedComposeWithRequiredGreeting)
 		path := testutil.RequireWriteComposeFile(t, root, `include: [./included/compose.yaml]
 x-topo:
   parameters: {TOPO_TEST_GREETING: {}}
@@ -157,14 +156,11 @@ x-topo:
 	t.Run("does not use an included dotenv value to satisfy a required root reference", func(t *testing.T) {
 		testutil.Unsetenv(t, "TOPO_TEST_GREETING")
 		root := t.TempDir()
-		includedDirectory := filepath.Join(root, "included")
-		testutil.RequireMkdirAll(t, includedDirectory)
-		testutil.RequireWriteComposeFile(t, includedDirectory, `services:
+		writeIncludedProjectWithDotenv(t, root, `services:
   included:
     image: alpine
     environment: {GREETING: "${TOPO_TEST_GREETING:?Greeting is required}"}
 `)
-		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_GREETING=hello\n")
 		path := testutil.RequireWriteComposeFile(t, root, `include: [./included/compose.yaml]
 services:
   root:
