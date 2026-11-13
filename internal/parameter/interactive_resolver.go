@@ -29,6 +29,9 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 	changes := Changes{}
 
 	for i, parameter := range parameters {
+		if !parameter.isUsed(changes) {
+			continue
+		}
 		initial := ""
 		if parameter.ExistingValue != nil {
 			initial = *parameter.ExistingValue
@@ -36,11 +39,11 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 
 		value, err := r.readPrompt(term.Prompt{
 			Validate: func(input string) bool {
-				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input)) == nil
+				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input), changes) == nil
 			},
 			Content: formatParameterPromptContent(parameter, i+1, len(parameters), r.palette),
 			Hint: func(input string, invalid bool) string {
-				return formatParameterPromptHint(parameter, input, invalid, r.palette)
+				return formatParameterPromptHint(parameter, input, invalid, changes, r.palette)
 			},
 			Initial: initial,
 			Prefix:  "   " + r.palette.Color(term.Magenta, ">") + " ",
@@ -87,9 +90,9 @@ func formatParameterPromptContent(parameter Parameter, number, total int, palett
 	return lines
 }
 
-func formatParameterPromptHint(parameter Parameter, input string, invalid bool, palette term.Palette) string {
+func formatParameterPromptHint(parameter Parameter, input string, invalid bool, changes Changes, palette term.Palette) string {
 	message := "Enter a value to continue"
-	if input != "" || parameter.AssertSatisfiedBy(nil) == nil {
+	if input != "" || parameter.AssertSatisfiedBy(nil, changes) == nil {
 		message = "Press Enter to continue"
 	}
 	message = palette.Color(term.Dim, message)
