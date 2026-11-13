@@ -75,10 +75,12 @@ func Read(scope Scope) (*types.Project, error) {
 type composeSource struct {
 	path                  string
 	ancestors             []string
+	extendsAncestors      [][2]string
 	workingDirectory      string
 	environment           types.Mapping
 	referenceEnvironments map[string]types.Mapping
 	model                 map[string]any
+	inheritanceModel      map[string]any
 }
 
 func findIncludedServiceSource(source composeSource, sources []composeSource, service string) (*composeSource, error) {
@@ -220,8 +222,8 @@ func resolveServiceInheritance(source composeSource, service string) (map[string
 		if err != nil {
 			return nil, err
 		}
+		delete(merged, "extends")
 	}
-	delete(merged, "extends")
 	return merged, nil
 }
 
@@ -332,6 +334,52 @@ func discoverIncludeSources(sources []composeSource) ([]composeSource, error) {
 			return nil, err
 		}
 		sources = append(sources, children...)
+	}
+	return sources, nil
+}
+
+func readDirectExtendedServices(source composeSource, discovered []composeSource) ([]composeSource, error) {
+	services, _ := source.model["services"].(map[string]any)
+	var sources []composeSource
+	for name, value := range services {
+		service, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("compose file %q must contain service mappings", source.path)
+		}
+		extends, present := service["extends"]
+		if !present {
+			continue
+		}
+		config, err := decodeExtends(extends)
+		if err != nil {
+			return nil, err
+		}
+		child := source
+		if source.inheritanceModel != nil {
+			child.model = source.inheritanceModel
+		}
+		available, _ := child.model["services"].(map[string]any)
+		if config.File == "" && available[config.Service] == nil {
+			included, err := findIncludedServiceSource(source, discovered, config.Service)
+			if err != nil {
+				return nil, err
+			}
+			if included != nil {
+				continue
+			}
+		}
+		extended, err := readExtendedService(&child, config.File, config.Service)
+		if err != nil {
+			return nil, err
+		}
+		ancestors := append(slices.Clone(source.extendsAncestors), [2]string{source.path, name})
+		if slices.Contains(ancestors, [2]string{child.path, config.Service}) {
+			return nil, fmt.Errorf("extends cycle detected at service %q in %q", config.Service, child.path)
+		}
+		child.extendsAncestors = ancestors
+		child.inheritanceModel = child.model
+		child.model = map[string]any{"services": map[string]any{config.Service: extended}}
+		sources = append(sources, child)
 	}
 	return sources, nil
 }
