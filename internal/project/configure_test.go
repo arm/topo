@@ -7,6 +7,7 @@ import (
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
+	"github.com/compose-spec/compose-go/v2/template"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -134,7 +135,9 @@ x-topo:
 
 		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
-		require.ErrorContains(t, err, "required variable TOPO_TEST_GREETING")
+		var missing *template.MissingRequiredError
+		require.ErrorAs(t, err, &missing)
+		assert.Equal(t, "TOPO_TEST_GREETING", missing.Variable)
 		assert.Nil(t, got)
 	})
 
@@ -169,7 +172,9 @@ x-topo:
 
 		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
-		require.ErrorContains(t, err, "required variable TOPO_TEST_GREETING")
+		var missing *template.MissingRequiredError
+		require.ErrorAs(t, err, &missing)
+		assert.Equal(t, "TOPO_TEST_GREETING", missing.Variable)
 		assert.Nil(t, got)
 	})
 
@@ -193,7 +198,9 @@ x-topo:
 
 		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
-		require.ErrorContains(t, err, "required variable TOPO_TEST_GREETING")
+		var missing *template.MissingRequiredError
+		require.ErrorAs(t, err, &missing)
+		assert.Equal(t, "TOPO_TEST_GREETING", missing.Variable)
 		assert.Nil(t, got)
 	})
 
@@ -244,7 +251,9 @@ x-topo:
 
 		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
-		require.ErrorContains(t, err, "required variable TOPO_TEST_GREETING")
+		var missing *template.MissingRequiredError
+		require.ErrorAs(t, err, &missing)
+		assert.Equal(t, "TOPO_TEST_GREETING", missing.Variable)
 		assert.Nil(t, got)
 	})
 }
