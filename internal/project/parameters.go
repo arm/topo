@@ -13,18 +13,18 @@ import (
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	sources, err := readRootSources(scope)
+	root, err := readRootSource(scope)
 	if err != nil {
 		return nil, err
 	}
-	parameters, err := decodeParameterMetadata(sources[0].model)
+	parameters, err := decodeParameterMetadata(root.model)
 	if err != nil {
 		return nil, err
 	}
 	if len(parameters) == 0 {
 		return parameters, nil
 	}
-	sources, err = discoverIncludeSources(sources)
+	sources, err := discoverIncludeSources([]composeSource{root})
 	if err != nil {
 		return nil, err
 	}

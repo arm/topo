@@ -111,32 +111,28 @@ func resolveSourceInheritance(source *composeSource) error {
 	return nil
 }
 
-func readRootSources(scope Scope) ([]composeSource, error) {
+func readRootSource(scope Scope) (composeSource, error) {
 	options, err := cli.NewProjectOptions([]string{scope.ComposeFile},
 		cli.WithEnv(scope.Env), cli.WithOsEnv, cli.WithEnvFiles(scope.EnvFiles...), cli.WithDotEnv)
 	if err != nil {
-		return nil, err
+		return composeSource{}, err
 	}
 	workingDirectory, err := options.GetWorkingDir()
 	if err != nil {
-		return nil, err
+		return composeSource{}, err
 	}
-	sources := make([]composeSource, 0, len([]string{scope.ComposeFile}))
-	for _, path := range []string{scope.ComposeFile} {
-		path, err := filepath.Abs(path)
-		if err != nil {
-			return nil, err
-		}
-		model, err := readRawComposeFile(path)
-		if err != nil {
-			return nil, err
-		}
-		sources = append(sources, composeSource{
-			path: path, workingDirectory: workingDirectory,
-			environment: options.Environment, model: model,
-		})
+	path, err := filepath.Abs(scope.ComposeFile)
+	if err != nil {
+		return composeSource{}, err
 	}
-	return sources, nil
+	model, err := readRawComposeFile(path)
+	if err != nil {
+		return composeSource{}, err
+	}
+	return composeSource{
+		path: path, workingDirectory: workingDirectory,
+		environment: options.Environment, model: model,
+	}, nil
 }
 
 func discoverIncludeSources(sources []composeSource) ([]composeSource, error) {
