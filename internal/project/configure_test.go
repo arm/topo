@@ -263,6 +263,75 @@ x-topo:
 		assert.Nil(t, got)
 	})
 
+	t.Run("resolves a Topo parameter declared only in an included file", func(t *testing.T) {
+		testutil.Unsetenv(t, "TOPO_TEST_GREETING")
+		root := t.TempDir()
+		includedDirectory := filepath.Join(root, "included")
+		testutil.RequireMkdirAll(t, includedDirectory)
+		testutil.RequireWriteComposeFile(t, includedDirectory, `services:
+  app:
+    image: alpine
+    environment: {GREETING: "${TOPO_TEST_GREETING:?Greeting is required}"}
+x-topo:
+  parameters: {TOPO_TEST_GREETING: {}}
+`)
+		path := testutil.RequireWriteComposeFile(t, root, "include: [./included/compose.yaml]\n")
+		cliResolver, err := parameter.NewCLIResolver([]string{"TOPO_TEST_GREETING=hello"}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"TOPO_TEST_GREETING": new("hello")}, got)
+	})
+
+	t.Run("rejects duplicate Topo parameter declarations in root and included files", func(t *testing.T) {
+		root := t.TempDir()
+		includedDirectory := filepath.Join(root, "included")
+		testutil.RequireMkdirAll(t, includedDirectory)
+		included := testutil.RequireWriteComposeFile(t, includedDirectory, `services:
+  app:
+    image: alpine
+x-topo:
+  parameters: {TOPO_TEST_GREETING: {}}
+`)
+		path := testutil.RequireWriteComposeFile(t, root, `include: [./included/compose.yaml]
+x-topo:
+  parameters: {TOPO_TEST_GREETING: {}}
+`)
+		resolver := parameter.NewStrictResolverChain()
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.ErrorContains(t, err, `duplicate Topo parameter "TOPO_TEST_GREETING"`)
+		assert.Contains(t, err.Error(), included)
+		assert.Nil(t, got)
+	})
+
+	t.Run("resolves a nested include path declared by the included file", func(t *testing.T) {
+		testutil.Unsetenv(t, "TOPO_TEST_DATABASE_CONFIG")
+		root := t.TempDir()
+		includedDirectory := filepath.Join(root, "included")
+		testutil.RequireMkdirAll(t, includedDirectory)
+		database := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {database: {image: postgres}}\n")
+		testutil.RequireWriteComposeFile(t, includedDirectory, `include:
+  - ${TOPO_TEST_DATABASE_CONFIG:?Choose a database configuration}
+x-topo:
+  parameters:
+    TOPO_TEST_DATABASE_CONFIG: {}
+`)
+		path := testutil.RequireWriteComposeFile(t, root, "include: [./included/compose.yaml]\n")
+		cliResolver, err := parameter.NewCLIResolver([]string{"TOPO_TEST_DATABASE_CONFIG=" + database}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"TOPO_TEST_DATABASE_CONFIG": new(database)}, got)
+	})
+
 	t.Run("resolves a required Topo parameter in an interpolated include", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_GREETING", "")
 		path := writeProjectWithInterpolatedInclude(t)

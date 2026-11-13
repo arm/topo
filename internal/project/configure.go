@@ -14,12 +14,12 @@ func resolveFilePathParameters(scope Scope, resolver parameter.Resolver, resolve
 		return nil, err
 	}
 	sources := []composeSource{root}
-	declared, err := loadParameterDeclarations(sources)
-	if err != nil {
-		return nil, err
-	}
 	changes := parameter.Changes{}
-	for index := 0; len(declared) > 0 && index < len(sources); index++ {
+	for index := 0; index < len(sources); index++ {
+		declared, err := loadParameterDeclarations(sources)
+		if err != nil {
+			return nil, err
+		}
 		source := &sources[index]
 		selected := selectFilePathParameters(declared, []composeSource{*source}, source.environment)
 		updates, err := resolveSelectedFilePathParameters(declared, selected, resolver, resolved)

@@ -17,16 +17,16 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	parameters, err := loadParameterDeclarations([]composeSource{root})
+	sources, err := discoverIncludeSources([]composeSource{root})
+	if err != nil {
+		return nil, err
+	}
+	parameters, err := loadParameterDeclarations(sources)
 	if err != nil {
 		return nil, err
 	}
 	if len(parameters) == 0 {
 		return parameters, nil
-	}
-	sources, err := discoverIncludeSources([]composeSource{root})
-	if err != nil {
-		return nil, err
 	}
 	for index := len(sources) - 1; index >= 0; index-- {
 		if err := resolveSourceInheritance(&sources[index], sources); err != nil {
@@ -65,7 +65,22 @@ func collectSourceParameterReferences(sources []composeSource) map[string][]para
 }
 
 func loadParameterDeclarations(sources []composeSource) ([]parameter.Parameter, error) {
-	return decodeParameterMetadata(sources[0].model)
+	var parameters []parameter.Parameter
+	seen := map[string]bool{}
+	for _, source := range sources {
+		declared, err := decodeParameterMetadata(source.model)
+		if err != nil {
+			return nil, err
+		}
+		for _, param := range declared {
+			if seen[param.Name] {
+				return nil, fmt.Errorf("duplicate Topo parameter %q in %q", param.Name, source.path)
+			}
+			seen[param.Name] = true
+			parameters = append(parameters, param)
+		}
+	}
+	return parameters, nil
 }
 
 func selectFilePathParameters(parameters []parameter.Parameter, sources []composeSource, currentValues map[string]string) []parameter.Parameter {
