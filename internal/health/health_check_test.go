@@ -1,13 +1,79 @@
 package health_test
 
 import (
+	"bytes"
 	"context"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/arm/topo/internal/health"
+	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestCheck(t *testing.T) {
+	t.Run("warns and selects Podman checks when explicitly selected docker invokes Podman", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("uses a POSIX shell wrapper")
+		}
+		directory := t.TempDir()
+		wrapper := "#!/bin/sh\n[ \"$1\" = --version ] || exit 1\necho 'podman version 6.1.4'\n"
+		require.NoError(t, os.WriteFile(filepath.Join(directory, "docker"), []byte(wrapper), 0o700))
+		t.Setenv("PATH", directory)
+		target := ssh.NewDestination("user@example.com")
+		var logOutput bytes.Buffer
+		logger.SetOptions(logger.Options{Output: &logOutput})
+		t.Cleanup(func() { logger.SetOptions(logger.Options{}) })
+
+		got := health.Check(t.Context(), health.HealthCheckOptions{
+			Engine: health.EngineDocker, Target: &target, SkipVersionChecks: true,
+		})
+
+		var labels []string
+		for _, dependency := range got.Deployment.Checks {
+			labels = append(labels, dependency.Name)
+		}
+		assert.Contains(t, labels, "Podman CLI")
+		assert.Contains(t, labels, "Podman connection")
+		assert.Contains(t, labels, "Podman API")
+		assert.NotContains(t, labels, "Docker CLI")
+		assert.NotContains(t, labels, "Docker daemon")
+		assert.Contains(t, logOutput.String(), "WARN")
+		assert.Contains(t, logOutput.String(), "Docker checks were requested, but the docker command invokes Podman. Continuing with Podman checks.")
+	})
+
+	t.Run("warns and selects Podman checks when the default docker command invokes Podman", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("uses a POSIX shell wrapper")
+		}
+		directory := t.TempDir()
+		wrapper := "#!/bin/sh\n[ \"$1\" = --version ] || exit 1\necho 'podman version 6.1.4'\n"
+		require.NoError(t, os.WriteFile(filepath.Join(directory, "docker"), []byte(wrapper), 0o700))
+		t.Setenv("PATH", directory)
+		target := ssh.NewDestination("user@example.com")
+		var logOutput bytes.Buffer
+		logger.SetOptions(logger.Options{Output: &logOutput})
+		t.Cleanup(func() { logger.SetOptions(logger.Options{}) })
+
+		got := health.Check(t.Context(), health.HealthCheckOptions{Target: &target, SkipVersionChecks: true})
+
+		var labels []string
+		for _, dependency := range got.Deployment.Checks {
+			labels = append(labels, dependency.Name)
+		}
+		assert.Contains(t, labels, "Podman CLI")
+		assert.Contains(t, labels, "Podman connection")
+		assert.Contains(t, labels, "Podman API")
+		assert.NotContains(t, labels, "Docker CLI")
+		assert.NotContains(t, labels, "Docker daemon")
+		assert.Contains(t, logOutput.String(), "WARN")
+		assert.Contains(t, logOutput.String(), "Docker checks were requested, but the docker command invokes Podman. Continuing with Podman checks.")
+	})
+}
 
 func TestHealthCheck(t *testing.T) {
 	t.Run("Evaluate", func(t *testing.T) {
