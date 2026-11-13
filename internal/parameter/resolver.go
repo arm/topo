@@ -22,8 +22,9 @@ type Parameter struct {
 }
 
 type Reference struct {
-	Path       string
-	Expression string
+	Path        string
+	Expression  string
+	Environment map[string]string
 }
 
 const assertSuffix = "__TOPO_ASSERT_SATISFIEDBY__"
@@ -34,8 +35,17 @@ func (p Parameter) AssertSatisfiedBy(val *string) error {
 		return nil
 	}
 	for _, reference := range p.References {
+		referenceValue := val
+		if referenceValue == nil {
+			if value, present := reference.Environment[p.Name]; present {
+				referenceValue = &value
+			}
+		}
+		if referenceValue != nil && *referenceValue != "" {
+			continue
+		}
 		name, expression := p.Name, reference.Expression
-		if val != nil {
+		if referenceValue != nil {
 			// Mark nonempty required (:?) variables with a unique suffix to distinguish them from presence required (?) variables
 			suffix := "_" + assertSuffix
 			name += suffix

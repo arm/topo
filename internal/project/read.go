@@ -3,11 +3,19 @@ package project
 import (
 	"context"
 	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/compose-spec/compose-go/v2/cli"
+	"github.com/compose-spec/compose-go/v2/dotenv"
 	"github.com/compose-spec/compose-go/v2/loader"
+	"github.com/compose-spec/compose-go/v2/template"
 	"github.com/compose-spec/compose-go/v2/types"
+	"gopkg.in/yaml.v3"
 )
 
 func ImageNames(scope Scope) ([]string, error) {
@@ -44,21 +52,15 @@ func PullableServices(scope Scope) ([]string, error) {
 
 func Read(scope Scope) (*types.Project, error) {
 	ctx := context.Background()
-	options, err := cli.NewProjectOptions(
-		[]string{scope.ComposeFile},
-		cli.WithResolvedPaths(false),
-		cli.WithNormalization(false),
-		cli.WithEnvFiles(scope.EnvFiles...),
-		cli.WithEnv(scope.Env),
-	)
+	options, err := newProjectOptions(scope)
 	if err != nil {
 		return nil, err
 	}
-	err = cli.WithOsEnv(options)
+	err = cli.WithResolvedPaths(false)(options)
 	if err != nil {
 		return nil, err
 	}
-	err = cli.WithDotEnv(options)
+	err = cli.WithNormalization(false)(options)
 	if err != nil {
 		return nil, err
 	}
@@ -69,16 +71,296 @@ func Read(scope Scope) (*types.Project, error) {
 	return composeProject, nil
 }
 
-func readUninterpolated(composeFilePath string) (map[string]any, error) {
-	options, err := cli.NewProjectOptions([]string{composeFilePath},
-		cli.WithResolvedPaths(false),
-		cli.WithNormalization(false),
-		cli.WithLoadOptions(func(o *loader.Options) {
-			o.SkipInterpolation = true
-		}),
+type composeSource struct {
+	path                  string
+	ancestors             []string
+	workingDirectory      string
+	environment           types.Mapping
+	referenceEnvironments map[string]types.Mapping
+	model                 map[string]any
+}
+
+func findIncludedServiceSource(source composeSource, sources []composeSource, service string) (*composeSource, error) {
+	var found *composeSource
+	for index := range sources {
+		candidate := &sources[index]
+		if !slices.Contains(candidate.ancestors, source.path) {
+			continue
+		}
+		services, _ := candidate.model["services"].(map[string]any)
+		if _, present := services[service]; !present {
+			continue
+		}
+		if found != nil {
+			return nil, fmt.Errorf("service %q is defined in both included files %q and %q", service, found.path, candidate.path)
+		}
+		found = candidate
+	}
+	return found, nil
+}
+
+func resolveSourceInheritance(source *composeSource, sources []composeSource) error {
+	source.referenceEnvironments = map[string]types.Mapping{}
+	for _, references := range collectParameterReferences(source.model) {
+		for _, reference := range references {
+			source.referenceEnvironments[reference.Path] = source.environment
+		}
+	}
+	services, _ := source.model["services"].(map[string]any)
+	visibleServices := maps.Clone(services)
+	serviceOrigins := map[string]*composeSource{}
+	for _, included := range sources {
+		includedServices, _ := included.model["services"].(map[string]any)
+		for name := range includedServices {
+			if _, present := visibleServices[name]; present {
+				continue
+			}
+			origin, err := findIncludedServiceSource(*source, sources, name)
+			if err != nil {
+				return err
+			}
+			if origin != nil && visibleServices != nil {
+				visibleServices[name] = origin.model["services"].(map[string]any)[name]
+				serviceOrigins[name] = origin
+			}
+		}
+	}
+	for range services {
+		for name, value := range services {
+			service, _ := value.(map[string]any)
+			base, _ := service["extends"].(string)
+			if config, ok := service["extends"].(map[string]any); ok {
+				if config["file"] != nil {
+					continue
+				}
+				base, _ = config["service"].(string)
+			}
+			if base == "" {
+				continue
+			}
+			origin := source
+			if included, present := serviceOrigins[base]; present {
+				origin = included
+			}
+			prefix := "services." + base + "."
+			for path, environment := range origin.referenceEnvironments {
+				if !strings.HasPrefix(path, prefix) {
+					continue
+				}
+				inheritedPath := "services." + name + "." + strings.TrimPrefix(path, prefix)
+				if _, present := source.referenceEnvironments[inheritedPath]; !present {
+					source.referenceEnvironments[inheritedPath] = environment
+				}
+			}
+		}
+	}
+	inheritanceModel := maps.Clone(source.model)
+	inheritanceModel["services"] = visibleServices
+	for _, value := range services {
+		service, _ := value.(map[string]any)
+		if _, present := service["extends"]; !present {
+			continue
+		}
+		model, err := loader.LoadModelWithContext(context.Background(), types.ConfigDetails{
+			WorkingDir:  source.workingDirectory,
+			Environment: source.environment,
+			ConfigFiles: []types.ConfigFile{{Filename: source.path, Config: inheritanceModel}},
+		}, func(options *loader.Options) {
+			options.SkipInterpolation = true
+			options.SkipInclude = true
+			options.SkipNormalization = true
+			options.SkipValidation = true
+			options.SkipConsistencyCheck = true
+			options.ResolvePaths = false
+		})
+		if err != nil {
+			return err
+		}
+		resolvedServices := model["services"].(map[string]any)
+		for name := range resolvedServices {
+			if _, local := services[name]; !local {
+				delete(resolvedServices, name)
+			}
+		}
+		source.model = model
+		return nil
+	}
+	return nil
+}
+
+func newProjectOptions(scope Scope) (*cli.ProjectOptions, error) {
+	return cli.NewProjectOptions([]string{scope.ComposeFile},
+		cli.WithEnv(scope.Env),
+		cli.WithOsEnv,
+		cli.WithEnvFiles(scope.EnvFiles...),
+		cli.WithDotEnv,
 	)
+}
+
+func readRootSource(scope Scope) (composeSource, error) {
+	options, err := newProjectOptions(scope)
+	if err != nil {
+		return composeSource{}, err
+	}
+	workingDirectory, err := options.GetWorkingDir()
+	if err != nil {
+		return composeSource{}, err
+	}
+	path, err := filepath.Abs(scope.ComposeFile)
+	if err != nil {
+		return composeSource{}, err
+	}
+	model, err := readRawComposeFile(path)
+	if err != nil {
+		return composeSource{}, err
+	}
+	return composeSource{
+		path: path, workingDirectory: workingDirectory,
+		environment: options.Environment, model: model,
+	}, nil
+}
+
+func discoverIncludeSources(sources []composeSource) ([]composeSource, error) {
+	for index := 0; index < len(sources); index++ {
+		source := sources[index]
+		includes, err := resolveIncludes(source.model["include"], source.workingDirectory, source.environment)
+		if err != nil {
+			return nil, err
+		}
+		for _, config := range includes {
+			for _, path := range config.Path {
+				if path == source.path || slices.Contains(source.ancestors, path) {
+					return nil, fmt.Errorf("include cycle detected: %q includes %q", source.path, path)
+				}
+			}
+			children, err := readIncludeSources(config, source.environment)
+			if err != nil {
+				return nil, err
+			}
+			for childIndex := range children {
+				children[childIndex].ancestors = append(slices.Clone(source.ancestors), source.path)
+			}
+			sources = append(sources, children...)
+		}
+	}
+	return sources, nil
+}
+
+func readIncludeSources(config types.IncludeConfig, parent types.Mapping) ([]composeSource, error) {
+	environment, err := loadIncludeEnvironment(config, parent)
 	if err != nil {
 		return nil, err
 	}
-	return options.LoadModel(context.Background())
+	sources := make([]composeSource, 0, len(config.Path))
+	for _, path := range config.Path {
+		model, err := readRawComposeFile(path)
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, composeSource{
+			path:             path,
+			workingDirectory: config.ProjectDirectory,
+			environment:      environment,
+			model:            model,
+		})
+	}
+	return sources, nil
+}
+
+func loadIncludeEnvironment(config types.IncludeConfig, parent types.Mapping) (types.Mapping, error) {
+	files := config.EnvFile
+	if len(files) == 0 {
+		path := filepath.Join(config.ProjectDirectory, ".env")
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			files = []string{path}
+		}
+	}
+	var paths []string
+	for _, path := range files {
+		if path != "/dev/null" {
+			paths = append(paths, path)
+		}
+	}
+	defaults, err := dotenv.GetEnvFromFile(parent, paths)
+	if err != nil {
+		return nil, err
+	}
+	return parent.Clone().Merge(defaults), nil
+}
+
+func resolveIncludes(value any, workingDirectory string, environment map[string]string) ([]types.IncludeConfig, error) {
+	if value == nil {
+		return nil, nil
+	}
+	entries, ok := value.([]any)
+	if !ok {
+		return nil, fmt.Errorf("include must be a list")
+	}
+	configs := make([]types.IncludeConfig, 0, len(entries))
+	for _, entry := range entries {
+		if path, ok := entry.(string); ok {
+			entry = map[string]any{"path": path}
+		}
+		var config types.IncludeConfig
+		if err := loader.Transform(entry, &config); err != nil {
+			return nil, fmt.Errorf("decode include: %w", err)
+		}
+		if len(config.Path) == 0 {
+			return nil, fmt.Errorf("include must specify a path")
+		}
+		for index, expression := range config.Path {
+			path, err := resolveComposeFilePath(expression, workingDirectory, environment)
+			if err != nil {
+				return nil, err
+			}
+			config.Path[index] = path
+		}
+		if config.ProjectDirectory == "" {
+			config.ProjectDirectory = filepath.Dir(config.Path[0])
+		} else {
+			directory, err := resolveComposeFilePath(config.ProjectDirectory, workingDirectory, environment)
+			if err != nil {
+				return nil, err
+			}
+			config.ProjectDirectory = directory
+		}
+		for index, expression := range config.EnvFile {
+			path, err := resolveComposeFilePath(expression, workingDirectory, environment)
+			if err != nil {
+				return nil, err
+			}
+			config.EnvFile[index] = path
+		}
+		configs = append(configs, config)
+	}
+	return configs, nil
+}
+
+func resolveComposeFilePath(expression, workingDirectory string, environment map[string]string) (string, error) {
+	path, err := template.Substitute(expression, func(name string) (string, bool) {
+		value, present := environment[name]
+		return value, present
+	})
+	if err != nil {
+		return "", fmt.Errorf("resolve compose file path %q: %w", expression, err)
+	}
+	if path == "" {
+		return "", fmt.Errorf("compose file path %q resolves to an empty string", expression)
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(workingDirectory, path)
+	}
+	return path, nil
+}
+
+func readRawComposeFile(path string) (map[string]any, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var document map[string]any
+	if err := yaml.Unmarshal(contents, &document); err != nil {
+		return nil, fmt.Errorf("parse compose file %q: %w", path, err)
+	}
+	return document, nil
 }

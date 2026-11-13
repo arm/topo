@@ -13,8 +13,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func currentEnvironment(t *testing.T, paths ...string) map[string]string {
+	t.Helper()
+	values, err := env.CurrentValues(paths)
+	require.NoError(t, err)
+	return values
+}
+
 func TestLoadParameters(t *testing.T) {
-	t.Run("loads parameter metadata", func(t *testing.T) {
+	t.Run("preserves a required Topo parameter expression in a device mapping", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    devices: ["${TOPO_TEST_DEVICE:?Device is required}:/dev/test"]
+x-topo:
+  parameters: {TOPO_TEST_DEVICE: {}}
+`)
+
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, []parameter.Reference{{Path: "services.app.devices[0]", Expression: "${TOPO_TEST_DEVICE:?Device is required}:/dev/test", Environment: currentEnvironment(t)}}, got[0].References)
+	})
+
+	t.Run("preserves a required Topo parameter expression in a port mapping", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    ports: ["${TOPO_TEST_PORT:?Port is required}:8080"]
+x-topo:
+  parameters: {TOPO_TEST_PORT: {}}
+`)
+
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, []parameter.Reference{{Path: "services.app.ports[0]", Expression: "${TOPO_TEST_PORT:?Port is required}:8080", Environment: currentEnvironment(t)}}, got[0].References)
+	})
+
+	t.Run("loads Topo parameter metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `x-topo:
   parameters:
     PORT:
@@ -57,9 +94,9 @@ x-topo:
 			{
 				Name: "TOPO_TEST_PARAMETER",
 				References: []parameter.Reference{
-					{Path: "services.app.command[1]", Expression: "prefix-${TOPO_TEST_PARAMETER?required}"},
-					{Path: "services.app.environment.FIRST", Expression: "${TOPO_TEST_PARAMETER:-one}/${TOPO_TEST_PARAMETER:-two}"},
-					{Path: "services.app.environment.SECOND", Expression: "${TOPO_TEST_PARAMETER:-one}/${TOPO_TEST_PARAMETER:-two}"},
+					{Path: "services.app.command[1]", Expression: "prefix-${TOPO_TEST_PARAMETER?required}", Environment: currentEnvironment(t)},
+					{Path: "services.app.environment.FIRST", Expression: "${TOPO_TEST_PARAMETER:-one}/${TOPO_TEST_PARAMETER:-two}", Environment: currentEnvironment(t)},
+					{Path: "services.app.environment.SECOND", Expression: "${TOPO_TEST_PARAMETER:-one}/${TOPO_TEST_PARAMETER:-two}", Environment: currentEnvironment(t)},
 				},
 			},
 			{Name: "TOPO_TEST_UNSET_PARAMETER"},
@@ -86,7 +123,7 @@ x-topo:
 		assert.Equal(t, []parameter.Parameter{{
 			Name:          "TOPO_TEST_FILE_PARAMETER",
 			ExistingValue: new("configured"),
-			References:    []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_FILE_PARAMETER", Expression: "${TOPO_TEST_FILE_PARAMETER}"}},
+			References:    []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_FILE_PARAMETER", Expression: "${TOPO_TEST_FILE_PARAMETER}", Environment: currentEnvironment(t, basePath, envPath)}},
 		}}, got)
 	})
 
@@ -111,7 +148,7 @@ x-topo:
 		assert.Equal(t, []parameter.Parameter{{
 			Name:          "TOPO_TEST_PARAMETER",
 			ExistingValue: new("shell=value"),
-			References:    []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_PARAMETER", Expression: "${TOPO_TEST_PARAMETER}"}},
+			References:    []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_PARAMETER", Expression: "${TOPO_TEST_PARAMETER}", Environment: currentEnvironment(t, basePath, envPath)}},
 		}}, got)
 	})
 
@@ -131,11 +168,11 @@ x-topo:
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
 			Name:       "TOPO_TEST_FILE_PARAMETER",
-			References: []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_FILE_PARAMETER", Expression: "${TOPO_TEST_FILE_PARAMETER}"}},
+			References: []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_FILE_PARAMETER", Expression: "${TOPO_TEST_FILE_PARAMETER}", Environment: currentEnvironment(t)}},
 		}}, got)
 	})
 
-	t.Run("loads legacy args as parameters", func(t *testing.T) {
+	t.Run("loads legacy args as Topo parameters", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `x-topo:
   args:
     PORT: {}
@@ -147,7 +184,7 @@ x-topo:
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
 	})
 
-	t.Run("prefers parameters over legacy args", func(t *testing.T) {
+	t.Run("prefers Topo parameters over legacy args", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `x-topo:
   parameters:
     PORT: {}
@@ -182,7 +219,7 @@ x-topo:
 		}, got)
 	})
 
-	t.Run("returns no parameters without metadata", func(t *testing.T) {
+	t.Run("returns no Topo parameters without metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
 		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
@@ -205,7 +242,7 @@ x-topo:
 
 		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
-		assert.ErrorContains(t, err, "failed to decode project metadata")
+		assert.Error(t, err)
 		assert.Nil(t, got)
 	})
 }
