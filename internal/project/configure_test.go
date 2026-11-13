@@ -12,6 +12,19 @@ import (
 )
 
 func TestConfigure(t *testing.T) {
+	const composeWithInterpolatedInclude = `include:
+  - ${TOPO_TEST_INCLUDE_FILE}
+x-topo:
+  parameters:
+    TOPO_TEST_GREETING: {}
+`
+	const includedComposeWithRequiredGreeting = `services:
+  app:
+    image: alpine
+    environment:
+      GREETING: ${TOPO_TEST_GREETING:?Greeting is required}
+`
+
 	t.Run("accepts unreferenced Topo parameters", func(t *testing.T) {
 		contents := `services:
   app:
@@ -71,19 +84,9 @@ x-topo:
 
 	t.Run("resolves a required Topo parameter in an interpolated include", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_GREETING", "")
-		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
-  app:
-    image: alpine
-    environment:
-      GREETING: ${TOPO_TEST_GREETING:?Greeting is required}
-`)
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), includedComposeWithRequiredGreeting)
 		t.Setenv("TOPO_TEST_INCLUDE_FILE", included)
-		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
-  - ${TOPO_TEST_INCLUDE_FILE}
-x-topo:
-  parameters:
-    TOPO_TEST_GREETING: {}
-`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), composeWithInterpolatedInclude)
 		changes := parameter.Changes{"TOPO_TEST_GREETING": new("hello")}
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
 
@@ -95,19 +98,9 @@ x-topo:
 
 	t.Run("rejects a missing required Topo parameter in an interpolated include", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_GREETING", "")
-		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
-  app:
-    image: alpine
-    environment:
-      GREETING: ${TOPO_TEST_GREETING:?Greeting is required}
-`)
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), includedComposeWithRequiredGreeting)
 		t.Setenv("TOPO_TEST_INCLUDE_FILE", included)
-		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
-  - ${TOPO_TEST_INCLUDE_FILE}
-x-topo:
-  parameters:
-    TOPO_TEST_GREETING: {}
-`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), composeWithInterpolatedInclude)
 		resolver := parameter.NewStrictResolverChain()
 
 		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
@@ -121,12 +114,7 @@ x-topo:
 		root := t.TempDir()
 		includedDirectory := filepath.Join(root, "included")
 		testutil.RequireMkdirAll(t, includedDirectory)
-		testutil.RequireWriteComposeFile(t, includedDirectory, `services:
-  app:
-    image: alpine
-    environment:
-      GREETING: ${TOPO_TEST_GREETING:?Greeting is required}
-`)
+		testutil.RequireWriteComposeFile(t, includedDirectory, includedComposeWithRequiredGreeting)
 		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_GREETING=hello\n")
 		path := testutil.RequireWriteComposeFile(t, root, `include:
   - ./included/compose.yaml
