@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/testutil"
@@ -38,6 +39,152 @@ x-topo:
 		testutil.RequireWriteComposeFile(t, includedDirectory, contents)
 		testutil.RequireWriteFile(t, filepath.Join(includedDirectory, ".env"), "TOPO_TEST_GREETING=hello\n")
 	}
+
+	t.Run("stops when the resolver leaves a required include path unresolved", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_CONFIG_FILE", "")
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_CONFIG_FILE:?Choose a configuration file}
+x-topo:
+  parameters:
+    TOPO_TEST_CONFIG_FILE: {}
+`)
+		promptCount := 0
+		interactive := parameter.NewInteractiveResolver(func(term.Prompt) (string, error) {
+			promptCount++
+			if promptCount > 1 {
+				t.Fatal("retried an unresolved path parameter")
+			}
+			return "", nil
+		}, term.NewPalette(false))
+		resolver := parameter.NewStrictResolverChain(interactive)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		var missing *template.MissingRequiredError
+		require.ErrorAs(t, err, &missing)
+		assert.Equal(t, "TOPO_TEST_CONFIG_FILE", missing.Variable)
+		assert.Equal(t, 1, promptCount)
+		assert.Nil(t, got)
+	})
+
+	t.Run("rejects a cycle formed by resolved include path parameters", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_CONFIG_FILE", "")
+		t.Setenv("TOPO_TEST_ROOT_FILE", "")
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_ROOT_FILE:?Choose the root configuration}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_CONFIG_FILE:?Choose a configuration file}
+x-topo:
+  parameters:
+    TOPO_TEST_CONFIG_FILE: {}
+    TOPO_TEST_ROOT_FILE: {}
+`)
+		cliResolver, err := parameter.NewCLIResolver([]string{"TOPO_TEST_CONFIG_FILE=" + included, "TOPO_TEST_ROOT_FILE=" + path}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.ErrorContains(t, err, "include cycle detected")
+		assert.Nil(t, got)
+	})
+
+	t.Run("resolves a parameterized include path discovered inside another include", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_CONFIG_FILE", "")
+		t.Setenv("TOPO_TEST_DATABASE_CONFIG", "")
+		database := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {database: {image: postgres}}\n")
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_DATABASE_CONFIG:?Choose a database configuration}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_CONFIG_FILE:?Choose a configuration file}
+x-topo:
+  parameters:
+    TOPO_TEST_CONFIG_FILE: {}
+    TOPO_TEST_DATABASE_CONFIG: {}
+`)
+		changes := parameter.Changes{
+			"TOPO_TEST_CONFIG_FILE": new(included), "TOPO_TEST_DATABASE_CONFIG": new(database),
+		}
+		cliResolver, err := parameter.NewCLIResolver([]string{"TOPO_TEST_CONFIG_FILE=" + included, "TOPO_TEST_DATABASE_CONFIG=" + database}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, changes, got)
+	})
+
+	t.Run("prompts only once when an existing include path is accepted unchanged", func(t *testing.T) {
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {app: {image: alpine}}\n")
+		t.Setenv("TOPO_TEST_CONFIG_FILE", included)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_CONFIG_FILE:?Choose a configuration file}
+x-topo:
+  parameters:
+    TOPO_TEST_CONFIG_FILE: {}
+`)
+		var promptedValues []string
+		interactive := parameter.NewInteractiveResolver(func(prompt term.Prompt) (string, error) {
+			promptedValues = append(promptedValues, prompt.Initial)
+			return prompt.Initial, nil
+		}, term.NewPalette(false))
+		resolver := parameter.NewStrictResolverChain(interactive)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{included}, promptedValues)
+		assert.Nil(t, got)
+	})
+
+	t.Run("accepts CLI values for both an include path and an included service parameter", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_CONFIG_FILE", "")
+		t.Setenv("TOPO_TEST_GREETING", "")
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine
+    environment: {GREETING: "${TOPO_TEST_GREETING:?Greeting is required}"}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_CONFIG_FILE:?Choose a configuration file}
+x-topo:
+  parameters:
+    TOPO_TEST_CONFIG_FILE: {}
+    TOPO_TEST_GREETING: {}
+`)
+		cliResolver, err := parameter.NewCLIResolver([]string{"TOPO_TEST_CONFIG_FILE=" + included, "TOPO_TEST_GREETING=hello"}, nil)
+		require.NoError(t, err)
+		resolver := parameter.NewStrictResolverChain(cliResolver)
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"TOPO_TEST_CONFIG_FILE": new(included), "TOPO_TEST_GREETING": new("hello")}, got)
+	})
+
+	t.Run("resolves an include path supplied by a Topo parameter resolver", func(t *testing.T) {
+		testutil.Unsetenv(t, "TOPO_TEST_CONFIG_FILE")
+		included := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - ${TOPO_TEST_CONFIG_FILE:?Choose a configuration file}
+x-topo:
+  parameters:
+    TOPO_TEST_CONFIG_FILE: {}
+`)
+		changes := parameter.Changes{"TOPO_TEST_CONFIG_FILE": new(included)}
+		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
+
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
+
+		require.NoError(t, err)
+		assert.Equal(t, changes, got)
+	})
 
 	t.Run("accepts unreferenced Topo parameters", func(t *testing.T) {
 		contents := `services:

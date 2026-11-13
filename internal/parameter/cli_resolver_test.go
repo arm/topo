@@ -9,6 +9,18 @@ import (
 )
 
 func TestCLIResolver(t *testing.T) {
+	t.Run("resolves a selected parameter without rejecting other declared assignments", func(t *testing.T) {
+		resolver, err := parameter.NewCLIResolver([]string{"CONFIG_FILE=database.yaml", "GREETING=hello"}, nil)
+		require.NoError(t, err)
+		declared := []parameter.Parameter{{Name: "CONFIG_FILE"}, {Name: "GREETING"}}
+		selected := []parameter.Parameter{{Name: "CONFIG_FILE"}}
+
+		got, err := resolver.ResolveSelected(declared, selected)
+
+		require.NoError(t, err)
+		assert.Equal(t, parameter.Changes{"CONFIG_FILE": new("database.yaml")}, got)
+	})
+
 	t.Run("preserves an explicitly empty value", func(t *testing.T) {
 		resolver, err := parameter.NewCLIResolver([]string{"GREETING="}, nil)
 		require.NoError(t, err)

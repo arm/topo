@@ -17,15 +17,25 @@ func NewStrictResolverChain(resolvers ...Resolver) *StrictResolverChain {
 }
 
 func (r *StrictResolverChain) Resolve(parameters []Parameter) (Changes, error) {
+	return r.ResolveSelected(parameters, parameters)
+}
+
+func (r *StrictResolverChain) ResolveSelected(declared, selected []Parameter) (Changes, error) {
 	changes := Changes{}
-	remaining := parameters
+	remaining := selected
 
 	for _, resolver := range r.resolvers {
 		if len(remaining) == 0 {
 			break
 		}
 
-		resolvedChanges, err := resolver.Resolve(remaining)
+		var resolvedChanges Changes
+		var err error
+		if staged, ok := resolver.(SelectedParameterResolver); ok {
+			resolvedChanges, err = staged.ResolveSelected(declared, remaining)
+		} else {
+			resolvedChanges, err = resolver.Resolve(remaining)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +44,7 @@ func (r *StrictResolverChain) Resolve(parameters []Parameter) (Changes, error) {
 		remaining = withoutChanges(remaining, changes)
 	}
 
-	if err := validateRequiredValues(parameters, changes); err != nil {
+	if err := validateRequiredValues(selected, changes); err != nil {
 		return nil, err
 	}
 

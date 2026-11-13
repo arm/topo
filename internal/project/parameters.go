@@ -17,7 +17,7 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	parameters, err := decodeParameterMetadata(root.model)
+	parameters, err := loadParameterDeclarations([]composeSource{root})
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +59,53 @@ func collectSourceParameterReferences(sources []composeSource) map[string][]para
 				}
 			}
 			references[name] = append(references[name], usages...)
+		}
+	}
+	return references
+}
+
+func loadParameterDeclarations(sources []composeSource) ([]parameter.Parameter, error) {
+	return decodeParameterMetadata(sources[0].model)
+}
+
+func selectFilePathParameters(parameters []parameter.Parameter, sources []composeSource, currentValues map[string]string) []parameter.Parameter {
+	references := map[string][]parameter.Reference{}
+	for _, source := range sources {
+		for name, usages := range collectPathParameterReferences(source) {
+			references[name] = append(references[name], usages...)
+		}
+	}
+	var selected []parameter.Parameter
+	for _, declared := range parameters {
+		usages := references[declared.Name]
+		if len(usages) == 0 {
+			continue
+		}
+		declared.References = usages
+		if value, present := currentValues[declared.Name]; present {
+			declared.ExistingValue = &value
+		}
+		selected = append(selected, declared)
+	}
+	return selected
+}
+
+func collectPathParameterReferences(source composeSource) map[string][]parameter.Reference {
+	pathModel := map[string]any{"include": source.model["include"]}
+	pathServices := map[string]any{}
+	services, _ := source.model["services"].(map[string]any)
+	for name, value := range services {
+		service, _ := value.(map[string]any)
+		extends, _ := service["extends"].(map[string]any)
+		if file, present := extends["file"]; present {
+			pathServices[name] = map[string]any{"extends": map[string]any{"file": file}}
+		}
+	}
+	pathModel["services"] = pathServices
+	references := collectParameterReferences(pathModel)
+	for _, usages := range references {
+		for index := range usages {
+			usages[index].Environment = source.environment
 		}
 	}
 	return references

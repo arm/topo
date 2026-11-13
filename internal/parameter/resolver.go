@@ -99,3 +99,7 @@ func (parameter Parameter) isUsed(changes Changes) bool {
 type Resolver interface {
 	Resolve(parameters []Parameter) (Changes, error)
 }
+
+type SelectedParameterResolver interface {
+	ResolveSelected(declared, selected []Parameter) (Changes, error)
+}
