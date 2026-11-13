@@ -63,22 +63,22 @@ func collectSourceParameterReferences(sources []composeSource) map[string][]para
 
 func decodeParameterMetadata(model map[string]any) ([]parameter.Parameter, error) {
 	var document yaml.Node
-	if err := document.Encode(model); err != nil {
+	if err := document.Encode(model["x-topo"]); err != nil {
 		return nil, fmt.Errorf("failed to encode project metadata: %w", err)
 	}
 
-	var raw parameterFile
+	var raw parameterMetadata
 	if err := document.Decode(&raw); err != nil {
 		return nil, fmt.Errorf("failed to decode project metadata: %w", err)
 	}
 
-	if len(raw.Metadata.Parameters) == 0 && len(raw.Metadata.Args) > 0 {
+	if len(raw.Parameters) == 0 && len(raw.Args) > 0 {
 		logger.Warn("x-topo.args is deprecated; use x-topo.parameters instead")
-		raw.Metadata.Parameters = raw.Metadata.Args
+		raw.Parameters = raw.Args
 	}
 
-	parameters := make([]parameter.Parameter, 0, len(raw.Metadata.Parameters))
-	for name, param := range raw.Metadata.Parameters {
+	parameters := make([]parameter.Parameter, 0, len(raw.Parameters))
+	for name, param := range raw.Parameters {
 		var source *parameter.Source
 		if param.Source != nil {
 			source = &parameter.Source{
@@ -137,10 +137,6 @@ func collectParameterReferences(model map[string]any) map[string][]parameter.Ref
 		})
 	}
 	return references
-}
-
-type parameterFile struct {
-	Metadata parameterMetadata `yaml:"x-topo"`
 }
 
 type parameterMetadata struct {
