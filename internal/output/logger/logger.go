@@ -71,6 +71,9 @@ func New(opts Options) *Logger {
 
 func (l *Logger) Log(level Level, msg string) {
 	formattedMsg := formatMessage(l.format, l.palette, level, msg)
+	if l.format == term.Plain && term.IsTerminal(l.output) {
+		formattedMsg = "\r\033[K" + formattedMsg
+	}
 	_, _ = fmt.Fprintln(l.output, formattedMsg)
 }
 
