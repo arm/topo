@@ -106,6 +106,7 @@ func init() {
 	}
 	configureCmd.Flags().StringArray("unset", nil, "remove a parameter from the output env file; repeat for multiple parameters")
 	addNoPromptFlag(configureCmd)
+	addPluginDirectoryFlag(configureCmd)
 	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
 	addComposeFileFlag(configureCmd)
 	addEnvFileFlag(configureCmd)

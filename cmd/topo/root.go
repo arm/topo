@@ -284,7 +284,7 @@ func newConfigurationResolver(
 		factsResolver = parameter.NewFactsResolver(cmd.Context(), target.value, fact.Providers)
 	}
 	if interactive {
-		resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, output, factsResolver))
+		resolvers = append(resolvers, pluginInteractiveResolver{cmd: cmd, output: output, factsResolver: factsResolver})
 	} else if factsResolver != nil {
 		resolvers = append(resolvers, factsResolver)
 	}

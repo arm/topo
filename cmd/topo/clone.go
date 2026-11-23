@@ -81,6 +81,7 @@ func init() {
 		addTargetFlag(topoCloneCmd)
 	}
 	addNoPromptFlag(topoCloneCmd)
+	addPluginDirectoryFlag(topoCloneCmd)
 	addMigrateToEnvFlag(topoCloneCmd)
 	rootCmd.AddCommand(topoCloneCmd)
 }
