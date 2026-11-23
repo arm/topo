@@ -55,7 +55,7 @@ type HealthReport struct {
 }
 
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
-	if options.Engine == "" || options.Engine == EngineDocker {
+	if options.Engine == "" {
 		stdout, _, err := runner.NewLocal().Run(ctx, "docker --version")
 		if err == nil && strings.HasPrefix(strings.TrimSpace(stdout), "podman version ") {
 			logger.Warn("Docker checks were requested, but the docker command invokes Podman. Continuing with Podman checks.")

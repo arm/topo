@@ -16,7 +16,7 @@ import (
 )
 
 func TestCheck(t *testing.T) {
-	t.Run("warns and selects Podman checks when explicitly selected docker invokes Podman", func(t *testing.T) {
+	t.Run("fails Docker checks when explicitly selected docker invokes Podman", func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("uses a POSIX shell wrapper")
 		}
@@ -37,13 +37,17 @@ func TestCheck(t *testing.T) {
 		for _, dependency := range got.Deployment.Checks {
 			labels = append(labels, dependency.Name)
 		}
-		assert.Contains(t, labels, "Podman CLI")
-		assert.Contains(t, labels, "Podman connection")
-		assert.Contains(t, labels, "Podman API")
-		assert.NotContains(t, labels, "Docker CLI")
-		assert.NotContains(t, labels, "Docker daemon")
-		assert.Contains(t, logOutput.String(), "WARN")
-		assert.Contains(t, logOutput.String(), "Docker checks were requested, but the docker command invokes Podman. Continuing with Podman checks.")
+		assert.Contains(t, labels, "Docker CLI")
+		assert.NotContains(t, labels, "Podman CLI")
+		for _, dependency := range got.Deployment.Checks {
+			switch dependency.Name {
+			case "Docker CLI":
+				assert.Equal(t, health.CheckStatusError, dependency.Status)
+				assert.Contains(t, dependency.Value, "Podman")
+			case "Docker daemon", "Docker Compose", "Engine can build ARM64 images":
+				assert.Equal(t, health.CheckStatusUndetermined, dependency.Status)
+			}
+		}
 	})
 
 	t.Run("warns and selects Podman checks when the default docker command invokes Podman", func(t *testing.T) {

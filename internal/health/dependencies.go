@@ -132,6 +132,20 @@ func NewDependencyOnDockerCLI(r runner.Runner) Dependency {
 					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
 				}}
 			}
+			stdout, _, err := r.Run(ctx, "docker --version")
+			if err != nil {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  err.Error(),
+				}}
+			}
+			if strings.HasPrefix(strings.TrimSpace(stdout), "podman version ") {
+				return DependencyCheckResult{Failure: &DependencyCheckFailure{
+					Severity: SeverityError,
+					Message:  "Docker was requested, but the docker command invokes Podman",
+					Fix:      &Fix{Description: "Install Docker or select Podman with --engine podman."},
+				}}
+			}
 			return DependencyCheckResult{SuccessValue: "docker"}
 		},
 	}
