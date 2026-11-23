@@ -2,16 +2,24 @@ package term
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/chzyer/readline"
 )
+
+// PromptAction runs without blocking editing. Its result replaces the editable value.
+type PromptAction struct {
+	Key rune
+	Run func(context.Context, string) (string, error)
+}
 
 type Prompt struct {
 	Prefix       string
@@ -20,6 +28,7 @@ type Prompt struct {
 	Content      []string
 	Hint         func(input string, showValidationError bool) string
 	RestoreValue *string
+	Actions      []PromptAction
 }
 
 func ReadPrompt(
@@ -72,30 +81,37 @@ func ReadPrompt(
 		err = errors.Join(err, output.Close(), editor.Close())
 	}()
 
-	var showValidationError bool
+	var showValidationError atomic.Bool
 	var writeErr error
-	currentInput := prompt.Initial
+	var inputMu sync.Mutex
+	var currentInput atomic.Value
+	currentInput.Store(prompt.Initial)
+	actions := newPromptActions(editor, prompt.Actions, &inputMu)
+	defer actions.close()
 
-	if prompt.Hint != nil {
-		editor.Config.SetPainter(promptPainter{prompt, editor.Config.FuncGetWidth, &showValidationError})
-	}
-	editor.Config.SetListener(func(line []rune, _ int, key rune) ([]rune, int, bool) {
-		if key != 0 {
-			currentInput = string(line)
-		}
-		return nil, 0, false
+	editor.Config.SetPainter(promptPainter{
+		prompt, editor.Config.FuncGetWidth, &showValidationError, actions.status, &currentInput,
 	})
 	editor.Config.FuncFilterInputRune = func(key rune) (rune, bool) {
-		showValidationError = false
+		showValidationError.Store(false)
+		inputMu.Lock()
+		defer inputMu.Unlock()
 		if key == readline.CharBckSearch && prompt.RestoreValue != nil {
-			currentInput = *prompt.RestoreValue
-			editor.Operation.SetBuffer(currentInput)
+			currentInput.Store(*prompt.RestoreValue)
+			editor.Operation.SetBuffer(*prompt.RestoreValue)
 			return readline.CharBell, true // Let readline advance without entering reverse search.
 		}
-		if (key == readline.CharEnter || key == readline.CharCtrlJ) && prompt.Validate != nil {
-			showValidationError = !prompt.Validate(currentInput)
+		if actions.invoke(key, currentInput.Load().(string)) {
+			editor.Refresh()
+			return readline.CharBell, true
 		}
-		return key, !showValidationError
+		if (key == readline.CharEnter || key == readline.CharCtrlJ) && prompt.Validate != nil {
+			showValidationError.Store(!prompt.Validate(currentInput.Load().(string)))
+		}
+		if !showValidationError.Load() && (key == readline.CharEnter || key == readline.CharCtrlJ || key == readline.CharInterrupt) {
+			actions.cancel()
+		}
+		return key, !showValidationError.Load()
 	}
 
 	for row := range prompt.Content {
@@ -163,15 +179,21 @@ func (w *promptOutput) Close() error {
 type promptPainter struct {
 	prompt              Prompt
 	width               func() int
-	showValidationError *bool
+	showValidationError *atomic.Bool
+	status              func() string
+	input               *atomic.Value
 }
 
 func (p promptPainter) Paint(line []rune, _ int) []rune {
+	p.input.Store(string(line))
 	width := p.width()
-	if width < 1 || strings.HasSuffix(string(line), lineFeed) {
+	if p.prompt.Hint == nil || width < 1 || strings.HasSuffix(string(line), lineFeed) {
 		return line
 	}
-	hint := p.prompt.Hint(string(line), *p.showValidationError)
+	hint := p.prompt.Hint(string(line), p.showValidationError.Load())
+	if status := p.status(); status != "" {
+		hint += " · " + status
+	}
 
 	runes := readline.Runes{}
 	cells := runes.WidthAll(runes.ColorFilter([]rune(p.prompt.Prefix))) + runes.WidthAll(line)
