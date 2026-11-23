@@ -1,18 +1,24 @@
 package parameter
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/arm/topo/internal/output/term"
+	"github.com/arm/topo/pkg/plugin/observations"
+	"github.com/arm/topo/pkg/plugin/suggestions"
 )
 
 // InteractiveResolver resolves parameter definitions to changes by prompting for values.
 type InteractiveResolver struct {
-	readPrompt      func(term.Prompt) (string, error)
-	palette         term.Palette
-	prefillResolver Resolver
+	Context            context.Context
+	Providers          []suggestions.Provider
+	TargetObservations observations.Tree
+	readPrompt         func(term.Prompt) (string, error)
+	palette            term.Palette
+	prefillResolver    Resolver
 }
 
 func NewInteractiveResolverForTerminal(in, out *os.File, prefillResolver Resolver) *InteractiveResolver {
@@ -48,6 +54,10 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 			initial = *detectedValue
 		}
 
+		actions, labels, err := r.parameterActions(parameter)
+		if err != nil {
+			return nil, err
+		}
 		valueFromInput := func(input string) *string {
 			if detectedValue != nil && input == *detectedValue {
 				return detectedValue
@@ -58,12 +68,13 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 			return parameter.AssertSatisfiedBy(valueFromInput(input)) == nil
 		}
 		value, err := r.readPrompt(term.Prompt{
+			Actions:  actions,
 			Validate: validate,
 			Content:  formatParameterPromptContent(parameter, i+1, len(parameters), detectedValue, r.palette),
 			Hint: func(input string, showValidationError bool) string {
 				offerDetectedValue := detectedValue != nil && input != *detectedValue
 				return formatParameterPromptHint(
-					parameter, validate(input), showValidationError, offerDetectedValue, r.palette,
+					parameter, validate(input), showValidationError, offerDetectedValue, labels, r.palette,
 				)
 			},
 			Initial:      initial,
@@ -118,7 +129,7 @@ func formatParameterPromptContent(
 }
 
 func formatParameterPromptHint(
-	parameter Parameter, canSubmit, showValidationError, offerDetectedValue bool, palette term.Palette,
+	parameter Parameter, canSubmit, showValidationError, offerDetectedValue bool, actionHints string, palette term.Palette,
 ) string {
 	message := "Enter a value to continue"
 	if canSubmit {
@@ -131,7 +142,7 @@ func formatParameterPromptHint(
 	if offerDetectedValue {
 		message += palette.Color(term.Dim, " · Ctrl+R to use detected value")
 	}
-	return "   " + message + palette.Color(term.Dim, " · Ctrl+C to cancel")
+	return "   " + message + actionHints + palette.Color(term.Dim, " · Ctrl+C to cancel")
 }
 
 func contentfulStringOrNil(input string) *string {

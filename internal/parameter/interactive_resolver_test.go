@@ -1,15 +1,49 @@
 package parameter_test
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
+	"github.com/arm/topo/pkg/plugin/observations"
+	"github.com/arm/topo/pkg/plugin/suggestions"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestInteractiveResolver(t *testing.T) {
+	t.Run("Resolve", func(t *testing.T) {
+		t.Run("shows shortcuts and invokes the selected action with the edited value", func(t *testing.T) {
+			var prompt term.Prompt
+			provider := &actionProvider{}
+			resolver := parameter.NewInteractiveResolver(recordPrompt(&prompt), term.NewPalette(false), nil)
+			resolver.Providers = []suggestions.Provider{provider}
+			resolver.TargetObservations = observations.Tree{"memory": int64(42)}
+			parameters := []parameter.Parameter{{
+				Name: "MODEL", ExistingValue: new("old"),
+				Project: suggestions.ProjectMetadata{Name: "Image segmentation"},
+				Hints:   suggestions.Hints{"model.task": json.RawMessage(`"chat"`)},
+			}}
+			_, err := resolver.Resolve(parameters)
+			require.NoError(t, err)
+			assert.Equal(t, suggestions.ProjectMetadata{Name: "Image segmentation"}, provider.discoveryRequest.Project)
+
+			got, err := prompt.Actions[1].Run(context.Background(), "edited")
+
+			require.NoError(t, err)
+			assert.Equal(t, "selected", got)
+			assert.Equal(t, "second", string(provider.actionID))
+			assert.Equal(t, suggestions.Request{
+				Project: suggestions.ProjectMetadata{Name: "Image segmentation"}, Hints: suggestions.Hints{"model.task": json.RawMessage(`"chat"`)},
+				CurrentValue: new("edited"), TargetObservations: observations.Tree{"memory": int64(42)},
+			}, provider.request)
+			assert.Equal(t, "   Press Enter to continue · Ctrl+O to Open portal · Ctrl+G to Other action · Ctrl+C to cancel",
+				prompt.Hint("value", false))
+		})
+	})
+
 	t.Run("resolves parameters in order", func(t *testing.T) {
 		resolver := parameter.NewInteractiveResolver(promptValues("hello", "8080"), term.NewPalette(false), nil)
 		parameters := []parameter.Parameter{{Name: "GREETING", ExistingValue: new("old")}, {Name: "PORT"}}
@@ -212,4 +246,24 @@ func recordPrompt(captured *term.Prompt) func(term.Prompt) (string, error) {
 
 func acceptPromptInitial(prompt term.Prompt) (string, error) {
 	return prompt.Initial, nil
+}
+
+type actionProvider struct {
+	discoveryRequest suggestions.Request
+	actionID         suggestions.ActionID
+	request          suggestions.Request
+}
+
+func (p *actionProvider) Suggestions(_ context.Context, request suggestions.Request) (suggestions.Response, error) {
+	p.discoveryRequest = request
+	return suggestions.Response{AvailableActions: []suggestions.Action{
+		{ID: "first", Label: "Open portal"}, {ID: "second", Label: "Other action"},
+	}}, nil
+}
+
+func (p *actionProvider) RunAction(
+	_ context.Context, id suggestions.ActionID, request suggestions.Request,
+) (suggestions.ActionResponse, error) {
+	p.actionID, p.request = id, request
+	return suggestions.ActionResponse{Suggestions: []suggestions.Suggestion{{Value: "selected"}}}, nil
 }
