@@ -3,6 +3,7 @@ package parameter
 import (
 	"strings"
 
+	"github.com/arm/topo/pkg/plugin/suggestions"
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
@@ -14,6 +15,8 @@ type Source struct {
 
 type Parameter struct {
 	Name          string
+	Project       suggestions.ProjectMetadata
+	Hints         suggestions.Hints
 	Source        *Source
 	Description   string
 	Example       string
