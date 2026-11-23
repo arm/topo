@@ -1,7 +1,6 @@
 package health_test
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -9,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/arm/topo/internal/health"
-	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,9 +23,6 @@ func TestCheck(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(directory, "docker"), []byte(wrapper), 0o700))
 		t.Setenv("PATH", directory)
 		target := ssh.NewDestination("user@example.com")
-		var logOutput bytes.Buffer
-		logger.SetOptions(logger.Options{Output: &logOutput})
-		t.Cleanup(func() { logger.SetOptions(logger.Options{}) })
 
 		got := health.Check(t.Context(), health.HealthCheckOptions{
 			Engine: health.EngineDocker, Target: &target, SkipVersionChecks: true,
@@ -50,7 +45,7 @@ func TestCheck(t *testing.T) {
 		}
 	})
 
-	t.Run("warns and selects Podman checks when the default docker command invokes Podman", func(t *testing.T) {
+	t.Run("fails Docker checks when the default docker command invokes Podman", func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("uses a POSIX shell wrapper")
 		}
@@ -59,9 +54,6 @@ func TestCheck(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(directory, "docker"), []byte(wrapper), 0o700))
 		t.Setenv("PATH", directory)
 		target := ssh.NewDestination("user@example.com")
-		var logOutput bytes.Buffer
-		logger.SetOptions(logger.Options{Output: &logOutput})
-		t.Cleanup(func() { logger.SetOptions(logger.Options{}) })
 
 		got := health.Check(t.Context(), health.HealthCheckOptions{Target: &target, SkipVersionChecks: true})
 
@@ -69,13 +61,17 @@ func TestCheck(t *testing.T) {
 		for _, dependency := range got.Deployment.Checks {
 			labels = append(labels, dependency.Name)
 		}
-		assert.Contains(t, labels, "Podman CLI")
-		assert.Contains(t, labels, "Podman connection")
-		assert.Contains(t, labels, "Podman API")
-		assert.NotContains(t, labels, "Docker CLI")
-		assert.NotContains(t, labels, "Docker daemon")
-		assert.Contains(t, logOutput.String(), "WARN")
-		assert.Contains(t, logOutput.String(), "Docker checks were requested, but the docker command invokes Podman. Continuing with Podman checks.")
+		assert.Contains(t, labels, "Docker CLI")
+		assert.NotContains(t, labels, "Podman CLI")
+		for _, dependency := range got.Deployment.Checks {
+			switch dependency.Name {
+			case "Docker CLI":
+				assert.Equal(t, health.CheckStatusError, dependency.Status)
+				assert.Contains(t, dependency.Value, "Podman")
+			case "Docker daemon", "Docker Compose", "Engine can build ARM64 images":
+				assert.Equal(t, health.CheckStatusUndetermined, dependency.Status)
+			}
+		}
 	})
 }
 

@@ -1,12 +1,6 @@
 package health
 
-import (
-	"context"
-	"strings"
-
-	"github.com/arm/topo/internal/output/logger"
-	"github.com/arm/topo/internal/runner"
-)
+import "context"
 
 type CheckStatus string
 
@@ -55,13 +49,6 @@ type HealthReport struct {
 }
 
 func Check(ctx context.Context, options HealthCheckOptions) HealthReport {
-	if options.Engine == "" {
-		stdout, _, err := runner.NewLocal().Run(ctx, "docker --version")
-		if err == nil && strings.HasPrefix(strings.TrimSpace(stdout), "podman version ") {
-			logger.Warn("Docker checks were requested, but the docker command invokes Podman. Continuing with Podman checks.")
-			options.Engine = EnginePodman
-		}
-	}
 	healthCheck := NewHealthCheck(options)
 	evaluatedHealthCheck := healthCheck.Evaluate(ctx)
 	return evaluatedHealthCheck.Report(targetDetails(options), options.MissingTargetFixMessage)
