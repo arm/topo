@@ -28,3 +28,17 @@ per-invocation ID on `RunAction`. Registration happens before execution so
 cancellation cannot race ahead of registration. Completion of `RunAction`
 acknowledges cleanup. Rebuild plugin executables against the matching SDK when
 testing changes to the experimental transport.
+
+## AI Portal example
+
+Run `bash pkg/plugin/examples/build-plugins.sh` to build the AI Portal and memory
+examples, then pass `--plugin-dir pkg/plugin/examples/bin` to `topo configure`.
+Set `TOPO_AI_PORTAL_URL` if the Portal that supports the handoff is not running at
+`http://localhost:3000/ai/models`.
+
+The example offers model selection for a parameter with a nonempty `model.task`
+or `model.format` string, or `huggingface.repo-id` in its `meta.type` hint (a
+string or array). It opens the browser only when selected and returns a repository
+ID as a candidate. Closing the browser alone does not end the action; you can
+still enter a value manually. The plugin closes its loopback callback server on
+cancellation.

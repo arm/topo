@@ -4,6 +4,7 @@
 # Temporary test files
 /test-tmp
 
-# Local binary
+# Local build output
 /topo
 /topo-sbom-source.json
+/pkg/plugin/examples/bin/
