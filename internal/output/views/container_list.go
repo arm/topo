@@ -23,9 +23,9 @@ type ContainerList struct {
 	Containers []Container `json:"containers"`
 }
 
-const containerListTemplate = `Container ID	Names	Image	Status	Processing Domain	Address
+const containerListTemplate = `Container ID	Service	Names	Image	Status	Processing Domain	Address
 {{- range .}}
-{{.ID}}	{{.Names}}	{{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
+{{.ID}}	{{.Service}}	{{.Names}}	{{.Image}}	{{.Status}}	{{.ProcessingDomain}}	{{.Address}}
 {{- end }}`
 
 func (r ContainerList) AsPlain(_ term.Palette) (string, error) {

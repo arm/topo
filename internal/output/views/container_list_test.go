@@ -13,13 +13,13 @@ import (
 
 func TestContainerList(t *testing.T) {
 	t.Run("PlainFormat", func(t *testing.T) {
-		t.Run("renders container id, names, image, status, processing domain, and address", func(t *testing.T) {
+		t.Run("renders container id, service, names, image, status, processing domain, and address", func(t *testing.T) {
 			toPrint := views.ContainerList{
 				Containers: []views.Container{
 					{
 						ID:               "abcdef123456",
 						Names:            "project-web-1",
-						Service:          "web",
+						Service:          "cool-web-service",
 						Image:            "my-app",
 						State:            "running",
 						Status:           "Up 5 minutes",
@@ -34,12 +34,14 @@ func TestContainerList(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Contains(t, out.String(), "abcdef123456")
+			assert.Contains(t, out.String(), "cool-web-service")
 			assert.Contains(t, out.String(), "project-web-1")
 			assert.Contains(t, out.String(), "my-app")
 			assert.Contains(t, out.String(), "Up 5 minutes")
 			assert.Contains(t, out.String(), "m0")
 			assert.Contains(t, out.String(), "localhost:8080")
 			assert.Contains(t, out.String(), "Container ID")
+			assert.Contains(t, out.String(), "Service")
 			assert.Contains(t, out.String(), "Names")
 			assert.NotContains(t, out.String(), "State")
 			assert.NotContains(t, out.String(), "running")
@@ -70,7 +72,7 @@ func TestContainerList(t *testing.T) {
 			err := views.Print(toPrint, &out, term.Plain)
 
 			require.NoError(t, err)
-			assert.Equal(t, "Container ID   Names   Image   Status   Processing Domain   Address", out.String())
+			assert.Equal(t, "Container ID   Service   Names   Image   Status   Processing Domain   Address", out.String())
 		})
 	})
 
