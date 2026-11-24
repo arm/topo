@@ -28,7 +28,7 @@ func runInstallScript(t *testing.T, args ...string) (string, error) {
 		"-ExecutionPolicy", "Bypass",
 		"-File", path,
 	}, args...)
-	cmd := exec.Command("powershell", cmdArgs...)
+	cmd := exec.Command("pwsh", cmdArgs...)
 	cmd.Env = append(os.Environ(), "LOCALAPPDATA="+localAppDataDir)
 
 	out, err := cmd.CombinedOutput()
