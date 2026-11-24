@@ -14,6 +14,7 @@ import (
 	"github.com/arm/topo/internal/output/logger"
 	"github.com/arm/topo/internal/output/term"
 	"github.com/arm/topo/internal/parameter"
+	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -58,11 +59,11 @@ func init() {
 const composeFileFlag = "file"
 
 func addComposeFileFlag(cmd *cobra.Command) {
-	cmd.Flags().StringP(
+	cmd.Flags().StringArrayP(
 		composeFileFlag,
 		"f",
-		"",
-		"compose file to use (default: compose.yaml, then compose.yml)",
+		nil,
+		"compose files to use; repeat -f for multiple files (default: compose.yaml, then compose.yml)",
 	)
 }
 
@@ -72,23 +73,39 @@ func resolveComposeFilePath(cmd *cobra.Command) (string, error) {
 		panic(fmt.Sprintf("internal error: compose file flag not registered: %s", composeFileFlag))
 	}
 
-	if flag.Changed {
-		composeFileArg := strings.TrimSpace(flag.Value.String())
-		if composeFileArg == "" {
-			return "", fmt.Errorf("compose file path must not be empty")
-		}
-		composeFilePath, err := filepath.Abs(composeFileArg)
-		if err != nil {
-			return "", fmt.Errorf("failed to resolve compose file path: %w", err)
-		}
-		return compose.RequireFile(composeFilePath)
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("failed to get current working directory: %w", err)
 	}
 	return compose.FindDefaultFile(cwd)
+}
+
+func resolveComposeFilePaths(cmd *cobra.Command) ([]string, error) {
+	if !cmd.Flags().Changed(composeFileFlag) {
+		path, err := resolveComposeFilePath(cmd)
+		if err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+	}
+	paths, err := cmd.Flags().GetStringArray(composeFileFlag)
+	if err != nil {
+		return nil, err
+	}
+	for index, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			return nil, fmt.Errorf("compose file path must not be empty")
+		}
+		absolutePath, err := filepath.Abs(strings.TrimSpace(path))
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve compose file path: %w", err)
+		}
+		paths[index], err = compose.RequireFile(absolutePath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return paths, nil
 }
 
 const targetEnvVar = env.TargetVariable
@@ -212,6 +229,18 @@ func addEnvFileFlag(cmd *cobra.Command) {
 		envFileFlag, env.DefaultFilenames,
 		"path to env file to source values for compose interpolation",
 	)
+}
+
+func collectComposeEnvironmentFiles(cmd *cobra.Command, composeFiles []string) ([]string, error) {
+	scope := project.Scope{ComposeFiles: composeFiles}
+	if cmd.Flags().Changed(envFileFlag) {
+		files, err := getEnvFiles(cmd, composeFiles[0])
+		if err != nil {
+			return nil, err
+		}
+		scope.EnvFiles = files
+	}
+	return scope.CollectEnvironmentFiles()
 }
 
 func getEnvFiles(cmd *cobra.Command, composeFilePath string) ([]string, error) {

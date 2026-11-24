@@ -42,12 +42,17 @@ func PullableServices(scope Scope) ([]string, error) {
 }
 
 func Read(scope Scope) (*types.Project, error) {
+	composeFiles := scope.ComposeFiles
+	environmentFiles, err := scope.CollectEnvironmentFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve environment files: %w", err)
+	}
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
-		[]string{scope.ComposeFile},
+		composeFiles,
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
-		cli.WithEnvFiles(scope.EnvFiles...),
+		cli.WithEnvFiles(environmentFiles...),
 		cli.WithEnv(scope.Env),
 	)
 	if err != nil {

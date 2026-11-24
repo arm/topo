@@ -14,20 +14,37 @@ import (
 )
 
 func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	parameters, err := loadParameterMetadata(scope.ComposeFile)
-	if err != nil {
-		return nil, err
+	composeFiles := scope.ComposeFiles
+	var parameters []parameter.Parameter
+	parameterIndexes := make(map[string]int)
+	for _, composeFile := range composeFiles {
+		declared, err := loadParameterMetadata(composeFile)
+		if err != nil {
+			return nil, err
+		}
+		for _, declaration := range declared {
+			if index, exists := parameterIndexes[declaration.Name]; exists {
+				parameters[index] = declaration
+				continue
+			}
+			parameterIndexes[declaration.Name] = len(parameters)
+			parameters = append(parameters, declaration)
+		}
 	}
 	if len(parameters) == 0 {
 		return parameters, nil
 	}
 
-	currentValues, err := env.CurrentValues(scope.EnvFiles)
+	environmentFiles, err := scope.CollectEnvironmentFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve environment files: %w", err)
+	}
+	currentValues, err := env.CurrentValues(environmentFiles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
 
-	parsedComposeConfig, err := readUninterpolated(scope.ComposeFile)
+	parsedComposeConfig, err := readUninterpolated(composeFiles)
 	if err != nil {
 		return nil, err
 	}

@@ -30,16 +30,16 @@ var (
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
-	Short: "Deploy services using the compose file",
-	Long: `Deploy services to the target using definitions in the compose file.
+	Short: "Deploy services using Compose files",
+	Long: `Deploy services to the target using definitions in the selected Compose files.
 
 This command performs the following operations in sequence:
-  1. Build - Builds container images defined in the compose file on the host
+  1. Build - Builds container images defined in the selected Compose files on the host
   2. Pull - Pulls any required images from registries to the host
-  3. Transfer - Transfers built and pulled images and compose file to the target
+  3. Transfer - Transfers built and pulled images and Compose files to the target
   4. Run - Runs docker compose up on the target
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.`,
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Repeat -f to merge multiple Compose files in order.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -52,15 +52,15 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		composeFilePath, err := resolveComposeFilePath(cmd)
+		composeFiles, err := resolveComposeFilePaths(cmd)
 		if err != nil {
 			return err
 		}
-		envFiles, err := getEnvFiles(cmd, composeFilePath)
+		envFiles, err := collectComposeEnvironmentFiles(cmd, composeFiles)
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
+		scope, err := project.BuildScope(composeFiles, target.value, envFiles)
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		defaultSuccessMessage := buildDefaultSuccessMessage(
 			engine,
 			target,
-			strings.TrimSpace(composeFileFlagValue.Value.String()),
+			composeFiles,
 			composeFileFlagValue.Changed,
 		)
 
@@ -118,12 +118,14 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 	},
 }
 
-func buildDefaultSuccessMessage(engine engineSelection, target targetSelection, composeFilePath string, explicitComposeFile bool) string {
-	composeFileArg := ""
+func buildDefaultSuccessMessage(engine engineSelection, target targetSelection, composeFiles []string, explicitComposeFile bool) string {
+	var composeFileArgs []string
 	if explicitComposeFile {
-		composeFileArg = "-f " + cmdtext.QuoteArg(composeFilePath)
+		for _, composeFile := range composeFiles {
+			composeFileArgs = append(composeFileArgs, "-f "+cmdtext.QuoteArg(composeFile))
+		}
 	}
-	psCommand := joinNonEmpty("topo ps", engine.cliArg(), target.cliArg(), composeFileArg)
+	psCommand := joinNonEmpty("topo ps", engine.cliArg(), target.cliArg(), strings.Join(composeFileArgs, " "))
 	return fmt.Sprintf("Run `%s` to see deployed containers", psCommand)
 }
 

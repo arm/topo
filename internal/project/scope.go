@@ -15,12 +15,12 @@ import (
 )
 
 type Scope struct {
-	ComposeFile string
-	Env         []string
-	EnvFiles    []string
+	ComposeFiles []string
+	Env          []string
+	EnvFiles     []string
 }
 
-func BuildScope(composeFile string, target string, envFiles []string) (Scope, error) {
+func BuildScope(composeFiles []string, target string, envFiles []string) (Scope, error) {
 	targetEnv := []string{}
 	if target != "" {
 		var err error
@@ -30,19 +30,32 @@ func BuildScope(composeFile string, target string, envFiles []string) (Scope, er
 		}
 	}
 
-	includePaths, err := collectIncludePaths(composeFile)
+	scope := Scope{ComposeFiles: composeFiles, Env: targetEnv, EnvFiles: envFiles}
+	rootEnvironmentFiles, err := scope.CollectEnvironmentFiles()
 	if err != nil {
-		return Scope{}, fmt.Errorf("failed to read include paths: %w", err)
+		return Scope{}, err
+	}
+	var includePaths []string
+	for _, composeFile := range composeFiles {
+		paths, err := collectIncludePaths(composeFile)
+		if err != nil {
+			return Scope{}, fmt.Errorf("failed to read include paths: %w", err)
+		}
+		includePaths = append(includePaths, paths...)
 	}
 	environmentFiles, err := collectEnvFiles(includePaths)
 	if err != nil {
 		return Scope{}, fmt.Errorf("failed to collect included environment files: %w", err)
 	}
-	return Scope{
-		ComposeFile: composeFile,
-		Env:         targetEnv,
-		EnvFiles:    append(environmentFiles, envFiles...),
-	}, nil
+	scope.EnvFiles = append(environmentFiles, rootEnvironmentFiles...)
+	return scope, nil
+}
+
+func (scope Scope) CollectEnvironmentFiles() ([]string, error) {
+	if len(scope.EnvFiles) > 0 {
+		return scope.EnvFiles, nil
+	}
+	return collectEnvFiles(scope.ComposeFiles)
 }
 
 func collectIncludePaths(root string) ([]string, error) {
@@ -169,8 +182,8 @@ func collectEnvFiles(composeFiles []string) ([]string, error) {
 	return environmentFiles, nil
 }
 
-func readUninterpolated(composeFilePath string) (map[string]any, error) {
-	options, err := cli.NewProjectOptions([]string{composeFilePath},
+func readUninterpolated(composeFiles []string) (map[string]any, error) {
+	options, err := cli.NewProjectOptions(composeFiles,
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
 		cli.WithLoadOptions(func(o *loader.Options) {
