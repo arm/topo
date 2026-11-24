@@ -15,15 +15,13 @@ func TestMemoryProvider(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
 			"cat /proc/meminfo": {Output: "MemFree: 1024 kB\nMemTotal:       16384000 kB\n"},
 		}}
-		want := fact.Report{Groups: []fact.Group{{
-			ID: fact.GroupSystemMemory,
-			Facts: []fact.Fact{{
-				Key:         fact.FactMemoryTotal,
+		want := fact.Report{
+			fact.FactMemoryTotal: {
 				Value:       fact.Value{Type: "integer", Integer: 16384000},
 				Label:       "Total memory",
 				Description: "Kernel-reported MemTotal in KiB",
-			}},
-		}}}
+			},
+		}
 
 		got, err := (fact.MemoryProvider{}).Facts(context.Background(), r)
 

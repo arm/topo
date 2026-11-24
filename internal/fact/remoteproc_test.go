@@ -21,26 +21,18 @@ func TestRemoteprocProvider(t *testing.T) {
 `,
 			},
 		}}
-		want := fact.Report{Groups: []fact.Group{
-			{
-				ID: "remoteproc2",
-				Facts: []fact.Fact{{
-					Key:         fact.FactRemoteprocName,
-					Value:       fact.Value{Type: "string", Text: "Cortex M4"},
-					Label:       "Remote processor name",
-					Description: "Kernel-reported remote processor name",
-				}},
+		want := fact.Report{
+			"remoteproc2.name": {
+				Value:       fact.Value{Type: "string", Text: "Cortex M4"},
+				Label:       "Remote processor name",
+				Description: "Kernel-reported remote processor name",
 			},
-			{
-				ID: "remoteproc7",
-				Facts: []fact.Fact{{
-					Key:         fact.FactRemoteprocName,
-					Value:       fact.Value{Type: "string", Text: "Cortex M4"},
-					Label:       "Remote processor name",
-					Description: "Kernel-reported remote processor name",
-				}},
+			"remoteproc7.name": {
+				Value:       fact.Value{Type: "string", Text: "Cortex M4"},
+				Label:       "Remote processor name",
+				Description: "Kernel-reported remote processor name",
 			},
-		}}
+		}
 
 		got, err := (fact.RemoteprocProvider{}).Facts(context.Background(), r)
 
@@ -57,7 +49,20 @@ func TestRemoteprocProvider(t *testing.T) {
 		got, err := (fact.RemoteprocProvider{}).Facts(context.Background(), r)
 
 		require.NoError(t, err)
-		assert.Equal(t, fact.Report{}, got)
+		assert.Empty(t, got)
+	})
+
+	t.Run("rejects duplicate device keys", func(t *testing.T) {
+		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+			probe: {
+				Output: "/sys/class/remoteproc/remoteproc2/name:Cortex M4\n/sys/class/remoteproc/remoteproc2/name:Cortex M55\n",
+			},
+		}}
+
+		got, err := (fact.RemoteprocProvider{}).Facts(context.Background(), r)
+
+		require.ErrorContains(t, err, "duplicate remoteproc fact key")
+		assert.Nil(t, got)
 	})
 
 	t.Run("rejects an empty name", func(t *testing.T) {
@@ -78,5 +83,20 @@ func TestRemoteprocProvider(t *testing.T) {
 		_, err := (fact.RemoteprocProvider{}).Facts(context.Background(), r)
 
 		assert.ErrorIs(t, err, assert.AnError)
+	})
+}
+
+func TestRemoteprocNames(t *testing.T) {
+	t.Run("selects device names from a report with other facts", func(t *testing.T) {
+		report := fact.Report{
+			"remoteproc2.name":          {Value: fact.Value{Type: "string", Text: "Cortex M55"}},
+			"remoteproc0.firmware.name": {Value: fact.Value{Type: "string", Text: "demo.elf"}},
+			"remoteproc0.running":       {Value: fact.Value{Type: "boolean", Boolean: true}},
+			"remoteproc0.name":          {Value: fact.Value{Type: "string", Text: "Cortex M4"}},
+		}
+
+		got := fact.RemoteprocNames(report)
+
+		assert.Equal(t, []string{"Cortex M4", "Cortex M55"}, got)
 	})
 }

@@ -8,66 +8,30 @@ import (
 	"github.com/arm/topo/internal/runner"
 )
 
-var Providers = map[string]Provider{
-	"topo.memory":     MemoryProvider{},
-	"topo.remoteproc": RemoteprocProvider{},
+var BuiltinTargetProviders = map[string]Provider{
+	"builtin.target.memory":     MemoryProvider{},
+	"builtin.target.remoteproc": RemoteprocProvider{},
 }
 
 type Provider interface {
 	Facts(ctx context.Context, targetRunner runner.CommandRunner) (Report, error)
 }
 
-type Report struct {
-	Groups []Group
-}
-
-func (r Report) Find(groupID, key string) (Fact, bool) {
-	for _, group := range r.Groups {
-		if group.ID != groupID {
-			continue
-		}
-		return group.Find(key)
-	}
-	return Fact{}, false
-}
+type Report map[string]Fact
 
 func (r Report) Validate() error {
-	groups := make(map[string]bool, len(r.Groups))
-	for _, group := range r.Groups {
-		if group.ID == "" || groups[group.ID] {
-			return fmt.Errorf("empty or duplicate fact group: %q", group.ID)
+	for key, fact := range r {
+		if key == "" {
+			return fmt.Errorf("invalid fact key: %q", key)
 		}
-		groups[group.ID] = true
-		keys := make(map[string]bool, len(group.Facts))
-		for _, fact := range group.Facts {
-			if fact.Key == "" || keys[fact.Key] {
-				return fmt.Errorf("invalid or duplicate fact: %q in group %q", fact.Key, group.ID)
-			}
-			keys[fact.Key] = true
-			if err := fact.Value.Validate(); err != nil {
-				return fmt.Errorf("invalid fact %q in group %q: %w", fact.Key, group.ID, err)
-			}
+		if err := fact.Value.Validate(); err != nil {
+			return fmt.Errorf("invalid fact %q: %w", key, err)
 		}
 	}
 	return nil
 }
 
-type Group struct {
-	ID    string
-	Facts []Fact
-}
-
-func (g Group) Find(key string) (Fact, bool) {
-	for _, fact := range g.Facts {
-		if fact.Key == key {
-			return fact, true
-		}
-	}
-	return Fact{}, false
-}
-
 type Fact struct {
-	Key         string
 	Value       Value
 	Label       string
 	Description string

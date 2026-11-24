@@ -9,10 +9,7 @@ import (
 	"github.com/arm/topo/internal/runner"
 )
 
-const (
-	GroupSystemMemory = "system-memory"
-	FactMemoryTotal   = "memory.total"
-)
+const FactMemoryTotal = "total"
 
 type MemoryProvider struct{}
 
@@ -20,23 +17,19 @@ func (MemoryProvider) Facts(ctx context.Context, r runner.CommandRunner) (Report
 	path := "/proc/meminfo"
 	out, _, err := r.Run(ctx, fmt.Sprintf("cat %s", path))
 	if err != nil {
-		return Report{}, err
+		return nil, err
 	}
 
 	value, err := findKeyValue("MemTotal", out)
 	if err != nil {
-		return Report{}, fmt.Errorf("failed to read %s: %w", path, err)
+		return nil, fmt.Errorf("failed to read %s: %w", path, err)
 	}
 	return Report{
-		Groups: []Group{{
-			ID: GroupSystemMemory,
-			Facts: []Fact{{
-				Key:         FactMemoryTotal,
-				Value:       Value{Type: "integer", Integer: value},
-				Label:       "Total memory",
-				Description: "Kernel-reported MemTotal in KiB",
-			}},
-		}},
+		FactMemoryTotal: {
+			Value:       Value{Type: "integer", Integer: value},
+			Label:       "Total memory",
+			Description: "Kernel-reported MemTotal in KiB",
+		},
 	}, nil
 }
 

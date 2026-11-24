@@ -305,14 +305,7 @@ func NewDependencyOnRemoteproc(r runner.Runner) Dependency {
 					},
 				}
 			}
-			if len(report.Groups) > 0 {
-				names := make([]string, len(report.Groups))
-				for i, group := range report.Groups {
-					name, ok := group.Find(fact.FactRemoteprocName)
-					if ok {
-						names[i] = name.Value.String()
-					}
-				}
+			if names := fact.RemoteprocNames(report); len(names) > 0 {
 				return DependencyCheckResult{
 					SuccessValue: strings.Join(names, ", "),
 				}

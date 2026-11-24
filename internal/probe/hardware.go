@@ -48,9 +48,9 @@ func memoryTotal(ctx context.Context, r runner.Runner) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	memory, ok := report.Find(fact.GroupSystemMemory, fact.FactMemoryTotal)
+	memory, ok := report[fact.FactMemoryTotal]
 	if !ok || memory.Value.Type != "integer" {
-		return 0, fmt.Errorf("memory provider did not return an integer %s fact in %s", fact.FactMemoryTotal, fact.GroupSystemMemory)
+		return 0, fmt.Errorf("memory provider did not return an integer %s fact", fact.FactMemoryTotal)
 	}
 	return memory.Value.Integer, nil
 }
@@ -63,12 +63,8 @@ func remoteProcessors(ctx context.Context, r runner.Runner) ([]RemoteProcessor, 
 	}
 
 	var remoteProcs []RemoteProcessor
-	for _, group := range report.Groups {
-		name, ok := group.Find(fact.FactRemoteprocName)
-		if !ok {
-			return nil, fmt.Errorf("remoteproc provider did not return a %s for %s", fact.FactRemoteprocName, group.ID)
-		}
-		remoteProcs = append(remoteProcs, RemoteProcessor{Name: name.Value.String()})
+	for _, name := range fact.RemoteprocNames(report) {
+		remoteProcs = append(remoteProcs, RemoteProcessor{Name: name})
 	}
 	return remoteProcs, nil
 }

@@ -61,19 +61,11 @@ func loadParameterMetadata(composeFilePath string) ([]parameter.Parameter, error
 
 	parameters := make([]parameter.Parameter, 0, len(raw.Metadata.Parameters))
 	for name, param := range raw.Metadata.Parameters {
-		var source *parameter.Source
-		if param.Source != nil {
-			source = &parameter.Source{
-				Provider: param.Source.Provider,
-				Group:    param.Source.Group,
-				Fact:     param.Source.Fact,
-			}
-		}
 		parameters = append(parameters, parameter.Parameter{
 			Name:        name,
 			Description: param.Description,
 			Example:     param.Example,
-			Source:      source,
+			Source:      param.Source,
 		})
 	}
 
@@ -131,13 +123,7 @@ type parameterMetadata struct {
 }
 
 type parameterFields struct {
-	Source      *sourceFields `yaml:"source,omitempty"`
-	Description string        `yaml:"description"`
-	Example     string        `yaml:"example,omitempty"`
-}
-
-type sourceFields struct {
-	Provider string `yaml:"provider"`
-	Group    string `yaml:"group"`
-	Fact     string `yaml:"fact"`
+	Source      *string `yaml:"source,omitempty"`
+	Description string  `yaml:"description"`
+	Example     string  `yaml:"example,omitempty"`
 }

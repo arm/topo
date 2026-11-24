@@ -17,10 +17,10 @@ func TestLoadParameters(t *testing.T) {
 	t.Run("loads parameter metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `x-topo:
   parameters:
-    PORT:
-      description: HTTP port
-      example: "8080"
-      source: {provider: test, group: settings, fact: port}
+    MEMORY_KIB:
+      description: Total target memory in KiB
+      example: "1048576"
+      source: builtin.target.memory.total
     EMPTY: {}
     UNSET: {}
 `)
@@ -29,7 +29,7 @@ func TestLoadParameters(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
-			{Name: "PORT", Description: "HTTP port", Example: "8080", Source: &parameter.Source{Provider: "test", Group: "settings", Fact: "port"}},
+			{Name: "MEMORY_KIB", Description: "Total target memory in KiB", Example: "1048576", Source: new("builtin.target.memory.total")},
 			{Name: "EMPTY"},
 			{Name: "UNSET"},
 		}, got)
