@@ -60,8 +60,8 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 		value, err := r.readPrompt(term.Prompt{
 			Validate: validate,
 			Content:  formatParameterPromptContent(parameter, i+1, len(parameters), detectedValue, r.palette),
-			Hint: func(input string, invalid bool) string {
-				return formatParameterPromptHint(parameter, validate(input), invalid, r.palette)
+			Hint: func(input string, showValidationError bool) string {
+				return formatParameterPromptHint(parameter, validate(input), showValidationError, r.palette)
 			},
 			Initial: initial,
 			Prefix:  "   " + r.palette.Color(term.Magenta, ">") + " ",
@@ -114,14 +114,14 @@ func formatParameterPromptContent(
 }
 
 func formatParameterPromptHint(
-	parameter Parameter, valid, invalid bool, palette term.Palette,
+	parameter Parameter, canSubmit, showValidationError bool, palette term.Palette,
 ) string {
 	message := "Enter a value to continue"
-	if valid {
+	if canSubmit {
 		message = "Press Enter to continue"
 	}
 	message = palette.Color(term.Dim, message)
-	if invalid {
+	if showValidationError {
 		message = fmt.Sprintf("%s %s is required, enter a value to continue", palette.Color(term.Red, "✗"), parameter.Name)
 	}
 	return "   " + message + palette.Color(term.Dim, " · Ctrl+C to cancel")
