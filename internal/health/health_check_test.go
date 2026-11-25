@@ -14,7 +14,15 @@ import (
 )
 
 func TestCheck(t *testing.T) {
-	t.Run("fails Docker checks when explicitly selected docker invokes Podman", func(t *testing.T) {
+	testCases := []struct {
+		name   string
+		engine health.Engine
+	}{
+		{name: "fails Docker checks when explicitly selected docker invokes Podman", engine: health.EngineDocker},
+		{name: "fails Docker checks when the default docker command invokes Podman"},
+	}
+
+	preparePodmanWrapper := func(t *testing.T) ssh.Destination {
 		if runtime.GOOS == "windows" {
 			t.Skip("uses a POSIX shell wrapper")
 		}
@@ -22,10 +30,14 @@ func TestCheck(t *testing.T) {
 		wrapper := "#!/bin/sh\n[ \"$1\" = --version ] || exit 1\necho 'podman version 6.1.4'\n"
 		require.NoError(t, os.WriteFile(filepath.Join(directory, "docker"), []byte(wrapper), 0o700))
 		t.Setenv("PATH", directory)
-		target := ssh.NewDestination("user@example.com")
+		return ssh.NewDestination("user@example.com")
+	}
+
+	checkEngine := func(t *testing.T, engine health.Engine) {
+		target := preparePodmanWrapper(t)
 
 		got := health.Check(t.Context(), health.HealthCheckOptions{
-			Engine: health.EngineDocker, Target: &target, SkipVersionChecks: true,
+			Engine: engine, Target: &target, SkipVersionChecks: true,
 		})
 
 		var labels []string
@@ -43,36 +55,14 @@ func TestCheck(t *testing.T) {
 				assert.Equal(t, health.CheckStatusUndetermined, dependency.Status)
 			}
 		}
-	})
+	}
 
-	t.Run("fails Docker checks when the default docker command invokes Podman", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("uses a POSIX shell wrapper")
-		}
-		directory := t.TempDir()
-		wrapper := "#!/bin/sh\n[ \"$1\" = --version ] || exit 1\necho 'podman version 6.1.4'\n"
-		require.NoError(t, os.WriteFile(filepath.Join(directory, "docker"), []byte(wrapper), 0o700))
-		t.Setenv("PATH", directory)
-		target := ssh.NewDestination("user@example.com")
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checkEngine(t, testCase.engine)
+		})
+	}
 
-		got := health.Check(t.Context(), health.HealthCheckOptions{Target: &target, SkipVersionChecks: true})
-
-		var labels []string
-		for _, dependency := range got.Deployment.Checks {
-			labels = append(labels, dependency.Name)
-		}
-		assert.Contains(t, labels, "Docker CLI")
-		assert.NotContains(t, labels, "Podman CLI")
-		for _, dependency := range got.Deployment.Checks {
-			switch dependency.Name {
-			case "Docker CLI":
-				assert.Equal(t, health.CheckStatusError, dependency.Status)
-				assert.Contains(t, dependency.Value, "Podman")
-			case "Docker daemon", "Docker Compose", "Engine can build ARM64 images":
-				assert.Equal(t, health.CheckStatusUndetermined, dependency.Status)
-			}
-		}
-	})
 }
 
 func TestHealthCheck(t *testing.T) {
