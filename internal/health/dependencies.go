@@ -142,7 +142,7 @@ func NewDependencyOnDockerCLI(r runner.Runner) Dependency {
 			if strings.HasPrefix(strings.TrimSpace(stdout), "podman version ") {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
-					Message:  "Docker was requested, but the docker command invokes Podman",
+					Message:  "Docker CLI is aliased to Podman",
 					Fix:      &Fix{Description: "Install Docker or select Podman with --engine podman."},
 				}}
 			}
