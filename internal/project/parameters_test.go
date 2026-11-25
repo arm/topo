@@ -90,6 +90,35 @@ x-topo:
 		}}, got)
 	})
 
+	t.Run("loads current values from .env beside an included Compose file", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_FILE_PARAMETER", "")
+		require.NoError(t, os.Unsetenv("TOPO_TEST_FILE_PARAMETER"))
+		includeFolder := t.TempDir()
+		baseFolder := t.TempDir()
+		includeComposeFile := testutil.RequireWriteComposeFile(t, includeFolder, `services:
+  app:
+    image: alpine
+    environment: {TOPO_TEST_FILE_PARAMETER: "${TOPO_TEST_FILE_PARAMETER}"}
+`)
+		path := testutil.RequireWriteComposeFile(t, baseFolder, `include:
+  - `+includeComposeFile+`
+
+x-topo:
+  parameters: {TOPO_TEST_FILE_PARAMETER: {}}
+`)
+		includeSiblingEnv := filepath.Join(includeFolder, ".env")
+		testutil.RequireWriteFile(t, includeSiblingEnv, "TOPO_TEST_FILE_PARAMETER=value_from_sibling\n")
+
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+
+		require.NoError(t, err)
+		assert.Equal(t, []parameter.Parameter{{
+			Name:          "TOPO_TEST_FILE_PARAMETER",
+			ExistingValue: new("value_from_sibling"),
+			References:    []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_FILE_PARAMETER", Expression: "${TOPO_TEST_FILE_PARAMETER}"}},
+		}}, got)
+	})
+
 	t.Run("prefers process values over env file values", func(t *testing.T) {
 		t.Setenv("TOPO_TEST_PARAMETER", "shell=value")
 		root := t.TempDir()
