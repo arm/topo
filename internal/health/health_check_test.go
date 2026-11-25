@@ -62,7 +62,6 @@ func TestCheck(t *testing.T) {
 			checkEngine(t, testCase.engine)
 		})
 	}
-
 }
 
 func TestHealthCheck(t *testing.T) {
