@@ -50,7 +50,7 @@ func TestCheck(t *testing.T) {
 			switch dependency.Name {
 			case "Docker CLI":
 				assert.Equal(t, health.CheckStatusError, dependency.Status)
-				assert.Contains(t, dependency.Value, "Docker was requested, but the docker command invokes Podman")
+				assert.Contains(t, dependency.Value, "Docker CLI is aliased to Podman")
 			case "Docker daemon", "Docker Compose", "Engine can build ARM64 images":
 				assert.Equal(t, health.CheckStatusUndetermined, dependency.Status)
 			}
