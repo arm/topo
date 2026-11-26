@@ -10,37 +10,58 @@ import (
 
 // InteractiveResolver resolves parameter definitions to changes by prompting for values.
 type InteractiveResolver struct {
-	readPrompt func(term.Prompt) (string, error)
-	palette    term.Palette
+	readPrompt      func(term.Prompt) (string, error)
+	palette         term.Palette
+	prefillResolver Resolver
 }
 
-func NewInteractiveResolverForTerminal(in *os.File, out *os.File) *InteractiveResolver {
+func NewInteractiveResolverForTerminal(in, out *os.File, prefillResolver Resolver) *InteractiveResolver {
 	readPrompt := func(prompt term.Prompt) (string, error) {
 		return term.ReadPrompt(in, out, prompt)
 	}
-	return NewInteractiveResolver(readPrompt, term.NewPaletteFor(out))
+	return NewInteractiveResolver(readPrompt, term.NewPaletteFor(out), prefillResolver)
 }
 
-func NewInteractiveResolver(readPrompt func(term.Prompt) (string, error), palette term.Palette) *InteractiveResolver {
-	return &InteractiveResolver{readPrompt: readPrompt, palette: palette}
+func NewInteractiveResolver(
+	readPrompt func(term.Prompt) (string, error), palette term.Palette, prefillResolver Resolver,
+) *InteractiveResolver {
+	return &InteractiveResolver{readPrompt: readPrompt, palette: palette, prefillResolver: prefillResolver}
 }
 
 func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
-	changes := Changes{}
+	var detected Changes
+	if r.prefillResolver != nil {
+		var err error
+		detected, err = r.prefillResolver.Resolve(parameters)
+		if err != nil {
+			return nil, err
+		}
+	}
 
+	changes := Changes{}
 	for i, parameter := range parameters {
+		detectedValue := detected[parameter.Name]
 		initial := ""
 		if parameter.ExistingValue != nil {
 			initial = *parameter.ExistingValue
+		} else if detectedValue != nil {
+			initial = *detectedValue
 		}
 
+		valueFromInput := func(input string) *string {
+			if detectedValue != nil && input == *detectedValue {
+				return detectedValue
+			}
+			return contentfulStringOrNil(input)
+		}
+		validate := func(input string) bool {
+			return parameter.AssertSatisfiedBy(valueFromInput(input)) == nil
+		}
 		value, err := r.readPrompt(term.Prompt{
-			Validate: func(input string) bool {
-				return parameter.AssertSatisfiedBy(contentfulStringOrNil(input)) == nil
-			},
-			Content: formatParameterPromptContent(parameter, i+1, len(parameters), r.palette),
-			Hint: func(input string, invalid bool) string {
-				return formatParameterPromptHint(parameter, input, invalid, r.palette)
+			Validate: validate,
+			Content:  formatParameterPromptContent(parameter, i+1, len(parameters), detectedValue, r.palette),
+			Hint: func(input string, showValidationError bool) string {
+				return formatParameterPromptHint(parameter, validate(input), showValidationError, r.palette)
 			},
 			Initial: initial,
 			Prefix:  "   " + r.palette.Color(term.Magenta, ">") + " ",
@@ -49,18 +70,20 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 			return nil, err
 		}
 
-		if value == "" && parameter.ExistingValue == nil {
-			continue
-		}
 		if parameter.ExistingValue != nil && value == *parameter.ExistingValue {
 			continue
 		}
-		changes[parameter.Name] = contentfulStringOrNil(value)
+		if parameter.ExistingValue == nil && detectedValue == nil && value == "" {
+			continue
+		}
+		changes[parameter.Name] = valueFromInput(value)
 	}
 	return changes, nil
 }
 
-func formatParameterPromptContent(parameter Parameter, number, total int, palette term.Palette) []string {
+func formatParameterPromptContent(
+	parameter Parameter, number, total int, detectedValue *string, palette term.Palette,
+) []string {
 	progress := palette.Color(term.Dim, fmt.Sprintf("%d/%d", number, total))
 	lines := []string{fmt.Sprintf("   %s %s", progress, parameter.Name), ""}
 	if description := strings.TrimSpace(parameter.Description); description != "" {
@@ -81,20 +104,24 @@ func formatParameterPromptContent(parameter Parameter, number, total int, palett
 	if len(lines) > 2 {
 		lines = append(lines, "")
 	}
+	if detectedValue != nil {
+		lines = append(lines, "   "+palette.Color(term.Blue, "i")+" Detected on target: "+*detectedValue)
+	}
 	if number > 1 {
 		lines = append([]string{""}, lines...)
 	}
 	return lines
 }
 
-func formatParameterPromptHint(parameter Parameter, input string, invalid bool, palette term.Palette) string {
+func formatParameterPromptHint(
+	parameter Parameter, canSubmit, showValidationError bool, palette term.Palette,
+) string {
 	message := "Enter a value to continue"
-	if input != "" || parameter.AssertSatisfiedBy(nil) == nil {
+	if canSubmit {
 		message = "Press Enter to continue"
 	}
 	message = palette.Color(term.Dim, message)
-
-	if invalid {
+	if showValidationError {
 		message = fmt.Sprintf("%s %s is required, enter a value to continue", palette.Color(term.Red, "✗"), parameter.Name)
 	}
 	return "   " + message + palette.Color(term.Dim, " · Ctrl+C to cancel")
