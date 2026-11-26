@@ -269,19 +269,24 @@ func experimentalFeaturesEnabled() bool {
 	return env.IsVarTruthy(experimentalFeaturesEnvVar)
 }
 
-func newConfigurationResolver(cmd *cobra.Command, assignments, removals []string, output *os.File) (*parameter.StrictResolverChain, error) {
+func newConfigurationResolver(
+	cmd *cobra.Command, assignments, removals []string, output *os.File,
+) (*parameter.StrictResolverChain, error) {
 	cli, err := parameter.NewCLIResolver(assignments, removals)
 	if err != nil {
 		return nil, err
 	}
 	resolvers := []parameter.Resolver{cli}
+	interactive := promptsEnabled(cmd) && term.IsTerminal(output) && term.IsTerminal(os.Stdin)
+	var factsResolver parameter.Resolver
 	if experimentalFeaturesEnabled() {
 		target, _ := lookupTarget(cmd)
-		targetResolver := parameter.NewFactsResolver(cmd.Context(), target.value, fact.Providers)
-		resolvers = append(resolvers, targetResolver)
+		factsResolver = parameter.NewFactsResolver(cmd.Context(), target.value, fact.Providers)
 	}
-	if promptsEnabled(cmd) && term.IsTerminal(output) && term.IsTerminal(os.Stdin) {
-		resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, output))
+	if interactive {
+		resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, output, factsResolver))
+	} else if factsResolver != nil {
+		resolvers = append(resolvers, factsResolver)
 	}
 	return parameter.NewStrictResolverChain(resolvers...), nil
 }
