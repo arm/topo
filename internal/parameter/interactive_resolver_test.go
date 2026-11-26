@@ -150,6 +150,23 @@ func TestInteractiveResolver(t *testing.T) {
 		assert.Empty(t, got)
 		assert.Equal(t, "arm64", prompt.Initial)
 		assert.Contains(t, prompt.Content, "   i Detected on target: aarch64")
+		assert.Equal(t, new("aarch64"), prompt.RestoreValue)
+	})
+
+	t.Run("offers Ctrl+R only when the input differs from the detected value", func(t *testing.T) {
+		var prompt term.Prompt
+		prefillResolver := parameter.NewStaticResolver(parameter.Changes{"DEVICE_ARCH": new("aarch64")})
+		resolver := parameter.NewInteractiveResolver(recordPrompt(&prompt), term.NewPalette(false), prefillResolver)
+		parameters := []parameter.Parameter{{Name: "DEVICE_ARCH", ExistingValue: new("arm64")}}
+
+		_, err := resolver.Resolve(parameters)
+		require.NoError(t, err)
+
+		hintForExistingValue := prompt.Hint("arm64", false)
+		hintForDetectedValue := prompt.Hint("aarch64", false)
+
+		assert.Equal(t, "   Press Enter to continue · Ctrl+R to use detected value · Ctrl+C to cancel", hintForExistingValue)
+		assert.Equal(t, "   Press Enter to continue · Ctrl+C to cancel", hintForDetectedValue)
 	})
 
 	t.Run("uses an edit instead of the detected value", func(t *testing.T) {
