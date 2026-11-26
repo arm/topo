@@ -14,11 +14,12 @@ import (
 )
 
 type Prompt struct {
-	Prefix   string
-	Initial  string
-	Validate func(input string) bool
-	Content  []string
-	Hint     func(input string, showValidationError bool) string
+	Prefix       string
+	Initial      string
+	Validate     func(input string) bool
+	Content      []string
+	Hint         func(input string, showValidationError bool) string
+	RestoreValue *string
 }
 
 func ReadPrompt(
@@ -86,6 +87,11 @@ func ReadPrompt(
 	})
 	editor.Config.FuncFilterInputRune = func(key rune) (rune, bool) {
 		showValidationError = false
+		if key == readline.CharBckSearch && prompt.RestoreValue != nil {
+			currentInput = *prompt.RestoreValue
+			editor.Operation.SetBuffer(currentInput)
+			return readline.CharBell, true // Let readline advance without entering reverse search.
+		}
 		if (key == readline.CharEnter || key == readline.CharCtrlJ) && prompt.Validate != nil {
 			showValidationError = !prompt.Validate(currentInput)
 		}
