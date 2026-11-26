@@ -18,7 +18,7 @@ type Prompt struct {
 	Initial  string
 	Validate func(input string) bool
 	Content  []string
-	Hint     func(input string, invalid bool) string
+	Hint     func(input string, showValidationError bool) string
 }
 
 func ReadPrompt(
@@ -71,12 +71,12 @@ func ReadPrompt(
 		err = errors.Join(err, output.Close(), editor.Close())
 	}()
 
-	var invalid bool
+	var showValidationError bool
 	var writeErr error
 	currentInput := prompt.Initial
 
 	if prompt.Hint != nil {
-		editor.Config.SetPainter(promptPainter{prompt, editor.Config.FuncGetWidth, &invalid})
+		editor.Config.SetPainter(promptPainter{prompt, editor.Config.FuncGetWidth, &showValidationError})
 	}
 	editor.Config.SetListener(func(line []rune, _ int, key rune) ([]rune, int, bool) {
 		if key != 0 {
@@ -85,11 +85,11 @@ func ReadPrompt(
 		return nil, 0, false
 	})
 	editor.Config.FuncFilterInputRune = func(key rune) (rune, bool) {
-		invalid = false
+		showValidationError = false
 		if (key == readline.CharEnter || key == readline.CharCtrlJ) && prompt.Validate != nil {
-			invalid = !prompt.Validate(currentInput)
+			showValidationError = !prompt.Validate(currentInput)
 		}
-		return key, !invalid
+		return key, !showValidationError
 	}
 
 	for row := range prompt.Content {
@@ -155,9 +155,9 @@ func (w *promptOutput) Close() error {
 }
 
 type promptPainter struct {
-	prompt  Prompt
-	width   func() int
-	invalid *bool
+	prompt              Prompt
+	width               func() int
+	showValidationError *bool
 }
 
 func (p promptPainter) Paint(line []rune, _ int) []rune {
@@ -165,7 +165,7 @@ func (p promptPainter) Paint(line []rune, _ int) []rune {
 	if width < 1 || strings.HasSuffix(string(line), lineFeed) {
 		return line
 	}
-	hint := p.prompt.Hint(string(line), *p.invalid)
+	hint := p.prompt.Hint(string(line), *p.showValidationError)
 
 	runes := readline.Runes{}
 	cells := runes.WidthAll(runes.ColorFilter([]rune(p.prompt.Prefix))) + runes.WidthAll(line)
