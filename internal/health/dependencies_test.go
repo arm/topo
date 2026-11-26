@@ -310,6 +310,31 @@ Platforms: linux/amd64, linux/arm/v7`
 	})
 }
 
+func TestNewDependencyOnDockerCLI(t *testing.T) {
+	t.Run("fails when the docker command invokes Podman", func(t *testing.T) {
+		r := &runner.Fake{
+			Binaries: []string{"docker"},
+			Commands: map[string]runner.FakeResult{
+				"docker --version": {Output: "podman version 6.1.4\n"},
+			},
+		}
+		dependency := health.NewDependencyOnDockerCLI(r)
+
+		got := dependency.Check(context.Background())
+
+		want := health.DependencyCheckResult{
+			Failure: &health.DependencyCheckFailure{
+				Severity: health.SeverityError,
+				Message:  "Docker CLI is aliased to Podman",
+				Fix: &health.Fix{
+					Description: "Install Docker or select Podman with --engine podman.",
+				},
+			},
+		}
+		assert.Equal(t, want, got)
+	})
+}
+
 func TestRemoteprocDependency(t *testing.T) {
 	t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
