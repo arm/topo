@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package topo.plugin.v1;
+
+option go_package = "github.com/arm/topo/pkg/plugin/transport/pluginpb";
+
+import "google/protobuf/empty.proto";
+
+service DescribeService {
+  rpc Describe(google.protobuf.Empty) returns (Descriptor);
+}
+
+message Descriptor {
+  string id = 1;
+  string capability = 2;
+}
