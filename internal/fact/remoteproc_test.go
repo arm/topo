@@ -2,8 +2,6 @@ package fact_test
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/arm/topo/internal/fact"
@@ -13,9 +11,11 @@ import (
 )
 
 func TestRemoteprocProvider(t *testing.T) {
+	const probe = `sh -c 'LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name'`
+
 	t.Run("reports distinct devices with duplicate names and gaps in numbering", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"grep -H . /sys/class/remoteproc/*/name": {
+			probe: {
 				Output: `/sys/class/remoteproc/remoteproc2/name:Cortex M4
 /sys/class/remoteproc/remoteproc7/name:Cortex M4
 `,
@@ -51,7 +51,7 @@ func TestRemoteprocProvider(t *testing.T) {
 
 	t.Run("returns empty when sysfs is unavailable", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"grep -H . /sys/class/remoteproc/*/name": {Err: errors.New("No such file or directory")},
+			probe: {Err: assert.AnError, Stderr: "grep: /sys/class/remoteproc/*/name: No such file or directory\n"},
 		}}
 
 		got, err := (fact.RemoteprocProvider{}).Facts(context.Background(), r)
@@ -62,7 +62,7 @@ func TestRemoteprocProvider(t *testing.T) {
 
 	t.Run("rejects an empty name", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"grep -H . /sys/class/remoteproc/*/name": {Output: "/sys/class/remoteproc/remoteproc2/name: "},
+			probe: {Output: "/sys/class/remoteproc/remoteproc2/name: "},
 		}}
 
 		_, err := (fact.RemoteprocProvider{}).Facts(context.Background(), r)
@@ -70,13 +70,13 @@ func TestRemoteprocProvider(t *testing.T) {
 		assert.ErrorContains(t, err, "empty remoteproc name")
 	})
 
-	t.Run("propagates wrapped timeout errors", func(t *testing.T) {
+	t.Run("propagates probe errors", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"grep -H . /sys/class/remoteproc/*/name": {Err: fmt.Errorf("reading remoteproc: %w", runner.ErrTimeout)},
+			probe: {Err: assert.AnError, Stderr: "Permission denied"},
 		}}
 
 		_, err := (fact.RemoteprocProvider{}).Facts(context.Background(), r)
 
-		assert.ErrorIs(t, err, runner.ErrTimeout)
+		assert.ErrorIs(t, err, assert.AnError)
 	})
 }

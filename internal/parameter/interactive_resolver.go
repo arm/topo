@@ -61,10 +61,14 @@ func (r *InteractiveResolver) Resolve(parameters []Parameter) (Changes, error) {
 			Validate: validate,
 			Content:  formatParameterPromptContent(parameter, i+1, len(parameters), detectedValue, r.palette),
 			Hint: func(input string, showValidationError bool) string {
-				return formatParameterPromptHint(parameter, validate(input), showValidationError, r.palette)
+				offerDetectedValue := detectedValue != nil && input != *detectedValue
+				return formatParameterPromptHint(
+					parameter, validate(input), showValidationError, offerDetectedValue, r.palette,
+				)
 			},
-			Initial: initial,
-			Prefix:  "   " + r.palette.Color(term.Magenta, ">") + " ",
+			Initial:      initial,
+			Prefix:       "   " + r.palette.Color(term.Magenta, ">") + " ",
+			RestoreValue: detectedValue,
 		})
 		if err != nil {
 			return nil, err
@@ -114,7 +118,7 @@ func formatParameterPromptContent(
 }
 
 func formatParameterPromptHint(
-	parameter Parameter, canSubmit, showValidationError bool, palette term.Palette,
+	parameter Parameter, canSubmit, showValidationError, offerDetectedValue bool, palette term.Palette,
 ) string {
 	message := "Enter a value to continue"
 	if canSubmit {
@@ -123,6 +127,9 @@ func formatParameterPromptHint(
 	message = palette.Color(term.Dim, message)
 	if showValidationError {
 		message = fmt.Sprintf("%s %s is required, enter a value to continue", palette.Color(term.Red, "✗"), parameter.Name)
+	}
+	if offerDetectedValue {
+		message += palette.Color(term.Dim, " · Ctrl+R to use detected value")
 	}
 	return "   " + message + palette.Color(term.Dim, " · Ctrl+C to cancel")
 }

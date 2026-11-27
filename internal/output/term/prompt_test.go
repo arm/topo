@@ -74,6 +74,21 @@ func TestReadPrompt(t *testing.T) {
 		assert.Equal(t, []bool{false, true, false}, slices.Compact(errorsShown))
 	})
 
+	t.Run("Ctrl+R replaces the input without submitting", func(t *testing.T) {
+		initial := "sour"
+		restoreValue := "sweet"
+		ctrlR := "\x12"
+		inputAfterCtrlR := "yellow"
+		enter := "\r"
+		terminal := newTestPTY(t, initial+ctrlR+inputAfterCtrlR+enter)
+		prompt := term.Prompt{RestoreValue: new(restoreValue)}
+
+		got, err := term.ReadPrompt(terminal, terminal, prompt)
+
+		require.NoError(t, err)
+		assert.Equal(t, restoreValue+inputAfterCtrlR, got)
+	})
+
 	t.Run("returns an interrupt on cancellation", func(t *testing.T) {
 		terminal := newTestPTY(t, "\x03")
 		prompt := term.Prompt{Content: []string{"Value:"}}
