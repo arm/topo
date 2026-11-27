@@ -67,7 +67,7 @@ func NewDependencyOnSSH(r runner.Runner) Dependency {
 			if err := r.BinaryExists(ctx, "ssh"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{Severity: SeverityError, Message: err.Error()}}
 			}
-			_, stderr, err := r.Run(ctx, "ssh -V")
+			_, stderr, err := r.Run(ctx, "ssh", "-V")
 			if err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{Message: err.Error()}}
 			}
@@ -132,7 +132,7 @@ func NewDependencyOnDockerCLI(r runner.Runner) Dependency {
 					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
 				}}
 			}
-			stdout, _, err := r.Run(ctx, "docker --version")
+			stdout, _, err := r.Run(ctx, "docker", "--version")
 			if err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
@@ -155,7 +155,7 @@ func NewDependencyOnDockerDaemon(r runner.Runner) Dependency {
 	return Dependency{
 		Label: "Docker daemon",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if _, _, err := r.Run(ctx, "docker info"); err != nil {
+			if _, _, err := r.Run(ctx, "docker", "info"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),
@@ -187,7 +187,7 @@ func NewDependencyOnDockerCompose(r runner.Runner) Dependency {
 	return Dependency{
 		Label: "Docker Compose",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			stdout, _, err := r.Run(ctx, "docker compose version --format json")
+			stdout, _, err := r.Run(ctx, "docker", "compose", "version", "--format", "json")
 			if err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
@@ -397,7 +397,7 @@ func NewDependencyOnPodmanConnection(r runner.Runner) Dependency {
 	return Dependency{
 		Label: "Podman connection",
 		Check: func(ctx context.Context) DependencyCheckResult {
-			if _, _, err := r.Run(ctx, "podman info"); err != nil {
+			if _, _, err := r.Run(ctx, "podman", "info"); err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
 					Message:  err.Error(),

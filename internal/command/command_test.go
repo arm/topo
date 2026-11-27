@@ -32,8 +32,13 @@ func TestQuoteArg(t *testing.T) {
 	}{
 		{
 			name: "plain arg",
-			arg:  "compose.yml",
-			want: "compose.yml",
+			arg:  "compose_v2-test.yml",
+			want: "compose_v2-test.yml",
+		},
+		{
+			name: "arg with punctuation outside the safe unquoted set",
+			arg:  "name+suffix",
+			want: "'name+suffix'",
 		},
 		{
 			name: "empty arg",

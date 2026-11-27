@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/arm/topo/internal/runner"
 )
 
 const remoteAuthorizedKeysCommand = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
@@ -13,16 +15,12 @@ var passwordAuthArgs = []string{
 	"-o", "PreferredAuthentications=password",
 }
 
-type sshRunnerWithExtraArgs interface {
-	RunWithStdinAndArgs(ctx context.Context, command string, stdin []byte, sshArgs ...string) (stdout, stderr string, err error)
-}
-
 type PubKeyTransfer struct {
 	pubKeyPath string
-	r          sshRunnerWithExtraArgs
+	r          *runner.SSH
 }
 
-func NewPubKeyTransfer(privKeyPath string, r sshRunnerWithExtraArgs) *PubKeyTransfer {
+func NewPubKeyTransfer(privKeyPath string, r *runner.SSH) *PubKeyTransfer {
 	return &PubKeyTransfer{
 		pubKeyPath: privKeyPath + ".pub",
 		r:          r,
@@ -39,7 +37,7 @@ func (kt *PubKeyTransfer) Run(outputWriter io.Writer) error {
 		return fmt.Errorf("failed to read public key %s: %w", kt.pubKeyPath, err)
 	}
 
-	cmdStdout, _, err := kt.r.RunWithStdinAndArgs(context.TODO(), remoteAuthorizedKeysCommand, pubKey, passwordAuthArgs...)
+	cmdStdout, _, err := kt.r.RunShellWithStdinAndSSHArgs(context.TODO(), remoteAuthorizedKeysCommand, pubKey, passwordAuthArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to transfer public key to target: %w", err)
 	}

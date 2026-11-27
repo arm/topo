@@ -50,8 +50,8 @@ func TestCheckPodmanARM64BuildMachineFallback(t *testing.T) {
 		"podman machine list --format json": {Output: `[
 			{"Name":"build-vm","Port":2222,"IdentityPath":"key"}
 		]`},
-		"podman machine ssh build-vm cat /proc/sys/fs/binfmt_misc/status":       {Output: "enabled\n"},
-		"podman machine ssh build-vm cat /proc/sys/fs/binfmt_misc/qemu-aarch64": {Output: "enabled\nflags: F\n"},
+		"podman machine ssh build-vm cat '/proc/sys/fs/binfmt_misc/status'":       {Output: "enabled\n"},
+		"podman machine ssh build-vm cat '/proc/sys/fs/binfmt_misc/qemu-aarch64'": {Output: "enabled\nflags: F\n"},
 	}}
 
 	err := probe.CheckPodmanARM64Build(t.Context(), r)

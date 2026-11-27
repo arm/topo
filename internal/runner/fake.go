@@ -13,24 +13,24 @@ type FakeResult struct {
 	Err    error
 }
 
-// Fake is a test double that maps commands to canned results.
-// It satisfies the Runner interface without coupling tests to method signatures.
+// Fake maps quoted command lines and raw shell scripts to canned results.
 type Fake struct {
 	Binaries        []string
 	BinaryExistsErr map[string]error
 	Commands        map[string]FakeResult
+	Scripts         map[string]FakeResult
 }
 
-func (f *Fake) Run(_ context.Context, command string) (string, string, error) {
-	res, ok := f.Commands[command]
-	if !ok {
-		return "", "", fmt.Errorf("unexpected command: %s", command)
-	}
-	return res.Output, res.Stderr, res.Err
+func (f *Fake) Run(_ context.Context, program string, args ...string) (string, string, error) {
+	return fakeResult(f.Commands, commandLine(program, args...))
 }
 
-func (f *Fake) RunWithStdin(ctx context.Context, command string, stdin []byte) (string, string, error) {
-	return f.Run(ctx, command)
+func (f *Fake) RunShell(_ context.Context, script string) (string, string, error) {
+	return fakeResult(f.Scripts, script)
+}
+
+func (f *Fake) RunWithStdin(ctx context.Context, _ []byte, program string, args ...string) (string, string, error) {
+	return f.Run(ctx, program, args...)
 }
 
 func (f *Fake) BinaryExists(_ context.Context, bin string) error {
@@ -43,4 +43,12 @@ func (f *Fake) BinaryExists(_ context.Context, bin string) error {
 		return nil
 	}
 	return fmt.Errorf("%q not found in $PATH", bin)
+}
+
+func fakeResult(results map[string]FakeResult, command string) (string, string, error) {
+	res, ok := results[command]
+	if !ok {
+		return "", "", fmt.Errorf("unexpected command: %s", command)
+	}
+	return res.Output, res.Stderr, res.Err
 }

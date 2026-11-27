@@ -27,7 +27,7 @@ type parsedTable struct {
 func IsRemotePortListening(ctx context.Context, targetDest ssh.Destination, port string) (bool, error) {
 	sshRunner := runner.NewSSH(targetDest)
 	for _, path := range procNetTcpFiles {
-		stdout, _, err := sshRunner.Run(ctx, fmt.Sprintf("cat %s", path))
+		stdout, _, err := sshRunner.Run(ctx, "cat", path)
 		if err != nil {
 			return false, err
 		}

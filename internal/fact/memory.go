@@ -18,7 +18,7 @@ type MemoryProvider struct{}
 
 func (MemoryProvider) Facts(ctx context.Context, r runner.CommandRunner) (Report, error) {
 	path := "/proc/meminfo"
-	out, _, err := r.Run(ctx, fmt.Sprintf("cat %s", path))
+	out, _, err := r.Run(ctx, "cat", path)
 	if err != nil {
 		return Report{}, err
 	}

@@ -18,20 +18,24 @@ func NewSSH(dest ssh.Destination) *SSH {
 	return &SSH{dest: dest}
 }
 
-func (r *SSH) Run(ctx context.Context, cmdStr string) (string, string, error) {
-	return r.exec(ctx, cmdStr, nil, nil)
+func (r *SSH) Run(ctx context.Context, program string, args ...string) (string, string, error) {
+	return r.RunWithStdin(ctx, nil, program, args...)
 }
 
-func (r *SSH) RunWithStdin(ctx context.Context, cmdStr string, stdin []byte) (string, string, error) {
-	return r.exec(ctx, cmdStr, stdin, nil)
+func (r *SSH) RunShell(ctx context.Context, script string) (string, string, error) {
+	return r.RunShellWithStdinAndSSHArgs(ctx, script, nil)
 }
 
-func (r *SSH) RunWithArgs(ctx context.Context, cmdStr string, args ...string) (string, string, error) {
-	return r.exec(ctx, cmdStr, nil, args)
+func (r *SSH) RunWithStdin(ctx context.Context, stdin []byte, program string, args ...string) (string, string, error) {
+	return r.exec(ctx, commandLine(program, args...), stdin, nil)
 }
 
-func (r *SSH) RunWithStdinAndArgs(ctx context.Context, cmdStr string, stdin []byte, args ...string) (string, string, error) {
-	return r.exec(ctx, cmdStr, stdin, args)
+func (r *SSH) RunWithArgs(ctx context.Context, program string, sshArgs ...string) (string, string, error) {
+	return r.exec(ctx, commandLine(program), nil, sshArgs)
+}
+
+func (r *SSH) RunShellWithStdinAndSSHArgs(ctx context.Context, script string, stdin []byte, sshArgs ...string) (string, string, error) {
+	return r.exec(ctx, "sh -c -- "+command.QuoteArg(script), stdin, sshArgs)
 }
 
 func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
@@ -39,7 +43,7 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 	if err != nil {
 		return err
 	}
-	if _, _, err := r.Run(ctx, cmd); err != nil {
+	if _, _, err := r.exec(ctx, cmd, nil, nil); err != nil {
 		if errors.Is(err, ssh.ErrSSH) || errors.Is(err, ErrTimeout) {
 			return err
 		}
