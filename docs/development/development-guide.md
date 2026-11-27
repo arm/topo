@@ -115,3 +115,17 @@ The generator downloads the configured version's `catalog.schema.json`, generate
 Commit the newly generated catalog schema types file and raise a PR to update the main branch.
 
 Available catalog versions and schemas are published in the [Topo Project Catalog Artifactory repository](https://artifacts.tools.arm.com/devx-topo-project-catalog/).
+
+## Experimental: Regenerating plugin gRPC bindings
+
+Edit the schemas under `pkg/plugin/transport/pluginpb/`, then regenerate the
+committed bindings. Put Protocol Buffers `protoc` 30.2 on your PATH and run:
+
+```sh
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+# Ensure GOBIN (or GOPATH/bin if unset) is on PATH.
+go generate ./pkg/plugin/transport/pluginpb
+```
+
+Normal builds use the checked-in bindings and do not require these tools.
