@@ -89,8 +89,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-			scope, prepareErr := project.BuildScope(composeFile, "", nil)
-			require.NoError(t, prepareErr)
+			scope := project.Scope{ComposeFile: composeFile}
 			options := deploy.Options{Engine: deploy.EnginePodman}
 
 			err := deploy.Deploy(t.Context(), &bytes.Buffer{}, scope, options)
@@ -181,8 +180,7 @@ services:
     build: .
     stop_grace_period: 1s
 `, deploytestutil.TestProjectName(t)))
-		scope, prepareErr := project.BuildScope(composeFilePath, "", nil)
-		require.NoError(t, prepareErr)
+		scope := project.Scope{ComposeFile: composeFilePath}
 		t.Cleanup(func() { deploytestutil.CleanupDockerComposeProject(t, scope) })
 		deployOptions := deploy.Options{Engine: deploy.EngineDocker, TargetHost: remoteDockerHost}
 		require.NoError(t, deploy.Deploy(t.Context(), io.Discard, scope, deployOptions))
@@ -433,8 +431,7 @@ services:
   pulled:
     image: team/web:latest
 `)
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
+		scope := project.Scope{ComposeFile: composeFile}
 		var calls [][]string
 		source := &registryTransferFake{
 			name: "source", calls: &calls,
@@ -474,10 +471,7 @@ services:
 		}
 		target := &registryTransferFake{name: "target", calls: &calls}
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), scope, "12345", source, target)
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), project.Scope{ComposeFile: composeFile}, "12345", source, target)
 
 		require.NoError(t, err)
 		assert.Equal(t, [][]string{
@@ -502,10 +496,7 @@ services:
 		}
 		target := &registryTransferFake{name: "target", calls: &calls}
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), scope, "12345", source, target)
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), project.Scope{ComposeFile: composeFile}, "12345", source, target)
 
 		require.ErrorContains(t, err, "pin the linux/arm64 image manifest digest")
 		require.Len(t, calls, 3)
@@ -521,10 +512,7 @@ services:
 		source := &registryTransferFake{calls: &calls}
 		target := &registryTransferFake{name: "target", calls: &calls, digestPreservationError: errors.New("legacy image store")}
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), scope, "12345", source, target)
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), project.Scope{ComposeFile: composeFile}, "12345", source, target)
 
 		require.ErrorIs(t, err, target.digestPreservationError)
 		assert.Equal(t, [][]string{{"target", preservesDigestOnTag}}, calls)

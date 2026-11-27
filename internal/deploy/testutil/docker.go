@@ -41,9 +41,7 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	scope, err := project.BuildScope(composeFilePath, "", nil)
-	require.NoError(t, err)
-	return scope, imageName
+	return project.Scope{ComposeFile: composeFilePath}, imageName
 }
 
 func RequireDockerImageExists(t *testing.T, host docker.Host, imageName string) {

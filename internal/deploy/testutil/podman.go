@@ -64,9 +64,7 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	scope, err := project.BuildScope(composeFile, "", nil)
-	require.NoError(t, err)
-	return scope, "test-project-" + testName
+	return project.Scope{ComposeFile: composeFile}, "test-project-" + testName
 }
 
 func CleanupPodmanComposeProject(t *testing.T, scope project.Scope) {

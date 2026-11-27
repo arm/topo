@@ -18,12 +18,7 @@ services:
     platform: linux/arm64
 `)
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
-
-		require.NoError(t, err)
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
 	})
 
 	t.Run("succeeds with valid platforms with variant", func(t *testing.T) {
@@ -34,12 +29,7 @@ services:
     platform: linux/arm64/v8
 `)
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
-
-		require.NoError(t, err)
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
 	})
 	t.Run("fails when platform missing", func(t *testing.T) {
 		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
@@ -48,10 +38,7 @@ services:
     image: busybox
 `)
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
+		err := checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing platform declaration")
 	})
@@ -63,10 +50,7 @@ services:
     platform: linux/amd64
 `)
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
+		err := checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "linux/amd64")
 	})
@@ -78,12 +62,7 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
-
-		require.NoError(t, err)
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
 	})
 	t.Run("succeeds with valid remoteproc-runtime", func(t *testing.T) {
 		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), `
@@ -94,11 +73,6 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		scope, prepareErr := project.BuildScope(composeFile, "", nil)
-		require.NoError(t, prepareErr)
-
-		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
-
-		require.NoError(t, err)
+		require.NoError(t, checks.EnsureProjectIsLinuxArm64Ready(project.Scope{ComposeFile: composeFile}))
 	})
 }

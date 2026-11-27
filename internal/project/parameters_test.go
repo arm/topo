@@ -24,10 +24,8 @@ func TestLoadParameters(t *testing.T) {
     EMPTY: {}
     UNSET: {}
 `)
-		scope, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
 
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -52,10 +50,7 @@ x-topo:
     TOPO_TEST_UNSET_PARAMETER: {}
 `)
 
-		scope, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -110,10 +105,7 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_FILE_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_FILE_PARAMETER=configured\n")
 
-		scope, err := project.BuildScope(path, "", []string{basePath, envPath})
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -170,10 +162,7 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_PARAMETER=topo\n")
 
-		scope, err := project.BuildScope(path, "", []string{basePath, envPath})
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -194,10 +183,7 @@ x-topo:
 `)
 		testutil.RequireWriteFile(t, filepath.Join(root, env.DefaultFilename), "invalid=\"unterminated\n")
 
-		scope, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -212,10 +198,7 @@ x-topo:
     PORT: {}
 `)
 
-		scope, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
@@ -229,10 +212,7 @@ x-topo:
     LEGACY: {}
 `)
 
-		scope, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
@@ -250,10 +230,7 @@ x-topo:
       example: "9000"
 `)
 
-		scope, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -265,12 +242,27 @@ x-topo:
 	t.Run("returns no parameters without metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
-		scope, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
-
-		got, err := project.LoadParameters(scope)
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
+	})
+
+	t.Run("reports missing files", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "missing.yaml")
+
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+
+		assert.ErrorIs(t, err, os.ErrNotExist)
+		assert.Nil(t, got)
+	})
+
+	t.Run("reports invalid YAML", func(t *testing.T) {
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
+
+		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+
+		assert.ErrorContains(t, err, "failed to decode project metadata")
+		assert.Nil(t, got)
 	})
 }

@@ -30,10 +30,8 @@ x-topo:
 		changes := parameter.Changes{"FOO": new("baz")}
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
-		prepared, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
 
-		got, err := project.Configure(prepared, resolver)
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)
@@ -50,10 +48,8 @@ x-topo:
 		changes := parameter.Changes{"GREETING": new("updated")}
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStaticResolver(changes)
-		prepared, err := project.BuildScope(path, "", nil)
-		require.NoError(t, err)
 
-		got, err := project.Configure(prepared, resolver)
+		got, err := project.Configure(project.Scope{ComposeFile: path}, resolver)
 
 		require.NoError(t, err)
 		assert.Equal(t, changes, got)

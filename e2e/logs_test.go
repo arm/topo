@@ -139,9 +139,7 @@ services:
 	contents, err := testutil.FixPodmanInDockerQuirk(contents)
 	require.NoError(t, err)
 	testutil.RequireWriteFile(t, composeFile, contents)
-	scope, err := project.BuildScope(composeFile, "", nil)
-	require.NoError(t, err)
-	return scope
+	return project.Scope{ComposeFile: composeFile}
 }
 
 func requireLogs(t *testing.T, topo string, args []string, want ...string) string {
