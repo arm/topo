@@ -76,7 +76,7 @@ func TestLocal(t *testing.T) {
 
 		stdout, stderr, err := r.RunShell(t.Context(), "exit 0")
 
-		require.EqualError(t, err, `"sh" not found in $PATH`)
+		require.ErrorIs(t, err, exec.ErrNotFound)
 		assert.Empty(t, stdout)
 		assert.Empty(t, stderr)
 	})

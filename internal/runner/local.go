@@ -20,9 +20,6 @@ func (r *Local) Run(ctx context.Context, program string, args ...string) (string
 }
 
 func (r *Local) RunShell(ctx context.Context, script string) (string, string, error) {
-	if err := r.BinaryExists(ctx, "sh"); err != nil {
-		return "", "", err
-	}
 	return r.exec(ctx, nil, "sh", "-c", "--", script)
 }
 
