@@ -3,6 +3,9 @@ package parameter
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
+	"unicode"
 
 	"github.com/arm/topo/internal/fact"
 	"github.com/arm/topo/internal/output/logger"
@@ -21,14 +24,14 @@ func NewFactsResolver(ctx context.Context, target string, providers map[string]f
 }
 
 func (r *FactsResolver) Resolve(parameters []Parameter) (Changes, error) {
-	sourceable, err := SourceableParameters(parameters, r.providers)
+	bindings, err := r.parseBindings(parameters)
 	if err != nil {
 		return nil, err
 	}
 
 	if r.target == "" {
-		for _, param := range sourceable {
-			logger.Warn(fmt.Sprintf("cannot automatically configure parameter %q without a target; provide a target or supply this parameter manually", param.Name))
+		for _, binding := range bindings {
+			logger.Warn(fmt.Sprintf("cannot automatically configure parameter %q without a target; provide a target or supply this parameter manually", binding.parameterName))
 		}
 		return nil, nil
 	}
@@ -37,43 +40,70 @@ func (r *FactsResolver) Resolve(parameters []Parameter) (Changes, error) {
 
 	changes := Changes{}
 	results := map[string]fact.Report{}
-	for _, parameter := range sourceable {
-		source := parameter.Source
-		result, ok := results[source.Provider]
+	for _, binding := range bindings {
+		result, ok := results[binding.provider]
 		if !ok {
 			var err error
-			result, err = r.providers[source.Provider].Facts(r.ctx, runner)
+			result, err = r.providers[binding.provider].Facts(r.ctx, runner)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve %s: %w", parameter.Name, err)
+				return nil, fmt.Errorf("failed to resolve %s from %q: %w", binding.parameterName, binding.source, err)
 			}
 			if err := result.Validate(); err != nil {
-				return nil, fmt.Errorf("failed to resolve %s: %w", parameter.Name, err)
+				return nil, fmt.Errorf("failed to resolve %s from %q: %w", binding.parameterName, binding.source, err)
 			}
-			results[source.Provider] = result
+			results[binding.provider] = result
 		}
-		fact, ok := result.Find(source.Group, source.Fact)
+		fact, ok := result[binding.key]
 		if !ok {
-			return nil, fmt.Errorf("fact %q not found in group %q for %s", source.Fact, source.Group, parameter.Name)
+			return nil, fmt.Errorf("target fact %q not found for %s", binding.source, binding.parameterName)
 		}
-		changes[parameter.Name] = new(fact.Value.String())
+		changes[binding.parameterName] = new(fact.Value.String())
 	}
 	return changes, nil
 }
 
-func SourceableParameters(parameters []Parameter, providers map[string]fact.Provider) ([]Parameter, error) {
-	var sourceable []Parameter
+type factBinding struct {
+	parameterName string
+	source        string
+	provider      string
+	key           string
+}
+
+func (r *FactsResolver) parseBindings(parameters []Parameter) ([]factBinding, error) {
+	var bindings []factBinding
 	for _, param := range parameters {
-		source := param.Source
-		if source == nil {
+		if param.Source == nil {
 			continue
 		}
-		if source.Provider == "" || source.Group == "" || source.Fact == "" {
-			return nil, fmt.Errorf("source requires provider, group and fact for %s", param.Name)
+		binding, err := r.parseBinding(param.Name, *param.Source)
+		if err != nil {
+			return nil, err
 		}
-		if _, exists := providers[source.Provider]; !exists {
-			return nil, fmt.Errorf("unknown provider %q for %s", source.Provider, param.Name)
-		}
-		sourceable = append(sourceable, param)
+		bindings = append(bindings, binding)
 	}
-	return sourceable, nil
+	return bindings, nil
+}
+
+func (r *FactsResolver) parseBinding(parameterName, source string) (factBinding, error) {
+	parts := strings.Split(source, ".")
+	if len(parts) < 2 || slices.Contains(parts, "") || strings.ContainsFunc(source, unicode.IsSpace) {
+		return factBinding{}, fmt.Errorf("invalid source %q for %s", source, parameterName)
+	}
+
+	binding := factBinding{parameterName: parameterName, source: source}
+	for provider := range r.providers {
+		key, matches := strings.CutPrefix(source, provider+".")
+		if !matches {
+			continue
+		}
+		if binding.provider != "" {
+			return factBinding{}, fmt.Errorf("multiple fact providers match source %q for %s", source, parameterName)
+		}
+		binding.provider = provider
+		binding.key = key
+	}
+	if binding.provider == "" {
+		return factBinding{}, fmt.Errorf("no fact provider matches source %q for %s", source, parameterName)
+	}
+	return binding, nil
 }

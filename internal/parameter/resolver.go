@@ -6,15 +6,9 @@ import (
 	"github.com/compose-spec/compose-go/v2/template"
 )
 
-type Source struct {
-	Provider string
-	Group    string
-	Fact     string
-}
-
 type Parameter struct {
 	Name          string
-	Source        *Source
+	Source        *string
 	Description   string
 	Example       string
 	ExistingValue *string

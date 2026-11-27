@@ -3,13 +3,15 @@ package fact
 import (
 	"context"
 	"fmt"
+	"maps"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/arm/topo/internal/runner"
 )
 
-const FactRemoteprocName = "remoteproc.name"
+const remoteprocNameField = "name"
 
 type RemoteprocProvider struct{}
 
@@ -17,31 +19,42 @@ func (RemoteprocProvider) Facts(ctx context.Context, r runner.CommandRunner) (Re
 	out, stderr, err := r.Run(ctx, `sh -c 'LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name'`)
 	if err != nil {
 		if strings.Contains(stderr, "No such file or directory") {
-			return Report{}, nil
+			return nil, nil
 		}
-		return Report{}, err
+		return nil, err
 	}
 
-	var report Report
+	report := make(Report)
 	for line := range strings.SplitSeq(out, "\n") {
 		if line == "" {
 			continue
 		}
-		filename, name, err := parseRemoteprocLine(line)
+		deviceID, name, err := parseRemoteprocLine(line)
 		if err != nil {
-			return Report{}, err
+			return nil, err
 		}
-		report.Groups = append(report.Groups, Group{
-			ID: filename,
-			Facts: []Fact{{
-				Key:         FactRemoteprocName,
-				Value:       Value{Type: "string", Text: name},
-				Label:       "Remote processor name",
-				Description: "Kernel-reported remote processor name",
-			}},
-		})
+		key := deviceID + "." + remoteprocNameField
+		if _, exists := report[key]; exists {
+			return nil, fmt.Errorf("duplicate remoteproc fact key: %q", key)
+		}
+		report[key] = Fact{
+			Value:       Value{Type: "string", Text: name},
+			Label:       "Remote processor name",
+			Description: "Kernel-reported remote processor name",
+		}
 	}
 	return report, nil
+}
+
+func RemoteprocNames(report Report) []string {
+	var names []string
+	for _, key := range slices.Sorted(maps.Keys(report)) {
+		deviceID, field, _ := strings.Cut(key, ".")
+		if deviceID != "" && field == remoteprocNameField {
+			names = append(names, report[key].Value.String())
+		}
+	}
+	return names
 }
 
 func parseRemoteprocLine(line string) (string, string, error) {

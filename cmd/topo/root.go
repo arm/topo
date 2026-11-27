@@ -281,7 +281,7 @@ func newConfigurationResolver(
 	var factsResolver parameter.Resolver
 	if experimentalFeaturesEnabled() {
 		target, _ := lookupTarget(cmd)
-		factsResolver = parameter.NewFactsResolver(cmd.Context(), target.value, fact.Providers)
+		factsResolver = parameter.NewFactsResolver(cmd.Context(), target.value, fact.BuiltinTargetProviders)
 	}
 	if interactive {
 		resolvers = append(resolvers, parameter.NewInteractiveResolverForTerminal(os.Stdin, output, factsResolver))
