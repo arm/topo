@@ -24,8 +24,10 @@ func TestLoadParameters(t *testing.T) {
     EMPTY: {}
     UNSET: {}
 `)
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -50,7 +52,10 @@ x-topo:
     TOPO_TEST_UNSET_PARAMETER: {}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -80,7 +85,10 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_FILE_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_FILE_PARAMETER=configured\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}})
+		preparedProject, err := project.PrepareProject(path, "", []string{basePath, envPath})
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -109,7 +117,10 @@ x-topo:
 		includeSiblingEnv := filepath.Join(includeFolder, ".env")
 		testutil.RequireWriteFile(t, includeSiblingEnv, "TOPO_TEST_FILE_PARAMETER=value_from_sibling\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -134,7 +145,10 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_PARAMETER=topo\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path, EnvFiles: []string{basePath, envPath}})
+		preparedProject, err := project.PrepareProject(path, "", []string{basePath, envPath})
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -155,7 +169,10 @@ x-topo:
 `)
 		testutil.RequireWriteFile(t, filepath.Join(root, env.DefaultFilename), "invalid=\"unterminated\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -170,7 +187,10 @@ x-topo:
     PORT: {}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
@@ -184,7 +204,10 @@ x-topo:
     LEGACY: {}
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
@@ -202,7 +225,10 @@ x-topo:
       example: "9000"
 `)
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -214,27 +240,12 @@ x-topo:
 	t.Run("returns no parameters without metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
-	})
-
-	t.Run("reports missing files", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "missing.yaml")
-
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
-
-		assert.ErrorIs(t, err, os.ErrNotExist)
-		assert.Nil(t, got)
-	})
-
-	t.Run("reports invalid YAML", func(t *testing.T) {
-		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
-
-		got, err := project.LoadParameters(project.Scope{ComposeFile: path})
-
-		assert.ErrorContains(t, err, "failed to decode project metadata")
-		assert.Nil(t, got)
 	})
 }

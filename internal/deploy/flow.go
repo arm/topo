@@ -26,7 +26,7 @@ type Engine interface {
 	RegistryClient
 }
 
-func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options Options) (deployErr error) {
+func Deploy(ctx context.Context, output io.Writer, preparedProject project.PreparedProject, options Options) (deployErr error) {
 	engine := options.Engine
 	if engine != EngineDocker && engine != EnginePodman {
 		return fmt.Errorf("invalid engine %q: must be docker or podman", engine)
@@ -40,14 +40,14 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		localEngine = docker.Engine{Host: docker.LocalHost}
 		portConflictMessages = docker.ContainerPortConflictMessages
 	} else {
-		if err := podman.EnsureNoRuntimeSet(scope); err != nil {
+		if err := podman.EnsureNoRuntimeSet(preparedProject); err != nil {
 			return err
 		}
 		localEngine = podman.Engine{Socket: podman.LocalSocket}
 		portConflictMessages = podman.ContainerPortConflictMessages
 	}
 
-	if err := PrepareImages(ctx, progress, scope, localEngine); err != nil {
+	if err := PrepareImages(ctx, progress, preparedProject, localEngine); err != nil {
 		return err
 	}
 
@@ -68,7 +68,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		}
 
 		if options.Registry == nil {
-			if err := TransferImagesViaPipe(ctx, progress, scope, localEngine, targetEngine); err != nil {
+			if err := TransferImagesViaPipe(ctx, progress, preparedProject, localEngine, targetEngine); err != nil {
 				return err
 			}
 		} else {
@@ -84,7 +84,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 			transferErr := TransferImagesViaRegistry(
 				ctx,
 				progress,
-				scope,
+				preparedProject,
 				registryConfig.Port,
 				localEngine,
 				targetEngine,
@@ -95,7 +95,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 		}
 	}
 
-	if err := StartServices(ctx, progress, scope, options.RecreateMode, targetEngine); err != nil {
+	if err := StartServices(ctx, progress, preparedProject, options.RecreateMode, targetEngine); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 	}
 	return post_deploy.PrintDeploySuccess(
 		output,
-		scope,
+		preparedProject,
 		options.DefaultSuccessMessage,
 	)
 }
@@ -118,7 +118,7 @@ func Deploy(ctx context.Context, output io.Writer, scope project.Scope, options 
 func Stop(
 	ctx context.Context,
 	output io.Writer,
-	scope project.Scope,
+	preparedProject project.PreparedProject,
 	target ssh.Destination,
 	engine EngineKind,
 ) (stopErr error) {
@@ -129,7 +129,7 @@ func Stop(
 
 	if engine == EngineDocker {
 		targetEngine := docker.Engine{Host: docker.NewHostFromDestination(target)}
-		return StopServices(ctx, progress, scope, targetEngine)
+		return StopServices(ctx, progress, preparedProject, targetEngine)
 	}
 
 	socket := podman.LocalSocket
@@ -145,7 +145,7 @@ func Stop(
 	}
 
 	targetEngine := podman.Engine{Socket: socket}
-	return StopServices(ctx, progress, scope, targetEngine)
+	return StopServices(ctx, progress, preparedProject, targetEngine)
 }
 
 func openPodmanSocketTunnel(
@@ -169,11 +169,11 @@ func openPodmanSocketTunnel(
 	return podman.NewSocket(tunnel.SocketURL()), closeTunnel, nil
 }
 
-func PrepareImages(ctx context.Context, progress *term.Progress, scope project.Scope, runner ComposeCommandRunner) error {
-	if err := BuildImages(ctx, progress, scope, runner); err != nil {
+func PrepareImages(ctx context.Context, progress *term.Progress, preparedProject project.PreparedProject, runner ComposeCommandRunner) error {
+	if err := BuildImages(ctx, progress, preparedProject, runner); err != nil {
 		return err
 	}
-	return PullImages(ctx, progress, scope, runner)
+	return PullImages(ctx, progress, preparedProject, runner)
 }
 
 type CommandRunner interface {
@@ -184,7 +184,7 @@ type CommandRunner interface {
 func TransferImagesViaPipe(
 	ctx context.Context,
 	progress *term.Progress,
-	scope project.Scope,
+	preparedProject project.PreparedProject,
 	sourceEx CommandRunner,
 	targetEx CommandRunner,
 ) error {
@@ -192,7 +192,7 @@ func TransferImagesViaPipe(
 		return err
 	}
 
-	images, err := project.ImageNames(scope)
+	images, err := project.ImageNames(preparedProject)
 	if err != nil {
 		return err
 	}
@@ -393,7 +393,7 @@ type RegistryClient interface {
 func TransferImagesViaRegistry(
 	ctx context.Context,
 	progress *term.Progress,
-	scope project.Scope,
+	preparedProject project.PreparedProject,
 	localRegistryPort string,
 	sourceEx RegistryClient,
 	targetEx RegistryClient,
@@ -402,7 +402,7 @@ func TransferImagesViaRegistry(
 		return err
 	}
 
-	images, err := project.ImageNames(scope)
+	images, err := project.ImageNames(preparedProject)
 	if err != nil {
 		return err
 	}

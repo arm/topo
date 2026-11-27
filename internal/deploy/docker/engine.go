@@ -67,12 +67,12 @@ func (ex Engine) PullImage(ctx context.Context, output io.Writer, image string) 
 	return ex.RunCommand(ctx, output, "pull", image)
 }
 
-func (ex Engine) ComposeCommand(ctx context.Context, scope project.Scope, args ...string) (*exec.Cmd, error) {
-	return ComposeCommand(ctx, ex.Host, scope, args...), nil
+func (ex Engine) ComposeCommand(ctx context.Context, preparedProject project.PreparedProject, args ...string) (*exec.Cmd, error) {
+	return ComposeCommand(ctx, ex.Host, preparedProject, args...), nil
 }
 
-func (ex Engine) RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error {
-	return RunComposeCommand(ctx, output, ex.Host, scope, args...)
+func (ex Engine) RunComposeCommand(ctx context.Context, output io.Writer, preparedProject project.PreparedProject, args ...string) error {
+	return RunComposeCommand(ctx, output, ex.Host, preparedProject, args...)
 }
 
 func (ex Engine) usesContainerdImageStore(ctx context.Context) (bool, error) {

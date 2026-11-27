@@ -19,21 +19,21 @@ func RunCommand(ctx context.Context, output io.Writer, host Host, args ...string
 	return run(Command(ctx, host, args...), output)
 }
 
-func ComposeCommand(ctx context.Context, host Host, scope project.Scope, args ...string) *exec.Cmd {
-	composeArgs := []string{"compose", "-f", scope.ComposeFile}
-	for _, envFile := range scope.EnvFiles {
+func ComposeCommand(ctx context.Context, host Host, preparedProject project.PreparedProject, args ...string) *exec.Cmd {
+	composeArgs := []string{"compose", "-f", preparedProject.ComposeFile()}
+	for _, envFile := range preparedProject.EnvFiles {
 		composeArgs = append(composeArgs, "--env-file", envFile)
 	}
 	composeArgs = append(composeArgs, args...)
 	cmdArgs := append(hostToArgs(host), composeArgs...)
 	cmd := exec.CommandContext(ctx, "docker", cmdArgs...)
 	command.ConfigureCancellation(cmd)
-	cmd.Env = append(os.Environ(), scope.Env...)
+	cmd.Env = append(os.Environ(), preparedProject.Env...)
 	return cmd
 }
 
-func RunComposeCommand(ctx context.Context, output io.Writer, host Host, scope project.Scope, args ...string) error {
-	return run(ComposeCommand(ctx, host, scope, args...), output)
+func RunComposeCommand(ctx context.Context, output io.Writer, host Host, preparedProject project.PreparedProject, args ...string) error {
+	return run(ComposeCommand(ctx, host, preparedProject, args...), output)
 }
 
 func run(cmd *exec.Cmd, output io.Writer) error {

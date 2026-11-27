@@ -31,7 +31,7 @@ func RequirePodmanRegistryContainerAbsent(t *testing.T, containerName string) {
 	})
 }
 
-func PodmanDeploymentFixture(t *testing.T) (project.Scope, string) {
+func PodmanDeploymentFixture(t *testing.T) (project.PreparedProject, string) {
 	t.Helper()
 	tempDir := t.TempDir()
 	testName := gtestutil.SanitiseTestName(t)
@@ -64,15 +64,17 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	return project.Scope{ComposeFile: composeFile}, "test-project-" + testName
+	preparedProject, err := project.PrepareProject(composeFile, "", nil)
+	require.NoError(t, err)
+	return preparedProject, "test-project-" + testName
 }
 
-func CleanupPodmanComposeProject(t *testing.T, scope project.Scope) {
+func CleanupPodmanComposeProject(t *testing.T, preparedProject project.PreparedProject) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, scope, "down", "-v", "--remove-orphans", "--rmi", "local")
+	cmd, err := podman.ComposeCommand(ctx, podman.LocalSocket, preparedProject, "down", "-v", "--remove-orphans", "--rmi", "local")
 	if err != nil {
 		t.Logf("failed to configure Podman Compose: %v", err)
 		return

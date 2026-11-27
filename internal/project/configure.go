@@ -7,8 +7,8 @@ import (
 	"github.com/arm/topo/internal/parameter"
 )
 
-func Configure(scope Scope, resolver parameter.Resolver) (parameter.Changes, error) {
-	parameters, err := LoadParameters(scope)
+func Configure(preparedProject PreparedProject, resolver parameter.Resolver) (parameter.Changes, error) {
+	parameters, err := LoadParameters(preparedProject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load parameters: %w", err)
 	}

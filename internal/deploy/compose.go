@@ -14,22 +14,22 @@ import (
 )
 
 type ComposeCommandRunner interface {
-	ComposeCommand(ctx context.Context, scope project.Scope, args ...string) (*exec.Cmd, error)
-	RunComposeCommand(ctx context.Context, output io.Writer, scope project.Scope, args ...string) error
+	ComposeCommand(ctx context.Context, preparedProject project.PreparedProject, args ...string) (*exec.Cmd, error)
+	RunComposeCommand(ctx context.Context, output io.Writer, preparedProject project.PreparedProject, args ...string) error
 }
 
-func BuildImages(ctx context.Context, progress *term.Progress, scope project.Scope, runner ComposeCommandRunner) error {
+func BuildImages(ctx context.Context, progress *term.Progress, preparedProject project.PreparedProject, runner ComposeCommandRunner) error {
 	if err := progress.Header("Build images"); err != nil {
 		return err
 	}
-	return runner.RunComposeCommand(ctx, progress.Output(), scope, "build")
+	return runner.RunComposeCommand(ctx, progress.Output(), preparedProject, "build")
 }
 
-func PullImages(ctx context.Context, progress *term.Progress, scope project.Scope, runner ComposeCommandRunner) error {
+func PullImages(ctx context.Context, progress *term.Progress, preparedProject project.PreparedProject, runner ComposeCommandRunner) error {
 	if err := progress.Header("Pull images"); err != nil {
 		return err
 	}
-	services, err := project.PullableServices(scope)
+	services, err := project.PullableServices(preparedProject)
 	if err != nil {
 		return err
 	}
@@ -38,10 +38,10 @@ func PullImages(ctx context.Context, progress *term.Progress, scope project.Scop
 	}
 
 	args := append([]string{"pull"}, services...)
-	return runner.RunComposeCommand(ctx, progress.Output(), scope, args...)
+	return runner.RunComposeCommand(ctx, progress.Output(), preparedProject, args...)
 }
 
-func StartServices(ctx context.Context, progress *term.Progress, scope project.Scope, mode RecreateMode, runner ComposeCommandRunner) error {
+func StartServices(ctx context.Context, progress *term.Progress, preparedProject project.PreparedProject, mode RecreateMode, runner ComposeCommandRunner) error {
 	if err := progress.Header("Start services"); err != nil {
 		return err
 	}
@@ -52,24 +52,24 @@ func StartServices(ctx context.Context, progress *term.Progress, scope project.S
 	case RecreateModeNone:
 		args = append(args, "--no-recreate")
 	}
-	return runner.RunComposeCommand(ctx, progress.Output(), scope, args...)
+	return runner.RunComposeCommand(ctx, progress.Output(), preparedProject, args...)
 }
 
-func StopServices(ctx context.Context, progress *term.Progress, scope project.Scope, runner ComposeCommandRunner) error {
+func StopServices(ctx context.Context, progress *term.Progress, preparedProject project.PreparedProject, runner ComposeCommandRunner) error {
 	if err := progress.Header("Stop services"); err != nil {
 		return err
 	}
-	return runner.RunComposeCommand(ctx, progress.Output(), scope, "stop")
+	return runner.RunComposeCommand(ctx, progress.Output(), preparedProject, "stop")
 }
 
-func LogServices(ctx context.Context, output io.Writer, scope project.Scope, runner ComposeCommandRunner, options LogsOptions) error {
+func LogServices(ctx context.Context, output io.Writer, preparedProject project.PreparedProject, runner ComposeCommandRunner, options LogsOptions) error {
 	args := []string{"logs", "--tail", "100"}
 	if options.Follow {
 		args = append(args, "--follow")
 	}
 	args = append(args, "--")
 	args = append(args, options.Services...)
-	return runner.RunComposeCommand(ctx, output, scope, args...)
+	return runner.RunComposeCommand(ctx, output, preparedProject, args...)
 }
 
 type RawContainer struct {
@@ -84,7 +84,7 @@ type RawContainer struct {
 
 func ListContainersRaw(
 	ctx context.Context,
-	scope project.Scope,
+	preparedProject project.PreparedProject,
 	runner ComposeCommandRunner,
 	all bool,
 ) ([]RawContainer, error) {
@@ -92,7 +92,7 @@ func ListContainersRaw(
 	if all {
 		args = append(args, "--all")
 	}
-	cmd, err := runner.ComposeCommand(ctx, scope, args...)
+	cmd, err := runner.ComposeCommand(ctx, preparedProject, args...)
 	if err != nil {
 		return nil, err
 	}

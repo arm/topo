@@ -7,8 +7,8 @@ import (
 	"github.com/arm/topo/internal/project"
 )
 
-func getSuccessMessage(scope project.Scope) (string, error) {
-	composeProject, err := project.Read(scope)
+func getSuccessMessage(preparedProject project.PreparedProject) (string, error) {
+	composeProject, err := project.Read(preparedProject)
 	if err != nil {
 		return "", err
 	}
@@ -23,8 +23,8 @@ func getSuccessMessage(scope project.Scope) (string, error) {
 	return metadata.DeploymentSuccessMessage, nil
 }
 
-func PrintDeploySuccess(output io.Writer, scope project.Scope, defaultMessage string) error {
-	successMessage, err := getSuccessMessage(scope)
+func PrintDeploySuccess(output io.Writer, preparedProject project.PreparedProject, defaultMessage string) error {
+	successMessage, err := getSuccessMessage(preparedProject)
 	if err != nil {
 		return err
 	}

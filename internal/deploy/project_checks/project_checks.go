@@ -18,8 +18,8 @@ func isPlatformMismatch(platform string) bool {
 	return !strings.HasPrefix(platform, linuxArm64Platform)
 }
 
-func EnsureProjectIsLinuxArm64Ready(scope project.Scope) error {
-	composeProject, err := project.Read(scope)
+func EnsureProjectIsLinuxArm64Ready(preparedProject project.PreparedProject) error {
+	composeProject, err := project.Read(preparedProject)
 	if err != nil {
 		return fmt.Errorf("failed to load project: %w", err)
 	}

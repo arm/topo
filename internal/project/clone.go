@@ -72,10 +72,12 @@ func configureProject(composeFilePath string, resolver parameter.Resolver) error
 		return err
 	}
 
-	changes, err := Configure(Scope{
-		ComposeFile: composeFilePath,
-		EnvFiles:    envFiles,
-	}, resolver)
+	preparedProject, err := PrepareProject(composeFilePath, "", envFiles)
+	if err != nil {
+		return err
+	}
+
+	changes, err := Configure(preparedProject, resolver)
 	if err != nil || changes == nil {
 		return err
 	}

@@ -6,7 +6,9 @@ import (
 	"github.com/arm/topo/internal/deploy/docker"
 	"github.com/arm/topo/internal/project"
 	"github.com/arm/topo/internal/ssh"
+	"github.com/arm/topo/internal/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCommand(t *testing.T) {
@@ -25,20 +27,25 @@ func TestComposeCommand(t *testing.T) {
 	t.Run("sets host flag for remote host", func(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFile: "/path/to/compose.yaml"}
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
 
-		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
+		cmd := docker.ComposeCommand(t.Context(), remoteHost, preparedProject, "up", "-d")
 
-		want := []string{"docker", "-H", "ssh://user@remote", "compose", "-f", "/path/to/compose.yaml", "up", "-d"}
+		want := []string{"docker", "-H", "ssh://user@remote", "compose", "-f", path, "up", "-d"}
 		assert.Equal(t, want, cmd.Args)
 	})
 
 	t.Run("sets command env vars", func(t *testing.T) {
 		dest := ssh.NewDestination("localhost")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFile: "compose.yaml", Env: []string{"FOO=NOTBAR"}}
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+		preparedProject.Env = []string{"FOO=NOTBAR"}
 
-		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
+		cmd := docker.ComposeCommand(t.Context(), remoteHost, preparedProject, "up", "-d")
 
 		assert.Contains(t, cmd.Env, "FOO=NOTBAR")
 	})
@@ -46,11 +53,13 @@ func TestComposeCommand(t *testing.T) {
 	t.Run("sets env-file args", func(t *testing.T) {
 		dest := ssh.NewDestination("localhost")
 		remoteHost := docker.NewHostFromDestination(dest)
-		scope := project.Scope{ComposeFile: "compose.yaml", EnvFiles: []string{".foobar.env", ".env"}}
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
+		preparedProject, err := project.PrepareProject(path, "", []string{".foobar.env", ".env"})
+		require.NoError(t, err)
 
-		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
+		cmd := docker.ComposeCommand(t.Context(), remoteHost, preparedProject, "up", "-d")
 
-		want := []string{"docker", "compose", "-f", "compose.yaml", "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}
+		want := []string{"docker", "compose", "-f", path, "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}
 		assert.Equal(t, want, cmd.Args)
 	})
 }

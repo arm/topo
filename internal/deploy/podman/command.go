@@ -27,13 +27,13 @@ func RunCommand(ctx context.Context, output io.Writer, socket Socket, args ...st
 	return nil
 }
 
-func ComposeCommand(ctx context.Context, socket Socket, scope project.Scope, args ...string) (*exec.Cmd, error) {
-	composeArgs := []string{"compose", "-f", scope.ComposeFile}
-	for _, envFile := range scope.EnvFiles {
+func ComposeCommand(ctx context.Context, socket Socket, preparedProject project.PreparedProject, args ...string) (*exec.Cmd, error) {
+	composeArgs := []string{"compose", "-f", preparedProject.ComposeFile()}
+	for _, envFile := range preparedProject.EnvFiles {
 		composeArgs = append(composeArgs, "--env-file", envFile)
 	}
 	composeArgs = append(composeArgs, args...)
-	cmd, err := composeCommand(ctx, socket, scope.Env, composeArgs...)
+	cmd, err := composeCommand(ctx, socket, preparedProject.Env, composeArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +71,8 @@ func composeCommand(ctx context.Context, socket Socket, environment []string, ar
 	return cmd, nil
 }
 
-func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, scope project.Scope, args ...string) error {
-	cmd, err := ComposeCommand(ctx, socket, scope, args...)
+func RunComposeCommand(ctx context.Context, output io.Writer, socket Socket, preparedProject project.PreparedProject, args ...string) error {
+	cmd, err := ComposeCommand(ctx, socket, preparedProject, args...)
 	if err != nil {
 		return err
 	}

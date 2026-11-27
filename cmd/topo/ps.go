@@ -40,7 +40,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
+		preparedProject, err := project.PrepareProject(composeFilePath, target.value, envFiles)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		containers, err := deploy.ListContainers(
-			ctx, scope, dest, deploy.EngineKind(engine.value), hostname, allContainers,
+			ctx, preparedProject, dest, deploy.EngineKind(engine.value), hostname, allContainers,
 		)
 		if err != nil {
 			return err

@@ -6,12 +6,11 @@ import (
 	"sort"
 
 	"github.com/compose-spec/compose-go/v2/cli"
-	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ImageNames(scope Scope) ([]string, error) {
-	composeProject, err := Read(scope)
+func ImageNames(preparedProject PreparedProject) ([]string, error) {
+	composeProject, err := Read(preparedProject)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +26,8 @@ func ImageNames(scope Scope) ([]string, error) {
 	return names, nil
 }
 
-func PullableServices(scope Scope) ([]string, error) {
-	composeProject, err := Read(scope)
+func PullableServices(preparedProject PreparedProject) ([]string, error) {
+	composeProject, err := Read(preparedProject)
 	if err != nil {
 		return nil, err
 	}
@@ -42,14 +41,14 @@ func PullableServices(scope Scope) ([]string, error) {
 	return names, nil
 }
 
-func Read(scope Scope) (*types.Project, error) {
+func Read(preparedProject PreparedProject) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
-		[]string{scope.ComposeFile},
+		[]string{preparedProject.ComposeFile()},
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
-		cli.WithEnvFiles(scope.EnvFiles...),
-		cli.WithEnv(scope.Env),
+		cli.WithEnvFiles(preparedProject.EnvFiles...),
+		cli.WithEnv(preparedProject.Env),
 	)
 	if err != nil {
 		return nil, err
@@ -67,18 +66,4 @@ func Read(scope Scope) (*types.Project, error) {
 		return nil, err
 	}
 	return composeProject, nil
-}
-
-func readUninterpolated(composeFilePath string) (map[string]any, error) {
-	options, err := cli.NewProjectOptions([]string{composeFilePath},
-		cli.WithResolvedPaths(false),
-		cli.WithNormalization(false),
-		cli.WithLoadOptions(func(o *loader.Options) {
-			o.SkipInterpolation = true
-		}),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return options.LoadModel(context.Background())
 }

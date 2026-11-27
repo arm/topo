@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"github.com/arm/topo/internal/env"
@@ -14,8 +13,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
-	parameters, err := loadParameterMetadata(scope.ComposeFile)
+func LoadParameters(preparedProject PreparedProject) ([]parameter.Parameter, error) {
+	parameters, err := loadParameterMetadata(preparedProject.ComposeFile())
 	if err != nil {
 		return nil, err
 	}
@@ -23,23 +22,12 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 		return parameters, nil
 	}
 
-	model, err := readUninterpolated(scope.ComposeFile)
-	if err != nil {
-		return nil, err
-	}
-	includePaths, err := readIncludePaths(scope.ComposeFile, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read include paths: %w", err)
-	}
-	environmentFiles, err := collectEnvFiles(includePaths)
-	if err != nil {
-		return nil, fmt.Errorf("failed to collect included environment files: %w", err)
-	}
-	currentValues, err := env.CurrentValues(append(environmentFiles, scope.EnvFiles...))
+	currentValues, err := env.CurrentValues(preparedProject.EnvFiles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
-	references := collectParameterReferences(model)
+
+	references := collectParameterReferences(preparedProject.uninterpolatedComposeConfig)
 	for i := range parameters {
 		param := &parameters[i]
 		param.References = references[param.Name]
@@ -87,68 +75,6 @@ func loadParameterMetadata(composeFilePath string) ([]parameter.Parameter, error
 	}
 
 	return parameters, nil
-}
-
-func readIncludePaths(composeFilePath string, visitedSet map[string]struct{}) ([]string, error) {
-	composeFilePath, err := filepath.Abs(composeFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve compose file path: %w", err)
-	}
-	if visitedSet == nil {
-		visitedSet = make(map[string]struct{})
-	}
-	if _, visited := visitedSet[composeFilePath]; visited {
-		return nil, nil
-	}
-	visitedSet[composeFilePath] = struct{}{}
-
-	reader, err := os.Open(composeFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open compose file: %w", err)
-	}
-	defer reader.Close() //nolint:errcheck
-
-	var raw map[string]any
-	decoder := yaml.NewDecoder(reader)
-
-	var includes []string
-	if err := decoder.Decode(&raw); err != nil {
-		return nil, fmt.Errorf("failed to decode compose file: %w", err)
-	}
-	if rawIncludes, ok := raw["include"].([]any); ok {
-		for _, include := range rawIncludes {
-			includePath, ok := include.(string)
-			if !ok {
-				return nil, fmt.Errorf("unsupported include entry in %q: expected a path string", composeFilePath)
-			}
-			if !filepath.IsAbs(includePath) {
-				includePath = filepath.Join(filepath.Dir(composeFilePath), includePath)
-			}
-			includePath = filepath.Clean(includePath)
-			if _, visited := visitedSet[includePath]; visited {
-				continue
-			}
-			includes = append(includes, includePath)
-			subIncludes, err := readIncludePaths(includePath, visitedSet)
-			if err != nil {
-				return nil, err
-			}
-			includes = append(includes, subIncludes...)
-		}
-	}
-	return includes, nil
-}
-
-func collectEnvFiles(composeFiles []string) ([]string, error) {
-	var environmentFiles []string
-	for _, composeFile := range composeFiles {
-		paths, err := env.ResolveFiles(filepath.Dir(composeFile), env.DefaultFilenames, true)
-		if err != nil {
-			return nil, err
-		}
-		environmentFiles = append(environmentFiles, paths...)
-	}
-	return environmentFiles, nil
 }
 
 func collectParameterReferences(model map[string]any) map[string][]parameter.Reference {

@@ -2,6 +2,7 @@ package post_deploy_test
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/arm/topo/internal/deploy/post_deploy"
@@ -22,7 +23,10 @@ services:
 `)
 		var buf bytes.Buffer
 
-		err := post_deploy.PrintDeploySuccess(&buf, project.Scope{ComposeFile: composeFile}, "Run `topo ps` to see deployed containers")
+		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		require.NoError(t, prepareErr)
+
+		err := post_deploy.PrintDeploySuccess(&buf, preparedProject, "Run `topo ps` to see deployed containers")
 
 		require.NoError(t, err)
 		assert.Equal(t, "Deployment complete!\n", buf.String())
@@ -36,7 +40,10 @@ services:
 `)
 		var buf bytes.Buffer
 
-		err := post_deploy.PrintDeploySuccess(&buf, project.Scope{ComposeFile: composeFile}, "default message")
+		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		require.NoError(t, prepareErr)
+
+		err := post_deploy.PrintDeploySuccess(&buf, preparedProject, "default message")
 
 		require.NoError(t, err)
 		assert.Equal(t, "default message\n", buf.String())
@@ -54,16 +61,23 @@ services:
 		var buf bytes.Buffer
 		t.Setenv("EXTRA_MESSAGE", "cool!")
 
-		err := post_deploy.PrintDeploySuccess(&buf, project.Scope{ComposeFile: composeFile}, "default message")
+		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		require.NoError(t, prepareErr)
+
+		err := post_deploy.PrintDeploySuccess(&buf, preparedProject, "default message")
 
 		require.NoError(t, err)
 		assert.Equal(t, "test-project deployed - cool!\n", buf.String())
 	})
 
-	t.Run("returns error when compose file does not exist", func(t *testing.T) {
+	t.Run("returns error when compose file is removed after preparation", func(t *testing.T) {
+		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
+		preparedProject, err := project.PrepareProject(composeFile, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, os.Remove(composeFile))
 		var buf bytes.Buffer
 
-		err := post_deploy.PrintDeploySuccess(&buf, project.Scope{ComposeFile: "nonexistent.yaml"}, "Run `topo ps` to see deployed containers")
+		err = post_deploy.PrintDeploySuccess(&buf, preparedProject, "Run `topo ps` to see deployed containers")
 
 		require.Error(t, err)
 	})

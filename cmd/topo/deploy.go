@@ -60,7 +60,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
+		preparedProject, err := project.PrepareProject(composeFilePath, target.value, envFiles)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 			return err
 		}
 
-		if err := ensureProjectIsReady(scope); err != nil {
+		if err := ensureProjectIsReady(preparedProject); err != nil {
 			return err
 		}
 
@@ -106,7 +106,7 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		deploymentErr := deploy.Deploy(ctx, os.Stdout, scope, options)
+		deploymentErr := deploy.Deploy(ctx, os.Stdout, preparedProject, options)
 		if deploymentErr == nil {
 			return nil
 		}
@@ -155,11 +155,11 @@ func joinNonEmpty(args ...string) string {
 	return strings.Join(nonEmptyArgs, " ")
 }
 
-func ensureProjectIsReady(scope project.Scope) error {
+func ensureProjectIsReady(preparedProject project.PreparedProject) error {
 	if skipProjectChecks {
 		return nil
 	}
-	return checks.EnsureProjectIsLinuxArm64Ready(scope)
+	return checks.EnsureProjectIsLinuxArm64Ready(preparedProject)
 }
 
 const (

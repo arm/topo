@@ -16,7 +16,7 @@ import (
 
 func ListContainers(
 	ctx context.Context,
-	scope project.Scope,
+	preparedProject project.PreparedProject,
 	target ssh.Destination,
 	engine EngineKind,
 	hostname string,
@@ -45,7 +45,7 @@ func ListContainers(
 		runner = podman.Engine{Socket: socket}
 	}
 
-	raws, err := ListContainersRaw(ctx, scope, runner, all)
+	raws, err := ListContainersRaw(ctx, preparedProject, runner, all)
 	if err != nil {
 		return nil, err
 	}
