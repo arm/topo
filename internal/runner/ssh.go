@@ -43,7 +43,7 @@ func (r *SSH) BinaryExists(ctx context.Context, bin string) error {
 	if err != nil {
 		return err
 	}
-	if _, _, err := r.RunShell(ctx, cmd); err != nil {
+	if _, _, err := r.exec(ctx, cmd, nil, nil); err != nil {
 		if errors.Is(err, ssh.ErrSSH) || errors.Is(err, ErrTimeout) {
 			return err
 		}
