@@ -2,7 +2,6 @@ package fact
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -15,12 +14,12 @@ const FactRemoteprocName = "remoteproc.name"
 type RemoteprocProvider struct{}
 
 func (RemoteprocProvider) Facts(ctx context.Context, r runner.CommandRunner) (Report, error) {
-	out, _, err := r.Run(ctx, "grep -H . /sys/class/remoteproc/*/name")
+	out, stderr, err := r.Run(ctx, `sh -c 'LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name'`)
 	if err != nil {
-		if errors.Is(err, runner.ErrTimeout) {
-			return Report{}, err
+		if strings.Contains(stderr, "No such file or directory") {
+			return Report{}, nil
 		}
-		return Report{}, nil
+		return Report{}, err
 	}
 
 	var report Report
