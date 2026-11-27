@@ -26,11 +26,12 @@ func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
-	model, err := readUninterpolated(scope.ComposeFile)
+
+	parsedComposeConfig, err := readUninterpolated(scope.ComposeFile)
 	if err != nil {
 		return nil, err
 	}
-	references := collectParameterReferences(model)
+	references := collectParameterReferences(parsedComposeConfig)
 	for i := range parameters {
 		param := &parameters[i]
 		param.References = references[param.Name]

@@ -66,6 +66,31 @@ x-topo:
 		}, got)
 	})
 
+	t.Run("loads parameter references from a long-form Compose include", func(t *testing.T) {
+		child := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine
+    environment: {TOKEN: "${TOPO_TEST_LONG_FORM_TOKEN}"}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - path: `+child+`
+x-topo:
+  parameters: {TOPO_TEST_LONG_FORM_TOKEN: {}}
+`)
+
+		scope, err := project.BuildScope(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(scope)
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, []parameter.Reference{{
+			Path:       "services.app.environment.TOKEN",
+			Expression: "${TOPO_TEST_LONG_FORM_TOKEN}",
+		}}, got[0].References)
+	})
+
 	t.Run("loads current values from env files", func(t *testing.T) {
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:
@@ -86,6 +111,38 @@ x-topo:
 		assert.Equal(t, []parameter.Parameter{{
 			Name:          "TOPO_TEST_FILE_PARAMETER",
 			ExistingValue: new("configured"),
+			References:    []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_FILE_PARAMETER", Expression: "${TOPO_TEST_FILE_PARAMETER}"}},
+		}}, got)
+	})
+
+	t.Run("loads current values from .env beside an included Compose file", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_FILE_PARAMETER", "")
+		require.NoError(t, os.Unsetenv("TOPO_TEST_FILE_PARAMETER"))
+		includeFolder := t.TempDir()
+		baseFolder := t.TempDir()
+		includeComposeFile := testutil.RequireWriteComposeFile(t, includeFolder, `services:
+  app:
+    image: alpine
+    environment: {TOPO_TEST_FILE_PARAMETER: "${TOPO_TEST_FILE_PARAMETER}"}
+`)
+		path := testutil.RequireWriteComposeFile(t, baseFolder, `include:
+  - `+includeComposeFile+`
+
+x-topo:
+  parameters: {TOPO_TEST_FILE_PARAMETER: {}}
+`)
+		includeSiblingEnv := filepath.Join(includeFolder, ".env")
+		testutil.RequireWriteFile(t, includeSiblingEnv, "TOPO_TEST_FILE_PARAMETER=value_from_sibling\n")
+
+		scope, err := project.BuildScope(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(scope)
+
+		require.NoError(t, err)
+		assert.Equal(t, []parameter.Parameter{{
+			Name:          "TOPO_TEST_FILE_PARAMETER",
+			ExistingValue: new("value_from_sibling"),
 			References:    []parameter.Reference{{Path: "services.app.environment.TOPO_TEST_FILE_PARAMETER", Expression: "${TOPO_TEST_FILE_PARAMETER}"}},
 		}}, got)
 	})
