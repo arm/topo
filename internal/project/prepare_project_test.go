@@ -45,6 +45,22 @@ func TestPrepareProject(t *testing.T) {
 		require.Equal(t, project.PreparedProject{}, got)
 	})
 
+	t.Run("collects environment files in include path list order", func(t *testing.T) {
+		baseDir, overrideDir := t.TempDir(), t.TempDir()
+		base := testutil.RequireWriteComposeFile(t, baseDir, "services:\n  app:\n    image: alpine\n")
+		override := testutil.RequireWriteComposeFile(t, overrideDir, "services:\n  app:\n    command: [echo, override]\n")
+		baseEnv := filepath.Join(baseDir, ".env")
+		overrideEnv := filepath.Join(overrideDir, ".env.topo")
+		testutil.RequireWriteFile(t, baseEnv, "GREETING=hello\n")
+		testutil.RequireWriteFile(t, overrideEnv, "GREETING=override\n")
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), fmt.Sprintf("include:\n  - path: [%q, %q]\n", base, override))
+
+		got, err := project.PrepareProject(path, "", nil)
+
+		require.NoError(t, err)
+		require.Equal(t, []string{baseEnv, overrideEnv}, got.EnvFiles)
+	})
+
 	t.Run("reports invalid YAML", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
 

@@ -71,6 +71,31 @@ x-topo:
 		}, got)
 	})
 
+	t.Run("loads parameter references from a long-form Compose include", func(t *testing.T) {
+		child := testutil.RequireWriteComposeFile(t, t.TempDir(), `services:
+  app:
+    image: alpine
+    environment: {TOKEN: "${TOPO_TEST_LONG_FORM_TOKEN}"}
+`)
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `include:
+  - path: `+child+`
+x-topo:
+  parameters: {TOPO_TEST_LONG_FORM_TOKEN: {}}
+`)
+
+		preparedProject, err := project.PrepareProject(path, "", nil)
+		require.NoError(t, err)
+
+		got, err := project.LoadParameters(preparedProject)
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, []parameter.Reference{{
+			Path:       "services.app.environment.TOKEN",
+			Expression: "${TOPO_TEST_LONG_FORM_TOKEN}",
+		}}, got[0].References)
+	})
+
 	t.Run("loads current values from env files", func(t *testing.T) {
 		root := t.TempDir()
 		path := testutil.RequireWriteComposeFile(t, root, `services:

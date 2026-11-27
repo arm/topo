@@ -81,7 +81,11 @@ func readIncludePaths(composeFilePath string, visitedSet map[string]struct{}) ([
 		return nil, fmt.Errorf("failed to decode compose file: %w", err)
 	}
 	if rawIncludes, ok := raw["include"].([]any); ok {
-		for _, include := range rawIncludes {
+		paths, err := expandIncludePaths(rawIncludes)
+		if err != nil {
+			return nil, fmt.Errorf("invalid includes in %q: %w", composeFilePath, err)
+		}
+		for _, include := range paths {
 			includePath, ok := include.(string)
 			if !ok {
 				return nil, fmt.Errorf("unsupported include entry in %q: expected a path string", composeFilePath)
@@ -102,6 +106,26 @@ func readIncludePaths(composeFilePath string, visitedSet map[string]struct{}) ([
 		}
 	}
 	return includes, nil
+}
+
+func expandIncludePaths(includes []any) ([]any, error) {
+	var paths []any
+	for _, include := range includes {
+		if config, ok := include.(map[string]any); ok {
+			for _, field := range []string{"project_directory", "env_file"} {
+				if _, present := config[field]; present {
+					return nil, fmt.Errorf("unsupported include field %q", field)
+				}
+			}
+			include = config["path"]
+		}
+		if pathList, ok := include.([]any); ok {
+			paths = append(paths, pathList...)
+			continue
+		}
+		paths = append(paths, include)
+	}
+	return paths, nil
 }
 
 func collectEnvFiles(composeFiles []string) ([]string, error) {
