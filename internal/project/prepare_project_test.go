@@ -61,12 +61,29 @@ func TestPrepareProject(t *testing.T) {
 		require.Equal(t, []string{baseEnv, overrideEnv}, got.EnvFiles)
 	})
 
-	t.Run("reports invalid YAML", func(t *testing.T) {
+		t.Run("reports invalid YAML", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
 
 		got, err := project.PrepareProject(path, "", nil)
 
 		require.Error(t, err)
 		require.Equal(t, project.PreparedProject{}, got)
+	})
+
+	t.Run("resolves nested includes in an override relative to the first file in the path list", func(t *testing.T) {
+		baseDir, overrideDir := t.TempDir(), t.TempDir()
+		base := testutil.RequireWriteComposeFile(t, baseDir, "services:\n  app:\n    image: alpine\n")
+		override := testutil.RequireWriteComposeFile(t, overrideDir, "include: [./child/compose.yaml]\n")
+		childDir := filepath.Join(baseDir, "child")
+		require.NoError(t, os.Mkdir(childDir, 0o755))
+		testutil.RequireWriteComposeFile(t, childDir, "services:\n  worker:\n    image: alpine\n")
+		childEnv := filepath.Join(childDir, ".env")
+		testutil.RequireWriteFile(t, childEnv, "GREETING=hello\n")
+		path := testutil.RequireWriteComposeFile(t, t.TempDir(), fmt.Sprintf("include:\n  - path: [%q, %q]\n", base, override))
+
+		got, err := project.PrepareProject(path, "", nil)
+
+		require.NoError(t, err)
+		require.Equal(t, []string{childEnv}, got.EnvFiles)
 	})
 }

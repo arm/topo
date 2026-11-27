@@ -38,7 +38,7 @@ func PrepareProject(composeFile string, target string, envFiles []string) (Prepa
 	if err != nil {
 		return PreparedProject{}, err
 	}
-	includePaths, err := readIncludePaths(composeFile, nil)
+	includePaths, err := collectIncludePaths(composeFile)
 	if err != nil {
 		return PreparedProject{}, fmt.Errorf("failed to read include paths: %w", err)
 	}
@@ -54,62 +54,93 @@ func PrepareProject(composeFile string, target string, envFiles []string) (Prepa
 	}, nil
 }
 
-func readIncludePaths(composeFilePath string, visitedSet map[string]struct{}) ([]string, error) {
-	composeFilePath, err := filepath.Abs(composeFilePath)
+func collectIncludePaths(root string) ([]string, error) {
+	root, err := filepath.Abs(root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve compose file path: %w", err)
 	}
-	if visitedSet == nil {
-		visitedSet = make(map[string]struct{})
-	}
-	if _, visited := visitedSet[composeFilePath]; visited {
-		return nil, nil
-	}
-	visitedSet[composeFilePath] = struct{}{}
-
-	reader, err := os.Open(composeFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open compose file: %w", err)
-	}
-	defer reader.Close() //nolint:errcheck
-
-	var raw map[string]any
-	decoder := yaml.NewDecoder(reader)
-
-	var includes []string
-	if err := decoder.Decode(&raw); err != nil {
-		return nil, fmt.Errorf("failed to decode compose file: %w", err)
-	}
-	if rawIncludes, ok := raw["include"].([]any); ok {
-		paths, err := expandIncludePaths(rawIncludes)
+	pending := []composeSource{{path: root, projectDirectory: filepath.Dir(root)}}
+	visited := make(map[string]struct{})
+	var paths []string
+	for len(pending) > 0 {
+		current := pending[0]
+		pending = pending[1:]
+		if _, seen := visited[current.path]; seen {
+			continue
+		}
+		visited[current.path] = struct{}{}
+		children, err := readIncludedSources(current)
 		if err != nil {
-			return nil, fmt.Errorf("invalid includes in %q: %w", composeFilePath, err)
+			return nil, err
 		}
-		for _, include := range paths {
-			includePath, ok := include.(string)
-			if !ok {
-				return nil, fmt.Errorf("unsupported include entry in %q: expected a path string", composeFilePath)
-			}
-			if !filepath.IsAbs(includePath) {
-				includePath = filepath.Join(filepath.Dir(composeFilePath), includePath)
-			}
-			includePath = filepath.Clean(includePath)
-			if _, visited := visitedSet[includePath]; visited {
-				continue
-			}
-			includes = append(includes, includePath)
-			subIncludes, err := readIncludePaths(includePath, visitedSet)
-			if err != nil {
-				return nil, err
-			}
-			includes = append(includes, subIncludes...)
+		if current.path != root {
+			paths = append(paths, current.path)
 		}
+		pending = append(children, pending...)
 	}
-	return includes, nil
+	return paths, nil
 }
 
-func expandIncludePaths(includes []any) ([]any, error) {
-	var paths []any
+func readComposeConfig(path string) (map[string]any, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read compose file %q: %w", path, err)
+	}
+	var config map[string]any
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		return nil, fmt.Errorf("failed to decode compose file %q: %w", path, err)
+	}
+	return config, nil
+}
+
+type composeSource struct {
+	path             string
+	projectDirectory string
+}
+
+func readIncludedSources(source composeSource) ([]composeSource, error) {
+	config, err := readComposeConfig(source.path)
+	if err != nil {
+		return nil, err
+	}
+	includes, _ := config["include"].([]any)
+	groups, err := collectIncludePathGroups(includes)
+	if err != nil {
+		return nil, fmt.Errorf("invalid includes in %q: %w", source.path, err)
+	}
+	var sources []composeSource
+	for _, group := range groups {
+		groupSources, err := resolveIncludeGroup(group, source.projectDirectory)
+		if err != nil {
+			return nil, fmt.Errorf("invalid include group in %q: %w", source.path, err)
+		}
+		sources = append(sources, groupSources...)
+	}
+	return sources, nil
+}
+
+func resolveIncludeGroup(paths []any, projectDirectory string) ([]composeSource, error) {
+	var sources []composeSource
+	groupDirectory := ""
+	for _, path := range paths {
+		includePath, ok := path.(string)
+		if !ok {
+			return nil, fmt.Errorf("unsupported include entry: expected a path string")
+		}
+		if !filepath.IsAbs(includePath) {
+			includePath = filepath.Join(projectDirectory, includePath)
+		}
+		includePath = filepath.Clean(includePath)
+		if groupDirectory == "" {
+			groupDirectory = filepath.Dir(includePath)
+		}
+		sources = append(sources, composeSource{path: includePath, projectDirectory: groupDirectory})
+	}
+	return sources, nil
+}
+
+func collectIncludePathGroups(includes []any) ([][]any, error) {
+	var groups [][]any
 	for _, include := range includes {
 		if config, ok := include.(map[string]any); ok {
 			for _, field := range []string{"project_directory", "env_file"} {
@@ -120,12 +151,12 @@ func expandIncludePaths(includes []any) ([]any, error) {
 			include = config["path"]
 		}
 		if pathList, ok := include.([]any); ok {
-			paths = append(paths, pathList...)
+			groups = append(groups, pathList)
 			continue
 		}
-		paths = append(paths, include)
+		groups = append(groups, []any{include})
 	}
-	return paths, nil
+	return groups, nil
 }
 
 func collectEnvFiles(composeFiles []string) ([]string, error) {
