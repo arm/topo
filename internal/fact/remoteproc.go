@@ -14,7 +14,7 @@ const FactRemoteprocName = "remoteproc.name"
 type RemoteprocProvider struct{}
 
 func (RemoteprocProvider) Facts(ctx context.Context, r runner.CommandRunner) (Report, error) {
-	out, stderr, err := r.Run(ctx, `sh -c 'LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name'`)
+	out, stderr, err := r.RunShell(ctx, "LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name")
 	if err != nil {
 		if strings.Contains(stderr, "No such file or directory") {
 			return Report{}, nil

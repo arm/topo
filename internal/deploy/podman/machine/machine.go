@@ -27,7 +27,7 @@ type Identity struct {
 }
 
 func Connections(ctx context.Context, r runner.CommandRunner) ([]Connection, error) {
-	output, _, err := r.Run(ctx, "podman system connection list --format json")
+	output, _, err := r.Run(ctx, "podman", "system", "connection", "list", "--format", "json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Podman connections: %w", err)
 	}
@@ -39,7 +39,7 @@ func Connections(ctx context.Context, r runner.CommandRunner) ([]Connection, err
 }
 
 func List(ctx context.Context, r runner.CommandRunner) ([]Identity, error) {
-	output, _, err := r.Run(ctx, "podman machine list --format json")
+	output, _, err := r.Run(ctx, "podman", "machine", "list", "--format", "json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Podman machines: %w", err)
 	}

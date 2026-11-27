@@ -3,8 +3,11 @@ package command
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 )
+
+var unquotedShellArgPattern = regexp.MustCompile(`^[[:alnum:]_.-]+$`)
 
 func SSHKeyGen(keyType string, keyPath string, targetHost string) *exec.Cmd {
 	sshKeyGenArgs := []string{"-t", keyType, "-f", keyPath, "-C", targetHost}
@@ -20,13 +23,9 @@ func BinaryLookupCommand(bin string) (string, error) {
 }
 
 func QuoteArg(s string) string {
-	if s == "" {
-		return "''"
+	if unquotedShellArgPattern.MatchString(s) {
+		return s
 	}
 
-	if strings.ContainsAny(s, " \t\n\"'\\/[/]$`") {
-		return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
-	}
-
-	return s
+	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
 }

@@ -11,10 +11,10 @@ import (
 )
 
 func TestRemoteprocProvider(t *testing.T) {
-	const probe = `sh -c 'LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name'`
+	const probe = "LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name"
 
 	t.Run("reports distinct devices with duplicate names and gaps in numbering", func(t *testing.T) {
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		r := &runner.Fake{Scripts: map[string]runner.FakeResult{
 			probe: {
 				Output: `/sys/class/remoteproc/remoteproc2/name:Cortex M4
 /sys/class/remoteproc/remoteproc7/name:Cortex M4
@@ -50,7 +50,7 @@ func TestRemoteprocProvider(t *testing.T) {
 	})
 
 	t.Run("returns empty when sysfs is unavailable", func(t *testing.T) {
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		r := &runner.Fake{Scripts: map[string]runner.FakeResult{
 			probe: {Err: assert.AnError, Stderr: "grep: /sys/class/remoteproc/*/name: No such file or directory\n"},
 		}}
 
@@ -61,7 +61,7 @@ func TestRemoteprocProvider(t *testing.T) {
 	})
 
 	t.Run("rejects an empty name", func(t *testing.T) {
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		r := &runner.Fake{Scripts: map[string]runner.FakeResult{
 			probe: {Output: "/sys/class/remoteproc/remoteproc2/name: "},
 		}}
 
@@ -71,7 +71,7 @@ func TestRemoteprocProvider(t *testing.T) {
 	})
 
 	t.Run("propagates probe errors", func(t *testing.T) {
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		r := &runner.Fake{Scripts: map[string]runner.FakeResult{
 			probe: {Err: assert.AnError, Stderr: "Permission denied"},
 		}}
 

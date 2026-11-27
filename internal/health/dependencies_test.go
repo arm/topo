@@ -336,10 +336,10 @@ func TestNewDependencyOnDockerCLI(t *testing.T) {
 }
 
 func TestRemoteprocDependency(t *testing.T) {
-	const probe = `sh -c 'LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name'`
+	const probe = "LC_ALL=C grep -H ^ /sys/class/remoteproc/*/name"
 
 	t.Run("fails when no remoteproc devices are found", func(t *testing.T) {
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		r := &runner.Fake{Scripts: map[string]runner.FakeResult{
 			probe: {},
 		}}
 		dependency := health.NewDependencyOnRemoteproc(r)
@@ -356,7 +356,7 @@ func TestRemoteprocDependency(t *testing.T) {
 	})
 
 	t.Run("fails when remoteproc probe fails", func(t *testing.T) {
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		r := &runner.Fake{Scripts: map[string]runner.FakeResult{
 			probe: {Err: runner.ErrTimeout},
 		}}
 		dependency := health.NewDependencyOnRemoteproc(r)
@@ -373,7 +373,7 @@ func TestRemoteprocDependency(t *testing.T) {
 	})
 
 	t.Run("reports remoteproc device names", func(t *testing.T) {
-		r := &runner.Fake{Commands: map[string]runner.FakeResult{
+		r := &runner.Fake{Scripts: map[string]runner.FakeResult{
 			probe: {Output: `/sys/class/remoteproc/remoteproc0/name:m4_0
 /sys/class/remoteproc/remoteproc1/name:m4_1
 `},

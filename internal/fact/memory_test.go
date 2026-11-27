@@ -13,7 +13,7 @@ import (
 func TestMemoryProvider(t *testing.T) {
 	t.Run("Facts reports total memory in KiB", func(t *testing.T) {
 		r := &runner.Fake{Commands: map[string]runner.FakeResult{
-			"cat /proc/meminfo": {Output: "MemFree: 1024 kB\nMemTotal:       16384000 kB\n"},
+			"cat '/proc/meminfo'": {Output: "MemFree: 1024 kB\nMemTotal:       16384000 kB\n"},
 		}}
 		want := fact.Report{Groups: []fact.Group{{
 			ID: fact.GroupSystemMemory,
@@ -34,7 +34,7 @@ func TestMemoryProvider(t *testing.T) {
 	t.Run("returns error when MemTotal not found", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"cat /proc/meminfo": {Output: "MemFree:        8192000 kB"},
+				"cat '/proc/meminfo'": {Output: "MemFree:        8192000 kB"},
 			},
 		}
 
@@ -46,7 +46,7 @@ func TestMemoryProvider(t *testing.T) {
 	t.Run("returns error when value is invalid", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"cat /proc/meminfo": {Output: "MemTotal:       notanumber"},
+				"cat '/proc/meminfo'": {Output: "MemTotal:       notanumber"},
 			},
 		}
 
@@ -58,7 +58,7 @@ func TestMemoryProvider(t *testing.T) {
 	t.Run("returns error when cat fails", func(t *testing.T) {
 		r := &runner.Fake{
 			Commands: map[string]runner.FakeResult{
-				"cat /proc/meminfo": {Err: assert.AnError},
+				"cat '/proc/meminfo'": {Err: assert.AnError},
 			},
 		}
 

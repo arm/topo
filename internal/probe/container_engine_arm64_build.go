@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/arm/topo/internal/command"
 	"github.com/arm/topo/internal/deploy/podman/machine"
 	"github.com/arm/topo/internal/runner"
 )
@@ -20,7 +19,7 @@ const binfmtMiscPath = "/proc/sys/fs/binfmt_misc"
 var ErrARM64BuildUnsupported = errors.New("linux/arm64 is not reported as supported")
 
 func CheckPodmanARM64Build(ctx context.Context, r runner.CommandRunner) error {
-	output, _, err := r.Run(ctx, "podman info --format json")
+	output, _, err := r.Run(ctx, "podman", "info", "--format", "json")
 	if err != nil {
 		return err
 	}
@@ -84,7 +83,7 @@ func checkPodmanMachineARM64Build(ctx context.Context, r runner.CommandRunner) e
 		return err
 	}
 	return checkARM64Binfmt(func(name string) ([]byte, error) {
-		output, _, err := r.Run(ctx, "podman machine ssh "+command.QuoteArg(machineName)+" cat "+binfmtMiscPath+"/"+name)
+		output, _, err := r.Run(ctx, "podman", "machine", "ssh", machineName, "cat", binfmtMiscPath+"/"+name)
 		return []byte(output), err
 	})
 }
@@ -123,7 +122,7 @@ func checkARM64Binfmt(readFile func(string) ([]byte, error)) error {
 }
 
 func CheckDockerARM64Build(ctx context.Context, r runner.CommandRunner) error {
-	output, _, err := r.Run(ctx, "docker buildx inspect")
+	output, _, err := r.Run(ctx, "docker", "buildx", "inspect")
 	if err != nil {
 		return err
 	}
