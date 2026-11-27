@@ -78,7 +78,7 @@ func connectSuggestionsOverInMemoryGRPC(
 	listener := bufconn.Listen(1024 * 1024)
 	go func() { _ = server.Serve(listener) }()
 	t.Cleanup(server.Stop)
-	conn, err := grpc.DialContext(t.Context(), "passthrough:///plugin",
+	conn, err := grpc.NewClient("passthrough:///plugin",
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return listener.DialContext(ctx)
 		}),
