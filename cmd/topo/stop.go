@@ -15,11 +15,11 @@ import (
 var topoStopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Stop a currently running deployment",
-	Long: `Stop services that are already running on the target using definitions in the compose file.
+	Long: `Stop services that are already running on the target using definitions in the selected Compose files.
 
 Executing this command does not remove the containers.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.`,
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Repeat -f to merge multiple Compose files in order.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
@@ -32,15 +32,15 @@ By default, Topo uses compose.yaml in the current working directory, then compos
 		if err != nil {
 			return err
 		}
-		composeFilePath, err := resolveComposeFilePath(cmd)
+		composeFiles, err := resolveComposeFilePaths(cmd)
 		if err != nil {
 			return err
 		}
-		envFiles, err := getEnvFiles(cmd, composeFilePath)
+		envFiles, err := collectComposeEnvironmentFiles(cmd, composeFiles)
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
+		scope, err := project.BuildScope(composeFiles, target.value, envFiles)
 		if err != nil {
 			return err
 		}

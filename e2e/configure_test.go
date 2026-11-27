@@ -60,6 +60,20 @@ func TestConfigure(t *testing.T) {
 		testutil.RequireEnvFileValues(t, filepath.Join(projectDir, env.DefaultFilename), map[string]string{"CUSTOM_NAME": "Custom"})
 	})
 
+	t.Run("configures parameters from repeated file flags", func(t *testing.T) {
+		base := testutil.RequireWriteComposeFile(t, t.TempDir(), configurableCompose("FIRST"))
+		override := testutil.RequireWriteComposeFile(t, t.TempDir(), configurableCompose("SECOND"))
+		workingDirectory := t.TempDir()
+
+		cmd := exec.Command(topo, "configure", "--no-prompt", "--output", "-", "-f", base, "-f", override, "FIRST=one", "SECOND=two")
+		cmd.Dir = workingDirectory
+		out, err := cmd.CombinedOutput()
+
+		require.NoErrorf(t, err, "configure failed: %s", out)
+		assert.Contains(t, string(out), `FIRST="one"`)
+		assert.Contains(t, string(out), `SECOND="two"`)
+	})
+
 	t.Run("rejects undeclared parameters without changing env files", func(t *testing.T) {
 		projectDir := t.TempDir()
 		original := configurableCompose("GREETING_NAME")
@@ -75,6 +89,25 @@ func TestConfigure(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, string(out), "unknown parameter: UNKNOWN")
 		assert.Equal(t, originalEnv, testutil.RequireReadFile(t, envPath))
+	})
+
+	t.Run("writes configuration beside the last Compose file without changing the first environment", func(t *testing.T) {
+		firstDirectory, lastDirectory := t.TempDir(), t.TempDir()
+		first := testutil.RequireWriteComposeFile(t, firstDirectory, configurableCompose("GREETING_NAME"))
+		last := testutil.RequireWriteComposeFile(t, lastDirectory, "services: {}\n")
+		firstEnvironment := filepath.Join(firstDirectory, env.DefaultFilename)
+		original := "GREETING_NAME=Original\n"
+		testutil.RequireWriteFile(t, firstEnvironment, original)
+		workingDirectory := t.TempDir()
+
+		cmd := exec.Command(topo, "configure", "--no-prompt", "-f", first, "-f", last, "GREETING_NAME=Updated")
+		cmd.Dir = workingDirectory
+		out, err := cmd.CombinedOutput()
+
+		require.NoErrorf(t, err, "configure failed: %s", out)
+		assert.Equal(t, original, testutil.RequireReadFile(t, firstEnvironment))
+		testutil.RequireEnvFileValues(t, filepath.Join(lastDirectory, env.DefaultFilename), map[string]string{"GREETING_NAME": "Updated"})
+		assert.NoFileExists(t, filepath.Join(workingDirectory, env.DefaultFilename))
 	})
 }
 

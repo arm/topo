@@ -2,6 +2,7 @@ package project_test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -27,7 +28,7 @@ services:
     image: worker:dev
 `)
 
-		got, err := project.ImageNames(project.Scope{ComposeFile: path})
+		got, err := project.ImageNames(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"nginx:1.27", "springfield-api", "worker:dev"}, got)
@@ -43,7 +44,7 @@ services:
     image: nginx:1.27
 `)
 
-		got, err := project.ImageNames(project.Scope{ComposeFile: path})
+		got, err := project.ImageNames(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{filepath.Base(dir) + "-api", "nginx:1.27"}, got)
@@ -72,7 +73,7 @@ services:
       service: build-base
 `)
 
-		got, err := project.ImageNames(project.Scope{ComposeFile: path})
+		got, err := project.ImageNames(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"duff:latest", "springfield-api"}, got)
@@ -93,7 +94,7 @@ services:
     image: busybox:1.36
 `)
 
-		got, err := project.ImageNames(project.Scope{ComposeFile: path})
+		got, err := project.ImageNames(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.True(t, sort.StringsAreSorted(got))
@@ -102,7 +103,7 @@ services:
 	t.Run("returns error for invalid yaml", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `{invalid`)
 
-		_, err := project.ImageNames(project.Scope{ComposeFile: path})
+		_, err := project.ImageNames(project.Scope{ComposeFiles: []string{path}})
 
 		assert.Error(t, err)
 	})
@@ -118,7 +119,7 @@ services:
     image: apu:16
 `)
 
-		got, err := project.PullableServices(project.Scope{ComposeFile: path})
+		got, err := project.PullableServices(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"duff-beer", "kwik-e-mart"}, got)
@@ -134,7 +135,7 @@ services:
     image: duff:7
 `)
 
-		got, err := project.PullableServices(project.Scope{ComposeFile: path})
+		got, err := project.PullableServices(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"duff-beer"}, got)
@@ -151,7 +152,7 @@ services:
       dockerfile: Dockerfile.sector7g
 `)
 
-		got, err := project.PullableServices(project.Scope{ComposeFile: path})
+		got, err := project.PullableServices(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.Empty(t, got)
@@ -170,7 +171,7 @@ services:
     image: duff:7
 `)
 
-		got, err := project.PullableServices(project.Scope{ComposeFile: path})
+		got, err := project.PullableServices(project.Scope{ComposeFiles: []string{path}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"duff-beer"}, got)
@@ -179,7 +180,7 @@ services:
 	t.Run("returns error for invalid yaml", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), `{invalid`)
 
-		_, err := project.PullableServices(project.Scope{ComposeFile: path})
+		_, err := project.PullableServices(project.Scope{ComposeFiles: []string{path}})
 
 		assert.Error(t, err)
 	})
@@ -189,7 +190,7 @@ func TestRead(t *testing.T) {
 	t.Run("when project file not found returns error", func(t *testing.T) {
 		dir := t.TempDir()
 
-		_, err := project.Read(project.Scope{ComposeFile: filepath.Join(dir, "compose.yaml")})
+		_, err := project.Read(project.Scope{ComposeFiles: []string{filepath.Join(dir, "compose.yaml")}})
 
 		assert.Error(t, err)
 	})
@@ -207,7 +208,7 @@ services:
         BAR: new-bar
 `
 		composeFilePath := testutil.RequireWriteComposeFile(t, dir, composeFileContents)
-		composeProject, err := project.Read(project.Scope{ComposeFile: composeFilePath})
+		composeProject, err := project.Read(project.Scope{ComposeFiles: []string{composeFilePath}})
 		require.NoError(t, err)
 
 		got, err := yaml.Marshal(composeProject)
@@ -230,7 +231,7 @@ services:
 		envFile := filepath.Join(dir, ".something.env")
 		testutil.RequireWriteFile(t, envFile, fmt.Sprintf("IMAGE_NAME=%s", imageName))
 
-		composeProject, err := project.Read(project.Scope{ComposeFile: composeFilePath, EnvFiles: []string{envFile}})
+		composeProject, err := project.Read(project.Scope{ComposeFiles: []string{composeFilePath}, EnvFiles: []string{envFile}})
 		require.NoError(t, err)
 
 		require.Contains(t, composeProject.Services, serviceName)
@@ -250,7 +251,7 @@ services:
 		imageName := "image-from-env"
 		t.Setenv("IMAGE_NAME", imageName)
 
-		composeProject, err := project.Read(project.Scope{ComposeFile: composeFilePath})
+		composeProject, err := project.Read(project.Scope{ComposeFiles: []string{composeFilePath}})
 		require.NoError(t, err)
 
 		require.Contains(t, composeProject.Services, serviceName)
@@ -262,11 +263,54 @@ services:
 		composeFileContents := "name: ${NAME:?project name is required}"
 		composeFilePath := testutil.RequireWriteComposeFile(t, dir, composeFileContents)
 		projectName := "project-from-env"
-		scope := project.Scope{ComposeFile: composeFilePath, Env: []string{fmt.Sprintf("%s=%s", "NAME", projectName)}}
+		scope := project.Scope{ComposeFiles: []string{composeFilePath}, Env: []string{fmt.Sprintf("%s=%s", "NAME", projectName)}}
 
 		composeProject, err := project.Read(scope)
 		require.NoError(t, err)
 
 		require.Equal(t, composeProject.Name, projectName)
+	})
+
+	t.Run("explicit environment files exclude adjacent defaults even for unspecified values", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_IMAGE", "")
+		require.NoError(t, os.Unsetenv("TOPO_TEST_IMAGE"))
+		directory := t.TempDir()
+		composeFile := testutil.RequireWriteComposeFile(t, directory, `services:
+  app:
+    image: ${TOPO_TEST_IMAGE:-alpine:latest}
+`)
+		testutil.RequireWriteFile(t, filepath.Join(directory, ".env"), "TOPO_TEST_IMAGE=alpine:3.20\n")
+		testutil.RequireWriteFile(t, filepath.Join(directory, ".env.topo"), "TOPO_TEST_IMAGE=alpine:3.21\n")
+		explicitEnvironment := filepath.Join(t.TempDir(), "custom.env")
+		testutil.RequireWriteFile(t, explicitEnvironment, "")
+
+		got, err := project.Read(project.Scope{ComposeFiles: []string{composeFile}, EnvFiles: []string{explicitEnvironment}})
+
+		require.NoError(t, err)
+		require.Contains(t, got.Services, "app")
+		assert.Equal(t, "alpine:latest", got.Services["app"].Image)
+	})
+
+	t.Run("merges Compose files and interpolates with the later file environment", func(t *testing.T) {
+		t.Setenv("TOPO_TEST_IMAGE", "")
+		require.NoError(t, os.Unsetenv("TOPO_TEST_IMAGE"))
+		baseDirectory, overrideDirectory := t.TempDir(), t.TempDir()
+		base := testutil.RequireWriteComposeFile(t, baseDirectory, `services:
+  app:
+    image: ${TOPO_TEST_IMAGE:?Image is required}
+`)
+		override := testutil.RequireWriteComposeFile(t, overrideDirectory, `services:
+  app:
+    command: ["echo", "hello"]
+`)
+		testutil.RequireWriteFile(t, filepath.Join(baseDirectory, ".env"), "TOPO_TEST_IMAGE=alpine:3.20\n")
+		testutil.RequireWriteFile(t, filepath.Join(overrideDirectory, ".env"), "TOPO_TEST_IMAGE=alpine:3.21\n")
+
+		got, err := project.Read(project.Scope{ComposeFiles: []string{base, override}})
+
+		require.NoError(t, err)
+		require.Contains(t, got.Services, "app")
+		assert.Equal(t, "alpine:3.21", got.Services["app"].Image)
+		assert.Equal(t, []string{"echo", "hello"}, []string(got.Services["app"].Command))
 	})
 }

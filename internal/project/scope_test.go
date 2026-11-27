@@ -17,7 +17,7 @@ func TestBuildScope(t *testing.T) {
 		target := "ssh://user@hostname:8080"
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
-		scope, err := project.BuildScope(path, target, nil)
+		scope, err := project.BuildScope([]string{path}, target, nil)
 
 		require.NoError(t, err)
 		require.ElementsMatch(t, scope.Env, []string{
@@ -30,7 +30,7 @@ func TestBuildScope(t *testing.T) {
 		envFiles := []string{"custom.env"}
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
-		scope, err := project.BuildScope(path, "ssh://user@hostname:8080", envFiles)
+		scope, err := project.BuildScope([]string{path}, "ssh://user@hostname:8080", envFiles)
 
 		require.NoError(t, err)
 		require.ElementsMatch(t, scope.EnvFiles, envFiles)
@@ -39,7 +39,7 @@ func TestBuildScope(t *testing.T) {
 	t.Run("reports missing files", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "missing.yaml")
 
-		got, err := project.BuildScope(path, "", nil)
+		got, err := project.BuildScope([]string{path}, "", nil)
 
 		require.ErrorIs(t, err, os.ErrNotExist)
 		require.Equal(t, project.Scope{}, got)
@@ -55,7 +55,7 @@ func TestBuildScope(t *testing.T) {
 		testutil.RequireWriteFile(t, overrideEnv, "GREETING=override\n")
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), fmt.Sprintf("include:\n  - path: [%q, %q]\n", base, override))
 
-		got, err := project.BuildScope(path, "", nil)
+		got, err := project.BuildScope([]string{path}, "", nil)
 
 		require.NoError(t, err)
 		require.Equal(t, []string{baseEnv, overrideEnv}, got.EnvFiles)
@@ -64,7 +64,7 @@ func TestBuildScope(t *testing.T) {
 	t.Run("reports invalid YAML", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
 
-		got, err := project.BuildScope(path, "", nil)
+		got, err := project.BuildScope([]string{path}, "", nil)
 
 		require.Error(t, err)
 		require.Equal(t, project.Scope{}, got)
@@ -81,7 +81,7 @@ func TestBuildScope(t *testing.T) {
 		testutil.RequireWriteFile(t, childEnv, "GREETING=hello\n")
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), fmt.Sprintf("include:\n  - path: [%q, %q]\n", base, override))
 
-		got, err := project.BuildScope(path, "", nil)
+		got, err := project.BuildScope([]string{path}, "", nil)
 
 		require.NoError(t, err)
 		require.Equal(t, []string{childEnv}, got.EnvFiles)
@@ -98,7 +98,7 @@ func TestBuildScope(t *testing.T) {
 		testutil.RequireWriteFile(t, filepath.Join(root, "second.yaml"), "include: [./shared/compose.yaml]\n")
 		path := testutil.RequireWriteComposeFile(t, root, "include: [./first.yaml, ./second.yaml]\n")
 
-		got, err := project.BuildScope(path, "", nil)
+		got, err := project.BuildScope([]string{path}, "", nil)
 
 		require.NoError(t, err)
 		require.Equal(t, []string{sharedEnv}, got.EnvFiles)
@@ -109,7 +109,7 @@ func TestBuildScope(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, root, "include: [./child.yaml]\n")
 		testutil.RequireWriteFile(t, filepath.Join(root, "child.yaml"), "include: [./compose.yaml]\n")
 
-		got, err := project.BuildScope(path, "", nil)
+		got, err := project.BuildScope([]string{path}, "", nil)
 
 		require.ErrorContains(t, err, "include cycle")
 		require.Equal(t, project.Scope{}, got)

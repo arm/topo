@@ -100,7 +100,7 @@ func testLogs(t *testing.T, topo string, engine deploy.EngineKind, target ssh.De
 	})
 	require.NoError(t, deploy.Deploy(t.Context(), t.Output(), scope, deploy.Options{Engine: engine, TargetHost: target}))
 	args := []string{
-		"logs", "-f", scope.ComposeFile,
+		"logs", "-f", scope.ComposeFiles[0],
 		"--target", target.String(),
 		"--engine", string(engine),
 	}
@@ -139,7 +139,7 @@ services:
 	contents, err := testutil.FixPodmanInDockerQuirk(contents)
 	require.NoError(t, err)
 	testutil.RequireWriteFile(t, composeFile, contents)
-	return project.Scope{ComposeFile: composeFile}
+	return project.Scope{ComposeFiles: []string{composeFile}}
 }
 
 func requireLogs(t *testing.T, topo string, args []string, want ...string) string {

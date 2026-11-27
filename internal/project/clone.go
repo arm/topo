@@ -72,7 +72,7 @@ func configureProject(composeFilePath string, resolver parameter.Resolver) error
 		return err
 	}
 
-	scope, err := BuildScope(composeFilePath, "", envFiles)
+	scope, err := BuildScope([]string{composeFilePath}, "", envFiles)
 	if err != nil {
 		return err
 	}

@@ -17,7 +17,7 @@ var configureCmd = &cobra.Command{
 	Short: "Configure project parameters",
 	Long: `Configure project parameters for the Topo project in the current directory.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Repeat -f to merge multiple Compose files in order.
 
 Some projects require parameters. Supply them on the command line or answer
 interactive prompts.`,
@@ -33,12 +33,16 @@ interactive prompts.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		composeFilePath, err := resolveComposeFilePath(cmd)
+		composeFiles, err := resolveComposeFilePaths(cmd)
 		if err != nil {
 			return err
 		}
+		composeFilePath := composeFiles[0]
 
 		if migrateToEnv(cmd) {
+			if len(composeFiles) != 1 {
+				return fmt.Errorf("--migrate-to-env requires exactly one Compose file")
+			}
 			err := migrate.ToEnv(composeFilePath)
 			if err != nil {
 				return err
@@ -50,6 +54,9 @@ interactive prompts.`,
 		envFiles, err := getEnvFiles(cmd, composeFilePath)
 		if err != nil {
 			return err
+		}
+		if !cmd.Flags().Changed(envFileFlag) {
+			envFiles = nil
 		}
 
 		usesLiteralBuildArgs, err := migrate.UsesLiteralBuildArgConfiguration(composeFilePath)
@@ -65,7 +72,7 @@ interactive prompts.`,
 			return err
 		}
 		if !cmd.Flags().Changed("output") {
-			outputPath = filepath.Join(filepath.Dir(composeFilePath), env.DefaultFilename)
+			outputPath = filepath.Join(filepath.Dir(composeFiles[len(composeFiles)-1]), env.DefaultFilename)
 		}
 
 		unset, err := cmd.Flags().GetStringArray("unset")
@@ -78,7 +85,7 @@ interactive prompts.`,
 			return err
 		}
 
-		scope, err := project.BuildScope(composeFilePath, "", envFiles)
+		scope, err := project.BuildScope(composeFiles, "", envFiles)
 		if err != nil {
 			return err
 		}
@@ -107,7 +114,7 @@ func init() {
 	}
 	configureCmd.Flags().StringArray("unset", nil, "remove a parameter from the output env file; repeat for multiple parameters")
 	addNoPromptFlag(configureCmd)
-	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
+	configureCmd.Flags().StringP("output", "o", env.DefaultFilename, fmt.Sprintf("env file to update, preserving existing entries (default: %s beside the last Compose file). Use - to print resolved values to stdout", env.DefaultFilename))
 	addComposeFileFlag(configureCmd)
 	addEnvFileFlag(configureCmd)
 	addMigrateToEnvFlag(configureCmd)

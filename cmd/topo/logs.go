@@ -22,7 +22,7 @@ By default, show the last 100 log lines from each container.
 Omit service names to show logs from all services in the current project.
 Use --follow to stream new log output until interrupted with Ctrl+C.
 
-By default, Topo uses compose.yaml in the current working directory, then compose.yml. Use -f to specify a different compose file.
+By default, Topo uses compose.yaml in the current working directory, then compose.yml. Repeat -f to merge multiple Compose files in order.
 Log output is text, including when --output json is set.`,
 	Example: `  topo logs --target user@board
   topo logs --target user@board --follow
@@ -40,15 +40,15 @@ Log output is text, including when --output json is set.`,
 		if err != nil {
 			return err
 		}
-		composeFilePath, err := resolveComposeFilePath(cmd)
+		composeFiles, err := resolveComposeFilePaths(cmd)
 		if err != nil {
 			return err
 		}
-		envFiles, err := getEnvFiles(cmd, composeFilePath)
+		envFiles, err := collectComposeEnvironmentFiles(cmd, composeFiles)
 		if err != nil {
 			return err
 		}
-		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
+		scope, err := project.BuildScope(composeFiles, target.value, envFiles)
 		if err != nil {
 			return err
 		}
