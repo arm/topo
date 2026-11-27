@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/arm/topo/internal/env"
 	"github.com/compose-spec/compose-go/v2/cli"
@@ -12,45 +14,34 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type PreparedProject struct {
-	composeFile string
+type Scope struct {
+	ComposeFile string
 	Env         []string
 	EnvFiles    []string
-
-	uninterpolatedComposeConfig map[string]any
 }
 
-func (p PreparedProject) ComposeFile() string {
-	return p.composeFile
-}
-
-func PrepareProject(composeFile string, target string, envFiles []string) (PreparedProject, error) {
+func BuildScope(composeFile string, target string, envFiles []string) (Scope, error) {
 	targetEnv := []string{}
 	if target != "" {
 		var err error
 		targetEnv, err = env.ResolveTargetEnv(target)
 		if err != nil {
-			return PreparedProject{}, err
+			return Scope{}, err
 		}
 	}
 
-	model, err := readUninterpolated(composeFile)
-	if err != nil {
-		return PreparedProject{}, err
-	}
 	includePaths, err := collectIncludePaths(composeFile)
 	if err != nil {
-		return PreparedProject{}, fmt.Errorf("failed to read include paths: %w", err)
+		return Scope{}, fmt.Errorf("failed to read include paths: %w", err)
 	}
 	environmentFiles, err := collectEnvFiles(includePaths)
 	if err != nil {
-		return PreparedProject{}, fmt.Errorf("failed to collect included environment files: %w", err)
+		return Scope{}, fmt.Errorf("failed to collect included environment files: %w", err)
 	}
-	return PreparedProject{
-		composeFile:                 composeFile,
-		Env:                         targetEnv,
-		EnvFiles:                    append(environmentFiles, envFiles...),
-		uninterpolatedComposeConfig: model,
+	return Scope{
+		ComposeFile: composeFile,
+		Env:         targetEnv,
+		EnvFiles:    append(environmentFiles, envFiles...),
 	}, nil
 }
 
@@ -65,6 +56,9 @@ func collectIncludePaths(root string) ([]string, error) {
 	for len(pending) > 0 {
 		current := pending[0]
 		pending = pending[1:]
+		if slices.Contains(current.ancestors, current.path) {
+			return nil, fmt.Errorf("include cycle detected: %s -> %s", strings.Join(current.ancestors, " -> "), current.path)
+		}
 		if _, seen := visited[current.path]; seen {
 			continue
 		}
@@ -75,6 +69,9 @@ func collectIncludePaths(root string) ([]string, error) {
 		}
 		if current.path != root {
 			paths = append(paths, current.path)
+		}
+		for index := range children {
+			children[index].ancestors = append(slices.Clone(current.ancestors), current.path)
 		}
 		pending = append(children, pending...)
 	}
@@ -96,6 +93,7 @@ func readComposeConfig(path string) (map[string]any, error) {
 type composeSource struct {
 	path             string
 	projectDirectory string
+	ancestors        []string
 }
 
 func readIncludedSources(source composeSource) ([]composeSource, error) {

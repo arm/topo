@@ -24,10 +24,10 @@ func TestLoadParameters(t *testing.T) {
     EMPTY: {}
     UNSET: {}
 `)
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -52,10 +52,10 @@ x-topo:
     TOPO_TEST_UNSET_PARAMETER: {}
 `)
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -83,10 +83,10 @@ x-topo:
   parameters: {TOPO_TEST_LONG_FORM_TOKEN: {}}
 `)
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		require.Len(t, got, 1)
@@ -110,10 +110,10 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_FILE_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_FILE_PARAMETER=configured\n")
 
-		preparedProject, err := project.PrepareProject(path, "", []string{basePath, envPath})
+		scope, err := project.BuildScope(path, "", []string{basePath, envPath})
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -142,10 +142,10 @@ x-topo:
 		includeSiblingEnv := filepath.Join(includeFolder, ".env")
 		testutil.RequireWriteFile(t, includeSiblingEnv, "TOPO_TEST_FILE_PARAMETER=value_from_sibling\n")
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -170,10 +170,10 @@ x-topo:
 		testutil.RequireWriteFile(t, basePath, "TOPO_TEST_PARAMETER=base\n")
 		testutil.RequireWriteFile(t, envPath, "TOPO_TEST_PARAMETER=topo\n")
 
-		preparedProject, err := project.PrepareProject(path, "", []string{basePath, envPath})
+		scope, err := project.BuildScope(path, "", []string{basePath, envPath})
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -194,10 +194,10 @@ x-topo:
 `)
 		testutil.RequireWriteFile(t, filepath.Join(root, env.DefaultFilename), "invalid=\"unterminated\n")
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{
@@ -212,10 +212,10 @@ x-topo:
     PORT: {}
 `)
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
@@ -229,10 +229,10 @@ x-topo:
     LEGACY: {}
 `)
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.Equal(t, []parameter.Parameter{{Name: "PORT"}}, got)
@@ -250,10 +250,10 @@ x-topo:
       example: "9000"
 `)
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []parameter.Parameter{
@@ -265,10 +265,10 @@ x-topo:
 	t.Run("returns no parameters without metadata", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
 
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		got, err := project.LoadParameters(preparedProject)
+		got, err := project.LoadParameters(scope)
 
 		require.NoError(t, err)
 		assert.Empty(t, got)

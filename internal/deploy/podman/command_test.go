@@ -45,10 +45,10 @@ func TestComposeSocketRawCommand(t *testing.T) {
 func TestComposeCommand(t *testing.T) {
 	t.Run("sets args", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), preparedProject, "up", "-d")
+		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"podman", "compose", "-f", path, "up", "-d"}, command.Args)
@@ -56,11 +56,11 @@ func TestComposeCommand(t *testing.T) {
 
 	t.Run("sets command env vars", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
-		preparedProject.Env = []string{"FOO=BAR"}
+		scope.Env = []string{"FOO=BAR"}
 
-		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), preparedProject, "up", "-d")
+		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
 		require.NoError(t, err)
 		assert.Contains(t, command.Env, "FOO=BAR")
@@ -68,10 +68,10 @@ func TestComposeCommand(t *testing.T) {
 
 	t.Run("sets env-file args", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(path, "", []string{".foobar.env", ".env"})
+		scope, err := project.BuildScope(path, "", []string{".foobar.env", ".env"})
 		require.NoError(t, err)
 
-		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), preparedProject, "up", "-d")
+		command, err := podman.ComposeCommand(t.Context(), podman.NewSocket("tcp://127.0.0.1:12345"), scope, "up", "-d")
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"podman", "compose", "-f", path, "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}, command.Args)
@@ -82,10 +82,10 @@ func TestComposeCommand(t *testing.T) {
 		socket := podman.NewSocket("tcp://127.0.0.1:12345")
 
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		command, err := podman.ComposeCommand(context.Background(), socket, preparedProject, "ps")
+		command, err := podman.ComposeCommand(context.Background(), socket, scope, "ps")
 
 		require.NoError(t, err)
 		assert.Contains(t, command.Env, "DOCKER_HOST=tcp://127.0.0.1:12345")

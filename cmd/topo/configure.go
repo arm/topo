@@ -78,11 +78,11 @@ interactive prompts.`,
 			return err
 		}
 
-		preparedProject, err := project.PrepareProject(composeFilePath, "", envFiles)
+		scope, err := project.BuildScope(composeFilePath, "", envFiles)
 		if err != nil {
 			return err
 		}
-		changes, err := project.Configure(preparedProject, resolver)
+		changes, err := project.Configure(scope, resolver)
 		if err != nil || changes == nil {
 			return err
 		}

@@ -18,10 +18,10 @@ services:
     platform: linux/arm64
 `)
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(preparedProject)
+		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
 
 		require.NoError(t, err)
 	})
@@ -34,10 +34,10 @@ services:
     platform: linux/arm64/v8
 `)
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(preparedProject)
+		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
 
 		require.NoError(t, err)
 	})
@@ -48,10 +48,10 @@ services:
     image: busybox
 `)
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(preparedProject)
+		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing platform declaration")
 	})
@@ -63,10 +63,10 @@ services:
     platform: linux/amd64
 `)
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(preparedProject)
+		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "linux/amd64")
 	})
@@ -78,10 +78,10 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(preparedProject)
+		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
 
 		require.NoError(t, err)
 	})
@@ -94,10 +94,10 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := checks.EnsureProjectIsLinuxArm64Ready(preparedProject)
+		err := checks.EnsureProjectIsLinuxArm64Ready(scope)
 
 		require.NoError(t, err)
 	})

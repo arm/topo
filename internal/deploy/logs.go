@@ -20,7 +20,7 @@ type LogsOptions struct {
 func Logs(
 	ctx context.Context,
 	output io.Writer,
-	preparedProject project.PreparedProject,
+	scope project.Scope,
 	target ssh.Destination,
 	engine EngineKind,
 	options LogsOptions,
@@ -31,7 +31,7 @@ func Logs(
 
 	if engine == EngineDocker {
 		runner := docker.Engine{Host: docker.NewHostFromDestination(target)}
-		return LogServices(ctx, output, preparedProject, runner, options)
+		return LogServices(ctx, output, scope, runner, options)
 	}
 
 	socket := podman.LocalSocket
@@ -45,5 +45,5 @@ func Logs(
 		}()
 		socket = podman.NewSocket(tunnel.SocketURL())
 	}
-	return LogServices(ctx, output, preparedProject, podman.Engine{Socket: socket}, options)
+	return LogServices(ctx, output, scope, podman.Engine{Socket: socket}, options)
 }

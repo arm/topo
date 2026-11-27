@@ -27,30 +27,30 @@ func TestDeploy(t *testing.T) {
 		testutil.RequireDocker(t)
 
 		t.Run("deploys to localhost", func(t *testing.T) {
-			preparedProject, imageName := deploytestutil.DockerDeploymentFixture(t)
-			t.Cleanup(func() { deploytestutil.CleanupDockerComposeProject(t, preparedProject) })
+			scope, imageName := deploytestutil.DockerDeploymentFixture(t)
+			t.Cleanup(func() { deploytestutil.CleanupDockerComposeProject(t, scope) })
 			deploytestutil.RequireDockerImageDoesNotExist(t, docker.LocalHost, imageName)
 			deployOptions := deploy.Options{Engine: deploy.EngineDocker, TargetHost: ssh.PlainLocalhost}
 
-			err := deploy.Deploy(t.Context(), t.Output(), preparedProject, deployOptions)
+			err := deploy.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
 			require.NoError(t, err)
 			deploytestutil.RequireDockerImageExists(t, docker.LocalHost, imageName)
-			deploytestutil.AssertDockerContainersRunning(t, ssh.PlainLocalhost, preparedProject)
+			deploytestutil.AssertDockerContainersRunning(t, ssh.PlainLocalhost, scope)
 		})
 
 		t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
 			container := testutil.StartContainer(t, testutil.DinDContainer)
 			remoteDockerHost := ssh.NewDestination(container.SSHDestination)
-			preparedProject, imageName := deploytestutil.DockerDeploymentFixture(t)
+			scope, imageName := deploytestutil.DockerDeploymentFixture(t)
 			deploytestutil.RequireDockerImageDoesNotExist(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
 			deployOptions := deploy.Options{Engine: deploy.EngineDocker, TargetHost: remoteDockerHost}
 
-			err := deploy.Deploy(t.Context(), t.Output(), preparedProject, deployOptions)
+			err := deploy.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
 			require.NoError(t, err)
 			deploytestutil.RequireDockerImageExists(t, docker.NewHostFromDestination(remoteDockerHost), imageName)
-			deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, preparedProject)
+			deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, scope)
 		})
 
 		t.Run("transfers images to a remote host through a registry", func(t *testing.T) {
@@ -60,7 +60,7 @@ func TestDeploy(t *testing.T) {
 			container := testutil.StartContainer(t, testutil.DinDContainer)
 			remoteDockerHost := ssh.NewDestination(container.SSHDestination)
 			remoteCommandHost := docker.NewHostFromDestination(remoteDockerHost)
-			preparedProject, imageName := deploytestutil.DockerDeploymentFixture(t)
+			scope, imageName := deploytestutil.DockerDeploymentFixture(t)
 			deploytestutil.RequireDockerImageDoesNotExist(t, remoteCommandHost, imageName)
 			deployOptions := deploy.Options{
 				Engine:     deploy.EngineDocker,
@@ -72,11 +72,11 @@ func TestDeploy(t *testing.T) {
 				},
 			}
 
-			err := deploy.Deploy(t.Context(), t.Output(), preparedProject, deployOptions)
+			err := deploy.Deploy(t.Context(), t.Output(), scope, deployOptions)
 
 			require.NoError(t, err)
 			deploytestutil.RequireDockerImageExists(t, remoteCommandHost, imageName)
-			deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, preparedProject)
+			deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, scope)
 		})
 	})
 
@@ -89,22 +89,22 @@ services:
     runtime: io.containerd.remoteproc.v1
 `)
 
-			preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+			scope, prepareErr := project.BuildScope(composeFile, "", nil)
 			require.NoError(t, prepareErr)
 			options := deploy.Options{Engine: deploy.EnginePodman}
 
-			err := deploy.Deploy(t.Context(), &bytes.Buffer{}, preparedProject, options)
+			err := deploy.Deploy(t.Context(), &bytes.Buffer{}, scope, options)
 
 			require.ErrorContains(t, err, `specifying "runtime:" in Compose files is unsupported for Podman deployments`)
 		})
 
 		t.Run("deploys to localhost", func(t *testing.T) {
 			testutil.RequirePodman(t)
-			preparedProject, projectName := deploytestutil.PodmanDeploymentFixture(t)
-			t.Cleanup(func() { deploytestutil.CleanupPodmanComposeProject(t, preparedProject) })
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			t.Cleanup(func() { deploytestutil.CleanupPodmanComposeProject(t, scope) })
 			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: ssh.PlainLocalhost}
 
-			err := deploy.Deploy(t.Context(), t.Output(), preparedProject, options)
+			err := deploy.Deploy(t.Context(), t.Output(), scope, options)
 
 			require.NoError(t, err)
 			deploytestutil.AssertPodmanContainersInState(t, projectName, podman.LocalSocket, "running")
@@ -113,11 +113,11 @@ services:
 		t.Run("transfers images to a remote host via pipe", func(t *testing.T) {
 			testutil.RequirePodman(t)
 			podmanContainer := testutil.StartContainer(t, testutil.PodmanContainer)
-			preparedProject, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
 			targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: targetDestination}
 
-			err := deploy.Deploy(t.Context(), t.Output(), preparedProject, options)
+			err := deploy.Deploy(t.Context(), t.Output(), scope, options)
 
 			require.NoError(t, err)
 			tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
@@ -134,7 +134,7 @@ services:
 			registryPort := "12739"
 			deploytestutil.RequirePodmanRegistryContainerAbsent(t, registryContainerName)
 			podmanContainer := testutil.StartContainer(t, testutil.PodmanContainer)
-			preparedProject, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
 			targetDestination := ssh.NewDestination(podmanContainer.SSHDestination)
 			options := deploy.Options{
 				Engine:     deploy.EnginePodman,
@@ -145,7 +145,7 @@ services:
 				},
 			}
 
-			err := deploy.Deploy(t.Context(), t.Output(), preparedProject, options)
+			err := deploy.Deploy(t.Context(), t.Output(), scope, options)
 
 			require.NoError(t, err)
 			tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), t.Output(), targetDestination)
@@ -181,29 +181,29 @@ services:
     build: .
     stop_grace_period: 1s
 `, deploytestutil.TestProjectName(t)))
-		preparedProject, prepareErr := project.PrepareProject(composeFilePath, "", nil)
+		scope, prepareErr := project.BuildScope(composeFilePath, "", nil)
 		require.NoError(t, prepareErr)
-		t.Cleanup(func() { deploytestutil.CleanupDockerComposeProject(t, preparedProject) })
+		t.Cleanup(func() { deploytestutil.CleanupDockerComposeProject(t, scope) })
 		deployOptions := deploy.Options{Engine: deploy.EngineDocker, TargetHost: remoteDockerHost}
-		require.NoError(t, deploy.Deploy(t.Context(), io.Discard, preparedProject, deployOptions))
-		deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, preparedProject)
+		require.NoError(t, deploy.Deploy(t.Context(), io.Discard, scope, deployOptions))
+		deploytestutil.AssertDockerContainersRunning(t, remoteDockerHost, scope)
 
-		err := deploy.Stop(t.Context(), io.Discard, preparedProject, remoteDockerHost, deploy.EngineDocker)
+		err := deploy.Stop(t.Context(), io.Discard, scope, remoteDockerHost, deploy.EngineDocker)
 
 		require.NoError(t, err)
-		deploytestutil.AssertDockerContainersStopped(t, remoteDockerHost, preparedProject)
+		deploytestutil.AssertDockerContainersStopped(t, remoteDockerHost, scope)
 	})
 
 	t.Run("Podman", func(t *testing.T) {
 		testutil.RequirePodman(t)
 
 		t.Run("stops services on localhost", func(t *testing.T) {
-			preparedProject, projectName := deploytestutil.PodmanDeploymentFixture(t)
-			t.Cleanup(func() { deploytestutil.CleanupPodmanComposeProject(t, preparedProject) })
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			t.Cleanup(func() { deploytestutil.CleanupPodmanComposeProject(t, scope) })
 			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: ssh.PlainLocalhost}
-			require.NoError(t, deploy.Deploy(t.Context(), t.Output(), preparedProject, options))
+			require.NoError(t, deploy.Deploy(t.Context(), t.Output(), scope, options))
 
-			err := deploy.Stop(t.Context(), t.Output(), preparedProject, ssh.PlainLocalhost, deploy.EnginePodman)
+			err := deploy.Stop(t.Context(), t.Output(), scope, ssh.PlainLocalhost, deploy.EnginePodman)
 
 			require.NoError(t, err)
 			deploytestutil.AssertPodmanContainersInState(t, projectName, podman.LocalSocket, "exited")
@@ -211,12 +211,12 @@ services:
 
 		t.Run("stops services on a remote target", func(t *testing.T) {
 			podmanContainer := testutil.StartContainer(t, testutil.PodmanContainer)
-			preparedProject, projectName := deploytestutil.PodmanDeploymentFixture(t)
+			scope, projectName := deploytestutil.PodmanDeploymentFixture(t)
 			target := ssh.NewDestination(podmanContainer.SSHDestination)
 			options := deploy.Options{Engine: deploy.EnginePodman, TargetHost: target}
-			require.NoError(t, deploy.Deploy(t.Context(), t.Output(), preparedProject, options))
+			require.NoError(t, deploy.Deploy(t.Context(), t.Output(), scope, options))
 
-			err := deploy.Stop(t.Context(), t.Output(), preparedProject, target, deploy.EnginePodman)
+			err := deploy.Stop(t.Context(), t.Output(), scope, target, deploy.EnginePodman)
 
 			require.NoError(t, err)
 			tunnel, err := podman.TunnelRemoteSocketPath(context.Background(), io.Discard, target)
@@ -433,7 +433,7 @@ services:
   pulled:
     image: team/web:latest
 `)
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 		var calls [][]string
 		source := &registryTransferFake{
@@ -446,7 +446,7 @@ services:
 		target := &registryTransferFake{name: "target", calls: &calls}
 		progress := term.NewProgress(io.Discard)
 
-		err := deploy.TransferImagesViaRegistry(t.Context(), progress, preparedProject, "12345", source, target)
+		err := deploy.TransferImagesViaRegistry(t.Context(), progress, scope, "12345", source, target)
 
 		require.NoError(t, err)
 		want := [][]string{
@@ -474,10 +474,10 @@ services:
 		}
 		target := &registryTransferFake{name: "target", calls: &calls}
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), preparedProject, "12345", source, target)
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), scope, "12345", source, target)
 
 		require.NoError(t, err)
 		assert.Equal(t, [][]string{
@@ -502,10 +502,10 @@ services:
 		}
 		target := &registryTransferFake{name: "target", calls: &calls}
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), preparedProject, "12345", source, target)
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), scope, "12345", source, target)
 
 		require.ErrorContains(t, err, "pin the linux/arm64 image manifest digest")
 		require.Len(t, calls, 3)
@@ -521,10 +521,10 @@ services:
 		source := &registryTransferFake{calls: &calls}
 		target := &registryTransferFake{name: "target", calls: &calls, digestPreservationError: errors.New("legacy image store")}
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), preparedProject, "12345", source, target)
+		err := deploy.TransferImagesViaRegistry(t.Context(), term.NewProgress(io.Discard), scope, "12345", source, target)
 
 		require.ErrorIs(t, err, target.digestPreservationError)
 		assert.Equal(t, [][]string{{"target", preservesDigestOnTag}}, calls)

@@ -48,7 +48,7 @@ Log output is text, including when --output json is set.`,
 		if err != nil {
 			return err
 		}
-		preparedProject, err := project.PrepareProject(composeFilePath, target.value, envFiles)
+		scope, err := project.BuildScope(composeFilePath, target.value, envFiles)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ Log output is text, including when --output json is set.`,
 		defer stop()
 		dest := ssh.NewDestination(target.value)
 		options := deploy.LogsOptions{Services: services, Follow: logsFollow}
-		err = deploy.Logs(ctx, os.Stdout, preparedProject, dest, deploy.EngineKind(engine.value), options)
+		err = deploy.Logs(ctx, os.Stdout, scope, dest, deploy.EngineKind(engine.value), options)
 		if ctx.Err() == context.Canceled {
 			return nil
 		}

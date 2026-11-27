@@ -9,8 +9,8 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func ImageNames(preparedProject PreparedProject) ([]string, error) {
-	composeProject, err := Read(preparedProject)
+func ImageNames(scope Scope) ([]string, error) {
+	composeProject, err := Read(scope)
 	if err != nil {
 		return nil, err
 	}
@@ -26,8 +26,8 @@ func ImageNames(preparedProject PreparedProject) ([]string, error) {
 	return names, nil
 }
 
-func PullableServices(preparedProject PreparedProject) ([]string, error) {
-	composeProject, err := Read(preparedProject)
+func PullableServices(scope Scope) ([]string, error) {
+	composeProject, err := Read(scope)
 	if err != nil {
 		return nil, err
 	}
@@ -41,14 +41,14 @@ func PullableServices(preparedProject PreparedProject) ([]string, error) {
 	return names, nil
 }
 
-func Read(preparedProject PreparedProject) (*types.Project, error) {
+func Read(scope Scope) (*types.Project, error) {
 	ctx := context.Background()
 	options, err := cli.NewProjectOptions(
-		[]string{preparedProject.ComposeFile()},
+		[]string{scope.ComposeFile},
 		cli.WithResolvedPaths(false),
 		cli.WithNormalization(false),
-		cli.WithEnvFiles(preparedProject.EnvFiles...),
-		cli.WithEnv(preparedProject.Env),
+		cli.WithEnvFiles(scope.EnvFiles...),
+		cli.WithEnv(scope.Env),
 	)
 	if err != nil {
 		return nil, err

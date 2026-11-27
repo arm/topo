@@ -28,10 +28,10 @@ func TestComposeCommand(t *testing.T) {
 		dest := ssh.NewDestination("ssh://user@remote")
 		remoteHost := docker.NewHostFromDestination(dest)
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		cmd := docker.ComposeCommand(t.Context(), remoteHost, preparedProject, "up", "-d")
+		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
 
 		want := []string{"docker", "-H", "ssh://user@remote", "compose", "-f", path, "up", "-d"}
 		assert.Equal(t, want, cmd.Args)
@@ -41,11 +41,11 @@ func TestComposeCommand(t *testing.T) {
 		dest := ssh.NewDestination("localhost")
 		remoteHost := docker.NewHostFromDestination(dest)
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
-		preparedProject.Env = []string{"FOO=NOTBAR"}
+		scope.Env = []string{"FOO=NOTBAR"}
 
-		cmd := docker.ComposeCommand(t.Context(), remoteHost, preparedProject, "up", "-d")
+		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
 
 		assert.Contains(t, cmd.Env, "FOO=NOTBAR")
 	})
@@ -54,10 +54,10 @@ func TestComposeCommand(t *testing.T) {
 		dest := ssh.NewDestination("localhost")
 		remoteHost := docker.NewHostFromDestination(dest)
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(path, "", []string{".foobar.env", ".env"})
+		scope, err := project.BuildScope(path, "", []string{".foobar.env", ".env"})
 		require.NoError(t, err)
 
-		cmd := docker.ComposeCommand(t.Context(), remoteHost, preparedProject, "up", "-d")
+		cmd := docker.ComposeCommand(t.Context(), remoteHost, scope, "up", "-d")
 
 		want := []string{"docker", "compose", "-f", path, "--env-file", ".foobar.env", "--env-file", ".env", "up", "-d"}
 		assert.Equal(t, want, cmd.Args)

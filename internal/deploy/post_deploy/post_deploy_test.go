@@ -23,10 +23,10 @@ services:
 `)
 		var buf bytes.Buffer
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := post_deploy.PrintDeploySuccess(&buf, preparedProject, "Run `topo ps` to see deployed containers")
+		err := post_deploy.PrintDeploySuccess(&buf, scope, "Run `topo ps` to see deployed containers")
 
 		require.NoError(t, err)
 		assert.Equal(t, "Deployment complete!\n", buf.String())
@@ -40,10 +40,10 @@ services:
 `)
 		var buf bytes.Buffer
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := post_deploy.PrintDeploySuccess(&buf, preparedProject, "default message")
+		err := post_deploy.PrintDeploySuccess(&buf, scope, "default message")
 
 		require.NoError(t, err)
 		assert.Equal(t, "default message\n", buf.String())
@@ -61,10 +61,10 @@ services:
 		var buf bytes.Buffer
 		t.Setenv("EXTRA_MESSAGE", "cool!")
 
-		preparedProject, prepareErr := project.PrepareProject(composeFile, "", nil)
+		scope, prepareErr := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, prepareErr)
 
-		err := post_deploy.PrintDeploySuccess(&buf, preparedProject, "default message")
+		err := post_deploy.PrintDeploySuccess(&buf, scope, "default message")
 
 		require.NoError(t, err)
 		assert.Equal(t, "test-project deployed - cool!\n", buf.String())
@@ -72,12 +72,12 @@ services:
 
 	t.Run("returns error when compose file is removed after preparation", func(t *testing.T) {
 		composeFile := testutil.RequireWriteComposeFile(t, t.TempDir(), "services: {}\n")
-		preparedProject, err := project.PrepareProject(composeFile, "", nil)
+		scope, err := project.BuildScope(composeFile, "", nil)
 		require.NoError(t, err)
 		require.NoError(t, os.Remove(composeFile))
 		var buf bytes.Buffer
 
-		err = post_deploy.PrintDeploySuccess(&buf, preparedProject, "Run `topo ps` to see deployed containers")
+		err = post_deploy.PrintDeploySuccess(&buf, scope, "Run `topo ps` to see deployed containers")
 
 		require.Error(t, err)
 	})

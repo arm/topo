@@ -30,7 +30,7 @@ x-topo:
 		changes := parameter.Changes{"FOO": new("baz")}
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStrictResolverChain(parameter.NewStaticResolver(changes))
-		prepared, err := project.PrepareProject(path, "", nil)
+		prepared, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
 		got, err := project.Configure(prepared, resolver)
@@ -50,7 +50,7 @@ x-topo:
 		changes := parameter.Changes{"GREETING": new("updated")}
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), contents)
 		resolver := parameter.NewStaticResolver(changes)
-		prepared, err := project.PrepareProject(path, "", nil)
+		prepared, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
 		got, err := project.Configure(prepared, resolver)
@@ -75,11 +75,11 @@ x-topo:
 x-topo:
   parameters: {TOPO_TEST_INCLUDED_TOPO_TOKEN: {}}
 `)
-		preparedProject, err := project.PrepareProject(path, "", nil)
+		scope, err := project.BuildScope(path, "", nil)
 		require.NoError(t, err)
 
-		_, configureErr := project.Configure(preparedProject, parameter.NewStrictResolverChain())
-		_, readErr := project.Read(preparedProject)
+		_, configureErr := project.Configure(scope, parameter.NewStrictResolverChain())
+		_, readErr := project.Read(scope)
 		if configureErr == nil {
 			require.NoError(t, readErr, "configuration accepted a token that Compose could not resolve")
 			return

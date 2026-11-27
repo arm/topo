@@ -92,15 +92,15 @@ func TestLogs(t *testing.T) {
 
 func testLogs(t *testing.T, topo string, engine deploy.EngineKind, target ssh.Destination, runner deploy.ComposeCommandRunner) {
 	t.Helper()
-	preparedProject := logsProject(t)
+	scope := logsProject(t)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		require.NoError(t, runner.RunComposeCommand(ctx, t.Output(), preparedProject, "down", "--volumes"))
+		require.NoError(t, runner.RunComposeCommand(ctx, t.Output(), scope, "down", "--volumes"))
 	})
-	require.NoError(t, deploy.Deploy(t.Context(), t.Output(), preparedProject, deploy.Options{Engine: engine, TargetHost: target}))
+	require.NoError(t, deploy.Deploy(t.Context(), t.Output(), scope, deploy.Options{Engine: engine, TargetHost: target}))
 	args := []string{
-		"logs", "-f", preparedProject.ComposeFile(),
+		"logs", "-f", scope.ComposeFile,
 		"--target", target.String(),
 		"--engine", string(engine),
 	}
@@ -109,7 +109,7 @@ func testLogs(t *testing.T, topo string, engine deploy.EngineKind, target ssh.De
 		want := []string{"stdout-first", "stderr-last", "other-service"}
 		requireLogs(t, topo, args, want...)
 		if engine == deploy.EngineDocker {
-			require.NoError(t, runner.RunComposeCommand(t.Context(), t.Output(), preparedProject, "stop"))
+			require.NoError(t, runner.RunComposeCommand(t.Context(), t.Output(), scope, "stop"))
 			requireLogs(t, topo, args, want...)
 		}
 		return
@@ -122,7 +122,7 @@ func testLogs(t *testing.T, topo string, engine deploy.EngineKind, target ssh.De
 	assert.NotContains(t, logs, "other-service")
 }
 
-func logsProject(t *testing.T) project.PreparedProject {
+func logsProject(t *testing.T) project.Scope {
 	t.Helper()
 	composeFile := filepath.Join(t.TempDir(), "logs.yaml")
 	contents := fmt.Sprintf(`name: %s
@@ -139,9 +139,9 @@ services:
 	contents, err := testutil.FixPodmanInDockerQuirk(contents)
 	require.NoError(t, err)
 	testutil.RequireWriteFile(t, composeFile, contents)
-	preparedProject, err := project.PrepareProject(composeFile, "", nil)
+	scope, err := project.BuildScope(composeFile, "", nil)
 	require.NoError(t, err)
-	return preparedProject
+	return scope
 }
 
 func requireLogs(t *testing.T, topo string, args []string, want ...string) string {

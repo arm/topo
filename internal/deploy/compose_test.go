@@ -29,13 +29,13 @@ services:
   to-pull:
     image: whatever
 `)
-		preparedProject, err := project.PrepareProject(composeFilePath, "", nil)
+		scope, err := project.BuildScope(composeFilePath, "", nil)
 		require.NoError(t, err)
 
 		err = deploy.PullImages(
 			t.Context(),
 			term.NewProgress(io.Discard),
-			preparedProject,
+			scope,
 			composeRunner,
 		)
 
@@ -53,7 +53,7 @@ func TestLogServices(t *testing.T) {
 			Follow:   true,
 		}
 
-		err := deploy.LogServices(t.Context(), io.Discard, project.PreparedProject{}, runner, options)
+		err := deploy.LogServices(t.Context(), io.Discard, project.Scope{}, runner, options)
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"logs", "--tail", "100", "--follow", "--", "web", "worker", "--follow"}, runner.calls)
@@ -65,7 +65,7 @@ func TestListContainersRaw(t *testing.T) {
 		commandError := errors.New("cannot configure Compose")
 		runner := &fakeComposeCommandRunner{commandError: commandError}
 
-		got, err := deploy.ListContainersRaw(t.Context(), project.PreparedProject{}, runner, false)
+		got, err := deploy.ListContainersRaw(t.Context(), project.Scope{}, runner, false)
 
 		assert.Nil(t, got)
 		assert.ErrorIs(t, err, commandError)
@@ -74,7 +74,7 @@ func TestListContainersRaw(t *testing.T) {
 	t.Run("passes --all when all is enabled", func(t *testing.T) {
 		runner := &fakeComposeCommandRunner{command: testutil.CmdWithOutput("", 0)}
 
-		_, err := deploy.ListContainersRaw(t.Context(), project.PreparedProject{}, runner, true)
+		_, err := deploy.ListContainersRaw(t.Context(), project.Scope{}, runner, true)
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"ps", "--format", "json", "--all"}, runner.calls)
@@ -85,7 +85,7 @@ func TestListContainersRaw(t *testing.T) {
 {"ID":"def456","Names":"project-db-1","Service":"db","Image":"postgres","State":"running","Status":"Up 5 minutes","Ports":""}`
 		runner := &fakeComposeCommandRunner{command: testutil.CmdWithOutput(input, 0)}
 
-		got, err := deploy.ListContainersRaw(t.Context(), project.PreparedProject{}, runner, false)
+		got, err := deploy.ListContainersRaw(t.Context(), project.Scope{}, runner, false)
 
 		require.NoError(t, err)
 		want := []deploy.RawContainer{
@@ -110,14 +110,14 @@ type fakeComposeCommandRunner struct {
 }
 
 func (runner *fakeComposeCommandRunner) ComposeCommand(
-	_ context.Context, _ project.PreparedProject, args ...string,
+	_ context.Context, _ project.Scope, args ...string,
 ) (*exec.Cmd, error) {
 	runner.calls = args
 	return runner.command, runner.commandError
 }
 
 func (runner *fakeComposeCommandRunner) RunComposeCommand(
-	_ context.Context, _ io.Writer, _ project.PreparedProject, args ...string,
+	_ context.Context, _ io.Writer, _ project.Scope, args ...string,
 ) error {
 	runner.calls = args
 	return nil

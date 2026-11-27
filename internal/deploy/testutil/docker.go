@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func DockerDeploymentFixture(t *testing.T) (project.PreparedProject, string) {
+func DockerDeploymentFixture(t *testing.T) (project.Scope, string) {
 	t.Helper()
 	temporaryDirectory := t.TempDir()
 	imageName := TestImageName(t)
@@ -41,9 +41,9 @@ CMD ["tail", "-f", "/dev/null"]
 			t.Logf("failed to remove image %s: %v: %s", imageName, err, string(removeOutput))
 		}
 	})
-	preparedProject, err := project.PrepareProject(composeFilePath, "", nil)
+	scope, err := project.BuildScope(composeFilePath, "", nil)
 	require.NoError(t, err)
-	return preparedProject, imageName
+	return scope, imageName
 }
 
 func RequireDockerImageExists(t *testing.T, host docker.Host, imageName string) {
@@ -75,21 +75,21 @@ func RequireDockerRegistryContainerAbsent(t *testing.T, containerName string) {
 	})
 }
 
-func CleanupDockerComposeProject(t *testing.T, preparedProject project.PreparedProject) {
+func CleanupDockerComposeProject(t *testing.T, scope project.Scope) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := docker.ComposeCommand(ctx, docker.LocalHost, preparedProject, "down", "-v")
+	cmd := docker.ComposeCommand(ctx, docker.LocalHost, scope, "down", "-v")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Logf("docker compose down failed: %v (compose file: %s): %s", err, preparedProject.ComposeFile(), output)
+		t.Logf("docker compose down failed: %v (compose file: %s): %s", err, scope.ComposeFile, output)
 	}
 }
 
-func AssertDockerContainersRunning(t *testing.T, destination ssh.Destination, preparedProject project.PreparedProject) {
+func AssertDockerContainersRunning(t *testing.T, destination ssh.Destination, scope project.Scope) {
 	t.Helper()
 	dockerCommand := docker.ComposeCommand(
-		t.Context(), docker.NewHostFromDestination(destination), preparedProject, "ps", "--format", "json",
+		t.Context(), docker.NewHostFromDestination(destination), scope, "ps", "--format", "json",
 	)
 	output, err := dockerCommand.CombinedOutput()
 	require.NoError(t, err, string(output))
@@ -104,10 +104,10 @@ func AssertDockerContainersRunning(t *testing.T, destination ssh.Destination, pr
 	}
 }
 
-func AssertDockerContainersStopped(t *testing.T, destination ssh.Destination, preparedProject project.PreparedProject) {
+func AssertDockerContainersStopped(t *testing.T, destination ssh.Destination, scope project.Scope) {
 	t.Helper()
 	dockerCommand := docker.ComposeCommand(
-		t.Context(), docker.NewHostFromDestination(destination), preparedProject, "ps", "--format", "json", "--all",
+		t.Context(), docker.NewHostFromDestination(destination), scope, "ps", "--format", "json", "--all",
 	)
 	output, err := dockerCommand.CombinedOutput()
 	require.NoError(t, err, string(output))

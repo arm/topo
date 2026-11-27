@@ -11,7 +11,7 @@ import (
 func TestListContainers(t *testing.T) {
 	t.Run("rejects an unsupported engine", func(t *testing.T) {
 		got, err := ListContainers(
-			t.Context(), project.PreparedProject{}, ssh.PlainLocalhost, EngineKind("unknown"), "target", false,
+			t.Context(), project.Scope{}, ssh.PlainLocalhost, EngineKind("unknown"), "target", false,
 		)
 
 		assert.Nil(t, got)

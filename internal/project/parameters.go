@@ -13,8 +13,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func LoadParameters(preparedProject PreparedProject) ([]parameter.Parameter, error) {
-	parameters, err := loadParameterMetadata(preparedProject.ComposeFile())
+func LoadParameters(scope Scope) ([]parameter.Parameter, error) {
+	parameters, err := loadParameterMetadata(scope.ComposeFile)
 	if err != nil {
 		return nil, err
 	}
@@ -22,12 +22,16 @@ func LoadParameters(preparedProject PreparedProject) ([]parameter.Parameter, err
 		return parameters, nil
 	}
 
-	currentValues, err := env.CurrentValues(preparedProject.EnvFiles)
+	currentValues, err := env.CurrentValues(scope.EnvFiles)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current environment values: %w", err)
 	}
 
-	references := collectParameterReferences(preparedProject.uninterpolatedComposeConfig)
+	parsedComposeConfig, err := readUninterpolated(scope.ComposeFile)
+	if err != nil {
+		return nil, err
+	}
+	references := collectParameterReferences(parsedComposeConfig)
 	for i := range parameters {
 		param := &parameters[i]
 		param.References = references[param.Name]

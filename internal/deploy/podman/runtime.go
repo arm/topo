@@ -8,8 +8,8 @@ import (
 	"github.com/arm/topo/internal/project"
 )
 
-func EnsureNoRuntimeSet(preparedProject project.PreparedProject) error {
-	runtimes, err := listCustomServiceRuntimes(preparedProject)
+func EnsureNoRuntimeSet(scope project.Scope) error {
+	runtimes, err := listCustomServiceRuntimes(scope)
 	if err != nil {
 		return err
 	}
@@ -26,8 +26,8 @@ type serviceRuntime struct {
 	runtime     string
 }
 
-func listCustomServiceRuntimes(preparedProject project.PreparedProject) ([]serviceRuntime, error) {
-	composeProject, err := project.Read(preparedProject)
+func listCustomServiceRuntimes(scope project.Scope) ([]serviceRuntime, error) {
+	composeProject, err := project.Read(scope)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load compose project: %w", err)
 	}
