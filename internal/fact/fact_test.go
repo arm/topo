@@ -69,29 +69,31 @@ func TestValue(t *testing.T) {
 	})
 }
 
-func TestReportValidate(t *testing.T) {
-	t.Run("accepts empty reports and valid facts", func(t *testing.T) {
-		for _, report := range []fact.Report{
-			nil,
-			{"example": {Value: fact.Value{Type: "boolean"}}},
-		} {
-			err := report.Validate()
+func TestReport(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("accepts empty reports and valid facts", func(t *testing.T) {
+			for _, report := range []fact.Report{
+				nil,
+				{"example": {Value: fact.Value{Type: "boolean"}}},
+			} {
+				err := report.Validate()
 
-			assert.NoError(t, err)
+				assert.NoError(t, err)
+			}
+		})
+
+		for _, test := range []struct {
+			name   string
+			report fact.Report
+		}{
+			{"rejects empty fact keys", fact.Report{"": {Value: fact.Value{Type: "boolean"}}}},
+			{"rejects invalid values", fact.Report{"example": {}}},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				err := test.report.Validate()
+
+				assert.Error(t, err)
+			})
 		}
 	})
-
-	for _, test := range []struct {
-		name   string
-		report fact.Report
-	}{
-		{"rejects empty fact keys", fact.Report{"": {Value: fact.Value{Type: "boolean"}}}},
-		{"rejects invalid values", fact.Report{"example": {}}},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			err := test.report.Validate()
-
-			assert.Error(t, err)
-		})
-	}
 }
