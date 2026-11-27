@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package topo.plugin.v1;
+
+option go_package = "github.com/arm/topo/pkg/plugin/transport/pluginpb";
+
+service SuggestionsService {
+  rpc Suggestions(SuggestionRequest) returns (SuggestionResponse);
+  rpc RunAction(ActionRequest) returns (ActionResponse);
+}
+
+message SuggestionRequest {
+  string project_name = 1;
+  map<string, bytes> hints = 2;
+  optional string current_value = 3;
+}
+
+message Suggestion {
+  string value = 1;
+  string label = 2;
+}
+
+message Action {
+  string id = 1;
+  string label = 2;
+  string description = 3;
+}
+
+message SuggestionResponse {
+  repeated Suggestion suggestions = 1;
+  repeated Action available_actions = 2;
+}
+
+message ActionRequest {
+  string id = 1;
+  SuggestionRequest request = 2;
+}
+
+message ActionResponse {
+  repeated Suggestion suggestions = 1;
+}
