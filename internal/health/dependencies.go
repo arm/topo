@@ -132,7 +132,7 @@ func NewDependencyOnDockerCLI(r runner.Runner) Dependency {
 					Fix:      &Fix{Description: "Install a supported container engine. See " + containerEngineInstallURL},
 				}}
 			}
-			stdout, _, err := r.Run(ctx, "docker --version")
+			stdout, _, err := r.Run(ctx, "docker", "--version")
 			if err != nil {
 				return DependencyCheckResult{Failure: &DependencyCheckFailure{
 					Severity: SeverityError,
