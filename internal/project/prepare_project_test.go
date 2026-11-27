@@ -61,7 +61,7 @@ func TestPrepareProject(t *testing.T) {
 		require.Equal(t, []string{baseEnv, overrideEnv}, got.EnvFiles)
 	})
 
-		t.Run("reports invalid YAML", func(t *testing.T) {
+	t.Run("reports invalid YAML", func(t *testing.T) {
 		path := testutil.RequireWriteComposeFile(t, t.TempDir(), "x-topo: [")
 
 		got, err := project.PrepareProject(path, "", nil)
